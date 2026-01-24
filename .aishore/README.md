@@ -129,11 +129,11 @@ or
 Copy `.aishore/` directory to your project root:
 
 ```bash
-# From this repo
+# Copy the directory
 cp -r .aishore /path/to/your/project/
 
-# Make executable
-chmod +x /path/to/your/project/.aishore/aishore
+# Add gitignore entries to your project
+cat .aishore/gitignore-entries.txt >> /path/to/your/project/.gitignore
 
 # Initialize
 cd /path/to/your/project

@@ -2,7 +2,19 @@
 
 **AI Sprint Runner** - Drop-in sprint orchestration for Claude Code.
 
-Copy `.aishore/` into any project to get automated feature development with AI agents.
+## Installation
+
+**Copy only the `.aishore/` directory** to your target project:
+
+```bash
+# From this repository
+cp -r .aishore /path/to/your/project/
+
+# Add gitignore entries to your project's .gitignore
+cat .aishore/gitignore-entries.txt >> /path/to/your/project/.gitignore
+```
+
+> **Note:** Do NOT copy the root-level files (README.md, LICENSE, etc.) - those are for this repository only. The `.aishore/` directory is self-contained.
 
 ## What It Does
 
@@ -19,15 +31,15 @@ Pick Item → Developer → Validator → Done
 
 ## Quick Start
 
+After copying `.aishore/` to your project:
+
 ```bash
-# Copy to your project
-cp -r .aishore /path/to/your/project/
 cd /path/to/your/project
 
 # Initialize
 .aishore/aishore init
 
-# Configure (edit validation command for your stack)
+# Configure validation command for your stack
 vim .aishore/config.yaml
 
 # Add your project context
@@ -76,17 +88,23 @@ models:
 - `bash` 4.4+
 - `git`
 
-## Structure
+## Repository Structure
 
 ```
-.aishore/
-├── aishore           # CLI
-├── config.yaml       # Settings
-├── context/          # Project docs (you provide)
-├── agents/           # AI agent prompts
-├── plan/             # Backlogs
-├── data/             # Runtime (logs, archive)
-└── lib/              # Utilities
+aishore/                    ← This repository
+├── .aishore/               ← COPY THIS to target projects
+│   ├── aishore             # CLI
+│   ├── config.yaml         # Settings (customize)
+│   ├── context/            # Project docs (you provide)
+│   ├── agents/             # AI agent prompts
+│   ├── plan/               # Backlogs
+│   ├── data/               # Runtime (logs, archive)
+│   └── lib/                # Utilities
+├── README.md               ← You are here (don't copy)
+├── LICENSE                 ← Tool license (don't copy)
+├── CHANGELOG.md            ← Version history (don't copy)
+├── CONTRIBUTING.md         ← For contributors (don't copy)
+└── migrate.sh              ← Migration helper (don't copy)
 ```
 
 ## How It Works
