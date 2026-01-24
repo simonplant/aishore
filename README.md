@@ -101,4 +101,4 @@ The orchestrator waits for this file, then proceeds to the next step.
 
 ## License
 
-MIT
+Proprietary - All Rights Reserved. See [LICENSE](LICENSE).
