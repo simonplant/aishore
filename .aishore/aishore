@@ -405,7 +405,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 cmd_groom() {
     local mode="bugs"  # Default: tech lead grooms bugs
-    [[ "$1" == "--backlog" ]] && mode="backlog"
+    [[ "${1:-}" == "--backlog" ]] && mode="backlog"
 
     load_config
     cd "$PROJECT_ROOT"
