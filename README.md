@@ -32,10 +32,14 @@ cat .aishore/gitignore-entries.txt >> .gitignore
 
 ### Migrating from older versions
 
-If you have an existing aishore installation with the old structure:
+If you have an existing aishore installation with the old structure (`.aishore/plan/` or `aishore/`):
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash -s -- --migrate
+# Preview what would change (no modifications)
+curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/migrate.sh | bash -s -- --dry-run .
+
+# Apply migration
+curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/migrate.sh | bash -s -- .
 ```
 
 ## What It Does
@@ -136,11 +140,12 @@ Or use environment variables: `AISHORE_MODEL_PRIMARY`, `AISHORE_MODEL_FAST`, `AI
 ## Keeping Updated
 
 ```bash
-.aishore/aishore update --dry-run  # Check for updates
+.aishore/aishore update --check    # Check for updates (dry-run)
 .aishore/aishore update            # Update from upstream
+.aishore/aishore update --force    # Re-download even if same version
 ```
 
-Updates fetch the latest script and agent prompts. Your `backlog/` and `config.yaml` are never modified.
+Updates fetch the CLI, agent prompts, and gitignore-entries. Your `backlog/` and `config.yaml` are never modified.
 
 ## How It Works
 

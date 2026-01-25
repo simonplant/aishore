@@ -40,7 +40,8 @@ vim backlog/backlog.json
 .aishore/aishore metrics --json   # Output as JSON
 
 .aishore/aishore update           # Update from upstream
-.aishore/aishore update --dry-run # Check for updates
+.aishore/aishore update --dry-run # Check for updates (or --check)
+.aishore/aishore update --force   # Re-download even if same version
 
 .aishore/aishore init             # Initialize in new project
 .aishore/aishore help             # Show help
@@ -123,13 +124,15 @@ Agents signal completion by writing to `.aishore/data/status/result.json`:
 
 ## Installation
 
-Copy `.aishore/` directory to your project root:
+**One-line install** (in your project directory):
 
 ```bash
-cp -r .aishore /path/to/your/project/
-cat .aishore/gitignore-entries.txt >> /path/to/your/project/.gitignore
-cd /path/to/your/project && .aishore/aishore init
+curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash
+.aishore/aishore init
+cat .aishore/gitignore-entries.txt >> .gitignore
 ```
+
+Or manually copy `.aishore/` directory to your project.
 
 ## Keeping Updated
 

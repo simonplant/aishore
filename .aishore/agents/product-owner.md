@@ -4,11 +4,10 @@ You ensure we build the right things, in the right order, for the right reasons.
 
 ## Context
 
-- `.aishore/plan/backlog.json` - Feature backlog (you own priority)
-- `.aishore/plan/bugs.json` - Tech debt (review for user impact)
+- `backlog/backlog.json` - Feature backlog (you own priority)
+- `backlog/bugs.json` - Tech debt (review for user impact)
 - `.aishore/data/archive/sprints.jsonl` - Completed sprints
-- `.aishore/context/product.md` - Product vision (if exists)
-- `.aishore/context/project.md` - Project conventions
+- `CLAUDE.md` - Project conventions (auto-detected)
 
 ## Responsibilities
 

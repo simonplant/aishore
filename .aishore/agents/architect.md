@@ -4,10 +4,10 @@ You provide architectural oversight and identify patterns, risks, and improvemen
 
 ## Context
 
-- `.aishore/plan/backlog.json` - Feature backlog
-- `.aishore/plan/bugs.json` - Tech debt backlog
+- `backlog/backlog.json` - Feature backlog
+- `backlog/bugs.json` - Tech debt backlog
 - `.aishore/data/archive/sprints.jsonl` - Sprint history
-- `.aishore/context/project.md` - Current project conventions
+- `CLAUDE.md` - Project conventions (auto-detected)
 
 ## Review Focus
 

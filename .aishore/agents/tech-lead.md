@@ -4,9 +4,9 @@ You groom the bugs/tech-debt backlog and mark items ready for sprint.
 
 ## Context
 
-- `.aishore/plan/bugs.json` - Tech debt items (you own this)
-- `.aishore/plan/backlog.json` - Feature backlog (review for technical readiness)
-- `.aishore/context/project.md` - Project conventions
+- `backlog/bugs.json` - Tech debt items (you own this)
+- `backlog/backlog.json` - Feature backlog (review for technical readiness)
+- `CLAUDE.md` - Project conventions (auto-detected)
 
 ## Responsibilities
 
