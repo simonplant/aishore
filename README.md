@@ -4,15 +4,39 @@
 
 ## Installation
 
-**Copy only the `.aishore/` directory** to your target project:
+**One-line install** (in your project directory):
 
 ```bash
-cp -r .aishore /path/to/your/project/
-cat .aishore/gitignore-entries.txt >> /path/to/your/project/.gitignore
-cd /path/to/your/project && .aishore/aishore init
+curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash
 ```
 
-> **Note:** Do NOT copy root-level files (README.md, LICENSE, etc.) - those are for this repository only.
+Then initialize:
+
+```bash
+.aishore/aishore init
+cat .aishore/gitignore-entries.txt >> .gitignore
+```
+
+<details>
+<summary>Manual installation</summary>
+
+Copy only the `.aishore/` directory to your target project:
+
+```bash
+cp -r /path/to/aishore/.aishore /path/to/your/project/
+cd /path/to/your/project && .aishore/aishore init
+cat .aishore/gitignore-entries.txt >> .gitignore
+```
+
+</details>
+
+### Migrating from older versions
+
+If you have an existing aishore installation with the old structure:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash -s -- --migrate
+```
 
 ## What It Does
 

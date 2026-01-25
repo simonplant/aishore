@@ -1,15 +1,19 @@
 #!/bin/bash
-# migrate.sh - Upgrade legacy aishore installations to .aishore/ structure
+# migrate.sh - Upgrade aishore installations to latest structure
 #
-# Usage: ./migrate.sh [project-path]
+# Usage: ./migrate.sh [options] [project-path]
 #
-# This script:
-#   1. Detects old aishore/ structure
-#   2. Creates new .aishore/ structure
-#   3. Migrates backlog data, agents, and archives
-#   4. Creates config.yaml
-#   5. Updates .gitignore
-#   6. Optionally removes old aishore/ directory
+# Options:
+#   --dry-run    Show what would be changed without making changes
+#   --force      Skip confirmation prompts
+#
+# Handles two migration scenarios:
+#   1. Legacy aishore/ → .aishore/ + backlog/
+#   2. Old .aishore/plan/ → backlog/ (latest structure)
+#
+# The new structure separates tool from user content:
+#   .aishore/     - Tool (can be updated/replaced)
+#   backlog/      - User content (preserved during updates)
 
 set -euo pipefail
 
@@ -18,56 +22,173 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+DIM='\033[2m'
 NC='\033[0m'
 
 log()     { echo -e "${BLUE}[migrate]${NC} $1"; }
 success() { echo -e "${GREEN}✓${NC} $1"; }
 warn()    { echo -e "${YELLOW}⚠${NC} $1"; }
 error()   { echo -e "${RED}✗${NC} $1"; }
+dry()     { echo -e "${CYAN}[dry-run]${NC} $1"; }
+would()   { echo -e "  ${DIM}→${NC} $1"; }
 
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
 
+DRY_RUN=false
+FORCE=false
+PROJECT_ROOT=""
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        --force)
+            FORCE=true
+            shift
+            ;;
+        -*)
+            error "Unknown option: $1"
+            echo "Usage: $0 [--dry-run] [--force] [project-path]"
+            exit 1
+            ;;
+        *)
+            PROJECT_ROOT="$1"
+            shift
+            ;;
+    esac
+done
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="${1:-.}"
+PROJECT_ROOT="${PROJECT_ROOT:-.}"
 PROJECT_ROOT="$(cd "$PROJECT_ROOT" && pwd)"
 
-OLD_DIR="$PROJECT_ROOT/aishore"
-NEW_DIR="$PROJECT_ROOT/.aishore"
+LEGACY_DIR="$PROJECT_ROOT/aishore"       # Very old: aishore/
+OLD_DIR="$PROJECT_ROOT/.aishore"          # Old: .aishore/plan/
+BACKLOG_DIR="$PROJECT_ROOT/backlog"       # New: backlog/
+
+# ============================================================================
+# DRY-RUN HELPERS
+# ============================================================================
+
+# Safe mkdir - respects dry-run
+do_mkdir() {
+    local dir="$1"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        if [[ ! -d "$dir" ]]; then
+            would "mkdir -p $dir"
+        fi
+    else
+        mkdir -p "$dir"
+    fi
+}
+
+# Safe copy - respects dry-run
+do_copy() {
+    local src="$1"
+    local dest="$2"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        would "cp $src → $dest"
+    else
+        cp "$src" "$dest"
+    fi
+}
+
+# Safe remove - respects dry-run
+do_remove() {
+    local path="$1"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        would "rm -rf $path"
+    else
+        rm -rf "$path"
+    fi
+}
+
+# Safe touch - respects dry-run
+do_touch() {
+    local file="$1"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        would "touch $file"
+    else
+        touch "$file"
+    fi
+}
+
+# Safe chmod - respects dry-run
+do_chmod() {
+    local mode="$1"
+    local file="$2"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        would "chmod $mode $file"
+    else
+        chmod "$mode" "$file"
+    fi
+}
+
+# Safe write - respects dry-run
+do_write() {
+    local file="$1"
+    local content="$2"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        would "write $file ($(echo "$content" | wc -l | tr -d ' ') lines)"
+    else
+        echo "$content" > "$file"
+    fi
+}
+
+# Safe append - respects dry-run
+do_append() {
+    local file="$1"
+    local content="$2"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        would "append to $file"
+    else
+        echo "$content" >> "$file"
+    fi
+}
 
 # ============================================================================
 # DETECTION
 # ============================================================================
 
-detect_old_structure() {
-    local found=0
-
-    # Check for old aishore/ directory
-    if [[ -d "$OLD_DIR" ]]; then
-        if [[ -d "$OLD_DIR/bin" ]] || [[ -f "$OLD_DIR/bin/aishore.sh" ]]; then
-            found=1
+# Scenario 1: Legacy aishore/ (non-hidden) structure
+detect_legacy_structure() {
+    if [[ -d "$LEGACY_DIR" ]]; then
+        if [[ -d "$LEGACY_DIR/bin" ]] || [[ -f "$LEGACY_DIR/bin/aishore.sh" ]]; then
+            return 0
         fi
-        if [[ -d "$OLD_DIR/plan" ]] && [[ -f "$OLD_DIR/plan/backlog.json" ]]; then
-            found=1
-        fi
-    fi
-
-    return $((1 - found))
-}
-
-detect_validation_command() {
-    # Try to extract from old common.sh
-    if [[ -f "$OLD_DIR/lib/common.sh" ]]; then
-        local cmd
-        cmd=$(grep -E 'AISHORE_VALIDATE_CMD.*=' "$OLD_DIR/lib/common.sh" 2>/dev/null | \
-              sed 's/.*AISHORE_VALIDATE_CMD.*:-//' | sed 's/}".*//' | tr -d '"' || true)
-        if [[ -n "$cmd" ]]; then
-            echo "$cmd"
+        if [[ -d "$LEGACY_DIR/plan" ]] && [[ -f "$LEGACY_DIR/plan/backlog.json" ]]; then
             return 0
         fi
     fi
+    return 1
+}
 
+# Scenario 2: Old .aishore/plan/ structure (backlog inside .aishore)
+detect_old_aishore_structure() {
+    if [[ -d "$OLD_DIR/plan" ]] && [[ -f "$OLD_DIR/plan/backlog.json" ]]; then
+        # Check that backlog/ doesn't already exist at project root
+        if [[ ! -d "$BACKLOG_DIR" ]]; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# Already migrated to latest
+detect_current_structure() {
+    if [[ -d "$BACKLOG_DIR" ]] && [[ -f "$BACKLOG_DIR/backlog.json" ]]; then
+        return 0
+    fi
+    return 1
+}
+
+detect_validation_command() {
     # Check package.json for common patterns
     if [[ -f "$PROJECT_ROOT/package.json" ]]; then
         if grep -q '"type-check"' "$PROJECT_ROOT/package.json" 2>/dev/null; then
@@ -97,233 +218,235 @@ detect_validation_command() {
 }
 
 # ============================================================================
-# MIGRATION
+# MIGRATION: OLD .aishore/plan/ → backlog/
 # ============================================================================
 
-create_new_structure() {
-    log "Creating new .aishore/ structure..."
+migrate_plan_to_backlog() {
+    log "Migrating .aishore/plan/ to backlog/..."
 
-    mkdir -p "$NEW_DIR"/{agents,context,data/{archive,logs,status},lib,plan/archive}
+    # Create backlog directory
+    do_mkdir "$BACKLOG_DIR/archive"
 
-    success "Directory structure created"
-}
-
-copy_new_cli() {
-    log "Installing new CLI..."
-
-    if [[ -f "$SCRIPT_DIR/.aishore/aishore" ]]; then
-        cp "$SCRIPT_DIR/.aishore/aishore" "$NEW_DIR/aishore"
-        chmod +x "$NEW_DIR/aishore"
-        success "CLI installed"
-    else
-        warn "CLI not found in source - you'll need to copy it manually"
-    fi
-}
-
-copy_new_lib() {
-    log "Installing library..."
-
-    if [[ -f "$SCRIPT_DIR/.aishore/lib/common.sh" ]]; then
-        cp "$SCRIPT_DIR/.aishore/lib/common.sh" "$NEW_DIR/lib/common.sh"
-        success "Library installed"
-    else
-        warn "Library not found in source - you'll need to copy it manually"
-    fi
-}
-
-migrate_agents() {
-    log "Migrating agent prompts..."
-
-    local migrated=0
-
-    # Copy new agents (preferred - they have updated paths)
-    if [[ -d "$SCRIPT_DIR/.aishore/agents" ]]; then
-        cp "$SCRIPT_DIR/.aishore/agents/"*.md "$NEW_DIR/agents/" 2>/dev/null || true
-        migrated=1
-        success "Installed updated agent prompts"
-    fi
-
-    # If no source agents, try to copy old ones (will need manual path updates)
-    if [[ $migrated -eq 0 ]] && [[ -d "$OLD_DIR/agents" ]]; then
-        cp "$OLD_DIR/agents/"*.md "$NEW_DIR/agents/" 2>/dev/null || true
-        warn "Copied old agents - they reference old paths and need manual updates"
-        warn "  Update references from 'aishore/plan/' to '.aishore/plan/'"
-        warn "  Update references from '@CLAUDE.md' to '@.aishore/context/project.md'"
-    fi
-}
-
-migrate_backlog() {
-    log "Migrating backlog data..."
-
-    # Migrate plan files (backlog.json, bugs.json, etc.)
+    # Move backlog files
     for file in backlog.json bugs.json icebox.json sprint.json definitions.md; do
         if [[ -f "$OLD_DIR/plan/$file" ]]; then
-            cp "$OLD_DIR/plan/$file" "$NEW_DIR/plan/$file"
+            do_copy "$OLD_DIR/plan/$file" "$BACKLOG_DIR/$file"
+            success "Migrated $file"
+        fi
+    done
+
+    # Move archive contents
+    if [[ -d "$OLD_DIR/plan/archive" ]]; then
+        for file in "$OLD_DIR/plan/archive"/*; do
+            if [[ -f "$file" ]]; then
+                do_copy "$file" "$BACKLOG_DIR/archive/"
+                success "Migrated archive/$(basename "$file")"
+            fi
+        done
+    fi
+
+    # Create archive .gitkeep
+    do_touch "$BACKLOG_DIR/archive/.gitkeep"
+
+    success "Backlog migrated to $BACKLOG_DIR/"
+}
+
+remove_old_directories() {
+    log "Cleaning up old structure..."
+
+    # Remove lib/ (now inlined)
+    if [[ -d "$OLD_DIR/lib" ]]; then
+        do_remove "$OLD_DIR/lib"
+        success "Removed .aishore/lib/ (now inlined)"
+    fi
+
+    # Remove context/ (now auto-detected)
+    if [[ -d "$OLD_DIR/context" ]]; then
+        do_remove "$OLD_DIR/context"
+        success "Removed .aishore/context/ (CLAUDE.md auto-detected)"
+    fi
+
+    # Remove old plan/ after successful migration
+    if [[ -d "$OLD_DIR/plan" ]] && [[ -d "$BACKLOG_DIR" || "$DRY_RUN" == "true" ]]; then
+        do_remove "$OLD_DIR/plan"
+        success "Removed .aishore/plan/ (migrated to backlog/)"
+    fi
+}
+
+update_aishore_cli() {
+    log "Updating aishore CLI..."
+
+    if [[ -f "$SCRIPT_DIR/.aishore/aishore" ]]; then
+        do_copy "$SCRIPT_DIR/.aishore/aishore" "$OLD_DIR/aishore"
+        do_chmod "+x" "$OLD_DIR/aishore"
+        success "CLI updated to latest version"
+    else
+        warn "Source CLI not found - update manually from upstream"
+    fi
+}
+
+update_agents() {
+    log "Updating agent prompts..."
+
+    if [[ -d "$SCRIPT_DIR/.aishore/agents" ]]; then
+        if [[ "$DRY_RUN" == "true" ]]; then
+            for agent in "$SCRIPT_DIR/.aishore/agents/"*.md; do
+                would "cp $(basename "$agent") → .aishore/agents/"
+            done
+        else
+            cp "$SCRIPT_DIR/.aishore/agents/"*.md "$OLD_DIR/agents/" 2>/dev/null || true
+        fi
+        success "Agent prompts updated"
+    else
+        warn "Source agents not found - update manually from upstream"
+    fi
+}
+
+update_gitignore_for_backlog() {
+    log "Updating .gitignore..."
+
+    local gitignore="$PROJECT_ROOT/.gitignore"
+
+    if [[ -f "$gitignore" ]]; then
+        # Remove old .aishore/plan entries if present
+        if grep -q ".aishore/plan" "$gitignore" 2>/dev/null; then
+            # Don't auto-modify, just warn
+            warn ".gitignore has old .aishore/plan entries - review manually"
+        fi
+
+        # Add backlog archive entry if not present
+        if ! grep -q ".aishore/data/logs/" "$gitignore" 2>/dev/null; then
+            local content=$'\n# aishore runtime (v0.1.2+)\n.aishore/data/logs/\n.aishore/data/status/'
+            do_append "$gitignore" "$content"
+            success "Added runtime entries to .gitignore"
+        fi
+    fi
+}
+
+# ============================================================================
+# MIGRATION: LEGACY aishore/ → .aishore/ + backlog/
+# ============================================================================
+
+migrate_from_legacy() {
+    log "Migrating from legacy aishore/ structure..."
+
+    # Create new .aishore structure
+    do_mkdir "$OLD_DIR/agents"
+    do_mkdir "$OLD_DIR/data/archive"
+    do_mkdir "$OLD_DIR/data/logs"
+    do_mkdir "$OLD_DIR/data/status"
+
+    # Copy new CLI
+    if [[ -f "$SCRIPT_DIR/.aishore/aishore" ]]; then
+        do_copy "$SCRIPT_DIR/.aishore/aishore" "$OLD_DIR/aishore"
+        do_chmod "+x" "$OLD_DIR/aishore"
+        success "CLI installed"
+    fi
+
+    # Copy agents
+    if [[ -d "$SCRIPT_DIR/.aishore/agents" ]]; then
+        if [[ "$DRY_RUN" == "true" ]]; then
+            for agent in "$SCRIPT_DIR/.aishore/agents/"*.md; do
+                would "cp $(basename "$agent") → .aishore/agents/"
+            done
+        else
+            cp "$SCRIPT_DIR/.aishore/agents/"*.md "$OLD_DIR/agents/" 2>/dev/null || true
+        fi
+        success "Agent prompts installed"
+    fi
+
+    # Create backlog directory
+    do_mkdir "$BACKLOG_DIR/archive"
+
+    # Migrate plan files from legacy location
+    for file in backlog.json bugs.json icebox.json sprint.json definitions.md; do
+        if [[ -f "$LEGACY_DIR/plan/$file" ]]; then
+            do_copy "$LEGACY_DIR/plan/$file" "$BACKLOG_DIR/$file"
             success "Migrated $file"
         fi
     done
 
     # Migrate archives
     for file in done.jsonl sprints.jsonl failed.jsonl; do
-        if [[ -f "$OLD_DIR/plan/archive/$file" ]]; then
-            cp "$OLD_DIR/plan/archive/$file" "$NEW_DIR/data/archive/$file"
+        if [[ -f "$LEGACY_DIR/plan/archive/$file" ]]; then
+            do_copy "$LEGACY_DIR/plan/archive/$file" "$OLD_DIR/data/archive/$file"
             success "Migrated archive/$file"
-        elif [[ -f "$OLD_DIR/plan/.archive/$file" ]]; then
-            cp "$OLD_DIR/plan/.archive/$file" "$NEW_DIR/data/archive/$file"
+        elif [[ -f "$LEGACY_DIR/plan/.archive/$file" ]]; then
+            do_copy "$LEGACY_DIR/plan/.archive/$file" "$OLD_DIR/data/archive/$file"
             success "Migrated .archive/$file"
         fi
     done
 
-    # Migrate logs
-    if [[ -f "$OLD_DIR/plan/.logs/agent-runs.log" ]]; then
-        cp "$OLD_DIR/plan/.logs/agent-runs.log" "$NEW_DIR/data/logs/"
-        success "Migrated agent-runs.log"
-    fi
+    # Create .gitkeep files
+    do_touch "$OLD_DIR/data/archive/.gitkeep"
+    do_touch "$OLD_DIR/data/logs/.gitkeep"
+    do_touch "$OLD_DIR/data/status/.gitkeep"
+    do_touch "$BACKLOG_DIR/archive/.gitkeep"
 
-    # Create empty files if they don't exist
-    touch "$NEW_DIR/data/archive/done.jsonl"
-    touch "$NEW_DIR/data/archive/sprints.jsonl"
-    touch "$NEW_DIR/data/archive/failed.jsonl"
-    touch "$NEW_DIR/data/archive/.gitkeep"
-    touch "$NEW_DIR/data/logs/.gitkeep"
-    touch "$NEW_DIR/data/status/.gitkeep"
-    touch "$NEW_DIR/plan/archive/.gitkeep"
-}
+    # Create config.yaml if it doesn't exist
+    if [[ ! -f "$OLD_DIR/config.yaml" ]]; then
+        local validate_cmd
+        validate_cmd=$(detect_validation_command)
 
-create_config() {
-    log "Creating config.yaml..."
-
-    local validate_cmd
-    validate_cmd=$(detect_validation_command)
-
-    cat > "$NEW_DIR/config.yaml" << EOF
-# aishore configuration
-# Migrated from legacy aishore/ structure
-
-project:
-  name: "$(basename "$PROJECT_ROOT")"
+        local config_content="# aishore configuration (optional - defaults are sensible)
 
 validation:
-  command: "$validate_cmd"
+  command: \"$validate_cmd\"
   timeout: 120
 
 models:
-  primary: "claude-opus-4-5-20251101"
-  fast: "claude-sonnet-4-20250514"
+  primary: \"claude-opus-4-5-20251101\"
+  fast: \"claude-sonnet-4-20250514\"
 
 agent:
-  timeout: 600
+  timeout: 3600"
 
-context:
-  project: "context/project.md"
-EOF
-
-    success "Created config.yaml with validation: $validate_cmd"
-}
-
-create_context() {
-    log "Setting up context..."
-
-    # Check for existing CLAUDE.md
-    if [[ -f "$PROJECT_ROOT/CLAUDE.md" ]]; then
-        # Create symlink
-        ln -sf "../../CLAUDE.md" "$NEW_DIR/context/project.md"
-        success "Linked context/project.md -> CLAUDE.md"
-    else
-        # Create placeholder
-        cat > "$NEW_DIR/context/project.md" << 'EOF'
-# Project Context
-
-Add your project conventions here, or symlink to an existing file:
-
-```bash
-ln -sf ../../CLAUDE.md .aishore/context/project.md
-```
-EOF
-        warn "Created placeholder context/project.md - add your project conventions"
-    fi
-}
-
-update_gitignore() {
-    log "Updating .gitignore..."
-
-    local gitignore="$PROJECT_ROOT/.gitignore"
-    local needs_update=0
-
-    if [[ -f "$gitignore" ]]; then
-        # Check if old entries exist
-        if grep -q "aishore/plan/\.logs" "$gitignore" 2>/dev/null; then
-            needs_update=1
+        if [[ "$DRY_RUN" == "true" ]]; then
+            would "write .aishore/config.yaml"
+        else
+            echo "$config_content" > "$OLD_DIR/config.yaml"
         fi
-
-        # Add new entries if not present
-        if ! grep -q ".aishore/data/logs/" "$gitignore" 2>/dev/null; then
-            echo "" >> "$gitignore"
-            echo "# aishore runtime files (new structure)" >> "$gitignore"
-            echo ".aishore/data/logs/" >> "$gitignore"
-            echo ".aishore/data/status/result.json" >> "$gitignore"
-            echo ".aishore/data/status/.item_source" >> "$gitignore"
-            success "Added new .aishore entries to .gitignore"
-        fi
-    else
-        cat > "$gitignore" << 'EOF'
-# aishore runtime files
-.aishore/data/logs/
-.aishore/data/status/result.json
-.aishore/data/status/.item_source
-EOF
-        success "Created .gitignore"
+        success "Created config.yaml"
     fi
+
+    success "Legacy migration complete"
 }
 
-update_package_json() {
-    log "Checking package.json scripts..."
-
-    local pkg="$PROJECT_ROOT/package.json"
-
-    if [[ -f "$pkg" ]]; then
-        if grep -q '"aishore"' "$pkg" 2>/dev/null; then
-            warn "package.json has aishore scripts - update manually:"
-            echo ""
-            echo '  "aishore": "./.aishore/aishore run",'
-            echo '  "aishore:groom": "./.aishore/aishore groom",'
-            echo '  "aishore:metrics": "./.aishore/aishore metrics",'
-            echo '  "aishore:review": "./.aishore/aishore review"'
-            echo ""
-        fi
-    fi
-}
+# ============================================================================
+# SUMMARY
+# ============================================================================
 
 show_summary() {
     echo ""
     log "Migration complete!"
     echo ""
     echo "New structure:"
-    echo "  $NEW_DIR/"
-    echo "  ├── aishore           # CLI"
-    echo "  ├── config.yaml       # Settings"
-    echo "  ├── context/          # Project docs"
-    echo "  ├── agents/           # Agent prompts"
-    echo "  ├── plan/             # Backlogs"
-    echo "  ├── data/             # Runtime (logs, archive)"
-    echo "  └── lib/              # Utilities"
+    echo "  your-project/"
+    echo "  ├── backlog/            # YOUR CONTENT (version controlled)"
+    echo "  │   ├── backlog.json"
+    echo "  │   ├── bugs.json"
+    echo "  │   ├── sprint.json"
+    echo "  │   └── archive/"
+    echo "  ├── CLAUDE.md           # Auto-detected"
+    echo "  └── .aishore/           # TOOL (can be updated)"
+    echo "      ├── aishore"
+    echo "      ├── agents/"
+    echo "      ├── config.yaml"
+    echo "      └── data/"
     echo ""
-    echo "Usage:"
-    echo "  .aishore/aishore run        # Run sprint"
-    echo "  .aishore/aishore groom      # Groom backlog"
-    echo "  .aishore/aishore metrics    # Show metrics"
-    echo "  .aishore/aishore help       # Show help"
+    echo "Test the migration:"
+    echo "  .aishore/aishore help"
+    echo "  .aishore/aishore metrics"
     echo ""
 
-    if [[ -d "$OLD_DIR" ]]; then
-        echo ""
+    if [[ -d "$LEGACY_DIR" ]]; then
         warn "Old aishore/ directory still exists"
-        echo ""
-        echo "After verifying the migration works:"
-        echo "  1. Test: .aishore/aishore help"
-        echo "  2. Test: .aishore/aishore metrics"
-        echo "  3. Delete old: rm -rf aishore/"
-        echo "  4. Commit: git add -A && git commit -m 'chore: migrate to .aishore structure'"
+        echo "After verifying migration works: rm -rf aishore/"
+    fi
+
+    if [[ -d "$OLD_DIR/plan" ]]; then
+        warn "Old .aishore/plan/ directory still exists"
+        echo "After verifying migration works: rm -rf .aishore/plan/"
     fi
 }
 
@@ -331,56 +454,166 @@ show_summary() {
 # MAIN
 # ============================================================================
 
+analyze_current_state() {
+    echo "Current state:"
+    echo ""
+
+    # Check .aishore contents
+    if [[ -d "$OLD_DIR" ]]; then
+        echo "  .aishore/"
+        [[ -f "$OLD_DIR/aishore" ]] && echo "    ├── aishore (CLI)"
+        [[ -d "$OLD_DIR/agents" ]] && echo "    ├── agents/"
+        [[ -f "$OLD_DIR/config.yaml" ]] && echo "    ├── config.yaml"
+        [[ -d "$OLD_DIR/context" ]] && echo -e "    ├── context/ ${YELLOW}← will remove${NC}"
+        [[ -d "$OLD_DIR/lib" ]] && echo -e "    ├── lib/ ${YELLOW}← will remove${NC}"
+        [[ -d "$OLD_DIR/plan" ]] && echo -e "    ├── plan/ ${YELLOW}← will move to backlog/${NC}"
+        [[ -d "$OLD_DIR/data" ]] && echo "    └── data/"
+    fi
+
+    # Check legacy aishore/
+    if [[ -d "$LEGACY_DIR" ]]; then
+        echo "  aishore/ (legacy)"
+        [[ -d "$LEGACY_DIR/plan" ]] && echo -e "    └── plan/ ${YELLOW}← will move to backlog/${NC}"
+    fi
+
+    # Check backlog
+    if [[ -d "$BACKLOG_DIR" ]]; then
+        echo "  backlog/ (already exists)"
+    else
+        echo -e "  backlog/ ${GREEN}← will create${NC}"
+    fi
+
+    # Check CLAUDE.md
+    if [[ -f "$PROJECT_ROOT/CLAUDE.md" ]]; then
+        echo "  CLAUDE.md (auto-detected)"
+    fi
+
+    echo ""
+}
+
+show_dry_run_summary() {
+    echo ""
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo -e "${CYAN}════════════════════════════════════════${NC}"
+        echo -e "${CYAN}  DRY RUN COMPLETE - No changes made${NC}"
+        echo -e "${CYAN}════════════════════════════════════════${NC}"
+        echo ""
+        echo "To apply these changes, run:"
+        echo "  $0 $PROJECT_ROOT"
+        echo ""
+    fi
+}
+
 main() {
     echo ""
     echo -e "${BLUE}════════════════════════════════════════${NC}"
-    echo -e "${BLUE}  aishore Migration Tool${NC}"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo -e "${BLUE}  aishore Migration Tool ${CYAN}(DRY RUN)${NC}"
+    else
+        echo -e "${BLUE}  aishore Migration Tool (v0.1.2)${NC}"
+    fi
     echo -e "${BLUE}════════════════════════════════════════${NC}"
     echo ""
     echo "Project: $PROJECT_ROOT"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo -e "${CYAN}Mode: DRY RUN (no changes will be made)${NC}"
+    fi
     echo ""
 
-    # Check for existing new structure
-    if [[ -d "$NEW_DIR" ]] && [[ -f "$NEW_DIR/aishore" ]]; then
-        error "New .aishore/ structure already exists"
-        echo "If you want to re-migrate, remove it first: rm -rf $NEW_DIR"
-        exit 1
+    # Check if already current
+    if detect_current_structure; then
+        if [[ ! -d "$OLD_DIR/plan" ]] && [[ ! -d "$OLD_DIR/lib" ]] && [[ ! -d "$OLD_DIR/context" ]]; then
+            success "Already using latest structure (backlog/ at project root)"
+            echo ""
+            echo "To update aishore CLI:"
+            echo "  cp $SCRIPT_DIR/.aishore/aishore $OLD_DIR/aishore"
+            exit 0
+        fi
     fi
 
-    # Detect old structure
-    if ! detect_old_structure; then
-        error "No legacy aishore/ structure found in $PROJECT_ROOT"
+    # Scenario 1: Legacy aishore/ (non-hidden)
+    if detect_legacy_structure; then
+        success "Found legacy aishore/ structure"
         echo ""
-        echo "Expected to find:"
-        echo "  $OLD_DIR/bin/aishore.sh"
-        echo "  $OLD_DIR/plan/backlog.json"
-        echo ""
-        echo "For fresh install, use: .aishore/aishore init"
-        exit 1
-    fi
 
-    success "Found legacy aishore/ structure"
-    echo ""
+        if [[ "$DRY_RUN" == "true" ]]; then
+            analyze_current_state
+            dry "Showing what would be changed..."
+            echo ""
+        elif [[ "$FORCE" != "true" ]]; then
+            read -p "Migrate to new structure (.aishore/ + backlog/)? [Y/n] " response
+            if [[ "$response" =~ ^[Nn]$ ]]; then
+                echo "Aborted"
+                exit 0
+            fi
+            echo ""
+        fi
 
-    # Confirm migration
-    read -p "Migrate to new .aishore/ structure? [Y/n] " response
-    if [[ "$response" =~ ^[Nn]$ ]]; then
-        echo "Aborted"
+        migrate_from_legacy
+        update_gitignore_for_backlog
+
+        if [[ "$DRY_RUN" == "true" ]]; then
+            show_dry_run_summary
+        else
+            show_summary
+        fi
         exit 0
     fi
-    echo ""
 
-    # Run migration
-    create_new_structure
-    copy_new_cli
-    copy_new_lib
-    migrate_agents
-    migrate_backlog
-    create_config
-    create_context
-    update_gitignore
-    update_package_json
-    show_summary
+    # Scenario 2: Old .aishore/plan/ structure
+    if detect_old_aishore_structure; then
+        success "Found old .aishore/plan/ structure"
+        echo ""
+
+        if [[ "$DRY_RUN" == "true" ]]; then
+            analyze_current_state
+            dry "Showing what would be changed..."
+            echo ""
+            echo "Changes planned:"
+            echo "  1. Move .aishore/plan/* to backlog/"
+            echo "  2. Remove .aishore/lib/ (now inlined)"
+            echo "  3. Remove .aishore/context/ (auto-detects CLAUDE.md)"
+            echo "  4. Update CLI and agents"
+            echo ""
+        elif [[ "$FORCE" != "true" ]]; then
+            echo "This will:"
+            echo "  1. Move .aishore/plan/* to backlog/"
+            echo "  2. Remove .aishore/lib/ (now inlined)"
+            echo "  3. Remove .aishore/context/ (auto-detects CLAUDE.md)"
+            echo "  4. Update CLI and agents"
+            echo ""
+            read -p "Proceed with migration? [Y/n] " response
+            if [[ "$response" =~ ^[Nn]$ ]]; then
+                echo "Aborted"
+                exit 0
+            fi
+            echo ""
+        fi
+
+        migrate_plan_to_backlog
+        update_aishore_cli
+        update_agents
+        remove_old_directories
+        update_gitignore_for_backlog
+
+        if [[ "$DRY_RUN" == "true" ]]; then
+            show_dry_run_summary
+        else
+            show_summary
+        fi
+        exit 0
+    fi
+
+    # No migratable structure found
+    error "No migratable structure found"
+    echo ""
+    echo "Expected one of:"
+    echo "  - aishore/plan/backlog.json (legacy)"
+    echo "  - .aishore/plan/backlog.json (old)"
+    echo ""
+    echo "For fresh install:"
+    echo "  curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash"
+    exit 1
 }
 
-main "$@"
+main

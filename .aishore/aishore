@@ -717,7 +717,15 @@ cmd_version() {
 cmd_update() {
     local repo_url="https://raw.githubusercontent.com/simonplant/aishore/main"
     local dry_run=false
-    [[ "${1:-}" == "--dry-run" ]] && dry_run=true
+    local force=false
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dry-run|--check) dry_run=true; shift ;;
+            --force) force=true; shift ;;
+            *) shift ;;
+        esac
+    done
 
     log_header "aishore Update"
     echo "Current version: $AISHORE_VERSION"
@@ -735,6 +743,7 @@ cmd_update() {
     fi
 
     # Fetch remote version
+    log_info "Checking for updates..."
     local remote_script
     remote_script=$($fetch_cmd "$repo_url/.aishore/aishore" 2>/dev/null) || {
         log_error "Failed to fetch from $repo_url"
@@ -752,30 +761,64 @@ cmd_update() {
     echo "Remote version: $remote_version"
     echo ""
 
-    if [[ "$AISHORE_VERSION" == "$remote_version" ]]; then
+    if [[ "$AISHORE_VERSION" == "$remote_version" ]] && [[ "$force" != "true" ]]; then
         log_success "Already up to date"
         return 0
     fi
 
+    # Show what will be updated
+    echo "Files to update:"
+    echo "  .aishore/aishore"
+    echo "  .aishore/gitignore-entries.txt"
+    echo "  .aishore/agents/developer.md"
+    echo "  .aishore/agents/validator.md"
+    echo "  .aishore/agents/tech-lead.md"
+    echo "  .aishore/agents/product-owner.md"
+    echo "  .aishore/agents/architect.md"
+    echo ""
+    echo "Not modified (your content):"
+    echo "  .aishore/config.yaml"
+    echo "  backlog/*"
+    echo ""
+
     if [[ "$dry_run" == "true" ]]; then
-        log_info "Dry run - would update to $remote_version"
+        log_info "Dry run - no changes made"
+        echo ""
+        echo "To apply update:"
+        echo "  .aishore/aishore update"
         return 0
     fi
 
-    log_info "Updating aishore script..."
+    # Update aishore script
+    log_info "Updating aishore..."
     echo "$remote_script" > "$AISHORE_ROOT/aishore"
     chmod +x "$AISHORE_ROOT/aishore"
 
-    # Update agent prompts
-    for agent in developer validator tech-lead product-owner architect; do
-        log_info "Updating agents/$agent.md..."
-        $fetch_cmd "$repo_url/.aishore/agents/$agent.md" > "$AGENTS_DIR/$agent.md" 2>/dev/null || \
-            log_warning "Could not update $agent.md"
-    done
+    # Update gitignore-entries.txt
+    log_info "Updating gitignore-entries.txt..."
+    $fetch_cmd "$repo_url/.aishore/gitignore-entries.txt" > "$AISHORE_ROOT/gitignore-entries.txt" 2>/dev/null || \
+        log_warning "Could not update gitignore-entries.txt"
 
-    log_success "Updated to $remote_version"
+    # Update agent prompts
+    local updated=0
+    local failed=0
+    for agent in developer validator tech-lead product-owner architect; do
+        if $fetch_cmd "$repo_url/.aishore/agents/$agent.md" > "$AGENTS_DIR/$agent.md" 2>/dev/null; then
+            ((updated++))
+        else
+            log_warning "Could not update $agent.md"
+            ((failed++))
+        fi
+    done
+    log_info "Updated $updated agent prompts"
+
     echo ""
-    echo "Note: config.yaml and backlog/ were not modified (your content)"
+    log_success "Updated to $remote_version"
+
+    if [[ $failed -gt 0 ]]; then
+        echo ""
+        log_warning "$failed files failed to update"
+    fi
 }
 
 cmd_help() {
@@ -801,6 +844,8 @@ Commands:
 
   update            Update aishore from upstream
     --dry-run       Check for updates without applying
+    --check         Alias for --dry-run
+    --force         Update even if already on latest version
 
   init              Initialize aishore in current project
   version           Show version
