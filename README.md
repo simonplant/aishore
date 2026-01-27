@@ -84,10 +84,10 @@ aishore auto-detects `CLAUDE.md` in your project root — no configuration neede
 | Command | Description |
 |---------|-------------|
 | `run [N]` | Run N sprints (default: 1) |
-| `run <ID>` | Run specific item by ID (e.g., FEAT-001) |
+| `run <ID>` | Run specific item by ID (e.g., `FEAT-001`) |
 | `run --auto-commit` | Auto-commit after each sprint |
-| `groom` | Groom bugs/tech debt (Tech Lead) |
-| `groom --backlog` | Groom features (Product Owner) |
+| `groom` | Groom bugs/tech debt (Tech Lead agent) |
+| `groom --backlog` | Groom features (Product Owner agent) |
 | `review` | Architecture review |
 | `review --update-docs` | Architecture review with doc updates |
 | `metrics` | Show sprint metrics |
@@ -97,6 +97,8 @@ aishore auto-detects `CLAUDE.md` in your project root — no configuration neede
 | `update --force --no-verify` | Force update, skip checksum verification |
 | `checksums` | Regenerate `checksums.sha256` |
 | `init` | Interactive setup wizard |
+| `version` | Show version |
+| `help` | Show usage |
 
 ## Project Structure
 
@@ -104,9 +106,11 @@ aishore auto-detects `CLAUDE.md` in your project root — no configuration neede
 your-project/
 ├── backlog/                 # YOUR CONTENT (version controlled)
 │   ├── backlog.json         # Feature backlog
-│   ├── bugs.json            # Tech debt backlog
+│   ├── bugs.json            # Bug/tech-debt backlog
 │   ├── sprint.json          # Current sprint state
+│   ├── definitions.md       # DoR, DoD, priority/size definitions
 │   └── archive/             # Completed sprint history
+│       └── sprints.jsonl
 ├── CLAUDE.md                # Project context (auto-detected)
 └── .aishore/                # TOOL (can be updated/replaced)
     ├── aishore              # Self-contained CLI
@@ -138,7 +142,15 @@ agent:
   timeout: 3600
 ```
 
-Or use environment variables: `AISHORE_MODEL_PRIMARY`, `AISHORE_MODEL_FAST`, `AISHORE_AGENT_TIMEOUT`, `AISHORE_VALIDATE_CMD`, `AISHORE_VALIDATE_TIMEOUT`
+Or use environment variables:
+
+| Setting            | Env var                    | Default                        |
+|--------------------|----------------------------|--------------------------------|
+| Primary model      | `AISHORE_MODEL_PRIMARY`    | `claude-opus-4-5-20251101`     |
+| Fast model         | `AISHORE_MODEL_FAST`       | `claude-sonnet-4-20250514`     |
+| Agent timeout      | `AISHORE_AGENT_TIMEOUT`    | `3600`                         |
+| Validation command | `AISHORE_VALIDATE_CMD`     | *(none)*                       |
+| Validation timeout | `AISHORE_VALIDATE_TIMEOUT` | `120`                          |
 
 ## Requirements
 
@@ -151,12 +163,12 @@ Or use environment variables: `AISHORE_MODEL_PRIMARY`, `AISHORE_MODEL_FAST`, `AI
 ## Keeping Updated
 
 ```bash
-.aishore/aishore update --check    # Check for updates (dry-run)
+.aishore/aishore update --dry-run  # Check for updates
 .aishore/aishore update            # Update from upstream (checksum-verified)
 .aishore/aishore update --force    # Re-download even if same version
 ```
 
-Updates fetch the CLI, agent prompts, and gitignore-entries — verified against SHA-256 checksums. Your `backlog/` and `config.yaml` are never modified.
+Updates fetch the CLI, agent prompts, and gitignore entries — verified against SHA-256 checksums. Your `backlog/` and `config.yaml` are never modified.
 
 If checksums cannot be fetched, the update aborts. Use `--force --no-verify` to bypass verification (not recommended).
 
