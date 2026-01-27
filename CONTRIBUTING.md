@@ -18,7 +18,7 @@ cd aishore
 - Bash 4.4+
 - jq
 - shellcheck (for linting)
-- On macOS: `brew install coreutils` (for gtimeout)
+- On macOS: `brew install coreutils` (for `gtimeout`)
 
 ## Code Style
 
@@ -44,6 +44,11 @@ Before submitting a PR:
 # Run shellcheck
 shellcheck .aishore/aishore
 
+# Syntax check all scripts
+bash -n .aishore/aishore
+bash -n install.sh
+bash -n migrate.sh
+
 # Test basic commands
 .aishore/aishore help
 .aishore/aishore version
@@ -51,6 +56,9 @@ shellcheck .aishore/aishore
 
 # Validate JSON
 jq empty backlog/*.json
+
+# Regenerate checksums after modifying tool files
+.aishore/aishore checksums
 ```
 
 ## Pull Request Process
@@ -59,19 +67,20 @@ jq empty backlog/*.json
 2. Create a feature branch: `git checkout -b feat/my-feature`
 3. Make your changes
 4. Run shellcheck and tests
-5. Commit with conventional commits: `feat:`, `fix:`, `docs:`, etc.
-6. Push and create a PR
+5. Regenerate checksums if you changed files in `.aishore/`
+6. Commit with conventional commits: `feat:`, `fix:`, `docs:`, etc.
+7. Push and create a PR
 
 ## Commit Convention
 
 We use [Conventional Commits](https://www.conventionalcommits.org/):
 
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `docs:` - Documentation
-- `refactor:` - Code refactoring
-- `test:` - Tests
-- `chore:` - Maintenance
+- `feat:` — New feature
+- `fix:` — Bug fix
+- `docs:` — Documentation
+- `refactor:` — Code refactoring
+- `test:` — Tests
+- `chore:` — Maintenance
 
 ## Architecture
 
@@ -80,22 +89,25 @@ project/
 ├── backlog/              # User content (version controlled by user)
 │   ├── backlog.json
 │   ├── bugs.json
-│   └── sprint.json
+│   ├── sprint.json
+│   └── archive/
 └── .aishore/             # Tool (this is what gets updated)
     ├── aishore           # Self-contained CLI
+    ├── checksums.sha256  # SHA-256 checksums for update verification
     ├── agents/*.md       # Agent prompts
     ├── config.yaml       # Optional overrides
-    └── data/             # Runtime data
+    └── data/             # Runtime data (logs, status, lock)
 ```
 
 Key design decisions:
 
 - **Separation of concerns**: Tool (`.aishore/`) vs user content (`backlog/`)
-- **Single file CLI**: All logic in one self-contained script
+- **Single file CLI**: All logic in one self-contained script (~1340 lines)
 - **Sensible defaults**: Config is optional, env vars for overrides
 - **Auto-detect context**: Finds CLAUDE.md automatically
-- **Self-updating**: `update` command fetches latest from upstream
-- **Completion contract**: Agents write to result.json
+- **Checksum-verified updates**: `update` command verifies SHA-256 before installing
+- **Concurrency guard**: `flock`-based locking prevents parallel runs
+- **Completion contract**: Agents write to `result.json` to signal done
 
 ## Questions?
 

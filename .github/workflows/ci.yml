@@ -13,10 +13,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run ShellCheck
+      - name: Run ShellCheck on aishore CLI
         uses: ludeeus/action-shellcheck@master
         with:
           scandir: '.aishore'
+          severity: warning
+
+      - name: Run ShellCheck on install.sh
+        uses: ludeeus/action-shellcheck@master
+        with:
+          additional_files: 'install.sh'
+          severity: warning
+
+      - name: Run ShellCheck on migrate.sh
+        uses: ludeeus/action-shellcheck@master
+        with:
+          additional_files: 'migrate.sh'
           severity: warning
 
   test:
@@ -33,6 +45,12 @@ jobs:
       - name: Check script is executable
         run: test -x .aishore/aishore
 
+      - name: Syntax check all scripts
+        run: |
+          bash -n .aishore/aishore
+          bash -n install.sh
+          bash -n migrate.sh
+
       - name: Test help command
         run: .aishore/aishore help
 
@@ -44,10 +62,19 @@ jobs:
 
       - name: Validate JSON files
         run: |
-          jq empty .aishore/plan/backlog.json
-          jq empty .aishore/plan/bugs.json
-          jq empty .aishore/plan/icebox.json
-          jq empty .aishore/plan/sprint.json
+          jq empty backlog/backlog.json
+          jq empty backlog/bugs.json
+          jq empty backlog/icebox.json
+          jq empty backlog/sprint.json
+
+      - name: Check version consistency
+        run: |
+          file_version=$(cat VERSION)
+          script_version=$(grep -E '^AISHORE_VERSION=' .aishore/aishore | cut -d'"' -f2)
+          if [ "$file_version" != "$script_version" ]; then
+            echo "Version mismatch: VERSION=$file_version, aishore=$script_version"
+            exit 1
+          fi
 
   macos:
     name: macOS Compatibility

@@ -5,6 +5,36 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-01-27
+
+### Added
+
+- **Checksum-verified updates**: `update` command fetches SHA-256 checksums and verifies all files before installing
+- **`checksums` command**: Regenerate `checksums.sha256` for update verification
+- **Concurrency guard**: `flock`-based locking prevents concurrent aishore processes
+- **Setup wizard**: `init` is now an interactive 6-step wizard that checks prerequisites (git, claude, jq), detects project name and validation command, and scaffolds all files
+- **Validation command execution**: Sprint runner now executes `validation.command` from config between developer and validator agents
+- **Failed item skipping**: When running multiple sprints, failed items are excluded from subsequent picks
+- **Temp directory management**: All temp files use a single cleaned-up `mktemp` directory
+- **Refactored agent execution**: Shared `run_agent_process()` with `AGENT_OUTPUT_FILE` support for capturing `--print` output
+- **Shared utilities**: `build_context()`, `build_completion_contract()`, `count_ready_items()` reduce duplication
+
+### Fixed
+
+- **Archive path inconsistency**: `migrate.sh` copied archives to `.aishore/data/archive/` but CLI reads from `backlog/archive/` — now consistent
+- **Dead directory**: `install.sh` no longer creates unused `.aishore/data/archive/`
+- **Gitignore consistency**: All scripts (`cmd_init`, `migrate.sh`, `gitignore-entries.txt`) now produce identical entries
+- `mark_complete()` uses proper jq for archive entries instead of string interpolation
+- `create_sprint()` uses jq for safe JSON generation instead of heredoc with string interpolation
+
+### Changed
+
+- `init` command is now an interactive wizard instead of a silent scaffolder
+- `review` command saves output to a persistent log file and prints it to stdout
+- `update` command uses staged fetch-then-verify-then-install approach (atomic)
+- `update --no-verify` requires `--force` as a safety measure
+- `groom` command exits non-zero on agent failure
+
 ## [0.1.2] - 2025-01-25
 
 ### Added
@@ -59,4 +89,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `.aishore/` self-contained directory
 - `backlog/` for user content (backlog.json, bugs.json, sprint.json)
-- `data/` for runtime files (logs, status, archive)
+- `data/` for runtime files (logs, status)
