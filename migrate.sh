@@ -316,7 +316,7 @@ update_gitignore_for_backlog() {
 
         # Add backlog archive entry if not present
         if ! grep -q ".aishore/data/logs/" "$gitignore" 2>/dev/null; then
-            local content=$'\n# aishore runtime files\n.aishore/data/logs/\n.aishore/data/status/result.json\n.aishore/data/status/.item_source'
+            local content=$'\n# aishore runtime files\n.aishore/data/logs/\n.aishore/data/status/result.json\n.aishore/data/status/.item_source\n.aishore/data/status/.aishore.lock'
             do_append "$gitignore" "$content"
             success "Added runtime entries to .gitignore"
         fi

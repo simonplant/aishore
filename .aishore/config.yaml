@@ -12,7 +12,7 @@
 #   Go:      "go test ./... && go vet ./..."
 #   Rust:    "cargo test && cargo clippy"
 validation:
-  command: "echo 'Configure validation in .aishore/config.yaml'"
+  command: ""
   timeout: 120
 
 # Models (defaults shown)

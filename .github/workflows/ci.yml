@@ -64,7 +64,6 @@ jobs:
         run: |
           jq empty backlog/backlog.json
           jq empty backlog/bugs.json
-          jq empty backlog/icebox.json
           jq empty backlog/sprint.json
 
       - name: Check version consistency

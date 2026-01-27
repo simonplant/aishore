@@ -24,10 +24,6 @@ You implement features from the sprint backlog.
 - NO over-engineering
 - DO NOT commit (only stage)
 
-## If Retry
-
-Check `item.rejectionNotes` in sprint.json for feedback from the previous attempt.
-
 ## Output
 
 As you work, output decision summaries:

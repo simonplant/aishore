@@ -83,11 +83,9 @@ log_agent()   { echo -e "${MAGENTA}[$1]${NC} $2"; }
 # UTILITIES (inlined from common.sh)
 # ============================================================================
 
-iso_timestamp() { date -Iseconds; }
-
 count_ready_items() {
     local file="$1"
-    jq '[.items[] | select(.readyForSprint == true and .passes != true)] | length' "$file" 2>/dev/null || echo 0
+    jq '[.items[] | select(.readyForSprint == true and (.passes == false or .passes == null))] | length' "$file" 2>/dev/null || echo 0
 }
 
 build_context() {
@@ -210,9 +208,14 @@ pick_item() {
         for backlog in "backlog.json" "bugs.json"; do
             item_json=$(jq -r --arg id "$specific_id" '
                 .items[] | select(.id == $id) |
-                {id, title, description, steps, acceptanceCriteria, priority}
+                {id, title, description, steps, acceptanceCriteria, priority, status, passes}
             ' "$BACKLOG_DIR/$backlog" 2>/dev/null)
             if [[ -n "$item_json" && "$item_json" != "null" ]]; then
+                local item_status
+                item_status=$(echo "$item_json" | jq -r '.status // "todo"')
+                if [[ "$item_status" == "done" ]]; then
+                    log_warning "Item $specific_id is already completed — re-running"
+                fi
                 echo "$backlog" > "$source_file"
                 echo "$item_json"
                 return 0
@@ -269,6 +272,8 @@ create_sprint() {
     local now
     now=$(date -Iseconds)
 
+    local tmp_sprint
+    tmp_sprint="$(ensure_tmpdir)/sprint_create.json"
     jq -n \
         --arg sprintId "sprint-$(date +%s)" \
         --arg startedAt "$now" \
@@ -289,7 +294,8 @@ create_sprint() {
                 acceptanceCriteria: $ac,
                 startedAt: $startedAt
             }
-        }' > "$BACKLOG_DIR/sprint.json"
+        }' > "$tmp_sprint"
+    mv "$tmp_sprint" "$BACKLOG_DIR/sprint.json"
 
     ITEM_ID="$item_id"
     log_info "Sprint created: $item_id - $title"
@@ -401,9 +407,9 @@ run_agent_process() {
 
     if kill -0 "$agent_pid" 2>/dev/null; then
         log_warning "Agent timed out after ${AGENT_TIMEOUT}s, killing..."
-        kill -TERM -"$agent_pid" 2>/dev/null || kill -TERM "$agent_pid" 2>/dev/null
+        kill -TERM -- -"$agent_pid" 2>/dev/null || kill -TERM "$agent_pid" 2>/dev/null
         sleep 2
-        kill -KILL -"$agent_pid" 2>/dev/null || true
+        kill -KILL -- -"$agent_pid" 2>/dev/null || true
     fi
 
     wait "$agent_pid" 2>/dev/null || true
@@ -413,7 +419,7 @@ run_agent_process() {
     log_agent "$agent_label" "Completed in ${duration}s"
 
     append_log "$LOGS_DIR/agent-runs.log" \
-        "$(iso_timestamp)|$agent_label|${AGENT_MODE:-unknown}|${duration}s|$model"
+        "$(date -Iseconds)|$agent_label|${AGENT_MODE:-unknown}|${duration}s|$model"
 }
 
 run_agent() {
@@ -931,7 +937,7 @@ cmd_init() {
     log_subheader "Step 5/6 — Scaffolding"
 
     # Create directories
-    mkdir -p "$STATUS_DIR" "$LOGS_DIR" "$ARCHIVE_DIR" "$BACKLOG_DIR/archive" "$AGENTS_DIR"
+    mkdir -p "$STATUS_DIR" "$LOGS_DIR" "$ARCHIVE_DIR" "$AGENTS_DIR"
     log_success "Created directory structure"
 
     # Write config.yaml
@@ -1335,7 +1341,7 @@ EOF
 # ============================================================================
 
 main() {
-    mkdir -p "$STATUS_DIR" "$LOGS_DIR" "$ARCHIVE_DIR" "$BACKLOG_DIR/archive"
+    mkdir -p "$STATUS_DIR" "$LOGS_DIR" "$ARCHIVE_DIR"
 
     local cmd="${1:-help}"
     shift || true
