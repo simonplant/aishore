@@ -179,11 +179,12 @@ load_config() {
     [[ ! -f "$CONFIG_FILE" ]] && return 0
 
     if command -v yq &> /dev/null; then
-        VALIDATE_CMD=$(yq -r '.validation.command // ""' "$CONFIG_FILE")
-        VALIDATE_TIMEOUT=$(yq -r '.validation.timeout // 120' "$CONFIG_FILE")
-        local cfg_primary=$(yq -r '.models.primary // ""' "$CONFIG_FILE")
-        local cfg_fast=$(yq -r '.models.fast // ""' "$CONFIG_FILE")
-        local cfg_timeout=$(yq -r '.agent.timeout // ""' "$CONFIG_FILE")
+        local cfg_primary cfg_fast cfg_timeout
+        VALIDATE_CMD=$(yq -r '.validation.command // ""' "$CONFIG_FILE" 2>/dev/null) || VALIDATE_CMD=""
+        VALIDATE_TIMEOUT=$(yq -r '.validation.timeout // 120' "$CONFIG_FILE" 2>/dev/null) || true
+        cfg_primary=$(yq -r '.models.primary // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_primary=""
+        cfg_fast=$(yq -r '.models.fast // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_fast=""
+        cfg_timeout=$(yq -r '.agent.timeout // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_timeout=""
         [[ -n "$cfg_primary" ]] && MODEL_PRIMARY="$cfg_primary"
         [[ -n "$cfg_fast" ]] && MODEL_FAST="$cfg_fast"
         [[ -n "$cfg_timeout" ]] && AGENT_TIMEOUT="$cfg_timeout"
@@ -296,12 +297,14 @@ create_sprint() {
 mark_complete() {
     local item_id="$1"
     local source="$2"
-    local now=$(date -Iseconds)
+    local now
+    now=$(date -Iseconds)
 
     [[ -z "$source" ]] && { log_error "Cannot mark complete: source backlog is empty"; return 1; }
 
     # Update source backlog
-    local tmp="$(ensure_tmpdir)/backlog_update.json"
+    local tmp
+    tmp="$(ensure_tmpdir)/backlog_update.json"
     if jq --arg id "$item_id" --arg ts "$now" '
         (.items[] | select(.id == $id)) |= . + {passes: true, status: "done", readyForSprint: false, completedAt: $ts}
     ' "$BACKLOG_DIR/$source" > "$tmp" 2>/dev/null; then
@@ -313,7 +316,8 @@ mark_complete() {
     fi
 
     # Update sprint.json
-    local tmp_sprint="$(ensure_tmpdir)/sprint_update.json"
+    local tmp_sprint
+    tmp_sprint="$(ensure_tmpdir)/sprint_update.json"
     if jq --arg ts "$now" '.status = "completed" | .completedAt = $ts | .item.status = "passed" | .item.completedAt = $ts' \
         "$BACKLOG_DIR/sprint.json" > "$tmp_sprint" 2>/dev/null; then
         mv "$tmp_sprint" "$BACKLOG_DIR/sprint.json"
@@ -358,7 +362,8 @@ run_agent_process() {
     local prompt="$5"
 
     log_agent "$agent_label" "Starting (model: $model, timeout: ${AGENT_TIMEOUT}s)"
-    local start_time=$(date +%s)
+    local start_time
+    start_time=$(date +%s)
 
     local claude_args=(
         --model "$model"
@@ -402,7 +407,8 @@ run_agent_process() {
 
     wait "$agent_pid" 2>/dev/null || true
 
-    local duration=$(($(date +%s) - start_time))
+    local duration
+    duration=$(($(date +%s) - start_time))
     log_agent "$agent_label" "Completed in ${duration}s"
 
     append_log "$LOGS_DIR/agent-runs.log" \
@@ -441,14 +447,17 @@ check_result() {
         return 1
     fi
 
-    local status=$(jq -r '.status // "unknown"' "$STATUS_DIR/result.json" 2>/dev/null)
+    local status
+    status=$(jq -r '.status // "unknown"' "$STATUS_DIR/result.json" 2>/dev/null)
 
     if [[ "$status" == "pass" ]]; then
-        local summary=$(jq -r '.summary // "completed"' "$STATUS_DIR/result.json")
+        local summary
+        summary=$(jq -r '.summary // "completed"' "$STATUS_DIR/result.json")
         log_success "$summary"
         return 0
     else
-        local reason=$(jq -r '.reason // "unknown error"' "$STATUS_DIR/result.json")
+        local reason
+        reason=$(jq -r '.reason // "unknown error"' "$STATUS_DIR/result.json")
         log_error "$reason"
         return 1
     fi
@@ -514,7 +523,8 @@ cmd_run() {
             break
         fi
 
-        local item_source=$(get_item_source)
+        local item_source
+        item_source=$(get_item_source)
         [[ -z "$item_source" ]] && { log_error "Failed to determine item source"; break; }
 
         create_sprint "$item_json" "$item_source"
@@ -686,7 +696,8 @@ $([[ -n "$since" ]] && echo "Review changes since commit: $since")
 $([[ "$update_docs" == "true" ]] && echo "You may update documentation and add backlog items." || echo "Read-only review. Do not modify files.")
 $(build_completion_contract)"
 
-    local output_file="$(ensure_tmpdir)/review_output.txt"
+    local output_file
+    output_file="$(ensure_tmpdir)/review_output.txt"
 
     log_info "Running architect agent..."
 
@@ -734,9 +745,12 @@ cmd_metrics() {
     ready_bugs=$(count_ready_items "$bugs_file")
 
     if [[ "$json_output" == "true" ]]; then
-        local completed=$([[ -f "$sprints_file" ]] && wc -l < "$sprints_file" | tr -d ' ' || echo 0)
-        local backlog_total=$(jq '.items | length' "$backlog_file" 2>/dev/null || echo 0)
-        local bugs_total=$(jq '.items | length' "$bugs_file" 2>/dev/null || echo 0)
+        local completed
+        completed=$([[ -f "$sprints_file" ]] && wc -l < "$sprints_file" | tr -d ' ' || echo 0)
+        local backlog_total
+        backlog_total=$(jq '.items | length' "$backlog_file" 2>/dev/null || echo 0)
+        local bugs_total
+        bugs_total=$(jq '.items | length' "$bugs_file" 2>/dev/null || echo 0)
 
         cat <<EOF
 {
@@ -837,9 +851,10 @@ cmd_init() {
     local detected_validate=""
     if [[ -f "$PROJECT_ROOT/package.json" ]]; then
         if command -v jq &>/dev/null; then
-            local has_test=$(jq -r '.scripts.test // empty' "$PROJECT_ROOT/package.json" 2>/dev/null || true)
-            local has_build=$(jq -r '.scripts.build // empty' "$PROJECT_ROOT/package.json" 2>/dev/null || true)
-            local has_check=$(jq -r '.scripts.check // empty' "$PROJECT_ROOT/package.json" 2>/dev/null || true)
+            local has_test has_build has_check
+            has_test=$(jq -r '.scripts.test // empty' "$PROJECT_ROOT/package.json" 2>/dev/null || true)
+            has_build=$(jq -r '.scripts.build // empty' "$PROJECT_ROOT/package.json" 2>/dev/null || true)
+            has_check=$(jq -r '.scripts.check // empty' "$PROJECT_ROOT/package.json" 2>/dev/null || true)
             if [[ -n "$has_check" ]]; then
                 detected_validate="npm run check"
             elif [[ -n "$has_build" && -n "$has_test" ]]; then
@@ -888,7 +903,8 @@ cmd_init() {
         fi
     done
 
-    local claude_md=$(find_claude_md)
+    local claude_md
+    claude_md=$(find_claude_md)
 
     if [[ -n "$claude_md" ]]; then
         log_success "Found $claude_md — agents will use this automatically"
@@ -1162,7 +1178,8 @@ cmd_update() {
     }
 
     # ── Phase 1: Fetch & verify all files into staging ──
-    local staging_dir="$(ensure_tmpdir)/update_staging"
+    local staging_dir
+    staging_dir="$(ensure_tmpdir)/update_staging"
     mkdir -p "$staging_dir/agents"
     local all_verified=true
 
@@ -1240,7 +1257,8 @@ cmd_checksums() {
         exit 1
     fi
 
-    local tmp="$(ensure_tmpdir)/checksums_gen.txt"
+    local tmp
+    tmp="$(ensure_tmpdir)/checksums_gen.txt"
     for f in "${files[@]}"; do
         [[ -f "$f" ]] && $hash_cmd "$f" >> "$tmp"
     done
