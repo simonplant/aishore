@@ -161,6 +161,14 @@ verify_checksum() {
     [[ "$actual" == "$expected" ]]
 }
 
+require_tool() {
+    local tool="$1"
+    if ! command -v "$tool" &>/dev/null; then
+        log_error "'$tool' is required but not installed. Please install it and try again."
+        exit 1
+    fi
+}
+
 # ============================================================================
 # AUTO-DETECT CLAUDE.MD
 # ============================================================================
@@ -537,6 +545,9 @@ handle_sprint_failure() {
 # ============================================================================
 
 cmd_run() {
+    require_tool jq
+    require_tool git
+
     local count=1
     local auto_commit=false
     local specific_id=""
@@ -670,7 +681,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
         elif [[ $count -eq 1 ]]; then
             echo ""
             git status --short
-            read -p "Commit? [y/N] " c
+            read -r -p "Commit? [y/N] " c
             if [[ $c == [yY] ]]; then
                 git add -A && git commit -m "feat($ITEM_ID): implement sprint item
 
@@ -691,6 +702,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 }
 
 cmd_groom() {
+    require_tool jq
+
     local mode="bugs"
     [[ "${1:-}" == "--backlog" ]] && mode="backlog"
 
@@ -739,6 +752,8 @@ $prompt"
 }
 
 cmd_review() {
+    require_tool jq
+
     local update_docs=false
     local since=""
 
@@ -810,6 +825,8 @@ $prompt"
 }
 
 cmd_metrics() {
+    require_tool jq
+
     local json_output=false
     [[ "${1:-}" == "--json" ]] && json_output=true
 
@@ -865,7 +882,7 @@ cmd_init() {
     local reinit=false
     if [[ -f "$BACKLOG_DIR/backlog.json" ]]; then
         log_warning "aishore already initialized (backlog.json exists)"
-        read -p "  Reinitialize? This preserves existing backlogs. [y/N] " c
+        read -r -p "  Reinitialize? This preserves existing backlogs. [y/N] " c
         [[ $c != [yY] ]] && exit 0
         reinit=true
         echo ""
@@ -916,7 +933,7 @@ cmd_init() {
     fi
     [[ -z "$detected_name" ]] && detected_name=$(basename "$PROJECT_ROOT")
 
-    read -p "  Project name [$detected_name]: " project_name
+    read -r -p "  Project name [$detected_name]: " project_name
     project_name="${project_name:-$detected_name}"
 
     echo ""
@@ -956,10 +973,10 @@ cmd_init() {
     fi
 
     if [[ -n "$detected_validate" ]]; then
-        read -p "  Validation command [$detected_validate]: " validate_cmd
+        read -r -p "  Validation command [$detected_validate]: " validate_cmd
         validate_cmd="${validate_cmd:-$detected_validate}"
     else
-        read -p "  Validation command (or leave empty to skip): " validate_cmd
+        read -r -p "  Validation command (or leave empty to skip): " validate_cmd
     fi
 
     echo ""
@@ -1327,11 +1344,11 @@ cmd_checksums() {
     done
 
     # Generate checksums
-    local hash_cmd=""
+    local hash_cmd=()
     if command -v sha256sum &>/dev/null; then
-        hash_cmd="sha256sum"
+        hash_cmd=(sha256sum)
     elif command -v shasum &>/dev/null; then
-        hash_cmd="shasum -a 256"
+        hash_cmd=(shasum -a 256)
     else
         log_error "No sha256sum or shasum found"
         exit 1
@@ -1340,7 +1357,7 @@ cmd_checksums() {
     local tmp
     tmp="$(ensure_tmpdir)/checksums_gen.txt"
     for f in "${files[@]}"; do
-        [[ -f "$f" ]] && $hash_cmd "$f" >> "$tmp"
+        [[ -f "$f" ]] && "${hash_cmd[@]}" "$f" >> "$tmp"
     done
 
     mv "$tmp" "$checksum_file"

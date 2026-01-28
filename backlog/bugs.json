@@ -141,9 +141,10 @@
         "Running aishore metrics without jq produces a clear error message",
         "shellcheck passes with no new warnings"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-01-28T13:44:35-07:00"
     },
     {
       "id": "BUG-007",

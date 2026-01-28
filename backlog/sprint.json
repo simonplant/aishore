@@ -1,26 +1,28 @@
 {
-  "sprintId": "sprint-1769632509",
-  "startedAt": "2026-01-28T13:35:09-07:00",
+  "sprintId": "sprint-1769632797",
+  "startedAt": "2026-01-28T13:39:57-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-005",
-    "title": "Error messages don't suggest remediation",
+    "id": "BUG-006",
+    "title": "Bash best-practice fixes: read -r, unquoted hash_cmd, prerequisite checks",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Step 1: In cmd_run(), update 'No ready items in backlog' to add: 'Run .aishore/aishore groom to prepare items, or set readyForSprint: true in backlog.json'",
-      "Step 2: In check_result(), update 'No result file' to add: 'Check .aishore/data/logs/ for details'",
-      "Step 3: In pick_item(), update 'Item not found: $id' to suggest checking backlog.json and bugs.json",
-      "Step 4: In cmd_run(), when the item source can't be determined, suggest a concrete next step",
-      "Step 5: In load_config(), when yq is missing, add hint about installing yq for full config support"
+      "Step 1: Add -r flag to all read -p calls (5 instances in cmd_run and cmd_init)",
+      "Step 2: Convert hash_cmd from string to array: hash_cmd=(sha256sum) or hash_cmd=(shasum -a 256), then use \"${hash_cmd[@]}\" when invoking",
+      "Step 3: Add a require_tool() helper that checks command -v and exits with a helpful message if missing",
+      "Step 4: Call require_tool jq at the top of cmd_run, cmd_groom, cmd_review, cmd_metrics",
+      "Step 5: Call require_tool git at the top of cmd_run"
     ],
     "acceptanceCriteria": [
-      "Each error message includes a suggested next action or remediation",
-      "Suggestions reference actual commands or file paths the user can act on",
-      "No existing error paths are removed, only augmented"
+      "All read calls use -r flag",
+      "hash_cmd is an array, invoked with proper quoting",
+      "Running aishore run without jq produces a clear error message, not a jq crash",
+      "Running aishore metrics without jq produces a clear error message",
+      "shellcheck passes with no new warnings"
     ],
-    "startedAt": "2026-01-28T13:35:09-07:00",
+    "startedAt": "2026-01-28T13:39:57-07:00",
     "status": "passed",
-    "completedAt": "2026-01-28T13:39:57-07:00"
+    "completedAt": "2026-01-28T13:44:35-07:00"
   },
-  "completedAt": "2026-01-28T13:39:57-07:00"
+  "completedAt": "2026-01-28T13:44:35-07:00"
 }
