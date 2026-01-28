@@ -18,11 +18,17 @@
 set -euo pipefail
 
 AISHORE_TMPDIR=""
-cleanup_tmpdir() {
+AISHORE_DID_STASH=""
+cleanup_exit() {
+    # Restore stashed changes on unexpected exit
+    if [[ "$AISHORE_DID_STASH" == "true" ]]; then
+        git stash pop >/dev/null 2>&1 || true
+        AISHORE_DID_STASH=""
+    fi
     [[ -n "$AISHORE_TMPDIR" && -d "$AISHORE_TMPDIR" ]] && rm -rf "$AISHORE_TMPDIR"
     return 0
 }
-trap cleanup_tmpdir EXIT
+trap cleanup_exit EXIT
 
 ensure_tmpdir() {
     [[ -z "$AISHORE_TMPDIR" ]] && AISHORE_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/aishore.XXXXXX")
@@ -490,6 +496,17 @@ check_result() {
 }
 
 # ============================================================================
+# FAILURE RECOVERY
+# ============================================================================
+
+handle_sprint_failure() {
+    log_warning "Resetting working tree after sprint failure"
+    git checkout -- . 2>/dev/null || true
+    git clean -fd 2>/dev/null || true
+    reset_sprint
+}
+
+# ============================================================================
 # COMMANDS
 # ============================================================================
 
@@ -516,6 +533,15 @@ cmd_run() {
     acquire_lock
     load_config
     cd "$PROJECT_ROOT"
+
+    # Stash pre-existing uncommitted changes so sprints don't destroy them
+    local did_stash=false
+    if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
+        log_warning "Stashing pre-existing uncommitted changes"
+        git stash push -u -m "aishore: pre-sprint stash" >/dev/null 2>&1
+        did_stash=true
+        AISHORE_DID_STASH=true
+    fi
 
     log_header "aishore - Sprint Runner"
     echo "Project: $PROJECT_ROOT"
@@ -561,9 +587,7 @@ cmd_run() {
             log_error "Implementation failed"
             failed=$((failed + 1))
             FAILED_IDS["$ITEM_ID"]=1
-            git checkout -- . 2>/dev/null || true
-            git clean -fd 2>/dev/null || true
-            reset_sprint
+            handle_sprint_failure
             continue
         fi
 
@@ -584,9 +608,7 @@ cmd_run() {
                 log_error "Validation command failed"
                 failed=$((failed + 1))
                 FAILED_IDS["$ITEM_ID"]=1
-                git checkout -- . 2>/dev/null || true
-                git clean -fd 2>/dev/null || true
-                reset_sprint
+                handle_sprint_failure
                 continue
             fi
             log_success "Validation passed"
@@ -598,9 +620,7 @@ cmd_run() {
             log_error "Validation failed"
             failed=$((failed + 1))
             FAILED_IDS["$ITEM_ID"]=1
-            git checkout -- . 2>/dev/null || true
-            git clean -fd 2>/dev/null || true
-            reset_sprint
+            handle_sprint_failure
             continue
         fi
 
@@ -632,6 +652,13 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
             fi
         fi
     done
+
+    # Restore pre-existing uncommitted changes
+    if [[ "$did_stash" == "true" ]]; then
+        log_info "Restoring pre-existing uncommitted changes"
+        AISHORE_DID_STASH=""
+        git stash pop >/dev/null 2>&1 || log_warning "Failed to restore stashed changes — run 'git stash pop' manually"
+    fi
 
     log_header "Results: $passed passed, $failed failed"
     [[ $failed -gt 0 || $passed -eq 0 ]] && exit 1 || exit 0
