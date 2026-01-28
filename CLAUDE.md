@@ -62,11 +62,17 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 **Context auto-detection:** aishore automatically finds and uses `CLAUDE.md` from the project root.
 
-**Agent invocation:** The CLI invokes Claude Code via `claude --model` with agent prompt, sprint context, and CLAUDE.md. Agents have permissions for: `Bash(git:*)`, `Edit`, `Write`, `Read`, `Glob`, `Grep`.
+**Agent invocation:** All agent invocations go through `run_agent()`, which assembles the prompt, appends the completion contract, and delegates to `run_agent_process()`. Agents have permissions for: `Bash(git:*)`, `Edit`, `Write`, `Read`, `Glob`, `Grep`.
 
 **Concurrency:** Only one aishore process runs at a time, enforced via `flock` on `.aishore/data/status/.aishore.lock`.
 
-**Update integrity:** The `update` command fetches files into a staging directory, verifies SHA-256 checksums against `checksums.sha256`, and only installs if all files pass verification.
+**Safe failure recovery:** Pre-existing uncommitted changes are stashed before sprints and restored afterward. Sprint failures reset the working tree without destroying unrelated work.
+
+**Configuration precedence:** env vars > config.yaml > built-in defaults.
+
+**Update integrity:** The `update` command fetches the remote `VERSION` file for comparison, then stages all files into a temp directory, verifies SHA-256 checksums against `checksums.sha256`, and only installs if all files pass verification.
+
+**Version management:** The `VERSION` file is the single source of truth. The CLI reads it at runtime, with an inline fallback for installed copies.
 
 ## Code Style
 

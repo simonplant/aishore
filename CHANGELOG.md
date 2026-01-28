@@ -5,6 +5,46 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-01-28
+
+### Added
+
+- **Progress indication**: Agent polling loop now shows periodic elapsed-time messages instead of silent waiting
+- **Prerequisite checks**: `require_tool` helper validates `jq` and `git` are installed before runtime commands, with clear error messages
+- **Actionable error messages**: All error messages now suggest remediation (e.g., "No ready items" tells you to run `groom` or edit the backlog)
+- **Safe failure recovery**: Sprint failures stash pre-existing uncommitted changes and restore them afterward, instead of destroying them with `git checkout -- .`
+
+### Fixed
+
+- **Config precedence**: Environment variables now correctly override `config.yaml` values (previously config.yaml silently won)
+- **macOS compatibility**: `setsid` fallback for systems where it's unavailable (macOS)
+- **`pick_item` field consistency**: Both specific-ID and auto-pick paths now return the same JSON shape
+- **`_apply_env_overrides` exit code**: Added `return 0` to prevent `set -e` from killing the script when no env vars are set
+- **yq warning false positive**: No longer warns about yq when only `validation.timeout` is set in config.yaml
+- **`read` calls**: Added `-r` flag to all 5 interactive `read -p` calls to prevent backslash interpretation
+- **`hash_cmd` quoting**: Converted from string to array for safe word-splitting
+
+### Changed
+
+- **Unified agent invocation**: `cmd_groom` and `cmd_review` now use `run_agent()` instead of calling `run_agent_process()` directly
+- **Version management**: `VERSION` file is the single source of truth; CLI reads it at runtime with inline fallback for installed copies
+- **Update command**: Fetches remote `VERSION` file instead of grepping the script for version comparison
+- **`migrate.sh`**: Reads version dynamically instead of hardcoding it
+
+### Removed
+
+- **`icebox.json` references** in `migrate.sh` (file was previously removed from the project)
+- **Hardcoded gitignore entries** in `cmd_init` (now reads from `gitignore-entries.txt`)
+- **Machine-specific entries** in `.claude/settings.local.json`
+
+### Documentation
+
+- Fixed `config.yaml` init template showing agent timeout as 600 instead of 3600
+- Added `AISHORE_VALIDATE_CMD` and `AISHORE_VALIDATE_TIMEOUT` to help text
+- Marked Product Owner Review/Evolve modes as planned in agent prompt
+- Removed hardcoded line count references from CLAUDE.md and CONTRIBUTING.md
+- Archive file now passed as context to groom command when it exists
+
 ## [0.1.3] - 2026-01-27
 
 ### Added

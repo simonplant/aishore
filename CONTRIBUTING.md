@@ -110,11 +110,21 @@ project/
 
 - **Separation of concerns** — Tool (`.aishore/`) vs user content (`backlog/`)
 - **Single-file CLI** — All logic in one self-contained Bash script
-- **Sensible defaults** — Config is optional; env vars available for overrides
+- **Sensible defaults** — Config is optional; env vars override config, which overrides defaults
 - **Auto-detect context** — Finds `CLAUDE.md` automatically
 - **Checksum-verified updates** — `update` command verifies SHA-256 before installing
 - **Concurrency guard** — `flock`-based locking prevents parallel runs
 - **Completion contract** — Agents write to `result.json` to signal done
+- **Safe failure recovery** — Pre-existing uncommitted work is stashed and restored on sprint failure
+
+### Version Management
+
+The `VERSION` file at project root is the single source of truth. The CLI reads it at runtime. An inline fallback in the script covers installed copies (where `VERSION` isn't present).
+
+When bumping versions:
+1. Update `VERSION`
+2. Update the fallback value in `.aishore/aishore` (`AISHORE_VERSION="x.y.z"`)
+3. CI verifies both match
 
 ## Questions?
 

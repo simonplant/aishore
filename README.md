@@ -158,7 +158,7 @@ Or use environment variables:
 - `jq` — JSON processor
 - `bash` 4.4+
 - `git`
-- On macOS: `brew install coreutils` (for `gtimeout`)
+- On macOS: `brew install coreutils` (for `gtimeout` used in validation timeouts)
 
 ## Keeping Updated
 
@@ -176,7 +176,7 @@ If checksums cannot be fetched, the update aborts. Use `--force --no-verify` to 
 
 **Concurrency guard:** Only one aishore process runs at a time (uses `flock` on Linux).
 
-**Sprint execution:** The orchestrator picks a ready backlog item, invokes the developer agent via `claude --model`, then runs your validation command (if configured), then invokes the validator agent.
+**Sprint execution:** The orchestrator picks a ready backlog item, invokes the developer agent via `claude --model`, then runs your validation command (if configured), then invokes the validator agent. Progress messages show elapsed time during agent execution.
 
 **Completion contract:** Agents signal completion by writing to `.aishore/data/status/result.json`:
 
@@ -184,9 +184,13 @@ If checksums cannot be fetched, the update aborts. Use `--force --no-verify` to 
 {"status": "pass", "summary": "implemented feature X"}
 ```
 
-The orchestrator polls for this file, then proceeds to the next step. On failure, the working tree is reset and the next item is tried.
+The orchestrator polls for this file, then proceeds to the next step.
+
+**Safe failure recovery:** On failure, the working tree is reset. Any pre-existing uncommitted changes are stashed before the sprint and restored afterward.
 
 **Failed item skipping:** When running multiple sprints (`run 5`), items that fail are excluded from subsequent picks in the same session.
+
+**Configuration precedence:** Environment variables override `config.yaml`, which overrides built-in defaults. This lets you set project defaults in config while overriding per-run via env vars.
 
 ## License
 
