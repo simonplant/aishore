@@ -1,28 +1,24 @@
 {
-  "sprintId": "sprint-1769633075",
-  "startedAt": "2026-01-28T13:44:35-07:00",
+  "sprintId": "sprint-1769633364",
+  "startedAt": "2026-01-28T13:49:24-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-007",
-    "title": "Unify agent invocation: cmd_groom and cmd_review bypass run_agent",
+    "id": "BUG-008",
+    "title": "pick_item returns different field sets for specific vs auto pick",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Step 1: Extend run_agent() to accept optional context_files and model parameters, making it flexible enough for groom and review",
-      "Step 2: Add an optional parameter for AGENT_OUTPUT_FILE support (needed by review)",
-      "Step 3: Refactor cmd_groom() to use run_agent() instead of directly calling run_agent_process()",
-      "Step 4: Refactor cmd_review() to use run_agent() instead of directly calling run_agent_process()",
-      "Step 5: Ensure all three callers (run, groom, review) produce identical prompt structure: agent prompt + mode + completion contract, with context files prepended"
+      "Step 1: Make both jq queries in pick_item() select the same fields: {id, title, description, steps, acceptanceCriteria, priority, status, passes}",
+      "Step 2: Use defaults in the jq query for status and passes: (.status // \"todo\") and (.passes // false)",
+      "Step 3: Verify create_sprint handles the consistent shape correctly"
     ],
     "acceptanceCriteria": [
-      "cmd_run, cmd_groom, and cmd_review all invoke agents through run_agent()",
-      "run_agent_process() is only called by run_agent(), not directly by commands",
-      "Review command still captures output to file and saves to log",
-      "Groom command still passes both backlog files as context",
-      "All agent invocations include the completion contract"
+      "pick_item returns the same JSON shape for both specific-ID and auto-pick paths",
+      "Both paths include id, title, description, steps, acceptanceCriteria, priority, status, passes",
+      "create_sprint works correctly with either path"
     ],
-    "startedAt": "2026-01-28T13:44:35-07:00",
+    "startedAt": "2026-01-28T13:49:24-07:00",
     "status": "passed",
-    "completedAt": "2026-01-28T13:49:24-07:00"
+    "completedAt": "2026-01-28T13:52:52-07:00"
   },
-  "completedAt": "2026-01-28T13:49:24-07:00"
+  "completedAt": "2026-01-28T13:52:52-07:00"
 }

@@ -241,7 +241,7 @@ pick_item() {
         for backlog in "backlog.json" "bugs.json"; do
             item_json=$(jq -r --arg id "$specific_id" '
                 .items[] | select(.id == $id) |
-                {id, title, description, steps, acceptanceCriteria, priority, status, passes}
+                {id, title, description, steps, acceptanceCriteria, priority, status: (.status // "todo"), passes: (.passes // false)}
             ' "$BACKLOG_DIR/$backlog" 2>/dev/null)
             if [[ -n "$item_json" && "$item_json" != "null" ]]; then
                 local item_status
@@ -273,7 +273,7 @@ pick_item() {
             . + {_priorityOrder: (if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end)}] |
             sort_by(._priorityOrder) |
             first |
-            if . then {id, title, description, steps, acceptanceCriteria, priority} else empty end
+            if . then {id, title, description, steps, acceptanceCriteria, priority, status: (.status // "todo"), passes: (.passes // false)} else empty end
         ' "$BACKLOG_DIR/$backlog" 2>/dev/null)
 
         if [[ -n "$item_json" && "$item_json" != "null" ]]; then
