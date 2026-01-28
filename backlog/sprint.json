@@ -1,27 +1,26 @@
 {
-  "sprintId": "sprint-1769632163",
-  "startedAt": "2026-01-28T13:29:23-07:00",
+  "sprintId": "sprint-1769632336",
+  "startedAt": "2026-01-28T13:32:16-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-003",
-    "title": "setsid not available on macOS",
+    "id": "BUG-004",
+    "title": "No progress indication during agent execution",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Step 1: Before the setsid calls in run_agent_process(), check if setsid is available with command -v setsid",
-      "Step 2: If setsid is available, use it as currently done",
-      "Step 3: If setsid is not available, launch claude directly without setsid (just background with &)",
-      "Step 4: Adjust the kill logic at lines 410-412 to handle both cases: with setsid use kill -TERM -- -$pid, without setsid use kill -TERM $pid",
-      "Step 5: Test that the help and version commands still work (no setsid needed for those)"
+      "Step 1: In the polling loop in run_agent_process(), add a periodic status message every 30 seconds",
+      "Step 2: The message should show elapsed time, e.g. log_info 'Waiting for agent... (30s elapsed)'",
+      "Step 3: Use a modulo check on elapsed to print every 30s without being noisy",
+      "Step 4: Keep the existing 5-second sleep interval for polling result.json"
     ],
     "acceptanceCriteria": [
-      "run_agent_process works on systems without setsid (macOS)",
-      "On Linux where setsid exists, behavior is unchanged",
-      "Agent timeout and kill logic works in both paths",
-      "No shellcheck warnings introduced"
+      "User sees periodic progress messages during agent execution",
+      "Messages show elapsed time",
+      "Messages appear at most every 30 seconds (not every 5s poll)",
+      "Existing polling behavior for result.json is unchanged"
     ],
-    "startedAt": "2026-01-28T13:29:23-07:00",
+    "startedAt": "2026-01-28T13:32:16-07:00",
     "status": "passed",
-    "completedAt": "2026-01-28T13:32:16-07:00"
+    "completedAt": "2026-01-28T13:35:09-07:00"
   },
-  "completedAt": "2026-01-28T13:32:16-07:00"
+  "completedAt": "2026-01-28T13:35:09-07:00"
 }

@@ -445,6 +445,9 @@ run_agent_process() {
         fi
         sleep 5
         elapsed=$((elapsed + 5))
+        if [[ $((elapsed % 30)) -eq 0 ]]; then
+            log_agent "$agent_label" "Waiting for agent... (${elapsed}s elapsed)"
+        fi
     done
 
     if kill -0 "$agent_pid" 2>/dev/null; then
