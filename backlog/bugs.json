@@ -116,9 +116,10 @@
         "Suggestions reference actual commands or file paths the user can act on",
         "No existing error paths are removed, only augmented"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-01-28T13:39:57-07:00"
     },
     {
       "id": "BUG-006",

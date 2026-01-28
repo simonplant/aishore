@@ -1,26 +1,26 @@
 {
-  "sprintId": "sprint-1769632336",
-  "startedAt": "2026-01-28T13:32:16-07:00",
+  "sprintId": "sprint-1769632509",
+  "startedAt": "2026-01-28T13:35:09-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-004",
-    "title": "No progress indication during agent execution",
+    "id": "BUG-005",
+    "title": "Error messages don't suggest remediation",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Step 1: In the polling loop in run_agent_process(), add a periodic status message every 30 seconds",
-      "Step 2: The message should show elapsed time, e.g. log_info 'Waiting for agent... (30s elapsed)'",
-      "Step 3: Use a modulo check on elapsed to print every 30s without being noisy",
-      "Step 4: Keep the existing 5-second sleep interval for polling result.json"
+      "Step 1: In cmd_run(), update 'No ready items in backlog' to add: 'Run .aishore/aishore groom to prepare items, or set readyForSprint: true in backlog.json'",
+      "Step 2: In check_result(), update 'No result file' to add: 'Check .aishore/data/logs/ for details'",
+      "Step 3: In pick_item(), update 'Item not found: $id' to suggest checking backlog.json and bugs.json",
+      "Step 4: In cmd_run(), when the item source can't be determined, suggest a concrete next step",
+      "Step 5: In load_config(), when yq is missing, add hint about installing yq for full config support"
     ],
     "acceptanceCriteria": [
-      "User sees periodic progress messages during agent execution",
-      "Messages show elapsed time",
-      "Messages appear at most every 30 seconds (not every 5s poll)",
-      "Existing polling behavior for result.json is unchanged"
+      "Each error message includes a suggested next action or remediation",
+      "Suggestions reference actual commands or file paths the user can act on",
+      "No existing error paths are removed, only augmented"
     ],
-    "startedAt": "2026-01-28T13:32:16-07:00",
+    "startedAt": "2026-01-28T13:35:09-07:00",
     "status": "passed",
-    "completedAt": "2026-01-28T13:35:09-07:00"
+    "completedAt": "2026-01-28T13:39:57-07:00"
   },
-  "completedAt": "2026-01-28T13:35:09-07:00"
+  "completedAt": "2026-01-28T13:39:57-07:00"
 }

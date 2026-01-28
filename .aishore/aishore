@@ -201,7 +201,7 @@ load_config() {
         [[ -n "$cfg_cmd" ]] && VALIDATE_CMD="$cfg_cmd"
         # Warn if config.yaml has model/timeout settings but yq is unavailable
         if grep -qE '^\s*(primary|fast|timeout):' "$CONFIG_FILE" 2>/dev/null; then
-            log_warning "config.yaml has model/timeout settings but yq is not installed — those settings are ignored"
+            log_warning "config.yaml has model/timeout settings but yq is not installed — those settings are ignored. Install yq for full config support: https://github.com/mikefarah/yq#install"
         fi
     fi
 
@@ -246,7 +246,7 @@ pick_item() {
                 return 0
             fi
         done
-        log_error "Item not found: $specific_id"
+        log_error "Item not found: $specific_id — check backlog/backlog.json and backlog/bugs.json for valid item IDs"
         return 1
     fi
 
@@ -501,7 +501,7 @@ $prompt"
 
 check_result() {
     if [[ ! -f "$STATUS_DIR/result.json" ]]; then
-        log_error "No result file - agent may have crashed"
+        log_error "No result file - agent may have crashed. Check .aishore/data/logs/ for details"
         return 1
     fi
 
@@ -594,16 +594,16 @@ cmd_run() {
         local item_json
         if ! item_json=$(pick_item "$specific_id" "$skip_list"); then
             if [[ -n "$specific_id" ]]; then
-                log_error "Item not found: $specific_id"
+                log_error "Item not found: $specific_id — check backlog/backlog.json and backlog/bugs.json for valid item IDs"
             else
-                log_warning "No ready items in backlog"
+                log_warning "No ready items in backlog. Run '.aishore/aishore groom' to prepare items, or set readyForSprint: true in backlog/backlog.json"
             fi
             break
         fi
 
         local item_source
         item_source=$(get_item_source)
-        [[ -z "$item_source" ]] && { log_error "Failed to determine item source"; break; }
+        [[ -z "$item_source" ]] && { log_error "Failed to determine item source. Ensure the item exists in backlog/backlog.json or backlog/bugs.json and retry"; break; }
 
         create_sprint "$item_json" "$item_source"
 
