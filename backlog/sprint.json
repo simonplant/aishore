@@ -1,28 +1,27 @@
 {
-  "sprintId": "sprint-1769631910",
-  "startedAt": "2026-01-28T13:25:10-07:00",
+  "sprintId": "sprint-1769632163",
+  "startedAt": "2026-01-28T13:29:23-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-002",
-    "title": "Failure recovery destroys all uncommitted work",
+    "id": "BUG-003",
+    "title": "setsid not available on macOS",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Step 1: At the start of cmd_run(), before any sprint begins, run git stash push -u -m 'aishore: pre-sprint stash' if the working tree is dirty, and record that a stash was made",
-      "Step 2: Extract the repeated failure-handling block (git checkout/clean/reset/continue) into a handle_sprint_failure() function",
-      "Step 3: On sprint failure, the handle_sprint_failure function should reset the working tree and log a warning",
-      "Step 4: At the end of cmd_run() (both success and failure paths), if a stash was made, run git stash pop and log that pre-existing changes were restored",
-      "Step 5: Add the stash pop to the cleanup path so it runs even on unexpected exits"
+      "Step 1: Before the setsid calls in run_agent_process(), check if setsid is available with command -v setsid",
+      "Step 2: If setsid is available, use it as currently done",
+      "Step 3: If setsid is not available, launch claude directly without setsid (just background with &)",
+      "Step 4: Adjust the kill logic at lines 410-412 to handle both cases: with setsid use kill -TERM -- -$pid, without setsid use kill -TERM $pid",
+      "Step 5: Test that the help and version commands still work (no setsid needed for those)"
     ],
     "acceptanceCriteria": [
-      "Pre-existing uncommitted changes are preserved through a failed sprint",
-      "Pre-existing uncommitted changes are preserved through a successful sprint",
-      "The failure-handling block is a single function called from all 3 locations",
-      "A warning is logged if pre-existing changes were stashed",
-      "If no pre-existing changes exist, no stash is created"
+      "run_agent_process works on systems without setsid (macOS)",
+      "On Linux where setsid exists, behavior is unchanged",
+      "Agent timeout and kill logic works in both paths",
+      "No shellcheck warnings introduced"
     ],
-    "startedAt": "2026-01-28T13:25:10-07:00",
+    "startedAt": "2026-01-28T13:29:23-07:00",
     "status": "passed",
-    "completedAt": "2026-01-28T13:29:23-07:00"
+    "completedAt": "2026-01-28T13:32:16-07:00"
   },
-  "completedAt": "2026-01-28T13:29:23-07:00"
+  "completedAt": "2026-01-28T13:32:16-07:00"
 }

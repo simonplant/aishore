@@ -397,6 +397,11 @@ run_agent_process() {
     local start_time
     start_time=$(date +%s)
 
+    local has_setsid=false
+    if command -v setsid &>/dev/null; then
+        has_setsid=true
+    fi
+
     local claude_args=(
         --model "$model"
         --permission-mode acceptEdits
@@ -405,14 +410,26 @@ run_agent_process() {
 
     if [[ -n "${AGENT_OUTPUT_FILE:-}" ]]; then
         claude_args+=(--print)
-        setsid env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
-            claude "${claude_args[@]}" \
-            -p "$prompt" > "$AGENT_OUTPUT_FILE" 2>&1 &
+        if [[ "$has_setsid" == true ]]; then
+            setsid env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+                claude "${claude_args[@]}" \
+                -p "$prompt" > "$AGENT_OUTPUT_FILE" 2>&1 &
+        else
+            env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+                claude "${claude_args[@]}" \
+                -p "$prompt" > "$AGENT_OUTPUT_FILE" 2>&1 &
+        fi
     else
         claude_args+=(--output-format "$output_format")
-        setsid env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
-            claude "${claude_args[@]}" \
-            -p "$prompt" &
+        if [[ "$has_setsid" == true ]]; then
+            setsid env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+                claude "${claude_args[@]}" \
+                -p "$prompt" &
+        else
+            env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+                claude "${claude_args[@]}" \
+                -p "$prompt" &
+        fi
     fi
 
     local agent_pid=$!
@@ -432,9 +449,15 @@ run_agent_process() {
 
     if kill -0 "$agent_pid" 2>/dev/null; then
         log_warning "Agent timed out after ${AGENT_TIMEOUT}s, killing..."
-        kill -TERM -- -"$agent_pid" 2>/dev/null || kill -TERM "$agent_pid" 2>/dev/null
-        sleep 2
-        kill -KILL -- -"$agent_pid" 2>/dev/null || true
+        if [[ "$has_setsid" == true ]]; then
+            kill -TERM -- -"$agent_pid" 2>/dev/null || kill -TERM "$agent_pid" 2>/dev/null
+            sleep 2
+            kill -KILL -- -"$agent_pid" 2>/dev/null || true
+        else
+            kill -TERM "$agent_pid" 2>/dev/null || true
+            sleep 2
+            kill -KILL "$agent_pid" 2>/dev/null || true
+        fi
     fi
 
     wait "$agent_pid" 2>/dev/null || true

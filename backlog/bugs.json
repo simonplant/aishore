@@ -70,9 +70,10 @@
         "Agent timeout and kill logic works in both paths",
         "No shellcheck warnings introduced"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-01-28T13:32:16-07:00"
     },
     {
       "id": "BUG-004",
