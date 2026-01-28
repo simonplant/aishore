@@ -50,14 +50,14 @@ BACKLOG_DIR="$PROJECT_ROOT/backlog"
 ARCHIVE_DIR="$BACKLOG_DIR/archive"
 
 # ============================================================================
-# DEFAULTS (can be overridden by config.yaml or env vars)
+# DEFAULTS — set first, config.yaml overrides, env vars win last
 # ============================================================================
 
-MODEL_PRIMARY="${AISHORE_MODEL_PRIMARY:-claude-opus-4-5-20251101}"
-MODEL_FAST="${AISHORE_MODEL_FAST:-claude-sonnet-4-20250514}"
-AGENT_TIMEOUT="${AISHORE_AGENT_TIMEOUT:-3600}"
-VALIDATE_CMD="${AISHORE_VALIDATE_CMD:-}"
-VALIDATE_TIMEOUT="${AISHORE_VALIDATE_TIMEOUT:-120}"
+MODEL_PRIMARY="claude-opus-4-5-20251101"
+MODEL_FAST="claude-sonnet-4-20250514"
+AGENT_TIMEOUT="3600"
+VALIDATE_CMD=""
+VALIDATE_TIMEOUT="120"
 
 # ============================================================================
 # COLORS & LOGGING (inlined from common.sh)
@@ -174,23 +174,42 @@ find_claude_md() {
 
 load_config() {
     # Only load if config exists
-    [[ ! -f "$CONFIG_FILE" ]] && return 0
+    [[ ! -f "$CONFIG_FILE" ]] && { _apply_env_overrides; return 0; }
 
     if command -v yq &> /dev/null; then
-        local cfg_primary cfg_fast cfg_timeout
-        VALIDATE_CMD=$(yq -r '.validation.command // ""' "$CONFIG_FILE" 2>/dev/null) || VALIDATE_CMD=""
-        VALIDATE_TIMEOUT=$(yq -r '.validation.timeout // 120' "$CONFIG_FILE" 2>/dev/null) || true
-        cfg_primary=$(yq -r '.models.primary // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_primary=""
-        cfg_fast=$(yq -r '.models.fast // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_fast=""
-        cfg_timeout=$(yq -r '.agent.timeout // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_timeout=""
-        [[ -n "$cfg_primary" ]] && MODEL_PRIMARY="$cfg_primary"
-        [[ -n "$cfg_fast" ]] && MODEL_FAST="$cfg_fast"
-        [[ -n "$cfg_timeout" ]] && AGENT_TIMEOUT="$cfg_timeout"
+        local cfg_val
+        cfg_val=$(yq -r '.validation.command // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
+        [[ -n "$cfg_val" ]] && VALIDATE_CMD="$cfg_val"
+        cfg_val=$(yq -r '.validation.timeout // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
+        [[ -n "$cfg_val" ]] && VALIDATE_TIMEOUT="$cfg_val"
+        cfg_val=$(yq -r '.models.primary // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
+        [[ -n "$cfg_val" ]] && MODEL_PRIMARY="$cfg_val"
+        cfg_val=$(yq -r '.models.fast // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
+        [[ -n "$cfg_val" ]] && MODEL_FAST="$cfg_val"
+        cfg_val=$(yq -r '.agent.timeout // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
+        [[ -n "$cfg_val" ]] && AGENT_TIMEOUT="$cfg_val"
     else
         # Simple grep fallback for validation command only
-        VALIDATE_CMD=$(grep -E '^\s*command:' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*command:\s*//' | tr -d '"' || echo "")
+        local cfg_cmd
+        cfg_cmd=$(grep -E '^\s*command:' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*command:\s*//' | tr -d '"' || echo "")
+        [[ -n "$cfg_cmd" ]] && VALIDATE_CMD="$cfg_cmd"
+        # Warn if config.yaml has model/timeout settings but yq is unavailable
+        if grep -qE '^\s*(primary|fast|timeout):' "$CONFIG_FILE" 2>/dev/null; then
+            log_warning "config.yaml has model/timeout settings but yq is not installed — those settings are ignored"
+        fi
     fi
+
+    # Env vars always win last
+    _apply_env_overrides
     return 0
+}
+
+_apply_env_overrides() {
+    [[ -n "${AISHORE_MODEL_PRIMARY:-}" ]] && MODEL_PRIMARY="$AISHORE_MODEL_PRIMARY"
+    [[ -n "${AISHORE_MODEL_FAST:-}" ]] && MODEL_FAST="$AISHORE_MODEL_FAST"
+    [[ -n "${AISHORE_AGENT_TIMEOUT:-}" ]] && AGENT_TIMEOUT="$AISHORE_AGENT_TIMEOUT"
+    [[ -n "${AISHORE_VALIDATE_CMD:-}" ]] && VALIDATE_CMD="$AISHORE_VALIDATE_CMD"
+    [[ -n "${AISHORE_VALIDATE_TIMEOUT:-}" ]] && VALIDATE_TIMEOUT="$AISHORE_VALIDATE_TIMEOUT"
 }
 
 # ============================================================================

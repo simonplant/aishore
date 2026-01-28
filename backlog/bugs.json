@@ -1,4 +1,257 @@
 {
-  "description": "Tech debt and bugs - Tech Lead owns grooming",
-  "items": []
+  "description": "Bugs and tech debt",
+  "items": [
+    {
+      "id": "BUG-001",
+      "title": "Config precedence: env vars silently overridden by config.yaml",
+      "description": "Defaults are set from env vars at lines 56-60 before load_config() runs. load_config() then unconditionally assigns VALIDATE_CMD from yaml, clobbering AISHORE_VALIDATE_CMD. The documented precedence (env > config > defaults) doesn't match reality. Also, the grep fallback when yq is unavailable silently ignores model/timeout config with no warning.",
+      "priority": "must",
+      "category": "bug",
+      "steps": [
+        "Step 1: In load_config(), only override a variable from config.yaml if the corresponding env var is NOT set",
+        "Step 2: For VALIDATE_CMD: use AISHORE_VALIDATE_CMD if set, else config.yaml, else empty",
+        "Step 3: Apply same pattern to MODEL_PRIMARY, MODEL_FAST, AGENT_TIMEOUT, VALIDATE_TIMEOUT",
+        "Step 4: When yq is unavailable and config.yaml has model/timeout settings, log_warning about partial config support",
+        "Step 5: Move the initial env-var defaults (lines 56-60) to use a pattern like: set defaults first, load config to override, then let env vars win last"
+      ],
+      "acceptanceCriteria": [
+        "AISHORE_VALIDATE_CMD env var takes precedence over validation.command in config.yaml",
+        "AISHORE_MODEL_PRIMARY env var takes precedence over models.primary in config.yaml",
+        "All 5 env vars override their config.yaml counterparts",
+        "When yq is missing and config.yaml has model settings, a warning is printed",
+        "Default values still work when neither env var nor config is set"
+      ],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-01-28T13:25:10-07:00"
+    },
+    {
+      "id": "BUG-002",
+      "title": "Failure recovery destroys all uncommitted work",
+      "description": "When a sprint fails (lines 545-546, 566-571, 582-586), git checkout -- . && git clean -fd discards ALL uncommitted changes in the entire working tree, not just what the developer agent changed. If the user had unstaged work before running aishore, it's destroyed with no warning.",
+      "priority": "must",
+      "category": "bug",
+      "steps": [
+        "Step 1: At the start of cmd_run(), before any sprint begins, run git stash push -u -m 'aishore: pre-sprint stash' if the working tree is dirty, and record that a stash was made",
+        "Step 2: Extract the repeated failure-handling block (git checkout/clean/reset/continue) into a handle_sprint_failure() function",
+        "Step 3: On sprint failure, the handle_sprint_failure function should reset the working tree and log a warning",
+        "Step 4: At the end of cmd_run() (both success and failure paths), if a stash was made, run git stash pop and log that pre-existing changes were restored",
+        "Step 5: Add the stash pop to the cleanup path so it runs even on unexpected exits"
+      ],
+      "acceptanceCriteria": [
+        "Pre-existing uncommitted changes are preserved through a failed sprint",
+        "Pre-existing uncommitted changes are preserved through a successful sprint",
+        "The failure-handling block is a single function called from all 3 locations",
+        "A warning is logged if pre-existing changes were stashed",
+        "If no pre-existing changes exist, no stash is created"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-003",
+      "title": "setsid not available on macOS",
+      "description": "run_agent_process() uses setsid (lines 383, 389) for process group management, but macOS doesn't ship setsid. The README claims macOS compatibility. Need a fallback.",
+      "priority": "must",
+      "category": "bug",
+      "steps": [
+        "Step 1: Before the setsid calls in run_agent_process(), check if setsid is available with command -v setsid",
+        "Step 2: If setsid is available, use it as currently done",
+        "Step 3: If setsid is not available, launch claude directly without setsid (just background with &)",
+        "Step 4: Adjust the kill logic at lines 410-412 to handle both cases: with setsid use kill -TERM -- -$pid, without setsid use kill -TERM $pid",
+        "Step 5: Test that the help and version commands still work (no setsid needed for those)"
+      ],
+      "acceptanceCriteria": [
+        "run_agent_process works on systems without setsid (macOS)",
+        "On Linux where setsid exists, behavior is unchanged",
+        "Agent timeout and kill logic works in both paths",
+        "No shellcheck warnings introduced"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-004",
+      "title": "No progress indication during agent execution",
+      "description": "When run_agent_process is polling for result.json (lines 396-406), there's zero output for up to 60 minutes. The user sees 'Starting...' then silence. Need periodic progress dots or status messages.",
+      "priority": "should",
+      "category": "improvement",
+      "steps": [
+        "Step 1: In the polling loop in run_agent_process(), add a periodic status message every 30 seconds",
+        "Step 2: The message should show elapsed time, e.g. log_info 'Waiting for agent... (30s elapsed)'",
+        "Step 3: Use a modulo check on elapsed to print every 30s without being noisy",
+        "Step 4: Keep the existing 5-second sleep interval for polling result.json"
+      ],
+      "acceptanceCriteria": [
+        "User sees periodic progress messages during agent execution",
+        "Messages show elapsed time",
+        "Messages appear at most every 30 seconds (not every 5s poll)",
+        "Existing polling behavior for result.json is unchanged"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-005",
+      "title": "Error messages don't suggest remediation",
+      "description": "Error messages state facts but don't tell the user what to do next. Examples: 'No ready items in backlog' (should suggest groom or manual edit), 'No result file - agent may have crashed' (should suggest checking logs), 'Item not found: X' (should list valid IDs or suggest checking backlog).",
+      "priority": "should",
+      "category": "improvement",
+      "steps": [
+        "Step 1: In cmd_run(), update 'No ready items in backlog' to add: 'Run .aishore/aishore groom to prepare items, or set readyForSprint: true in backlog.json'",
+        "Step 2: In check_result(), update 'No result file' to add: 'Check .aishore/data/logs/ for details'",
+        "Step 3: In pick_item(), update 'Item not found: $id' to suggest checking backlog.json and bugs.json",
+        "Step 4: In cmd_run(), when the item source can't be determined, suggest a concrete next step",
+        "Step 5: In load_config(), when yq is missing, add hint about installing yq for full config support"
+      ],
+      "acceptanceCriteria": [
+        "Each error message includes a suggested next action or remediation",
+        "Suggestions reference actual commands or file paths the user can act on",
+        "No existing error paths are removed, only augmented"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-006",
+      "title": "Bash best-practice fixes: read -r, unquoted hash_cmd, prerequisite checks",
+      "description": "Multiple bash best-practice issues: (1) read calls missing -r flag at 5 locations (lines 609, 797, 847, 887, 891), (2) $hash_cmd used unquoted at line 1271 relies on word splitting, (3) no prerequisite check for jq/git before runtime commands like run/metrics.",
+      "priority": "should",
+      "category": "tech-debt",
+      "steps": [
+        "Step 1: Add -r flag to all read -p calls (5 instances in cmd_run and cmd_init)",
+        "Step 2: Convert hash_cmd from string to array: hash_cmd=(sha256sum) or hash_cmd=(shasum -a 256), then use \"${hash_cmd[@]}\" when invoking",
+        "Step 3: Add a require_tool() helper that checks command -v and exits with a helpful message if missing",
+        "Step 4: Call require_tool jq at the top of cmd_run, cmd_groom, cmd_review, cmd_metrics",
+        "Step 5: Call require_tool git at the top of cmd_run"
+      ],
+      "acceptanceCriteria": [
+        "All read calls use -r flag",
+        "hash_cmd is an array, invoked with proper quoting",
+        "Running aishore run without jq produces a clear error message, not a jq crash",
+        "Running aishore metrics without jq produces a clear error message",
+        "shellcheck passes with no new warnings"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-007",
+      "title": "Unify agent invocation: cmd_groom and cmd_review bypass run_agent",
+      "description": "cmd_run() uses run_agent() for invoking agents, but cmd_groom() and cmd_review() bypass it and call run_agent_process() directly, duplicating prompt assembly, result cleanup, and context building. This creates two parallel patterns for the same operation.",
+      "priority": "should",
+      "category": "tech-debt",
+      "steps": [
+        "Step 1: Extend run_agent() to accept optional context_files and model parameters, making it flexible enough for groom and review",
+        "Step 2: Add an optional parameter for AGENT_OUTPUT_FILE support (needed by review)",
+        "Step 3: Refactor cmd_groom() to use run_agent() instead of directly calling run_agent_process()",
+        "Step 4: Refactor cmd_review() to use run_agent() instead of directly calling run_agent_process()",
+        "Step 5: Ensure all three callers (run, groom, review) produce identical prompt structure: agent prompt + mode + completion contract, with context files prepended"
+      ],
+      "acceptanceCriteria": [
+        "cmd_run, cmd_groom, and cmd_review all invoke agents through run_agent()",
+        "run_agent_process() is only called by run_agent(), not directly by commands",
+        "Review command still captures output to file and saves to log",
+        "Groom command still passes both backlog files as context",
+        "All agent invocations include the completion contract"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-008",
+      "title": "pick_item returns different field sets for specific vs auto pick",
+      "description": "pick_item for specific IDs (line 211) selects {id, title, description, steps, acceptanceCriteria, priority, status, passes}. Auto-pick (line 243) selects {id, title, description, steps, acceptanceCriteria, priority} — missing status and passes. create_sprint receives different JSON shapes depending on the code path.",
+      "priority": "should",
+      "category": "bug",
+      "steps": [
+        "Step 1: Make both jq queries in pick_item() select the same fields: {id, title, description, steps, acceptanceCriteria, priority, status, passes}",
+        "Step 2: Use defaults in the jq query for status and passes: (.status // \"todo\") and (.passes // false)",
+        "Step 3: Verify create_sprint handles the consistent shape correctly"
+      ],
+      "acceptanceCriteria": [
+        "pick_item returns the same JSON shape for both specific-ID and auto-pick paths",
+        "Both paths include id, title, description, steps, acceptanceCriteria, priority, status, passes",
+        "create_sprint works correctly with either path"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-009",
+      "title": "Documentation drift: timeout, help text, agent modes, dates",
+      "description": "Multiple documentation inconsistencies: (1) cmd_init config template writes agent timeout as 600 but default is 3600, (2) cmd_help omits AISHORE_VALIDATE_CMD and AISHORE_VALIDATE_TIMEOUT env vars, (3) product-owner.md documents Review and Evolve modes that are unreachable from CLI, (4) architect.md and product-owner.md claim archive access that isn't always provided.",
+      "priority": "should",
+      "category": "docs",
+      "steps": [
+        "Step 1: In cmd_init(), change the commented agent timeout from 600 to 3600 in the config template",
+        "Step 2: In cmd_help(), add AISHORE_VALIDATE_CMD and AISHORE_VALIDATE_TIMEOUT to the env vars section",
+        "Step 3: In product-owner.md, remove or clearly mark Review and Evolve mode sections as future/planned since the CLI only supports groom mode",
+        "Step 4: In cmd_groom(), pass archive/sprints.jsonl as context when it exists (to match the product-owner.md prompt)",
+        "Step 5: Update CLAUDE.md and CONTRIBUTING.md line count reference from ~1370 to something more durable like 'single file CLI' without a specific count"
+      ],
+      "acceptanceCriteria": [
+        "Config template in init shows correct default timeout of 3600",
+        "Help text lists all 5 environment variables",
+        "Product owner agent prompt only documents the groom mode (or clearly marks others as planned)",
+        "Archive file is passed as context to groom when it exists",
+        "No specific line count claims in documentation"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-010",
+      "title": "DRY: gitignore entries, validation detection, icebox.json refs",
+      "description": "Three duplication/cleanup issues: (1) Gitignore entries are hardcoded in cmd_init, migrate.sh, AND gitignore-entries.txt — should read from the file. (2) Validation command detection is duplicated between cmd_init and migrate.sh with different logic. (3) migrate.sh still references icebox.json which was removed from the project.",
+      "priority": "could",
+      "category": "tech-debt",
+      "steps": [
+        "Step 1: In cmd_init(), read gitignore entries from .aishore/gitignore-entries.txt instead of hardcoding them",
+        "Step 2: In migrate.sh, read gitignore entries from .aishore/gitignore-entries.txt if available, else use hardcoded fallback",
+        "Step 3: Remove icebox.json from the migration file lists in migrate.sh (lines 231 and 361)",
+        "Step 4: Align validation detection in migrate.sh with cmd_init logic (use python -m pytest, support compound commands)"
+      ],
+      "acceptanceCriteria": [
+        "cmd_init reads gitignore entries from gitignore-entries.txt",
+        "icebox.json is not referenced anywhere in the codebase",
+        "Validation detection in migrate.sh matches cmd_init logic for Python and Node.js projects"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-011",
+      "title": "Clean up .claude/settings.local.json",
+      "description": "The settings file contains machine-specific absolute paths (/home/simon/dev/aishore/...), one-off commit messages, and overly broad permissions like Bash(bash:*) which allows arbitrary command execution. This file is checked into the repo and would affect all contributors.",
+      "priority": "should",
+      "category": "tech-debt",
+      "steps": [
+        "Step 1: Remove all absolute-path entries that reference /home/simon/dev/aishore/",
+        "Step 2: Replace them with relative-path equivalents where possible (e.g., .aishore/aishore help)",
+        "Step 3: Remove the one-off git commit entry (line 19)",
+        "Step 4: Review whether Bash(bash:*) is needed or if more specific permissions suffice",
+        "Step 5: Remove one-off entries like Bash(while read f), Bash(do du -h), Bash(echo:*), Bash(awk:*) that were accumulated during development"
+      ],
+      "acceptanceCriteria": [
+        "No absolute paths in settings.local.json",
+        "No one-off command entries",
+        "Permissions are scoped to what the project actually needs",
+        "File still allows the documented operations (shellcheck, git, aishore commands)"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    }
+  ]
 }

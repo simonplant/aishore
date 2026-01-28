@@ -1,5 +1,28 @@
 {
-  "sprintId": null,
-  "status": "idle",
-  "item": null
+  "sprintId": "sprint-1769631702",
+  "startedAt": "2026-01-28T13:21:42-07:00",
+  "status": "completed",
+  "item": {
+    "id": "BUG-001",
+    "title": "Config precedence: env vars silently overridden by config.yaml",
+    "sourceBacklog": "bugs.json",
+    "steps": [
+      "Step 1: In load_config(), only override a variable from config.yaml if the corresponding env var is NOT set",
+      "Step 2: For VALIDATE_CMD: use AISHORE_VALIDATE_CMD if set, else config.yaml, else empty",
+      "Step 3: Apply same pattern to MODEL_PRIMARY, MODEL_FAST, AGENT_TIMEOUT, VALIDATE_TIMEOUT",
+      "Step 4: When yq is unavailable and config.yaml has model/timeout settings, log_warning about partial config support",
+      "Step 5: Move the initial env-var defaults (lines 56-60) to use a pattern like: set defaults first, load config to override, then let env vars win last"
+    ],
+    "acceptanceCriteria": [
+      "AISHORE_VALIDATE_CMD env var takes precedence over validation.command in config.yaml",
+      "AISHORE_MODEL_PRIMARY env var takes precedence over models.primary in config.yaml",
+      "All 5 env vars override their config.yaml counterparts",
+      "When yq is missing and config.yaml has model settings, a warning is printed",
+      "Default values still work when neither env var nor config is set"
+    ],
+    "startedAt": "2026-01-28T13:21:42-07:00",
+    "status": "passed",
+    "completedAt": "2026-01-28T13:25:10-07:00"
+  },
+  "completedAt": "2026-01-28T13:25:10-07:00"
 }
