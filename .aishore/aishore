@@ -207,8 +207,8 @@ load_config() {
         local cfg_cmd
         cfg_cmd=$(grep -E '^\s*command:' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*command:\s*//' | tr -d '"' || echo "")
         [[ -n "$cfg_cmd" ]] && VALIDATE_CMD="$cfg_cmd"
-        # Warn if config.yaml has model/timeout settings but yq is unavailable
-        if grep -qE '^\s*(primary|fast|timeout):' "$CONFIG_FILE" 2>/dev/null; then
+        # Warn if config.yaml has uncommented model/agent settings that yq would parse
+        if grep -qE '^[^#]*(models|agent):' "$CONFIG_FILE" 2>/dev/null; then
             log_warning "config.yaml has model/timeout settings but yq is not installed — those settings are ignored. Install yq for full config support: https://github.com/mikefarah/yq#install"
         fi
     fi
@@ -224,6 +224,7 @@ _apply_env_overrides() {
     [[ -n "${AISHORE_AGENT_TIMEOUT:-}" ]] && AGENT_TIMEOUT="$AISHORE_AGENT_TIMEOUT"
     [[ -n "${AISHORE_VALIDATE_CMD:-}" ]] && VALIDATE_CMD="$AISHORE_VALIDATE_CMD"
     [[ -n "${AISHORE_VALIDATE_TIMEOUT:-}" ]] && VALIDATE_TIMEOUT="$AISHORE_VALIDATE_TIMEOUT"
+    return 0
 }
 
 # ============================================================================
