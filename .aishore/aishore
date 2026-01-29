@@ -294,6 +294,24 @@ pick_item() {
                 if [[ "$item_status" == "done" ]]; then
                     log_warning "Item $specific_id is already completed — re-running"
                 fi
+                # Check for unmet dependencies
+                local deps_json
+                deps_json=$(jq -r --arg id "$specific_id" '
+                    .items[] | select(.id == $id) | .dependsOn // empty
+                ' "$BACKLOG_DIR/$backlog" 2>/dev/null)
+                if [[ -n "$deps_json" && "$deps_json" != "null" ]]; then
+                    local all_done_ids="[]"
+                    for df in "backlog.json" "bugs.json"; do
+                        local df_done
+                        df_done=$(jq -r '[.items[] | select(.status == "done") | .id]' "$BACKLOG_DIR/$df" 2>/dev/null || echo "[]")
+                        all_done_ids=$(echo "$all_done_ids" "$df_done" | jq -s 'add | unique')
+                    done
+                    local unmet
+                    unmet=$(echo "$deps_json" | jq -r --argjson done "$all_done_ids" '.[] | select(. as $dep | $done | index($dep) == null)' 2>/dev/null)
+                    if [[ -n "$unmet" ]]; then
+                        log_warning "Item $specific_id has unmet dependencies: $(echo "$unmet" | tr '\n' ', ' | sed 's/,$//')"
+                    fi
+                fi
                 echo "$backlog" > "$source_file"
                 echo "$item_json"
                 return 0
@@ -309,12 +327,32 @@ pick_item() {
         skip_json=$(echo "$skip_ids" | tr ',' '\n' | jq -R . | jq -s .)
     fi
 
-    # Auto-pick: highest priority ready item (excluding failed items)
+    # Build list of done item IDs from both backlogs for dependency checking
+    local done_ids_json="[]"
+    for bf in "backlog.json" "bugs.json"; do
+        local bf_done
+        bf_done=$(jq -r '[.items[] | select(.status == "done") | .id]' "$BACKLOG_DIR/$bf" 2>/dev/null || echo "[]")
+        done_ids_json=$(echo "$done_ids_json" "$bf_done" | jq -s 'add | unique')
+    done
+
+    # Warn about self-referencing dependencies
+    for bf in "backlog.json" "bugs.json"; do
+        local self_refs
+        self_refs=$(jq -r '.items[] | select(.dependsOn != null) | select(.id as $self | .dependsOn | index($self) != null) | .id' "$BACKLOG_DIR/$bf" 2>/dev/null || true)
+        if [[ -n "$self_refs" ]]; then
+            while IFS= read -r sid; do
+                log_warning "Item $sid has self-referencing dependency — skipping in auto-pick"
+            done <<< "$self_refs"
+        fi
+    done
+
+    # Auto-pick: highest priority ready item (excluding failed items and unmet dependencies)
     for backlog in "backlog.json" "bugs.json"; do
-        item_json=$(jq -r --argjson skip "$skip_json" '
+        item_json=$(jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" '
             [.items[] |
             select(.readyForSprint == true and (.passes == false or .passes == null) and (.status == "todo" or .status == null)) |
             select(.id as $id | $skip | index($id) | not) |
+            select(.dependsOn == null or (.dependsOn | length == 0) or (.id as $self | .dependsOn | all(. != $self) and all(. as $dep | $done_ids | index($dep) != null))) |
             . + {_priorityOrder: (if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end)}] |
             sort_by(._priorityOrder) |
             first |
@@ -1408,7 +1446,8 @@ EOF
         cat > "$BACKLOG_DIR/backlog.json" << 'EOF'
 {
   "description": "Feature backlog",
-  "items": []
+  "items": [],
+  "_dependsOn_docs": "Items may include an optional 'dependsOn' array of item ID strings (e.g. \"dependsOn\": [\"FEAT-001\"]). Auto-pick skips items whose dependencies are not yet done."
 }
 EOF
         log_success "Created backlog/backlog.json"

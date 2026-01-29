@@ -82,11 +82,12 @@
         "Self-referencing dependsOn is detected and skipped",
         "shellcheck passes with no new warnings"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-01-28",
-      "groomingNotes": "MODERATE VALUE: Implementation is contained within pick_item(). The jq filter handles most logic. Indirect circular dependencies are naturally safe (items with unmet deps just aren't picked). Only self-referencing needs explicit detection. Low risk, moderate complexity in jq queries."
+      "groomingNotes": "MODERATE VALUE: Implementation is contained within pick_item(). The jq filter handles most logic. Indirect circular dependencies are naturally safe (items with unmet deps just aren't picked). Only self-referencing needs explicit detection. Low risk, moderate complexity in jq queries.",
+      "completedAt": "2026-01-28T18:34:43-07:00"
     },
     {
       "id": "FEAT-005",

@@ -1,30 +1,30 @@
 {
-  "sprintId": "sprint-1769649927",
-  "startedAt": "2026-01-28T18:25:27-07:00",
+  "sprintId": "sprint-1769650155",
+  "startedAt": "2026-01-28T18:29:15-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-005",
-    "title": "Backlog status dashboard command",
+    "id": "FEAT-004",
+    "title": "Item dependency support in backlog",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Step 1: Add cmd_status() function (place it near cmd_metrics at line ~864). Add require_tool jq. Wire 'status' into the case statement (line ~1492) as: status) cmd_status \"$@\" ;;",
-      "Step 2: Read backlog.json and bugs.json using jq. Count items by status: jq '[.items[] | .status // \"todo\"] | group_by(.) | map({(.[0]): length}) | add' for each file. Display as 'Features: X todo, Y in-progress, Z done' and 'Bugs: X todo, Y done'.",
-      "Step 3: List items where readyForSprint is true using jq '.items[] | select(.readyForSprint == true) | \"  \\(.id): \\(.title)\"'. Display under a 'Ready for sprint:' header. If none, display warning: 'No items ready for sprint — run groom or set readyForSprint: true'.",
-      "Step 4: Show last 5 completed sprints from sprints.jsonl. Use tail -5 on the file, then format each line with jq: '\\(.date) \\(.itemId) \\(.status)'. Display under 'Recent sprints:' header.",
-      "Step 5: Add warnings section: if no backlog items exist, warn 'Backlog is empty'. If all items are done, note 'All items completed'. If sprints.jsonl doesn't exist, note 'No sprints run yet'.",
-      "Step 6: Update cmd_help() to add 'status' command: 'status           Show backlog overview and sprint readiness'."
+      "Step 1: No schema enforcement needed — JSON is schemaless. The 'dependsOn' field is simply an optional array of item ID strings (e.g., \"dependsOn\": [\"FEAT-002\"]). Document the convention in the backlog.json template created by cmd_init() (line ~912+).",
+      "Step 2: In pick_item() auto-pick path (line ~306-329), before the existing jq filter, build a list of 'done' item IDs from both backlog.json and bugs.json: done_ids=$(jq -r '.items[] | select(.status == \"done\") | .id'). Pass this as a jq variable.",
+      "Step 3: Add to the auto-pick jq filter: select(.dependsOn == null or (.dependsOn | all(. as $dep | $done_ids | index($dep) != null))). This skips items whose dependsOn contains any ID not in the done list. Items without dependsOn pass through unchanged.",
+      "Step 4: In pick_item() specific-ID path (line ~284-303), if the item has dependsOn, check for unmet dependencies and log_warning listing them, but proceed anyway (user explicitly chose this item).",
+      "Step 5: Add circular dependency protection: in auto-pick, if an item's dependsOn contains its own ID, skip it with log_warning. For indirect cycles, the natural behavior is safe — items with unmet deps are simply never picked.",
+      "Step 6: Update the example item in cmd_init() template to show: \"dependsOn\": [] (empty array, commented as optional)."
     ],
     "acceptanceCriteria": [
-      "User can run `.aishore/aishore status` and see item counts by status",
-      "Ready-for-sprint items are listed with their IDs and titles",
-      "Recent completions are shown with dates",
-      "Helpful warnings appear when backlog needs attention",
-      "Output is concise and fits in one terminal screen",
+      "Items with `dependsOn: ['FEAT-002']` are skipped by auto-pick if FEAT-002 status is not 'done'",
+      "Explicit ID selection (`run FEAT-003`) works even with unmet dependencies (with a warning)",
+      "Items without dependsOn are unaffected",
+      "Circular dependencies don't cause infinite loops (log error and skip)",
+      "Self-referencing dependsOn is detected and skipped",
       "shellcheck passes with no new warnings"
     ],
-    "startedAt": "2026-01-28T18:25:27-07:00",
+    "startedAt": "2026-01-28T18:29:15-07:00",
     "status": "passed",
-    "completedAt": "2026-01-28T18:29:15-07:00"
+    "completedAt": "2026-01-28T18:34:43-07:00"
   },
-  "completedAt": "2026-01-28T18:29:15-07:00"
+  "completedAt": "2026-01-28T18:34:43-07:00"
 }
