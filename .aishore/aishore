@@ -1839,6 +1839,56 @@ cmd_checksums() {
     cat "$checksum_file"
 }
 
+cmd_clean() {
+    require_tool jq
+
+    local dry_run=false
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dry-run) dry_run=true; shift ;;
+            *) log_error "Unknown option: $1"; return 1 ;;
+        esac
+    done
+
+    local feat_count=0 bug_count=0
+
+    for source in backlog.json bugs.json; do
+        local filepath="$BACKLOG_DIR/$source"
+        [[ -f "$filepath" ]] || continue
+
+        local count
+        count=$(jq '[.items[] | select(.status == "done")] | length' "$filepath" 2>/dev/null || echo 0)
+
+        if [[ "$source" == "backlog.json" ]]; then
+            feat_count=$count
+        else
+            bug_count=$count
+        fi
+
+        if [[ "$dry_run" == "false" && "$count" -gt 0 ]]; then
+            local tmp
+            tmp="$(ensure_tmpdir)/clean_${source}"
+            if jq '.items |= map(select(.status == "done" | not))' "$filepath" > "$tmp" 2>/dev/null; then
+                mv "$tmp" "$filepath"
+            else
+                rm -f "$tmp"
+                log_error "Failed to clean $source"
+                return 1
+            fi
+        fi
+    done
+
+    local total=$((feat_count + bug_count))
+
+    if [[ "$total" -eq 0 ]]; then
+        echo "Nothing to clean"
+    elif [[ "$dry_run" == "true" ]]; then
+        echo "Would remove: $feat_count features, $bug_count bugs"
+    else
+        echo "Cleaned $feat_count features, $bug_count bugs ($total total removed)"
+    fi
+}
+
 cmd_help() {
     cat << EOF
 aishore - AI Sprint Runner (v$AISHORE_VERSION)
@@ -1869,6 +1919,9 @@ Commands:
     --check         Alias for --dry-run
     --force         Update even if already on latest version
     --no-verify     Skip checksum verification (use with --force)
+
+  clean             Remove done items from backlog and bugs
+    --dry-run       Show what would be removed without changing files
 
   checksums         Regenerate checksums.sha256 for update verification
   init              Setup wizard — checks prerequisites, configures project
@@ -1940,6 +1993,7 @@ main() {
         status)  cmd_status "$@" ;;
         update)  cmd_update "$@" ;;
         checksums) cmd_checksums ;;
+        clean)   cmd_clean "$@" ;;
         init)    cmd_init "$@" ;;
         version|-v|--version) cmd_version ;;
         help|-h|--help) cmd_help ;;
