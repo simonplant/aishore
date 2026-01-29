@@ -622,6 +622,59 @@ handle_sprint_failure() {
 # COMMANDS
 # ============================================================================
 
+print_batch_summary() {
+    local batch_start="$1"
+    local -n _results=$2
+    local -n _items=$3
+    local -n _times=$4
+    local -n _failed_ids=$5
+
+    local batch_elapsed=$(( $(date +%s) - batch_start ))
+    local total=${#_results[@]}
+    local total_passed=0
+    local total_failed=0
+
+    for r in "${_results[@]}"; do
+        if [[ "$r" == "pass" ]]; then
+            total_passed=$((total_passed + 1))
+        else
+            total_failed=$((total_failed + 1))
+        fi
+    done
+
+    echo ""
+    log_header "Batch Summary"
+    printf "  %-8s %-12s %-8s %s\n" "Sprint" "Item" "Status" "Elapsed"
+    printf "  %-8s %-12s %-8s %s\n" "------" "----" "------" "-------"
+
+    for ((idx=0; idx<total; idx++)); do
+        local status_display
+        if [[ "${_results[$idx]}" == "pass" ]]; then
+            status_display="${GREEN}pass${NC}"
+        else
+            status_display="${RED}fail${NC}"
+        fi
+        local mins=$(( _times[idx] / 60 ))
+        local secs=$(( _times[idx] % 60 ))
+        printf "  %-8s %-12s " "$((idx + 1))" "${_items[$idx]}"
+        echo -e "${status_display}     ${mins}m${secs}s"
+    done
+
+    printf "  %-8s %-12s %-8s %s\n" "------" "----" "------" "-------"
+    local total_mins=$(( batch_elapsed / 60 ))
+    local total_secs=$(( batch_elapsed % 60 ))
+    printf "  Passed: %d  Failed: %d  Total: %dm%ds\n" "$total_passed" "$total_failed" "$total_mins" "$total_secs"
+
+    if [[ $total_failed -gt 0 ]]; then
+        echo ""
+        echo "  Failed items:"
+        for fid in "${!_failed_ids[@]}"; do
+            echo "    - $fid: ${_failed_ids[$fid]}"
+        done
+    fi
+    echo ""
+}
+
 cmd_run() {
     require_tool jq
     require_tool git
@@ -739,9 +792,16 @@ cmd_run() {
 
     local passed=0 failed=0
     declare -A FAILED_IDS
+    local batch_start
+    batch_start=$(date +%s)
+    local sprint_results=()
+    local sprint_items=()
+    local sprint_times=()
 
     for ((i=1; i<=count; i++)); do
         [[ $count -gt 1 ]] && log_subheader "Sprint $i/$count"
+        local sprint_start
+        sprint_start=$(date +%s)
 
         # Build comma-separated exclusion list from failed items
         local skip_list=""
@@ -789,7 +849,10 @@ cmd_run() {
                     continue
                 fi
                 failed=$((failed + 1))
-                FAILED_IDS["$ITEM_ID"]=1
+                FAILED_IDS["$ITEM_ID"]="Implementation failed"
+                sprint_results+=("fail")
+                sprint_items+=("$ITEM_ID")
+                sprint_times+=("$(( $(date +%s) - sprint_start ))")
                 handle_sprint_failure
                 break
             fi
@@ -830,7 +893,10 @@ Fix the issues and ensure all acceptance criteria pass."
                     continue
                 fi
                 failed=$((failed + 1))
-                FAILED_IDS["$ITEM_ID"]=1
+                FAILED_IDS["$ITEM_ID"]="Validation failed"
+                sprint_results+=("fail")
+                sprint_items+=("$ITEM_ID")
+                sprint_times+=("$(( $(date +%s) - sprint_start ))")
                 handle_sprint_failure
                 break
             fi
@@ -853,7 +919,10 @@ Fix the issues and ensure all acceptance criteria pass."
                     continue
                 fi
                 failed=$((failed + 1))
-                FAILED_IDS["$ITEM_ID"]=1
+                FAILED_IDS["$ITEM_ID"]="Validator failed"
+                sprint_results+=("fail")
+                sprint_items+=("$ITEM_ID")
+                sprint_times+=("$(( $(date +%s) - sprint_start ))")
                 handle_sprint_failure
                 break
             fi
@@ -872,10 +941,16 @@ Fix the issues and ensure all acceptance criteria pass."
         if mark_complete "$ITEM_ID" "$item_source" "$total_attempts"; then
             log_success "Sprint complete: $ITEM_ID"
             passed=$((passed + 1))
+            sprint_results+=("pass")
+            sprint_items+=("$ITEM_ID")
+            sprint_times+=("$(( $(date +%s) - sprint_start ))")
         else
             log_error "Failed to mark $ITEM_ID complete"
             failed=$((failed + 1))
-            FAILED_IDS["$ITEM_ID"]=1
+            FAILED_IDS["$ITEM_ID"]="Archival failed"
+            sprint_results+=("fail")
+            sprint_items+=("$ITEM_ID")
+            sprint_times+=("$(( $(date +%s) - sprint_start ))")
             continue
         fi
 
@@ -896,6 +971,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
             fi
         fi
     done
+
+    # Print batch summary for multi-sprint runs
+    if [[ $count -gt 1 ]]; then
+        print_batch_summary "$batch_start" sprint_results sprint_items sprint_times FAILED_IDS
+    fi
 
     # Restore pre-existing uncommitted changes
     if [[ "$did_stash" == "true" ]]; then

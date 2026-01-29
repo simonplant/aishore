@@ -53,11 +53,12 @@
         "Single sprint runs (`run` or `run 1`) do not show the batch summary",
         "shellcheck passes with no new warnings"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-01-28",
-      "groomingNotes": "HIGH VALUE: Straightforward implementation. Uses existing passed/failed counters and FAILED_IDS array. Key change: FAILED_IDS stores reason strings instead of 1. No architectural changes — just tracking arrays and a print function. Low risk."
+      "groomingNotes": "HIGH VALUE: Straightforward implementation. Uses existing passed/failed counters and FAILED_IDS array. Key change: FAILED_IDS stores reason strings instead of 1. No architectural changes — just tracking arrays and a print function. Low risk.",
+      "completedAt": "2026-01-28T18:25:27-07:00"
     },
     {
       "id": "FEAT-004",

@@ -1,31 +1,30 @@
 {
-  "sprintId": "sprint-1769649435",
-  "startedAt": "2026-01-28T18:17:15-07:00",
+  "sprintId": "sprint-1769649668",
+  "startedAt": "2026-01-28T18:21:08-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-002",
-    "title": "Dry-run mode for sprint execution",
+    "id": "FEAT-003",
+    "title": "Sprint summary report after batch runs",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Step 1: In cmd_run() argument parsing (line ~616-629), add --dry-run flag that sets local dry_run=false. Parse it in the case statement alongside --auto-commit.",
-      "Step 2: In dry-run mode, skip acquire_lock() and stash logic (not needed since nothing is modified). Still call load_config() to show accurate config. Call pick_item() normally and display the selected item JSON with jq formatting.",
-      "Step 3: Extract the prompt assembly logic from run_agent() (lines 549-556) into a helper function build_agent_prompt() that returns the assembled prompt string. In dry-run mode, call build_agent_prompt('developer', 'implement') and display the result.",
-      "Step 4: Display the validation command ($VALIDATE_CMD) if configured, or note that no validation command is set.",
-      "Step 5: Print a summary: 'Dry run complete. Would pick: <ITEM_ID> (<title>). Model: <MODEL_PRIMARY>. Validation: <VALIDATE_CMD or none>.' Exit 0 without starting any agent or modifying files.",
-      "Step 6: Update cmd_help() to document --dry-run flag. Ensure --dry-run and --auto-commit can't both be set (log_error and exit if both specified)."
+      "Step 1: At the start of cmd_run() (after line ~654), record a batch_start timestamp using date +%s. Declare two indexed arrays: sprint_results=() and sprint_items=() to track per-sprint outcomes.",
+      "Step 2: After each sprint iteration succeeds (line ~728) or fails (lines ~686, ~707, ~719, ~731), append to sprint_results the status ('pass' or 'fail') and to sprint_items the ITEM_ID. Also record per-sprint elapsed time using a per-iteration start timestamp.",
+      "Step 3: After the for loop (before stash restore, line ~754), if count > 1, call a new print_batch_summary() function. This function prints a formatted report.",
+      "Step 4: print_batch_summary() displays: a header line, a table row per sprint (sprint #, item ID, status, elapsed time), a separator, totals (passed, failed, total elapsed). Use printf for aligned columns.",
+      "Step 5: If any sprints failed, append a 'Failed items:' section listing each failed item ID. Read failure reasons from the FAILED_IDS associative array (store reasons instead of just 1).",
+      "Step 6: Change FAILED_IDS to store failure reasons: FAILED_IDS[\"$ITEM_ID\"]=\"Implementation failed\" (or 'Validation failed', etc.) instead of just =1. Update skip list logic to still work (check -n instead of value)."
     ],
     "acceptanceCriteria": [
-      "User can run `.aishore/aishore run --dry-run` and see the item that would be picked",
-      "The developer prompt is displayed so the user can review it",
-      "The validation command is shown (or 'none configured' if unset)",
-      "No agent process is started, no files are modified, no lock acquired",
-      "Dry-run with a specific ID works: `.aishore/aishore run --dry-run FEAT-002`",
-      "--dry-run and --auto-commit together produce an error",
+      "Running `run 3` shows a summary table after all sprints complete",
+      "Summary includes per-sprint status (pass/fail) with item IDs",
+      "Total elapsed time is shown",
+      "Failed sprints list their failure reasons (implementation/validation/validator)",
+      "Single sprint runs (`run` or `run 1`) do not show the batch summary",
       "shellcheck passes with no new warnings"
     ],
-    "startedAt": "2026-01-28T18:17:15-07:00",
+    "startedAt": "2026-01-28T18:21:08-07:00",
     "status": "passed",
-    "completedAt": "2026-01-28T18:21:08-07:00"
+    "completedAt": "2026-01-28T18:25:27-07:00"
   },
-  "completedAt": "2026-01-28T18:21:08-07:00"
+  "completedAt": "2026-01-28T18:25:27-07:00"
 }
