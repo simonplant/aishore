@@ -2,22 +2,205 @@
   "description": "Feature backlog - Product Owner owns priority",
   "items": [
     {
-      "id": "FEAT-001",
-      "title": "Example feature",
-      "description": "Description of what this feature does for the user",
+      "id": "FEAT-002",
+      "title": "Dry-run mode for sprint execution",
+      "description": "Users want to preview what a sprint will do before committing to it. A dry-run mode shows which item would be picked, what prompt would be sent to the developer agent, and what validation command would run — without actually executing anything. This reduces risk for first-time users and helps debug backlog configuration.",
       "priority": "should",
       "category": "core",
       "steps": [
-        "Step 1: Implement the feature",
-        "Step 2: Add tests"
+        "Step 1: In cmd_run() argument parsing (line ~616-629), add --dry-run flag that sets local dry_run=false. Parse it in the case statement alongside --auto-commit.",
+        "Step 2: In dry-run mode, skip acquire_lock() and stash logic (not needed since nothing is modified). Still call load_config() to show accurate config. Call pick_item() normally and display the selected item JSON with jq formatting.",
+        "Step 3: Extract the prompt assembly logic from run_agent() (lines 549-556) into a helper function build_agent_prompt() that returns the assembled prompt string. In dry-run mode, call build_agent_prompt('developer', 'implement') and display the result.",
+        "Step 4: Display the validation command ($VALIDATE_CMD) if configured, or note that no validation command is set.",
+        "Step 5: Print a summary: 'Dry run complete. Would pick: <ITEM_ID> (<title>). Model: <MODEL_PRIMARY>. Validation: <VALIDATE_CMD or none>.' Exit 0 without starting any agent or modifying files.",
+        "Step 6: Update cmd_help() to document --dry-run flag. Ensure --dry-run and --auto-commit can't both be set (log_error and exit if both specified)."
       ],
       "acceptanceCriteria": [
-        "User can perform the action",
-        "Tests pass"
+        "User can run `.aishore/aishore run --dry-run` and see the item that would be picked",
+        "The developer prompt is displayed so the user can review it",
+        "The validation command is shown (or 'none configured' if unset)",
+        "No agent process is started, no files are modified, no lock acquired",
+        "Dry-run with a specific ID works: `.aishore/aishore run --dry-run FEAT-002`",
+        "--dry-run and --auto-commit together produce an error",
+        "shellcheck passes with no new warnings"
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomedAt": "2026-01-28",
+      "groomingNotes": "HIGH VALUE: Low implementation cost. Key decision: extract prompt assembly into build_agent_prompt() helper so dry-run can display it without invoking run_agent_process(). No architectural risk. Reuses existing pick_item() and load_config()."
+    },
+    {
+      "id": "FEAT-003",
+      "title": "Sprint summary report after batch runs",
+      "description": "When running multiple sprints (`run 5`), the user gets per-sprint output but no overall summary. After a batch completes, users need a consolidated report showing: how many succeeded/failed, which items were completed, total elapsed time, and any items that failed validation.",
+      "priority": "should",
+      "category": "core",
+      "steps": [
+        "Step 1: At the start of cmd_run() (after line ~654), record a batch_start timestamp using date +%s. Declare two indexed arrays: sprint_results=() and sprint_items=() to track per-sprint outcomes.",
+        "Step 2: After each sprint iteration succeeds (line ~728) or fails (lines ~686, ~707, ~719, ~731), append to sprint_results the status ('pass' or 'fail') and to sprint_items the ITEM_ID. Also record per-sprint elapsed time using a per-iteration start timestamp.",
+        "Step 3: After the for loop (before stash restore, line ~754), if count > 1, call a new print_batch_summary() function. This function prints a formatted report.",
+        "Step 4: print_batch_summary() displays: a header line, a table row per sprint (sprint #, item ID, status, elapsed time), a separator, totals (passed, failed, total elapsed). Use printf for aligned columns.",
+        "Step 5: If any sprints failed, append a 'Failed items:' section listing each failed item ID. Read failure reasons from the FAILED_IDS associative array (store reasons instead of just 1).",
+        "Step 6: Change FAILED_IDS to store failure reasons: FAILED_IDS[\"$ITEM_ID\"]=\"Implementation failed\" (or 'Validation failed', etc.) instead of just =1. Update skip list logic to still work (check -n instead of value)."
+      ],
+      "acceptanceCriteria": [
+        "Running `run 3` shows a summary table after all sprints complete",
+        "Summary includes per-sprint status (pass/fail) with item IDs",
+        "Total elapsed time is shown",
+        "Failed sprints list their failure reasons (implementation/validation/validator)",
+        "Single sprint runs (`run` or `run 1`) do not show the batch summary",
+        "shellcheck passes with no new warnings"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-01-28",
+      "groomingNotes": "HIGH VALUE: Straightforward implementation. Uses existing passed/failed counters and FAILED_IDS array. Key change: FAILED_IDS stores reason strings instead of 1. No architectural changes — just tracking arrays and a print function. Low risk."
+    },
+    {
+      "id": "FEAT-004",
+      "title": "Item dependency support in backlog",
+      "description": "Some features naturally depend on others (e.g., 'add user auth' before 'add user profile page'). Currently, users must manually order items or risk the auto-picker selecting something whose prerequisite isn't done. Adding an optional 'dependsOn' field lets users declare dependencies, and the picker skips items whose dependencies aren't complete.",
+      "priority": "could",
+      "category": "core",
+      "steps": [
+        "Step 1: No schema enforcement needed — JSON is schemaless. The 'dependsOn' field is simply an optional array of item ID strings (e.g., \"dependsOn\": [\"FEAT-002\"]). Document the convention in the backlog.json template created by cmd_init() (line ~912+).",
+        "Step 2: In pick_item() auto-pick path (line ~306-329), before the existing jq filter, build a list of 'done' item IDs from both backlog.json and bugs.json: done_ids=$(jq -r '.items[] | select(.status == \"done\") | .id'). Pass this as a jq variable.",
+        "Step 3: Add to the auto-pick jq filter: select(.dependsOn == null or (.dependsOn | all(. as $dep | $done_ids | index($dep) != null))). This skips items whose dependsOn contains any ID not in the done list. Items without dependsOn pass through unchanged.",
+        "Step 4: In pick_item() specific-ID path (line ~284-303), if the item has dependsOn, check for unmet dependencies and log_warning listing them, but proceed anyway (user explicitly chose this item).",
+        "Step 5: Add circular dependency protection: in auto-pick, if an item's dependsOn contains its own ID, skip it with log_warning. For indirect cycles, the natural behavior is safe — items with unmet deps are simply never picked.",
+        "Step 6: Update the example item in cmd_init() template to show: \"dependsOn\": [] (empty array, commented as optional)."
+      ],
+      "acceptanceCriteria": [
+        "Items with `dependsOn: ['FEAT-002']` are skipped by auto-pick if FEAT-002 status is not 'done'",
+        "Explicit ID selection (`run FEAT-003`) works even with unmet dependencies (with a warning)",
+        "Items without dependsOn are unaffected",
+        "Circular dependencies don't cause infinite loops (log error and skip)",
+        "Self-referencing dependsOn is detected and skipped",
+        "shellcheck passes with no new warnings"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-01-28",
+      "groomingNotes": "MODERATE VALUE: Implementation is contained within pick_item(). The jq filter handles most logic. Indirect circular dependencies are naturally safe (items with unmet deps just aren't picked). Only self-referencing needs explicit detection. Low risk, moderate complexity in jq queries."
+    },
+    {
+      "id": "FEAT-005",
+      "title": "Backlog status dashboard command",
+      "description": "Users need a quick overview of their backlog state without opening JSON files. A `status` command shows: items by status (todo/in-progress/done), items ready for sprint, recent completions, and any warnings (empty backlog, nothing ready, stale items).",
+      "priority": "should",
+      "category": "ux",
+      "steps": [
+        "Step 1: Add cmd_status() function (place it near cmd_metrics at line ~864). Add require_tool jq. Wire 'status' into the case statement (line ~1492) as: status) cmd_status \"$@\" ;;",
+        "Step 2: Read backlog.json and bugs.json using jq. Count items by status: jq '[.items[] | .status // \"todo\"] | group_by(.) | map({(.[0]): length}) | add' for each file. Display as 'Features: X todo, Y in-progress, Z done' and 'Bugs: X todo, Y done'.",
+        "Step 3: List items where readyForSprint is true using jq '.items[] | select(.readyForSprint == true) | \"  \\(.id): \\(.title)\"'. Display under a 'Ready for sprint:' header. If none, display warning: 'No items ready for sprint — run groom or set readyForSprint: true'.",
+        "Step 4: Show last 5 completed sprints from sprints.jsonl. Use tail -5 on the file, then format each line with jq: '\\(.date) \\(.itemId) \\(.status)'. Display under 'Recent sprints:' header.",
+        "Step 5: Add warnings section: if no backlog items exist, warn 'Backlog is empty'. If all items are done, note 'All items completed'. If sprints.jsonl doesn't exist, note 'No sprints run yet'.",
+        "Step 6: Update cmd_help() to add 'status' command: 'status           Show backlog overview and sprint readiness'."
+      ],
+      "acceptanceCriteria": [
+        "User can run `.aishore/aishore status` and see item counts by status",
+        "Ready-for-sprint items are listed with their IDs and titles",
+        "Recent completions are shown with dates",
+        "Helpful warnings appear when backlog needs attention",
+        "Output is concise and fits in one terminal screen",
+        "shellcheck passes with no new warnings"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-01-28",
+      "groomingNotes": "HIGH VALUE: Simple read-only command. Follows cmd_metrics() pattern for structure. All data comes from existing JSON files via jq queries. No side effects, no risk. Can be implemented entirely as a standalone function."
+    },
+    {
+      "id": "FEAT-006",
+      "title": "Configurable agent permissions per command",
+      "description": "Currently all agents get the same permission set (Bash(git:*), Edit, Write, Read, Glob, Grep). The validator agent shouldn't need Write/Edit permissions, and review with --update-docs needs broader permissions than plain review. Users should be able to scope agent permissions in config.yaml.",
+      "priority": "could",
+      "category": "security",
+      "steps": [
+        "Step 1: Define default permission constants near the top of the file (after line ~72): PERMS_DEVELOPER='Bash(git:*),Edit,Write,Read,Glob,Grep', PERMS_VALIDATOR='Bash(git:*),Read,Glob,Grep', PERMS_REVIEWER='Read,Glob,Grep', PERMS_REVIEWER_DOCS='Read,Glob,Grep,Edit,Write'.",
+        "Step 2: In run_agent() (line ~529), add a new parameter or derive permissions from agent_name and mode. Map: developer/implement→PERMS_DEVELOPER, validator/validate→PERMS_VALIDATOR, architect/review→PERMS_REVIEWER. For review with output_file (--update-docs), use PERMS_REVIEWER_DOCS.",
+        "Step 3: Replace the hardcoded 'Bash(git:*),Edit,Write,Read,Glob,Grep' in run_agent() (lines ~560, ~565) with the derived permission variable.",
+        "Step 4: Add optional 'permissions' section to config.yaml loading in load_config(). Format: permissions.developer, permissions.validator, permissions.reviewer. If set, override the defaults. Use same yq/grep pattern as existing config loading.",
+        "Step 5: Update cmd_help() to document the default permission sets and the config.yaml override option."
+      ],
+      "acceptanceCriteria": [
+        "Validator agent cannot write or edit files by default",
+        "Review agent is read-only by default, gets write access with --update-docs",
+        "Developer agent retains full permissions",
+        "Users can override permissions in config.yaml",
+        "Default behavior is unchanged for users without config overrides",
+        "Groom agents (tech-lead, product-owner) retain full permissions since they update backlog files",
+        "shellcheck passes with no new warnings"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-01-28",
+      "groomingNotes": "MODERATE VALUE: Clean implementation path. run_agent() already passes allowed_tools to run_agent_process(), so the change is at the permission selection level. Key consideration: groom agents (tech-lead, product-owner) need Edit/Write to update backlog JSON files — keep them on PERMS_DEVELOPER. Config override pattern follows existing load_config() style."
+    },
+    {
+      "id": "FEAT-007",
+      "title": "Sprint retry with feedback loop",
+      "description": "When a sprint fails validation, the current behavior resets the tree and moves on. Users want the option to retry: feed the validation failure back to the developer agent so it can fix the issues. This 'retry loop' is the most requested workflow improvement — it turns a one-shot attempt into an iterative development cycle.",
+      "priority": "must",
+      "category": "core",
+      "steps": [
+        "Step 1: In cmd_run() argument parsing (line ~616-629), add --retries N flag that sets local retries=0 (default). Parse the numeric argument after --retries. Add retries to the header display (line ~644-652).",
+        "Step 2: After implementation (line ~682-690), wrap the validation phases (lines ~692-723) in a retry loop: for ((attempt=0; attempt<=retries; attempt++)). On first attempt, run validation normally. On retry attempts, skip re-running the developer agent — just re-validate.",
+        "Step 3: On validation failure inside the retry loop, if attempts remain: (a) read the failure reason from result.json via jq (.reason), (b) read VALIDATE_CMD stderr/stdout if command validation failed, (c) do NOT call handle_sprint_failure() — leave the tree as-is so the developer can build on it.",
+        "Step 4: Construct a retry prompt using run_agent's extra_prompt parameter (6th arg). Include: 'Previous attempt failed validation. Failure output: <captured output>. Fix the issues and ensure all acceptance criteria pass.' Then call run_agent 'developer' 'implement' with this extra_prompt.",
+        "Step 5: After the retry developer agent completes, loop back to the validation phases. If all retries exhausted, call handle_sprint_failure() as current behavior. Track attempt count in a local variable.",
+        "Step 6: When archiving via mark_complete, update sprint.json to include 'attempts': N (total attempts taken). Modify create_sprint() or mark_complete() to accept and record this.",
+        "Step 7: Update cmd_help() to document --retries N flag under the run command section."
+      ],
+      "acceptanceCriteria": [
+        "User can run `.aishore/aishore run --retries 2` to allow up to 2 retry attempts",
+        "Each retry passes the previous validation failure to the developer agent via extra_prompt",
+        "The working tree is NOT reset between retries (agent builds on previous attempt)",
+        "After all retries exhausted, the tree IS reset (current failure behavior via handle_sprint_failure)",
+        "Default behavior (no flag) is unchanged: single attempt, reset on failure",
+        "Sprint archive records the number of attempts taken in sprint.json",
+        "Validation command output (stderr+stdout) is captured and passed to retry prompt",
+        "Validator agent failure reason from result.json is captured and passed to retry prompt",
+        "shellcheck passes with no new warnings"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-01-28",
+      "groomingNotes": "HIGHEST VALUE: Groomed with precise code locations. The retry loop wraps the existing validation phases (lines 692-723). Key insight: run_agent() already accepts an extra_prompt 6th parameter, so retry context injection is straightforward. Validation command output needs capture (redirect to temp file). No architectural changes needed — this is a loop + prompt assembly within cmd_run()."
+    },
+    {
+      "id": "FEAT-008",
+      "title": "Notification on sprint completion",
+      "description": "Users run sprints in the background and want to know when they finish. Support a configurable notification hook (command to run on completion) so users can get desktop notifications, Slack messages, or any custom alert when a sprint succeeds or fails.",
+      "priority": "could",
+      "category": "ux",
+      "steps": [
+        "Step 1: Add NOTIFY_CMD='' default near the config defaults (line ~56-60). In load_config(), add loading from config.yaml: notifications.on_complete via yq (or grep fallback). Follow existing config loading pattern from VALIDATE_CMD.",
+        "Step 2: Add AISHORE_NOTIFY_CMD env var override in _apply_env_overrides(). Follow the existing pattern: [[ -n \"${AISHORE_NOTIFY_CMD:-}\" ]] && NOTIFY_CMD=\"$AISHORE_NOTIFY_CMD\".",
+        "Step 3: Create a send_notification() helper function that takes status ($1) and item_id ($2). Run: bash -c \"$NOTIFY_CMD\" -- \"$status\" \"$item_id\" with stderr redirected. Wrap in if/fi to catch failures and log_warning without affecting sprint outcome.",
+        "Step 4: Call send_notification at the end of each sprint iteration in cmd_run(): after mark_complete success (line ~728) call send_notification 'pass' \"$ITEM_ID\", and after each failure path (lines ~686, ~707, ~719) call send_notification 'fail' \"$ITEM_ID\". Only call if NOTIFY_CMD is non-empty.",
+        "Step 5: Update cmd_help() to document AISHORE_NOTIFY_CMD env var and notifications.on_complete config option. Add examples in comments: notify-send (Linux), osascript (macOS), curl webhook.",
+        "Step 6: Update the config.yaml template in cmd_init() to include a commented-out notifications section with examples."
+      ],
+      "acceptanceCriteria": [
+        "Users can set a notification command in config.yaml or env var",
+        "The command receives sprint status (pass/fail) and item ID as arguments ($1 and $2)",
+        "Notification failures don't affect sprint outcome (log_warning only)",
+        "Works with any executable command (not tied to a specific notification system)",
+        "AISHORE_NOTIFY_CMD env var overrides config.yaml setting",
+        "shellcheck passes with no new warnings"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-01-28",
+      "groomingNotes": "MODERATE VALUE: Follows established patterns exactly (VALIDATE_CMD loading, env var override, config.yaml). Low risk. The send_notification() helper is self-contained. Key design: pass status and item_id as positional args to the user's command via bash -c \"$cmd\" -- \"$1\" \"$2\"."
     }
   ]
 }
