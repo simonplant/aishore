@@ -382,6 +382,7 @@ create_sprint() {
 mark_complete() {
     local item_id="$1"
     local source="$2"
+    local attempts="${3:-1}"
     local now
     now=$(date -Iseconds)
 
@@ -403,7 +404,7 @@ mark_complete() {
     # Update sprint.json
     local tmp_sprint
     tmp_sprint="$(ensure_tmpdir)/sprint_update.json"
-    if jq --arg ts "$now" '.status = "completed" | .completedAt = $ts | .item.status = "passed" | .item.completedAt = $ts' \
+    if jq --arg ts "$now" --argjson attempts "$attempts" '.status = "completed" | .completedAt = $ts | .attempts = $attempts | .item.status = "passed" | .item.completedAt = $ts' \
         "$BACKLOG_DIR/sprint.json" > "$tmp_sprint" 2>/dev/null; then
         mv "$tmp_sprint" "$BACKLOG_DIR/sprint.json"
     else
@@ -612,10 +613,19 @@ cmd_run() {
     local count=1
     local auto_commit=false
     local specific_id=""
+    local retries=0
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --auto-commit) auto_commit=true; shift ;;
+            --retries)
+                shift
+                if [[ $# -eq 0 || ! "$1" =~ ^[0-9]+$ ]]; then
+                    log_error "--retries requires a numeric argument"
+                    return 1
+                fi
+                retries="$1"
+                shift ;;
             *)
                 if [[ "$1" =~ ^[0-9]+$ ]]; then
                     count="$1"
@@ -649,6 +659,7 @@ cmd_run() {
         echo "Sprints: $count"
     fi
     [[ "$auto_commit" == "true" ]] && echo "Auto-commit: enabled"
+    [[ "$retries" -gt 0 ]] && echo "Retries: $retries"
     echo ""
 
     local passed=0 failed=0
@@ -679,51 +690,111 @@ cmd_run() {
 
         create_sprint "$item_json" "$item_source"
 
-        # Run developer
-        run_agent "developer" "implement" "$MODEL_PRIMARY"
-        if ! check_result; then
-            log_error "Implementation failed"
-            failed=$((failed + 1))
-            FAILED_IDS["$ITEM_ID"]=1
-            handle_sprint_failure
-            continue
-        fi
+        # Run developer and validation with retry loop
+        local attempt=0
+        local sprint_passed=false
+        local retry_extra_prompt=""
 
-        # Run validation command (if configured)
-        if [[ -n "$VALIDATE_CMD" ]]; then
-            log_info "Running validation: $VALIDATE_CMD"
-            local validate_ok=true
-            if command -v timeout &>/dev/null; then
-                if ! timeout "$VALIDATE_TIMEOUT" bash -c "$VALIDATE_CMD" 2>&1; then
-                    validate_ok=false
-                fi
-            else
-                if ! bash -c "$VALIDATE_CMD" 2>&1; then
-                    validate_ok=false
-                fi
+        for ((attempt=0; attempt<=retries; attempt++)); do
+            if [[ $attempt -gt 0 ]]; then
+                log_info "Retry attempt $attempt/$retries"
             fi
-            if [[ "$validate_ok" != "true" ]]; then
-                log_error "Validation command failed"
+
+            # Run developer agent
+            run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$retry_extra_prompt"
+            if ! check_result; then
+                log_error "Implementation failed"
+                if [[ $attempt -lt $retries ]]; then
+                    local fail_reason=""
+                    if [[ -f "$STATUS_DIR/result.json" ]]; then
+                        fail_reason=$(jq -r '.reason // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
+                    fi
+                    retry_extra_prompt="Previous attempt failed during implementation. Failure reason: ${fail_reason}. Fix the issues and ensure all acceptance criteria pass."
+                    log_info "Will retry with failure context"
+                    continue
+                fi
                 failed=$((failed + 1))
                 FAILED_IDS["$ITEM_ID"]=1
                 handle_sprint_failure
-                continue
+                break
             fi
-            log_success "Validation passed"
-        fi
 
-        # Run validator agent
-        run_agent "validator" "validate" "$MODEL_FAST"
-        if ! check_result; then
-            log_error "Validation failed"
-            failed=$((failed + 1))
-            FAILED_IDS["$ITEM_ID"]=1
-            handle_sprint_failure
-            continue
-        fi
+            # Run validation command (if configured)
+            local validate_failed=false
+            local validate_output=""
+            if [[ -n "$VALIDATE_CMD" ]]; then
+                log_info "Running validation: $VALIDATE_CMD"
+                local validate_ok=true
+                local validate_tmpfile
+                validate_tmpfile="$(ensure_tmpdir)/validate_output.txt"
+                if command -v timeout &>/dev/null; then
+                    if ! timeout "$VALIDATE_TIMEOUT" bash -c "$VALIDATE_CMD" >"$validate_tmpfile" 2>&1; then
+                        validate_ok=false
+                    fi
+                else
+                    if ! bash -c "$VALIDATE_CMD" >"$validate_tmpfile" 2>&1; then
+                        validate_ok=false
+                    fi
+                fi
+                validate_output=$(cat "$validate_tmpfile" 2>/dev/null || true)
+                rm -f "$validate_tmpfile"
+                if [[ "$validate_ok" != "true" ]]; then
+                    log_error "Validation command failed"
+                    validate_failed=true
+                else
+                    log_success "Validation passed"
+                fi
+            fi
+
+            if [[ "$validate_failed" == "true" ]]; then
+                if [[ $attempt -lt $retries ]]; then
+                    retry_extra_prompt="Previous attempt failed validation command ($VALIDATE_CMD). Validation output:
+${validate_output}
+Fix the issues and ensure all acceptance criteria pass."
+                    log_info "Will retry with failure context"
+                    continue
+                fi
+                failed=$((failed + 1))
+                FAILED_IDS["$ITEM_ID"]=1
+                handle_sprint_failure
+                break
+            fi
+
+            # Run validator agent
+            run_agent "validator" "validate" "$MODEL_FAST"
+            if ! check_result; then
+                log_error "Validation failed"
+                if [[ $attempt -lt $retries ]]; then
+                    local agent_fail_reason=""
+                    if [[ -f "$STATUS_DIR/result.json" ]]; then
+                        agent_fail_reason=$(jq -r '.reason // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
+                    fi
+                    retry_extra_prompt="Previous attempt failed validator agent review. Failure reason: ${agent_fail_reason}."
+                    if [[ -n "$validate_output" ]]; then
+                        retry_extra_prompt="${retry_extra_prompt} Validation command output: ${validate_output}."
+                    fi
+                    retry_extra_prompt="${retry_extra_prompt} Fix the issues and ensure all acceptance criteria pass."
+                    log_info "Will retry with failure context"
+                    continue
+                fi
+                failed=$((failed + 1))
+                FAILED_IDS["$ITEM_ID"]=1
+                handle_sprint_failure
+                break
+            fi
+
+            # All validations passed
+            sprint_passed=true
+            break
+        done
+
+        # Track total attempts for archiving
+        local total_attempts=$((attempt + 1))
+
+        [[ "$sprint_passed" != "true" ]] && continue
 
         # Success
-        if mark_complete "$ITEM_ID" "$item_source"; then
+        if mark_complete "$ITEM_ID" "$item_source" "$total_attempts"; then
             log_success "Sprint complete: $ITEM_ID"
             passed=$((passed + 1))
         else
@@ -1426,6 +1497,7 @@ Commands:
   run [count]       Run N sprints (default: 1)
   run <ID>          Run specific item by ID (e.g., TEST-006)
     --auto-commit   Automatically commit after each sprint
+    --retries N     Allow up to N retry attempts on validation failure
 
   groom             Groom bugs/tech debt (Tech Lead mode)
     --backlog       Groom features instead (Product Owner mode)
@@ -1453,6 +1525,7 @@ Examples:
   .aishore/aishore run 5            # Run 5 sprints
   .aishore/aishore run TEST-006     # Run specific item
   .aishore/aishore run --auto-commit 3
+  .aishore/aishore run --retries 2    # Allow 2 retries on failure
   .aishore/aishore groom
   .aishore/aishore update --dry-run
 

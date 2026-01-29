@@ -168,11 +168,12 @@
         "Validator agent failure reason from result.json is captured and passed to retry prompt",
         "shellcheck passes with no new warnings"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-01-28",
-      "groomingNotes": "HIGHEST VALUE: Groomed with precise code locations. The retry loop wraps the existing validation phases (lines 692-723). Key insight: run_agent() already accepts an extra_prompt 6th parameter, so retry context injection is straightforward. Validation command output needs capture (redirect to temp file). No architectural changes needed — this is a loop + prompt assembly within cmd_run()."
+      "groomingNotes": "HIGHEST VALUE: Groomed with precise code locations. The retry loop wraps the existing validation phases (lines 692-723). Key insight: run_agent() already accepts an extra_prompt 6th parameter, so retry context injection is straightforward. Validation command output needs capture (redirect to temp file). No architectural changes needed — this is a loop + prompt assembly within cmd_run().",
+      "completedAt": "2026-01-28T18:17:15-07:00"
     },
     {
       "id": "FEAT-008",

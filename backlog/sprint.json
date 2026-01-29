@@ -1,25 +1,34 @@
 {
-  "sprintId": "sprint-1769633993",
-  "startedAt": "2026-01-28T13:59:53-07:00",
+  "sprintId": "sprint-1769649054",
+  "startedAt": "2026-01-28T18:10:54-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-010",
-    "title": "DRY: gitignore entries, validation detection, icebox.json refs",
-    "sourceBacklog": "bugs.json",
+    "id": "FEAT-007",
+    "title": "Sprint retry with feedback loop",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "Step 1: In cmd_init(), read gitignore entries from .aishore/gitignore-entries.txt instead of hardcoding them",
-      "Step 2: In migrate.sh, read gitignore entries from .aishore/gitignore-entries.txt if available, else use hardcoded fallback",
-      "Step 3: Remove icebox.json from the migration file lists in migrate.sh (lines 231 and 361)",
-      "Step 4: Align validation detection in migrate.sh with cmd_init logic (use python -m pytest, support compound commands)"
+      "Step 1: In cmd_run() argument parsing (line ~616-629), add --retries N flag that sets local retries=0 (default). Parse the numeric argument after --retries. Add retries to the header display (line ~644-652).",
+      "Step 2: After implementation (line ~682-690), wrap the validation phases (lines ~692-723) in a retry loop: for ((attempt=0; attempt<=retries; attempt++)). On first attempt, run validation normally. On retry attempts, skip re-running the developer agent — just re-validate.",
+      "Step 3: On validation failure inside the retry loop, if attempts remain: (a) read the failure reason from result.json via jq (.reason), (b) read VALIDATE_CMD stderr/stdout if command validation failed, (c) do NOT call handle_sprint_failure() — leave the tree as-is so the developer can build on it.",
+      "Step 4: Construct a retry prompt using run_agent's extra_prompt parameter (6th arg). Include: 'Previous attempt failed validation. Failure output: <captured output>. Fix the issues and ensure all acceptance criteria pass.' Then call run_agent 'developer' 'implement' with this extra_prompt.",
+      "Step 5: After the retry developer agent completes, loop back to the validation phases. If all retries exhausted, call handle_sprint_failure() as current behavior. Track attempt count in a local variable.",
+      "Step 6: When archiving via mark_complete, update sprint.json to include 'attempts': N (total attempts taken). Modify create_sprint() or mark_complete() to accept and record this.",
+      "Step 7: Update cmd_help() to document --retries N flag under the run command section."
     ],
     "acceptanceCriteria": [
-      "cmd_init reads gitignore entries from gitignore-entries.txt",
-      "icebox.json is not referenced anywhere in the codebase",
-      "Validation detection in migrate.sh matches cmd_init logic for Python and Node.js projects"
+      "User can run `.aishore/aishore run --retries 2` to allow up to 2 retry attempts",
+      "Each retry passes the previous validation failure to the developer agent via extra_prompt",
+      "The working tree is NOT reset between retries (agent builds on previous attempt)",
+      "After all retries exhausted, the tree IS reset (current failure behavior via handle_sprint_failure)",
+      "Default behavior (no flag) is unchanged: single attempt, reset on failure",
+      "Sprint archive records the number of attempts taken in sprint.json",
+      "Validation command output (stderr+stdout) is captured and passed to retry prompt",
+      "Validator agent failure reason from result.json is captured and passed to retry prompt",
+      "shellcheck passes with no new warnings"
     ],
-    "startedAt": "2026-01-28T13:59:53-07:00",
+    "startedAt": "2026-01-28T18:10:54-07:00",
     "status": "passed",
-    "completedAt": "2026-01-28T14:05:36-07:00"
+    "completedAt": "2026-01-28T18:17:15-07:00"
   },
-  "completedAt": "2026-01-28T14:05:36-07:00"
+  "completedAt": "2026-01-28T18:17:15-07:00"
 }
