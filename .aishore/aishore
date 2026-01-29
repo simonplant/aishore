@@ -187,6 +187,45 @@ find_claude_md() {
     return 0
 }
 
+get_claudemd_snippet() {
+    cat <<'EOSNIPPET'
+
+## Sprint Orchestration (aishore)
+
+This project uses [aishore](https://github.com/simonweniger/aishore) for AI-assisted sprint management.
+
+### Commands
+
+```bash
+# Sprints
+.aishore/aishore run [count]        # Run N sprints (default: 1)
+.aishore/aishore run FEAT-001       # Run specific item by ID
+.aishore/aishore run --auto-commit  # Auto-commit after each sprint
+
+# Grooming
+.aishore/aishore groom              # Tech lead: groom bugs
+.aishore/aishore groom --backlog    # Product owner: groom features
+
+# Review
+.aishore/aishore review             # Architecture review
+.aishore/aishore review --update-docs          # Review and update docs
+.aishore/aishore review --since <commit>       # Review changes since commit
+
+# Info
+.aishore/aishore metrics            # Sprint metrics
+.aishore/aishore metrics --json     # Metrics as JSON
+
+# Maintenance
+.aishore/aishore update             # Update from upstream (checksum-verified)
+.aishore/aishore update --dry-run   # Check for updates without applying
+.aishore/aishore checksums          # Regenerate checksums after editing .aishore/ files
+.aishore/aishore init               # Interactive setup wizard
+```
+
+**Important**: After modifying any files in `.aishore/` (script, agent prompts, etc.), run `.aishore/aishore checksums` before committing. This regenerates `checksums.sha256` which is used to verify integrity during `update`.
+EOSNIPPET
+}
+
 # ============================================================================
 # CONFIGURATION (optional config.yaml, sensible defaults)
 # ============================================================================
@@ -1004,10 +1043,7 @@ cmd_init() {
     if [[ -n "$claude_md" ]]; then
         log_success "Found $claude_md — agents will use this automatically"
     else
-        log_info "No CLAUDE.md found"
-        echo "  Recommended: create CLAUDE.md in your project root."
-        echo "  It tells agents about your tech stack, conventions, and commands."
-        echo "  See: https://docs.anthropic.com/en/docs/claude-code/memory"
+        log_info "No CLAUDE.md found — will create one during scaffolding"
     fi
 
     if [[ -n "$prd_found" ]]; then
@@ -1111,6 +1147,22 @@ EOF
         log_success "Created .gitignore"
     fi
 
+    # Add aishore section to CLAUDE.md
+    local snippet
+    snippet=$(get_claudemd_snippet)
+    if [[ -n "$claude_md" ]]; then
+        if grep -q "## Sprint Orchestration (aishore)" "$claude_md" 2>/dev/null; then
+            log_info "CLAUDE.md already contains aishore section"
+        else
+            printf '%s\n' "$snippet" >> "$claude_md"
+            log_success "Appended aishore section to CLAUDE.md"
+        fi
+    else
+        claude_md="$PROJECT_ROOT/CLAUDE.md"
+        printf '# %s\n%s\n' "$project_name" "$snippet" > "$claude_md"
+        log_success "Created CLAUDE.md with aishore section"
+    fi
+
     echo ""
 
     # ── Step 6: Summary & next steps ───────────────────────────────────
@@ -1129,11 +1181,6 @@ EOF
     # Contextual next steps based on what's missing
     echo -e "${CYAN}Next steps:${NC}"
     local step=1
-
-    if [[ -z "$claude_md" ]]; then
-        echo "  $step. Create CLAUDE.md with your project's tech stack and conventions"
-        step=$((step + 1))
-    fi
 
     local item_count=0
     if command -v jq &>/dev/null && [[ -f "$BACKLOG_DIR/backlog.json" ]]; then

@@ -24,15 +24,28 @@ This directory contains the aishore sprint runner. See the [project README](../R
 ## Quick Reference
 
 ```bash
-.aishore/aishore run [N]          # Run N sprints (default: 1)
-.aishore/aishore run <ID>         # Run specific item
-.aishore/aishore groom            # Groom bugs/tech debt
-.aishore/aishore groom --backlog  # Groom features
-.aishore/aishore review           # Architecture review
-.aishore/aishore metrics          # Sprint metrics
-.aishore/aishore update           # Update from upstream
-.aishore/aishore init             # Setup wizard
-.aishore/aishore help             # Full command list
+# Sprints
+.aishore/aishore run [N]            # Run N sprints (default: 1)
+.aishore/aishore run <ID>           # Run specific item (e.g., FEAT-001)
+.aishore/aishore run --auto-commit  # Auto-commit after each sprint
+
+# Grooming
+.aishore/aishore groom              # Groom bugs/tech debt
+.aishore/aishore groom --backlog    # Groom features
+
+# Review
+.aishore/aishore review             # Architecture review
+.aishore/aishore review --update-docs          # Review and update docs
+.aishore/aishore review --since <commit>       # Review changes since commit
+
+# Info & maintenance
+.aishore/aishore metrics            # Sprint metrics
+.aishore/aishore metrics --json     # Metrics as JSON
+.aishore/aishore update             # Update from upstream (checksum-verified)
+.aishore/aishore update --dry-run   # Check for updates without applying
+.aishore/aishore checksums          # Regenerate checksums
+.aishore/aishore init               # Setup wizard
+.aishore/aishore help               # Full command list
 ```
 
 ## Updating

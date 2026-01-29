@@ -11,16 +11,27 @@ The tool is self-contained in `.aishore/` and user content lives in `backlog/` a
 ## Commands
 
 ```bash
-# Lint
+# Lint & validate
 shellcheck .aishore/aishore
-
-# Validate JSON
 jq empty backlog/*.json
 
-# Test basic functionality
-.aishore/aishore help
-.aishore/aishore version
-.aishore/aishore metrics
+# CLI commands
+.aishore/aishore init               # Interactive setup wizard
+.aishore/aishore run [N]            # Run N sprints (default: 1)
+.aishore/aishore run <ID>           # Run specific item (e.g., FEAT-001)
+.aishore/aishore run --auto-commit  # Auto-commit after each sprint
+.aishore/aishore groom              # Tech lead: groom bugs
+.aishore/aishore groom --backlog    # Product owner: groom features
+.aishore/aishore review             # Architecture review
+.aishore/aishore review --update-docs          # Review and update docs
+.aishore/aishore review --since <commit>       # Review changes since commit
+.aishore/aishore metrics            # Sprint metrics
+.aishore/aishore metrics --json     # Metrics as JSON
+.aishore/aishore update             # Update from upstream (checksum-verified)
+.aishore/aishore update --dry-run   # Check for updates without applying
+.aishore/aishore checksums          # Regenerate checksums after editing .aishore/ files
+.aishore/aishore version            # Show version
+.aishore/aishore help               # Show usage
 ```
 
 No build step — the tool is pure Bash.
