@@ -41,6 +41,8 @@ This directory contains the aishore sprint runner. See the [project README](../R
 # Info & maintenance
 .aishore/aishore metrics            # Sprint metrics
 .aishore/aishore metrics --json     # Metrics as JSON
+.aishore/aishore clean              # Remove done items from backlogs
+.aishore/aishore clean --dry-run    # Show what would be removed
 .aishore/aishore update             # Update from upstream (checksum-verified)
 .aishore/aishore update --dry-run   # Check for updates without applying
 .aishore/aishore checksums          # Regenerate checksums

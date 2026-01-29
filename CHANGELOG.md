@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`clean` command**: Remove done items from `backlog.json` and `bugs.json` with `--dry-run` support
 - **Progress indication**: Agent polling loop now shows periodic elapsed-time messages instead of silent waiting
 - **Prerequisite checks**: `require_tool` helper validates `jq` and `git` are installed before runtime commands, with clear error messages
 - **Actionable error messages**: All error messages now suggest remediation (e.g., "No ready items" tells you to run `groom` or edit the backlog)

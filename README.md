@@ -95,6 +95,8 @@ aishore auto-detects `CLAUDE.md` in your project root — no configuration neede
 | `update` | Update aishore from upstream (checksum-verified) |
 | `update --dry-run` | Check for updates without applying |
 | `update --force --no-verify` | Force update, skip checksum verification |
+| `clean` | Remove done items from backlog and bugs |
+| `clean --dry-run` | Show what would be removed without changing files |
 | `checksums` | Regenerate `checksums.sha256` |
 | `init` | Interactive setup wizard |
 | `version` | Show version |
