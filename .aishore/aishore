@@ -1118,7 +1118,7 @@ cmd_groom() {
 
     log_info "Running $agent agent..."
 
-    run_agent "$agent" "groom" "$MODEL_PRIMARY" "$context_args"
+    run_agent "$agent" "groom" "$MODEL_FAST" "$context_args"
 
     if ! check_result; then
         exit 1
