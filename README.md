@@ -148,8 +148,8 @@ Or use environment variables:
 
 | Setting            | Env var                    | Default                        |
 |--------------------|----------------------------|--------------------------------|
-| Primary model      | `AISHORE_MODEL_PRIMARY`    | `claude-opus-4-6`     |
-| Fast model         | `AISHORE_MODEL_FAST`       | `claude-sonnet-4-6`     |
+| Primary model      | `AISHORE_MODEL_PRIMARY`    | `claude-opus-4-6`              |
+| Fast model         | `AISHORE_MODEL_FAST`       | `claude-sonnet-4-6`            |
 | Agent timeout      | `AISHORE_AGENT_TIMEOUT`    | `3600`                         |
 | Validation command | `AISHORE_VALIDATE_CMD`     | *(none)*                       |
 | Validation timeout | `AISHORE_VALIDATE_TIMEOUT` | `120`                          |

@@ -46,7 +46,7 @@ PROJECT_ROOT="$(dirname "$AISHORE_ROOT")"
 if [[ -f "$PROJECT_ROOT/VERSION" ]]; then
     AISHORE_VERSION=$(cat "$PROJECT_ROOT/VERSION")
 else
-    AISHORE_VERSION="0.1.5"
+    AISHORE_VERSION="0.1.6"
 fi
 
 # Tool paths (in .aishore/ - can be updated)
