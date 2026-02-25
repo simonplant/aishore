@@ -137,8 +137,8 @@ validation:
   timeout: 120
 
 models:
-  primary: "claude-opus-4-5-20251101"
-  fast: "claude-sonnet-4-20250514"
+  primary: "claude-opus-4-6"
+  fast: "claude-sonnet-4-6"
 
 agent:
   timeout: 3600
@@ -148,8 +148,8 @@ Or use environment variables:
 
 | Setting            | Env var                    | Default                        |
 |--------------------|----------------------------|--------------------------------|
-| Primary model      | `AISHORE_MODEL_PRIMARY`    | `claude-opus-4-5-20251101`     |
-| Fast model         | `AISHORE_MODEL_FAST`       | `claude-sonnet-4-20250514`     |
+| Primary model      | `AISHORE_MODEL_PRIMARY`    | `claude-opus-4-6`     |
+| Fast model         | `AISHORE_MODEL_FAST`       | `claude-sonnet-4-6`     |
 | Agent timeout      | `AISHORE_AGENT_TIMEOUT`    | `3600`                         |
 | Validation command | `AISHORE_VALIDATE_CMD`     | *(none)*                       |
 | Validation timeout | `AISHORE_VALIDATE_TIMEOUT` | `120`                          |

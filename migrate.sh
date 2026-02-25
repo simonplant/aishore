@@ -427,8 +427,8 @@ validation:
   timeout: 120
 
 models:
-  primary: \"claude-opus-4-5-20251101\"
-  fast: \"claude-sonnet-4-20250514\"
+  primary: \"claude-opus-4-6\"
+  fast: \"claude-sonnet-4-6\"
 
 agent:
   timeout: 3600"

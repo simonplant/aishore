@@ -64,8 +64,8 @@ ARCHIVE_DIR="$BACKLOG_DIR/archive"
 # DEFAULTS — set first, config.yaml overrides, env vars win last
 # ============================================================================
 
-MODEL_PRIMARY="claude-opus-4-5-20251101"
-MODEL_FAST="claude-sonnet-4-20250514"
+MODEL_PRIMARY="claude-opus-4-6"
+MODEL_FAST="claude-sonnet-4-6"
 AGENT_TIMEOUT="3600"
 VALIDATE_CMD=""
 VALIDATE_TIMEOUT="120"
@@ -1491,8 +1491,8 @@ validation:
   timeout: 120
 
 # models:
-#   primary: "claude-opus-4-5-20251101"
-#   fast: "claude-sonnet-4-20250514"
+#   primary: "claude-opus-4-6"
+#   fast: "claude-sonnet-4-6"
 
 # agent:
 #   timeout: 3600
@@ -1947,8 +1947,8 @@ Files:
   .aishore/agents/        Agent prompts (updated by 'update')
 
 Environment Variables:
-  AISHORE_MODEL_PRIMARY     Primary model (default: claude-opus-4-5-20251101)
-  AISHORE_MODEL_FAST        Fast model (default: claude-sonnet-4-20250514)
+  AISHORE_MODEL_PRIMARY     Primary model (default: claude-opus-4-6)
+  AISHORE_MODEL_FAST        Fast model (default: claude-sonnet-4-6)
   AISHORE_AGENT_TIMEOUT     Agent timeout in seconds (default: 3600)
   AISHORE_VALIDATE_CMD      Validation command to run after implementation
   AISHORE_VALIDATE_TIMEOUT  Validation command timeout in seconds (default: 120)
