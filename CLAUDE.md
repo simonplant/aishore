@@ -83,9 +83,9 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 **Configuration precedence:** env vars > config.yaml > built-in defaults.
 
-**Update integrity:** The `update` command fetches the remote `VERSION` file for comparison, then stages all files into a temp directory, verifies SHA-256 checksums against `checksums.sha256`, and only installs if all files pass verification.
+**Update integrity:** The `update` command fetches the remote `.aishore/VERSION` for comparison, then stages all files into a temp directory, verifies SHA-256 checksums against `checksums.sha256`, and only installs if all files pass verification.
 
-**Version management:** The `VERSION` file is the single source of truth. The CLI reads it at runtime, with an inline fallback for installed copies.
+**Version management:** `.aishore/VERSION` is the single source of truth. The CLI reads it at runtime.
 
 ## Code Style
 

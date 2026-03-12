@@ -39,8 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Unified agent invocation**: `cmd_groom` and `cmd_review` now use `run_agent()` instead of calling `run_agent_process()` directly
-- **Version management**: `VERSION` file is the single source of truth; CLI reads it at runtime with inline fallback for installed copies
-- **Update command**: Fetches remote `VERSION` file instead of grepping the script for version comparison
+- **Version management**: `.aishore/VERSION` is the single source of truth; CLI reads it at runtime
+- **Update command**: Fetches remote `.aishore/VERSION` for version comparison
 - **`migrate.sh`**: Reads version dynamically instead of hardcoding it
 
 ### Removed

@@ -119,12 +119,12 @@ project/
 
 ### Version Management
 
-The `VERSION` file at project root is the single source of truth. The CLI reads it at runtime. An inline fallback in the script covers installed copies (where `VERSION` isn't present).
+`.aishore/VERSION` is the single source of truth. The CLI reads it at runtime.
 
 When bumping versions:
-1. Update `VERSION`
-2. Update the fallback value in `.aishore/aishore` (`AISHORE_VERSION="x.y.z"`)
-3. CI verifies both match
+1. Update `.aishore/VERSION`
+2. Run `.aishore/aishore checksums`
+3. CI verifies the runtime version matches the file
 
 ## Questions?
 

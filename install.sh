@@ -63,7 +63,7 @@ AISHORE_DIR="$INSTALL_DIR/.aishore"
 
 # Files to download
 FILES=(
-    "VERSION"
+    ".aishore/VERSION"
     ".aishore/aishore"
     ".aishore/gitignore-entries.txt"
     ".aishore/agents/developer.md"
