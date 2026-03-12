@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # aishore - AI Sprint Runner CLI
 # A self-contained sprint orchestration tool for Claude Code
 #
@@ -1441,9 +1441,10 @@ cmd_init() {
     # Check for existing requirements docs
     local prd_found=""
     for candidate in \
-        "$PROJECT_ROOT/product.md" "$PROJECT_ROOT/PRODUCT.md" \
-        "$PROJECT_ROOT/prd.md" "$PROJECT_ROOT/PRD.md" \
-        "$PROJECT_ROOT/docs/product.md" "$PROJECT_ROOT/docs/PRD.md" \
+        "$PROJECT_ROOT/PRODUCT.md" "$PROJECT_ROOT/product.md" \
+        "$PROJECT_ROOT/PRD.md" "$PROJECT_ROOT/prd.md" \
+        "$PROJECT_ROOT/docs/PRODUCT.md" "$PROJECT_ROOT/docs/product.md" \
+        "$PROJECT_ROOT/docs/PRD.md" \
         "$PROJECT_ROOT/docs/WEBSITE_BRIEF.md" \
         "$PROJECT_ROOT/README.md"; do
         if [[ -f "$candidate" ]]; then
@@ -1464,8 +1465,8 @@ cmd_init() {
     if [[ -n "$prd_found" ]]; then
         log_success "Found requirements doc: $prd_found"
     else
-        log_info "No product requirements doc found (product.md, prd.md, etc.)"
-        echo "  Tip: a product.md helps the product-owner agent prioritize features."
+        log_info "No product requirements doc found (PRODUCT.md, PRD.md, etc.)"
+        echo "  Tip: a PRODUCT.md helps the product-owner agent prioritize features."
         echo "  Even a short description of what you're building is useful."
     fi
 
