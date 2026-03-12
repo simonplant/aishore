@@ -1444,7 +1444,7 @@ cmd_init() {
         "$PROJECT_ROOT/PRODUCT.md" "$PROJECT_ROOT/product.md" \
         "$PROJECT_ROOT/PRD.md" "$PROJECT_ROOT/prd.md" \
         "$PROJECT_ROOT/docs/PRODUCT.md" "$PROJECT_ROOT/docs/product.md" \
-        "$PROJECT_ROOT/docs/PRD.md" \
+        "$PROJECT_ROOT/docs/PRD.md" "$PROJECT_ROOT/docs/prd.md" \
         "$PROJECT_ROOT/docs/WEBSITE_BRIEF.md" \
         "$PROJECT_ROOT/README.md"; do
         if [[ -f "$candidate" ]]; then
