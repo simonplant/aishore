@@ -343,7 +343,7 @@ pick_item() {
                         all_done_ids=$(echo "$all_done_ids" "$df_done" | jq -s 'add | unique')
                     done
                     local unmet
-                    unmet=$(echo "$deps_json" | jq -r --argjson done "$all_done_ids" '.[] | select(. as $dep | $done | index($dep) == null)' 2>/dev/null)
+                    unmet=$(echo "$deps_json" | jq -r --argjson done_ids "$all_done_ids" '.[] | select(. as $dep | $done_ids | index($dep) == null)' 2>/dev/null)
                     if [[ -n "$unmet" ]]; then
                         log_warning "Item $specific_id has unmet dependencies: $(echo "$unmet" | tr '\n' ', ' | sed 's/,$//')"
                     fi
