@@ -119,6 +119,9 @@ build_context() {
     local claude_md
     claude_md=$(find_claude_md)
     [[ -n "$claude_md" ]] && context="$context @$claude_md"
+    local project_docs
+    project_docs=$(find_project_docs)
+    [[ -n "$project_docs" ]] && context="$context $project_docs"
     echo "$context"
 }
 
@@ -187,7 +190,7 @@ require_tool() {
 }
 
 # ============================================================================
-# AUTO-DETECT CLAUDE.MD
+# AUTO-DETECT PROJECT DOCS
 # ============================================================================
 
 find_claude_md() {
@@ -197,6 +200,16 @@ find_claude_md() {
         [[ -f "$path" ]] && { echo "$path"; return 0; }
     done
     return 0
+}
+
+find_project_docs() {
+    local dir="$PROJECT_ROOT"
+    local docs=""
+    for path in "$dir/ARCHITECTURE.md" "$dir/docs/ARCHITECTURE.md" \
+                "$dir/PRODUCT.md" "$dir/docs/PRODUCT.md"; do
+        [[ -f "$path" ]] && docs="$docs @$path"
+    done
+    echo "$docs"
 }
 
 get_claudemd_snippet() {
