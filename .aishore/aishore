@@ -72,8 +72,8 @@ VALIDATE_TIMEOUT="120"
 NOTIFY_CMD=""
 
 # Default permission sets per agent role
-PERMS_DEVELOPER="Bash(git:*),Edit,Write,Read,Glob,Grep"
-PERMS_VALIDATOR="Bash(git:*),Read,Glob,Grep"
+PERMS_DEVELOPER="Bash,Edit,Write,Read,Glob,Grep"
+PERMS_VALIDATOR="Bash,Read,Write,Glob,Grep"
 PERMS_REVIEWER="Read,Glob,Grep"
 PERMS_REVIEWER_DOCS="Read,Glob,Grep,Edit,Write"
 
@@ -2648,15 +2648,15 @@ Environment Variables:
 
 Agent Permissions:
   Each agent role has a default permission set:
-    developer       Bash(git:*),Edit,Write,Read,Glob,Grep
-    validator       Bash(git:*),Read,Glob,Grep
+    developer       Bash,Edit,Write,Read,Glob,Grep
+    validator       Bash,Read,Write,Glob,Grep
     reviewer        Read,Glob,Grep  (with --update-docs: Read,Glob,Grep,Edit,Write)
     groom agents    Same as developer (they update backlog files)
 
   Override in config.yaml:
     permissions:
-      developer: "Bash(git:*),Edit,Write,Read,Glob,Grep"
-      validator: "Bash(git:*),Read,Glob,Grep"
+      developer: "Bash,Edit,Write,Read,Glob,Grep"
+      validator: "Bash,Read,Write,Glob,Grep"
       reviewer: "Read,Glob,Grep"
 
 Trust Model:
