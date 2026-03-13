@@ -17,6 +17,11 @@ jq empty backlog/*.json
 
 # CLI commands
 .aishore/aishore init               # Interactive setup wizard
+.aishore/aishore backlog list       # List all items
+.aishore/aishore backlog add        # Add item (interactive or with flags)
+.aishore/aishore backlog show <ID>  # Show full detail of one item
+.aishore/aishore backlog edit <ID>  # Update fields on an item
+.aishore/aishore backlog rm <ID>    # Remove an item
 .aishore/aishore run [N]            # Run N sprints (default: 1)
 .aishore/aishore run <ID>           # Run specific item (e.g., FEAT-001)
 .aishore/aishore run --auto-commit  # Auto-commit after each sprint

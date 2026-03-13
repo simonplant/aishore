@@ -53,7 +53,7 @@ cd /path/to/your/project
 .aishore/aishore init
 
 # Add features to backlog
-vim backlog/backlog.json
+.aishore/aishore backlog add --title "My feature" --desc "Description"
 
 # Groom items (marks them ready)
 .aishore/aishore groom
@@ -71,6 +71,15 @@ aishore auto-detects `CLAUDE.md` in your project root — no configuration neede
 
 | Command | Description |
 |---------|-------------|
+| `backlog list` | List all items (features + bugs) |
+| `backlog list --status todo` | Filter by status |
+| `backlog list --type feat` | Filter by type (feat, bug) |
+| `backlog list --ready` | Show only sprint-ready items |
+| `backlog add` | Add a new item (interactive) |
+| `backlog add --title "..." --type bug` | Add with flags |
+| `backlog show <ID>` | Show full detail of one item |
+| `backlog edit <ID> --priority must` | Update fields on an item |
+| `backlog rm <ID>` | Remove an item |
 | `run [N]` | Run N sprints (default: 1) |
 | `run <ID>` | Run specific item by ID (e.g., `FEAT-001`) |
 | `run --auto-commit` | Auto-commit after each sprint |

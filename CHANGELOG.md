@@ -5,6 +5,30 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-03-12
+
+### Added
+
+- **`backlog` CRUD commands**: Full CLI management of backlog items without editing JSON
+  - `backlog list` — List all items with filtering by status, type, and readiness
+  - `backlog add` — Add items interactively or with flags (`--title`, `--type`, `--priority`, etc.)
+  - `backlog show <ID>` — Show full detail of any item
+  - `backlog edit <ID>` — Update fields (`--title`, `--priority`, `--status`, `--ready`, etc.)
+  - `backlog rm <ID>` — Remove items with confirmation (or `--force`)
+- **Auto-detect project docs**: Agents automatically receive `ARCHITECTURE.md` and `PRODUCT.md` from root or `docs/` as context during sprints
+
+### Fixed
+
+- **Graceful VERSION handling**: CLI no longer crashes when `.aishore/VERSION` is missing — falls back to "unknown" instead of hard-exiting
+
+### Changed
+
+- **VERSION moved into `.aishore/`**: VERSION file now lives at `.aishore/VERSION` alongside the rest of the tool
+
+### Removed
+
+- **Migration script**: Removed `migrate.sh` and all migration references
+
 ## [0.1.9] - 2026-03-12
 
 ### Fixed
