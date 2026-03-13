@@ -825,17 +825,27 @@ check_result() {
     fi
 
     local status
-    status=$(jq -r '.status // "unknown"' "$STATUS_DIR/result.json" 2>/dev/null)
+    # Support both simple format {"status":"pass"} and detailed format {"overall":"PASS"}
+    status=$(jq -r '.status // .overall // "unknown"' "$STATUS_DIR/result.json" 2>/dev/null)
+    # Normalize to lowercase so PASS/pass both match
+    status=$(echo "$status" | tr '[:upper:]' '[:lower:]')
 
     if [[ "$status" == "pass" ]]; then
         local summary
-        summary=$(jq -r '.summary // "completed"' "$STATUS_DIR/result.json")
+        summary=$(jq -r '.summary // .checks // "completed"' "$STATUS_DIR/result.json")
         log_success "$summary"
         return 0
     else
         local reason
         reason=$(jq -r '.reason // "unknown error"' "$STATUS_DIR/result.json")
-        log_error "$reason"
+        if [[ "$reason" == "unknown error" ]]; then
+            # Include actual file contents to aid debugging
+            local raw_content
+            raw_content=$(cat "$STATUS_DIR/result.json" 2>/dev/null || echo "(unreadable)")
+            log_error "Unexpected result format: $raw_content"
+        else
+            log_error "$reason"
+        fi
         return 1
     fi
 }
@@ -1123,7 +1133,7 @@ cmd_run() {
                 if [[ $attempt -lt $retries ]]; then
                     local fail_reason=""
                     if [[ -f "$STATUS_DIR/result.json" ]]; then
-                        fail_reason=$(jq -r '.reason // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
+                        fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
                     fi
                     retry_extra_prompt="Previous attempt failed during implementation. Failure reason: ${fail_reason}. Fix the issues and ensure all acceptance criteria pass."
                     log_info "Will retry with failure context"
@@ -1193,7 +1203,7 @@ Fix the issues and ensure all acceptance criteria pass."
                 if [[ $attempt -lt $retries ]]; then
                     local agent_fail_reason=""
                     if [[ -f "$STATUS_DIR/result.json" ]]; then
-                        agent_fail_reason=$(jq -r '.reason // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
+                        agent_fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
                     fi
                     retry_extra_prompt="Previous attempt failed validator agent review. Failure reason: ${agent_fail_reason}."
                     if [[ -n "$validate_output" ]]; then
