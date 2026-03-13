@@ -43,11 +43,11 @@ AISHORE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$AISHORE_ROOT")"
 
 # Version: read from .aishore/VERSION (single source of truth)
-if [[ ! -f "$AISHORE_ROOT/VERSION" ]]; then
-    echo "ERROR: VERSION file not found at $AISHORE_ROOT/VERSION" >&2
-    exit 1
+if [[ -f "$AISHORE_ROOT/VERSION" ]]; then
+    AISHORE_VERSION=$(cat "$AISHORE_ROOT/VERSION")
+else
+    AISHORE_VERSION="unknown"
 fi
-AISHORE_VERSION=$(cat "$AISHORE_ROOT/VERSION")
 
 # Tool paths (in .aishore/ - can be updated)
 CONFIG_FILE="$AISHORE_ROOT/config.yaml"
