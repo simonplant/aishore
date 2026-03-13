@@ -1618,7 +1618,153 @@ EOF
         log_info "Kept existing backlog/sprint.json"
     fi
 
+    if [[ ! -f "$BACKLOG_DIR/DEFINITIONS.md" ]]; then
+        cat > "$BACKLOG_DIR/DEFINITIONS.md" << 'DEOF'
+# Sprint Definitions
+
+## Definition of Ready (DoR)
+
+An item is ready for sprint when:
+
+| # | Criteria              | Description                                        |
+|---|-----------------------|----------------------------------------------------|
+| 1 | **Clear Value**       | The "why" is understood - ties to a user outcome   |
+| 2 | **Actionable Steps**  | Steps are clear enough for implementation          |
+| 3 | **Testable AC**       | Acceptance criteria can be verified                |
+| 4 | **No Blockers**       | Dependencies are resolved                          |
+| 5 | **Right Size**        | Can be completed in one sprint                     |
+| 6 | **readyForSprint**    | Tech Lead has marked it ready                      |
+
+## Definition of Done (DoD)
+
+An item is done when:
+
+| # | Criteria              | Description                                        |
+|---|-----------------------|----------------------------------------------------|
+| 1 | **Code Complete**     | Implementation matches acceptance criteria         |
+| 2 | **Tests Pass**        | All tests pass (existing + new)                   |
+| 3 | **Validation Pass**   | Type-check, lint, tests all pass                  |
+| 4 | **AC Verified**       | Each acceptance criterion is met                  |
+| 5 | **No Regressions**    | Existing functionality still works                |
+
+## Priority Levels
+
+| Priority | Code | Description                   |
+|----------|------|-------------------------------|
+| Must     | P0   | Critical, blocking other work |
+| Should   | P1   | Important, not blocking       |
+| Could    | P2   | Nice to have                  |
+| Future   | P3   | Long-term consideration       |
+
+## Size Estimates
+
+| Size | Typical Scope                               |
+|------|---------------------------------------------|
+| XS   | Single file change, < 50 lines              |
+| S    | Few files, < 200 lines, straightforward     |
+| M    | Multiple files, new patterns, 200-500 lines |
+| L    | Significant feature, multiple components    |
+| XL   | Large feature, consider splitting           |
+
+## Backlog Item Structure
+
+```json
+{
+  "id": "FEAT-001",
+  "title": "Short title",
+  "description": "User-focused description",
+  "priority": "should",
+  "category": "core",
+  "steps": ["Step 1", "Step 2"],
+  "acceptanceCriteria": ["AC 1", "AC 2"],
+  "status": "todo",
+  "passes": false,
+  "readyForSprint": false
+}
+```
+DEOF
+        log_success "Created backlog/DEFINITIONS.md"
+    else
+        log_info "Kept existing backlog/DEFINITIONS.md"
+    fi
+
     touch "$ARCHIVE_DIR/sprints.jsonl"
+
+    # Scaffold project docs if missing
+    local docs_dir="$PROJECT_ROOT/docs"
+
+    # PRODUCT.md
+    local product_found=false
+    for p in "$PROJECT_ROOT/PRODUCT.md" "$PROJECT_ROOT/product.md" \
+             "$docs_dir/PRODUCT.md" "$docs_dir/product.md" \
+             "$PROJECT_ROOT/PRD.md" "$PROJECT_ROOT/prd.md" \
+             "$docs_dir/PRD.md" "$docs_dir/prd.md"; do
+        [[ -f "$p" ]] && { product_found=true; break; }
+    done
+    if [[ "$product_found" == "false" ]]; then
+        mkdir -p "$docs_dir"
+        cat > "$docs_dir/PRODUCT.md" << PEOF
+# Product Requirements — $project_name
+
+<!-- TODO: Fill in the sections below to give aishore agents context about what you're building -->
+
+## Vision
+
+What is this product and why does it exist?
+
+## Target Users
+
+Who are you building this for?
+
+## Core Features
+
+What are the key capabilities?
+
+- [ ] Feature 1
+- [ ] Feature 2
+- [ ] Feature 3
+
+## Non-Goals
+
+What is explicitly out of scope?
+PEOF
+        log_success "Created docs/PRODUCT.md (fill in to help agents understand your product)"
+    else
+        log_info "Found existing product doc: $p"
+    fi
+
+    # ARCHITECTURE.md
+    local arch_found=false
+    for p in "$PROJECT_ROOT/ARCHITECTURE.md" "$docs_dir/ARCHITECTURE.md"; do
+        [[ -f "$p" ]] && { arch_found=true; break; }
+    done
+    if [[ "$arch_found" == "false" ]]; then
+        mkdir -p "$docs_dir"
+        cat > "$docs_dir/ARCHITECTURE.md" << AEOF
+# Architecture — $project_name
+
+<!-- TODO: Fill in the sections below to guide implementation decisions -->
+
+## Tech Stack
+
+What languages, frameworks, and tools does this project use?
+
+## Project Structure
+
+Describe the key directories and their purpose.
+
+## Key Design Decisions
+
+Document important architectural choices and their rationale.
+
+## Conventions
+
+Code style, naming conventions, patterns to follow.
+AEOF
+        log_success "Created docs/ARCHITECTURE.md (fill in to guide agent implementation)"
+    else
+        log_info "Found existing architecture doc: $p"
+    fi
 
     # Update .gitignore
     local gitignore="$PROJECT_ROOT/.gitignore"
@@ -1671,15 +1817,26 @@ EOF
     echo ""
 
     # Status summary
-    echo "  Project:      $project_name"
-    echo "  Validation:   ${validate_cmd:-<none>}"
-    echo "  CLAUDE.md:    ${claude_md:-<not found>}"
-    echo "  Requirements: ${prd_found:-<not found>}"
+    echo "  Project:       $project_name"
+    echo "  Validation:    ${validate_cmd:-<none>}"
+    echo "  CLAUDE.md:     ${claude_md:-<not found>}"
+    echo "  PRODUCT.md:    $(ls "$docs_dir/PRODUCT.md" "$PROJECT_ROOT/PRODUCT.md" 2>/dev/null | head -1 || echo '<not found>')"
+    echo "  ARCHITECTURE:  $(ls "$docs_dir/ARCHITECTURE.md" "$PROJECT_ROOT/ARCHITECTURE.md" 2>/dev/null | head -1 || echo '<not found>')"
+    echo "  Definitions:   $BACKLOG_DIR/DEFINITIONS.md"
     echo ""
 
     # Contextual next steps based on what's missing
     echo -e "${CYAN}Next steps:${NC}"
     local step=1
+
+    if [[ "$product_found" == "false" ]]; then
+        echo "  $step. Fill in docs/PRODUCT.md with your product vision"
+        step=$((step + 1))
+    fi
+    if [[ "$arch_found" == "false" ]]; then
+        echo "  $step. Fill in docs/ARCHITECTURE.md with your tech stack and conventions"
+        step=$((step + 1))
+    fi
 
     local item_count=0
     if command -v jq &>/dev/null && [[ -f "$BACKLOG_DIR/backlog.json" ]]; then
@@ -1687,7 +1844,7 @@ EOF
     fi
 
     if [[ "$item_count" -eq 0 ]]; then
-        echo "  $step. Add features to backlog/backlog.json (or run: .aishore/aishore groom --backlog)"
+        echo "  $step. Add features: .aishore/aishore backlog add"
         step=$((step + 1))
         echo "  $step. Groom items for sprint readiness: .aishore/aishore groom"
         step=$((step + 1))

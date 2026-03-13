@@ -94,7 +94,7 @@ project/
 │   ├── backlog.json      # Feature backlog
 │   ├── bugs.json         # Bug/tech-debt backlog
 │   ├── sprint.json       # Current sprint state
-│   ├── definitions.md    # DoR, DoD, priority/size definitions
+│   ├── DEFINITIONS.md    # DoR, DoD, priority/size definitions
 │   └── archive/          # Completed sprint history
 │       └── sprints.jsonl
 └── .aishore/             # Tool (this is what gets updated)
