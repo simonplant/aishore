@@ -82,7 +82,9 @@ aishore auto-detects `CLAUDE.md` in your project root — no configuration neede
 | `backlog rm <ID>` | Remove an item |
 | `run [N]` | Run N sprints (default: 1) |
 | `run <ID>` | Run specific item by ID (e.g., `FEAT-001`) |
+| `run --dry-run` | Preview what would happen without running agents |
 | `run --auto-commit` | Auto-commit after each sprint |
+| `run --retries N` | Allow N retry attempts on validation failure |
 | `groom` | Groom bugs/tech debt (Tech Lead agent) |
 | `groom --backlog` | Groom features (Product Owner agent) |
 | `review` | Architecture review |
@@ -94,6 +96,7 @@ aishore auto-detects `CLAUDE.md` in your project root — no configuration neede
 | `update --force --no-verify` | Force update, skip checksum verification |
 | `clean` | Remove done items from backlog and bugs |
 | `clean --dry-run` | Show what would be removed without changing files |
+| `status` | Show backlog overview and sprint readiness |
 | `checksums` | Regenerate `checksums.sha256` |
 | `init` | Interactive setup wizard |
 | `version` | Show version |
@@ -140,6 +143,9 @@ models:
 
 agent:
   timeout: 3600
+
+notifications:
+  on_complete: "notify-send 'aishore' \"Sprint $1: $2\""
 ```
 
 Or use environment variables:
@@ -151,6 +157,7 @@ Or use environment variables:
 | Agent timeout      | `AISHORE_AGENT_TIMEOUT`    | `3600`                         |
 | Validation command | `AISHORE_VALIDATE_CMD`     | *(none)*                       |
 | Validation timeout | `AISHORE_VALIDATE_TIMEOUT` | `120`                          |
+| Notify command     | `AISHORE_NOTIFY_CMD`       | *(none)*                       |
 
 ## Requirements
 
@@ -174,7 +181,7 @@ If checksums cannot be fetched, the update aborts. Use `--force --no-verify` to 
 
 ## How It Works
 
-**Concurrency guard:** Only one aishore process runs at a time (uses `flock` on Linux).
+**Concurrency guard:** Only one aishore process runs at a time (uses `flock`).
 
 **Sprint execution:** The orchestrator picks a ready backlog item, invokes the developer agent via `claude --model`, then runs your validation command (if configured), then invokes the validator agent. Progress messages show elapsed time during agent execution.
 
@@ -191,6 +198,12 @@ The orchestrator polls for this file, then proceeds to the next step.
 **Failed item skipping:** When running multiple sprints (`run 5`), items that fail are excluded from subsequent picks in the same session.
 
 **Configuration precedence:** Environment variables override `config.yaml`, which overrides built-in defaults. This lets you set project defaults in config while overriding per-run via env vars.
+
+**Notifications:** Configure `notifications.on_complete` in `config.yaml` (or `AISHORE_NOTIFY_CMD` env var) to run a command on sprint completion. The command receives `$1=status` and `$2=item_id`.
+
+**Update integrity:** The `update` command fetches the remote `.aishore/VERSION` for comparison, stages all files into a temp directory, verifies SHA-256 checksums against `checksums.sha256`, and only installs if all files pass verification.
+
+**Version management:** `.aishore/VERSION` is the single source of truth. The CLI reads it at runtime.
 
 ## License
 

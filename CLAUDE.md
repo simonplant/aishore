@@ -24,7 +24,9 @@ jq empty backlog/*.json
 .aishore/aishore backlog rm <ID>    # Remove an item
 .aishore/aishore run [N]            # Run N sprints (default: 1)
 .aishore/aishore run <ID>           # Run specific item (e.g., FEAT-001)
+.aishore/aishore run --dry-run      # Preview without running agents
 .aishore/aishore run --auto-commit  # Auto-commit after each sprint
+.aishore/aishore run --retries N    # Allow N retries on validation failure
 .aishore/aishore groom              # Tech lead: groom bugs
 .aishore/aishore groom --backlog    # Product owner: groom features
 .aishore/aishore review             # Architecture review
@@ -34,6 +36,7 @@ jq empty backlog/*.json
 .aishore/aishore metrics --json     # Metrics as JSON
 .aishore/aishore clean              # Remove done items from backlogs
 .aishore/aishore clean --dry-run    # Show what would be removed
+.aishore/aishore status             # Show backlog overview and sprint readiness
 .aishore/aishore update             # Update from upstream (checksum-verified)
 .aishore/aishore update --dry-run   # Check for updates without applying
 .aishore/aishore checksums          # Regenerate checksums after editing .aishore/ files
@@ -57,6 +60,7 @@ project/
 │   ├── backlog.json
 │   ├── bugs.json
 │   ├── sprint.json
+│   ├── DEFINITIONS.md       # DoR, DoD, priority/size definitions
 │   └── archive/
 │       └── sprints.jsonl
 └── .aishore/                # Tool (can be updated)
@@ -79,9 +83,9 @@ project/
 ```
 The orchestrator polls for this file, then proceeds to the next step.
 
-**Context auto-detection:** aishore automatically finds and uses `CLAUDE.md` from the project root.
+**Context auto-detection:** aishore automatically finds and uses `CLAUDE.md`, `PRODUCT.md`, and `ARCHITECTURE.md` from the project root (or `docs/` directory) as agent context.
 
-**Agent invocation:** All agent invocations go through `run_agent()`, which assembles the prompt, appends the completion contract, and delegates to `run_agent_process()`. Agents have permissions for: `Bash(git:*)`, `Edit`, `Write`, `Read`, `Glob`, `Grep`.
+**Agent invocation:** All agent invocations go through `run_agent()`, which assembles the prompt, appends the completion contract, and delegates to `run_agent_process()`. Permissions vary by role: developer gets `Bash(git:*),Edit,Write,Read,Glob,Grep`; validator gets `Bash(git:*),Read,Glob,Grep`; reviewer gets `Read,Glob,Grep` (or with `Edit,Write` when `--update-docs` is used). Permissions are configurable in `config.yaml`.
 
 **Concurrency:** Only one aishore process runs at a time, enforced via `flock` on `.aishore/data/status/.aishore.lock`.
 

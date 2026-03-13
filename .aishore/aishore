@@ -1962,6 +1962,7 @@ cmd_update() {
     echo "Files to update:"
     echo "  .aishore/VERSION"
     echo "  .aishore/aishore"
+    echo "  .aishore/README.md"
     echo "  .aishore/gitignore-entries.txt"
     echo "  .aishore/agents/developer.md"
     echo "  .aishore/agents/validator.md"
@@ -2049,6 +2050,17 @@ cmd_update() {
         all_verified=false
     fi
 
+    # Stage README.md
+    log_info "Fetching README.md..."
+    if $fetch_cmd "$repo_url/.aishore/README.md" > "$staging_dir/README.md" 2>/dev/null; then
+        if ! verify_or_abort "$staging_dir/README.md" "README.md" ".aishore/README.md"; then
+            all_verified=false
+        fi
+    else
+        log_error "Could not fetch README.md"
+        all_verified=false
+    fi
+
     # Stage gitignore-entries.txt
     log_info "Fetching gitignore-entries.txt..."
     if $fetch_cmd "$repo_url/.aishore/gitignore-entries.txt" > "$staging_dir/gitignore-entries.txt" 2>/dev/null; then
@@ -2083,13 +2095,14 @@ cmd_update() {
     mv "$staging_dir/VERSION" "$AISHORE_ROOT/VERSION"
     mv "$staging_dir/aishore" "$AISHORE_ROOT/aishore"
     chmod +x "$AISHORE_ROOT/aishore"
+    mv "$staging_dir/README.md" "$AISHORE_ROOT/README.md"
     mv "$staging_dir/gitignore-entries.txt" "$AISHORE_ROOT/gitignore-entries.txt"
     for agent in developer validator tech-lead product-owner architect; do
         mv "$staging_dir/agents/$agent.md" "$AGENTS_DIR/$agent.md"
     done
 
     echo ""
-    log_success "Updated to $remote_version (8 files installed)"
+    log_success "Updated to $remote_version (9 files installed)"
 }
 
 cmd_checksums() {
@@ -2099,6 +2112,7 @@ cmd_checksums() {
     local files=(
         .aishore/VERSION
         .aishore/aishore
+        .aishore/README.md
         .aishore/gitignore-entries.txt
     )
 

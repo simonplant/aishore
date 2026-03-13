@@ -5,6 +5,12 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-03-12
+
+### Changed
+
+- **Consolidated backlog helpers**: Extracted shared JSON operations (`update_item`, `add_item`, `remove_item`, `remove_items_by_status`) into reusable helper functions, reducing duplication across backlog CRUD and sprint completion logic
+
 ## [0.2.0] - 2026-03-12
 
 ### Added
@@ -16,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `backlog edit <ID>` — Update fields (`--title`, `--priority`, `--status`, `--ready`, etc.)
   - `backlog rm <ID>` — Remove items with confirmation (or `--force`)
 - **Auto-detect project docs**: Agents automatically receive `ARCHITECTURE.md` and `PRODUCT.md` from root or `docs/` as context during sprints
+- **Scaffold project docs**: `init` wizard now creates `PRODUCT.md`, `ARCHITECTURE.md`, and `DEFINITIONS.md` templates when they don't already exist
 
 ### Fixed
 

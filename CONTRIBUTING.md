@@ -111,7 +111,7 @@ project/
 - **Separation of concerns** — Tool (`.aishore/`) vs user content (`backlog/`)
 - **Single-file CLI** — All logic in one self-contained Bash script
 - **Sensible defaults** — Config is optional; env vars override config, which overrides defaults
-- **Auto-detect context** — Finds `CLAUDE.md` automatically
+- **Auto-detect context** — Finds `CLAUDE.md`, `PRODUCT.md`, and `ARCHITECTURE.md` automatically
 - **Checksum-verified updates** — `update` command verifies SHA-256 before installing
 - **Concurrency guard** — `flock`-based locking prevents parallel runs
 - **Completion contract** — Agents write to `result.json` to signal done
