@@ -844,10 +844,54 @@ check_result() {
 # FAILURE RECOVERY
 # ============================================================================
 
+save_backlog_snapshot() {
+    local snapshot_dir="$STATUS_DIR/backlog-snapshot"
+    mkdir -p "$snapshot_dir"
+    for f in "backlog.json" "bugs.json"; do
+        [[ -f "$BACKLOG_DIR/$f" ]] && cp "$BACKLOG_DIR/$f" "$snapshot_dir/$f" || true
+    done
+}
+
+restore_backlog_snapshot() {
+    local snapshot_dir="$STATUS_DIR/backlog-snapshot"
+    for f in "backlog.json" "bugs.json"; do
+        [[ -f "$snapshot_dir/$f" ]] && cp "$snapshot_dir/$f" "$BACKLOG_DIR/$f" || true
+    done
+}
+
+mark_item_failed() {
+    local item_id="$1"
+    local reason="$2"
+    local source="$3"
+    [[ -z "$source" ]] && return 0
+    local now
+    now=$(date -Iseconds)
+    update_item "$source" "$item_id" \
+        '| . + {lastFailReason: $reason, lastFailAt: $ts, failCount: ((.failCount // 0) + 1)}' \
+        --arg reason "$reason" --arg ts "$now" 2>/dev/null || true
+}
+
 handle_sprint_failure() {
     log_warning "Resetting working tree after sprint failure"
+    # Save backlog state before reset so completed-item mutations survive
+    local snapshot_dir="$STATUS_DIR/backlog-snapshot"
+    local has_snapshot=false
+    [[ -d "$snapshot_dir" ]] && has_snapshot=true
+
+    # Unstage any staged changes (e.g. backlog.json staged by developer via git add -A)
+    # so that git checkout -- . can revert them from the working tree too
+    git reset HEAD -- . 2>/dev/null || true
     git checkout -- . 2>/dev/null || true
-    git clean -fd 2>/dev/null || true
+    # Exclude .aishore/ so git clean does not remove the backlog snapshot in
+    # .aishore/data/status/backlog-snapshot/ that we need to restore below
+    git clean -fd -e '.aishore' 2>/dev/null || true
+
+    # Restore backlog from pre-sprint snapshot (preserves mark_complete writes
+    # from earlier successful sprints in the same batch run)
+    if [[ "$has_snapshot" == true ]]; then
+        restore_backlog_snapshot
+    fi
+
     reset_sprint
 }
 
@@ -1058,6 +1102,10 @@ cmd_run() {
 
         create_sprint "$item_json" "$item_source"
 
+        # Snapshot backlog before developer runs (so failure reset can restore
+        # mark_complete writes from earlier successful sprints in this batch)
+        save_backlog_snapshot
+
         # Run developer and validation with retry loop
         local attempt=0
         local sprint_passed=false
@@ -1083,6 +1131,7 @@ cmd_run() {
                 fi
                 failed=$((failed + 1))
                 FAILED_IDS["$ITEM_ID"]="Implementation failed"
+                mark_item_failed "$ITEM_ID" "Implementation failed" "$item_source"
                 sprint_results+=("fail")
                 sprint_items+=("$ITEM_ID")
                 sprint_times+=("$(( $(date +%s) - sprint_start ))")
@@ -1128,6 +1177,7 @@ Fix the issues and ensure all acceptance criteria pass."
                 fi
                 failed=$((failed + 1))
                 FAILED_IDS["$ITEM_ID"]="Validation failed"
+                mark_item_failed "$ITEM_ID" "Validation command failed" "$item_source"
                 sprint_results+=("fail")
                 sprint_items+=("$ITEM_ID")
                 sprint_times+=("$(( $(date +%s) - sprint_start ))")
@@ -1155,6 +1205,7 @@ Fix the issues and ensure all acceptance criteria pass."
                 fi
                 failed=$((failed + 1))
                 FAILED_IDS["$ITEM_ID"]="Validator failed"
+                mark_item_failed "$ITEM_ID" "Validator agent rejected implementation" "$item_source"
                 sprint_results+=("fail")
                 sprint_items+=("$ITEM_ID")
                 sprint_times+=("$(( $(date +%s) - sprint_start ))")
