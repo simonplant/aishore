@@ -100,6 +100,7 @@ project/
 │       └── sprints.jsonl
 └── .aishore/             # Tool (this is what gets updated)
     ├── aishore           # Single-file CLI (Bash)
+    ├── VERSION           # Version (single source of truth)
     ├── checksums.sha256  # SHA-256 checksums for update verification
     ├── config.yaml       # Optional overrides
     ├── agents/           # Agent prompts (developer, validator, tech-lead, architect, product-owner)

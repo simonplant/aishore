@@ -7,6 +7,7 @@ This directory contains the aishore sprint runner. See the [project README](../R
 ```
 .aishore/
 ├── aishore              # Self-contained CLI (Bash)
+├── VERSION              # Version (single source of truth)
 ├── checksums.sha256     # SHA-256 checksums for update verification
 ├── config.yaml          # Optional overrides (sensible defaults built-in)
 ├── gitignore-entries.txt

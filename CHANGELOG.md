@@ -5,6 +5,34 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] - 2026-03-12
+
+### Fixed
+
+- **Graceful VERSION handling**: CLI no longer crashes when `.aishore/VERSION` is missing — falls back to "unknown" instead of hard-exiting, so commands like `groom` and `run` work even without a VERSION file
+
+### Changed
+
+- **VERSION moved into `.aishore/`**: VERSION file now lives at `.aishore/VERSION` alongside the rest of the tool, keeping the project root clean
+
+## [0.1.8] - 2026-03-11
+
+### Fixed
+
+- **VERSION as single source of truth**: CLI reads version from `.aishore/VERSION` at runtime instead of hardcoding it inline
+
+## [0.1.7] - 2026-03-10
+
+### Fixed
+
+- **Init file detection**: Added missing `docs/prd.md` to project type detection
+- **ShellCheck compliance**: Renamed jq variable `done` to avoid SC1010 warning
+- **Case consistency**: Standardized `PRODUCT.md` references to uppercase
+
+### Changed
+
+- **Groom uses fast model**: Groom agent now uses Sonnet (fast model) instead of Opus for faster turnaround
+
 ## [0.1.6] - 2026-02-24
 
 ### Changed

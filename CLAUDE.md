@@ -56,6 +56,7 @@ project/
 │       └── sprints.jsonl
 └── .aishore/                # Tool (can be updated)
     ├── aishore              # Single-file CLI (Bash)
+    ├── VERSION              # Version (single source of truth)
     ├── checksums.sha256     # SHA-256 checksums for update verification
     ├── agents/*.md          # Agent prompts
     ├── config.yaml          # Optional overrides

@@ -116,6 +116,7 @@ your-project/
 ├── CLAUDE.md                # Project context (auto-detected)
 └── .aishore/                # TOOL (can be updated/replaced)
     ├── aishore              # Self-contained CLI
+    ├── VERSION              # Version (single source of truth)
     ├── checksums.sha256     # SHA-256 checksums for update verification
     ├── config.yaml          # Optional overrides
     ├── agents/              # Agent prompts
