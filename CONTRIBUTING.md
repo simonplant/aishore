@@ -50,7 +50,6 @@ shellcheck .aishore/aishore
 # Syntax check
 bash -n .aishore/aishore
 bash -n install.sh
-bash -n migrate.sh
 
 # Smoke test
 .aishore/aishore help

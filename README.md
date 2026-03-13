@@ -30,18 +30,6 @@ cd /path/to/your/project && .aishore/aishore init
 
 </details>
 
-### Migrating from older versions
-
-If you have an existing aishore installation with the old structure (`.aishore/plan/` or `aishore/`):
-
-```bash
-# Preview what would change (no modifications)
-curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/migrate.sh | bash -s -- --dry-run .
-
-# Apply migration
-curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/migrate.sh | bash -s -- .
-```
-
 ## What It Does
 
 aishore runs sprints autonomously:

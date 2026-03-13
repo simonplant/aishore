@@ -9,7 +9,6 @@
 #
 # Options:
 #   --init      Run 'aishore init' after install (creates backlog/)
-#   --migrate   Run migration if old structure detected
 #   --dir PATH  Install to PATH instead of current directory
 
 set -euo pipefail
@@ -35,16 +34,11 @@ die()     { error "$1"; exit 1; }
 # Parse arguments
 INSTALL_DIR="."
 DO_INIT=false
-DO_MIGRATE=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --init)
             DO_INIT=true
-            shift
-            ;;
-        --migrate)
-            DO_MIGRATE=true
             shift
             ;;
         --dir)
@@ -87,18 +81,6 @@ detect_existing() {
         if [[ -f "$AISHORE_DIR/aishore" ]]; then
             return 0  # Already installed
         fi
-    fi
-    return 1
-}
-
-detect_old_structure() {
-    # Check for old .aishore/plan/ structure
-    if [[ -d "$AISHORE_DIR/plan" ]] && [[ -f "$AISHORE_DIR/plan/backlog.json" ]]; then
-        return 0
-    fi
-    # Check for legacy aishore/ structure
-    if [[ -d "$INSTALL_DIR/aishore/plan" ]]; then
-        return 0
     fi
     return 1
 }
@@ -157,21 +139,6 @@ run_init() {
     "$AISHORE_DIR/aishore" init
 }
 
-run_migrate() {
-    log "Downloading migration script..."
-    local migrate_script
-    migrate_script=$(mktemp)
-
-    if curl -sSfL "$BASE_URL/migrate.sh" -o "$migrate_script"; then
-        chmod +x "$migrate_script"
-        "$migrate_script" "$INSTALL_DIR"
-        rm -f "$migrate_script"
-    else
-        warn "Could not download migration script"
-        echo "Run manually: curl -sSL $BASE_URL/migrate.sh | bash -s -- $INSTALL_DIR"
-    fi
-}
-
 show_next_steps() {
     echo ""
     log "Installation complete!"
@@ -212,34 +179,14 @@ main() {
 
     # Check for existing installation
     if detect_existing; then
-        if [[ "$DO_MIGRATE" == "true" ]] && detect_old_structure; then
-            warn "Existing installation found with old structure"
-            run_migrate
-            exit 0
-        else
-            warn "aishore already installed at $AISHORE_DIR"
-            echo ""
-            echo "To update:"
-            echo "  cd $INSTALL_DIR && .aishore/aishore update"
-            echo ""
-            echo "To reinstall:"
-            echo "  rm -rf $AISHORE_DIR && curl -sSL $BASE_URL/install.sh | bash"
-            exit 0
-        fi
-    fi
-
-    # Check for old structure needing migration
-    if detect_old_structure; then
-        if [[ "$DO_MIGRATE" == "true" ]]; then
-            run_migrate
-            exit 0
-        else
-            warn "Old aishore structure detected"
-            echo ""
-            echo "To migrate:"
-            echo "  curl -sSL $BASE_URL/install.sh | bash -s -- --migrate"
-            exit 1
-        fi
+        warn "aishore already installed at $AISHORE_DIR"
+        echo ""
+        echo "To update:"
+        echo "  cd $INSTALL_DIR && .aishore/aishore update"
+        echo ""
+        echo "To reinstall:"
+        echo "  rm -rf $AISHORE_DIR && curl -sSL $BASE_URL/install.sh | bash"
+        exit 0
     fi
 
     # Fresh install
