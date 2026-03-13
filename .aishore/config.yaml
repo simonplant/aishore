@@ -24,5 +24,14 @@ validation:
 # agent:
 #   timeout: 3600
 
+# Agent permissions (defaults shown)
+# Unrestricted Bash is needed so developer/validator can run build, test, and
+# lint commands (npm install, pytest, go test, etc.) in addition to git.
+# The --permission-mode acceptEdits flag provides the interactive safety gate.
+# permissions:
+#   developer: "Bash,Edit,Write,Read,Glob,Grep"
+#   validator: "Bash,Read,Write,Glob,Grep"
+#   reviewer: "Read,Glob,Grep"
+
 # Note: CLAUDE.md is auto-detected from project root
 # No context configuration needed
