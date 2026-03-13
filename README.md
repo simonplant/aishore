@@ -1,10 +1,35 @@
 # aishore
 
-**AI Sprint Runner** — Drop-in sprint orchestration for Claude Code.
+**Autonomous sprint execution for Claude Code.**
 
-## Installation
+aishore is a drop-in tool that runs development sprints without you. You describe what needs building in a backlog, and aishore picks items, implements them with AI agents, validates the work, and archives the results. You come back to committed, tested code.
 
-**One-line install** (in your project directory):
+```
+You: "Build these features"  →  aishore runs sprints  →  You: review completed work
+```
+
+## How It Works
+
+aishore models a real sprint team with specialized AI agents:
+
+```
+┌─────────┐    ┌───────────┐    ┌────────────┐    ┌───────────┐    ┌─────────┐
+│  Pick   │───▶│ Developer │───▶│ Validation │───▶│ Validator │───▶│ Archive │
+│  Item   │    │   Agent   │    │  Command   │    │   Agent   │    │  Done   │
+└─────────┘    └───────────┘    └────────────┘    └───────────┘    └─────────┘
+```
+
+1. **Pick** — selects the highest-priority ready item from your backlog
+2. **Develop** — a Developer agent implements the feature, following your project's conventions
+3. **Test** — your validation command runs (test suite, linter, type-checker)
+4. **Validate** — a Validator agent checks acceptance criteria against the actual changes
+5. **Archive** — completed work is recorded and the item is marked done
+
+Run `aishore run 5` and it executes five sprints back-to-back. Failed items are skipped in subsequent picks so the batch keeps moving.
+
+## Getting Started
+
+### Install
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash
@@ -16,12 +41,12 @@ Then run the setup wizard:
 .aishore/aishore init
 ```
 
-The wizard checks prerequisites (git, claude, jq), detects your project type, configures validation, and sets up `backlog/` and `.gitignore`.
+The wizard checks prerequisites, detects your project type, configures validation, and scaffolds `backlog/`.
 
 <details>
 <summary>Manual installation</summary>
 
-Copy only the `.aishore/` directory to your target project:
+Copy the `.aishore/` directory into your project:
 
 ```bash
 cp -r /path/to/aishore/.aishore /path/to/your/project/
@@ -30,77 +55,103 @@ cd /path/to/your/project && .aishore/aishore init
 
 </details>
 
-## What It Does
-
-aishore runs sprints autonomously:
-
-1. **Picks** the next ready item from your backlog (or a specific ID)
-2. **Developer agent** implements the feature
-3. **Validation command** runs your test suite (if configured)
-4. **Validator agent** checks acceptance criteria
-5. **Archives** completed work
-
-```
-Pick Item → Developer → Validate → Validator → Done
-```
-
-## Quick Start
+### Your First Sprint
 
 ```bash
-cd /path/to/your/project
+# 1. Add a feature to the backlog
+.aishore/aishore backlog add --title "Add health check endpoint" \
+  --desc "GET /health returns 200 with {status: ok}"
 
-# Initialize (interactive setup wizard)
-.aishore/aishore init
-
-# Add features to backlog
-.aishore/aishore backlog add --title "My feature" --desc "Description"
-
-# Groom items (marks them ready)
+# 2. Groom it (adds steps, acceptance criteria, marks it ready)
 .aishore/aishore groom
 
-# Run a sprint
+# 3. Run a sprint
 .aishore/aishore run
-
-# Or run a specific item
-.aishore/aishore run FEAT-001
 ```
 
-aishore auto-detects `CLAUDE.md` in your project root — no configuration needed.
+That's it. The developer agent reads the item, explores your codebase, implements the feature, and the validator confirms it meets the acceptance criteria.
 
-## Commands
+## The Workflow
 
-| Command | Description |
-|---------|-------------|
-| `backlog list` | List all items (features + bugs) |
-| `backlog list --status todo` | Filter by status |
-| `backlog list --type feat` | Filter by type (feat, bug) |
-| `backlog list --ready` | Show only sprint-ready items |
-| `backlog add` | Add a new item (interactive) |
-| `backlog add --title "..." --type bug` | Add with flags |
-| `backlog show <ID>` | Show full detail of one item |
-| `backlog edit <ID> --priority must` | Update fields on an item |
-| `backlog rm <ID>` | Remove an item |
-| `run [N]` | Run N sprints (default: 1) |
-| `run <ID>` | Run specific item by ID (e.g., `FEAT-001`) |
-| `run --dry-run` | Preview what would happen without running agents |
-| `run --auto-commit` | Auto-commit after each sprint |
-| `run --retries N` | Allow N retry attempts on validation failure |
-| `groom` | Groom bugs/tech debt (Tech Lead agent) |
-| `groom --backlog` | Groom features (Product Owner agent) |
-| `review` | Architecture review |
-| `review --update-docs` | Architecture review with doc updates |
-| `metrics` | Show sprint metrics |
-| `metrics --json` | Metrics as JSON |
-| `update` | Update aishore from upstream (checksum-verified) |
-| `update --dry-run` | Check for updates without applying |
-| `update --force --no-verify` | Force update, skip checksum verification |
-| `clean` | Remove done items from backlog and bugs |
-| `clean --dry-run` | Show what would be removed without changing files |
-| `status` | Show backlog overview and sprint readiness |
-| `checksums` | Regenerate `checksums.sha256` |
-| `init` | Interactive setup wizard |
-| `version` | Show version |
-| `help` | Show usage |
+aishore follows a **populate → groom → run → review** cycle. This mirrors how a real team works: product fills the backlog, leads refine it, developers execute, and architects review.
+
+### 1. Populate the Backlog
+
+Add features and bugs to your backlog. Each item gets an ID, priority, and description.
+
+```bash
+.aishore/aishore backlog add --title "OAuth2 login flow" --priority must
+.aishore/aishore backlog add --title "Fix timeout on large uploads" --type bug
+```
+
+List what's in the backlog at any time:
+
+```bash
+.aishore/aishore backlog list
+.aishore/aishore backlog list --ready    # Only sprint-ready items
+.aishore/aishore backlog list --type bug  # Only bugs
+```
+
+### 2. Groom
+
+Grooming turns rough ideas into sprint-ready items by adding implementation steps and testable acceptance criteria.
+
+```bash
+.aishore/aishore groom              # Tech Lead: grooms bugs + marks features ready
+.aishore/aishore groom --backlog    # Product Owner: grooms features for value alignment
+```
+
+The **Tech Lead agent** focuses on technical clarity — are the steps actionable? Are the acceptance criteria testable? The **Product Owner agent** focuses on value — are we building the right things in the right order?
+
+### 3. Run Sprints
+
+```bash
+.aishore/aishore run           # Run one sprint
+.aishore/aishore run 5         # Run five sprints back-to-back
+.aishore/aishore run FEAT-003  # Run a specific item
+.aishore/aishore run --dry-run # Preview what would run without executing
+```
+
+Each sprint is isolated. Pre-existing uncommitted changes are stashed beforehand and restored afterward. If a sprint fails, the working tree resets cleanly — your other work is never lost.
+
+Use `--auto-commit` to commit after each successful sprint, or `--retries N` to let failing items retry.
+
+### 4. Review
+
+After sprints complete, the Architect agent can review the accumulated changes:
+
+```bash
+.aishore/aishore review                        # Architecture review
+.aishore/aishore review --update-docs          # Review and update project docs
+.aishore/aishore review --since abc123f        # Review changes since a specific commit
+```
+
+### Monitor Progress
+
+```bash
+.aishore/aishore status          # Backlog overview and sprint readiness
+.aishore/aishore metrics         # Sprint velocity, pass rates, trends
+.aishore/aishore metrics --json  # Machine-readable metrics
+```
+
+Clean up completed items when they accumulate:
+
+```bash
+.aishore/aishore clean           # Remove done items
+.aishore/aishore clean --dry-run # Preview what would be removed
+```
+
+## Agent Roles
+
+| Agent | Role | When |
+|-------|------|------|
+| **Developer** | Implements features following project conventions | `run` |
+| **Validator** | Checks acceptance criteria against actual changes | `run` |
+| **Tech Lead** | Grooms bugs, ensures technical readiness | `groom` |
+| **Product Owner** | Grooms features, aligns with product vision | `groom --backlog` |
+| **Architect** | Reviews patterns, risks, and code quality | `review` |
+
+All agents automatically read your `CLAUDE.md`, `PRODUCT.md`, and `ARCHITECTURE.md` for project context.
 
 ## Project Structure
 
@@ -111,28 +162,25 @@ your-project/
 │   ├── bugs.json            # Bug/tech-debt backlog
 │   ├── sprint.json          # Current sprint state
 │   ├── DEFINITIONS.md       # DoR, DoD, priority/size definitions
-│   └── archive/             # Completed sprint history
-│       └── sprints.jsonl
+│   └── archive/
+│       └── sprints.jsonl    # Completed sprint history
 ├── CLAUDE.md                # Project context (auto-detected)
-└── .aishore/                # TOOL (can be updated/replaced)
-    ├── aishore              # Self-contained CLI
-    ├── VERSION              # Version (single source of truth)
-    ├── checksums.sha256     # SHA-256 checksums for update verification
-    ├── config.yaml          # Optional overrides
+└── .aishore/                # TOOL (updatable, replaceable)
+    ├── aishore              # Single-file CLI (Bash)
     ├── agents/              # Agent prompts
-    └── data/                # Runtime (logs, status)
+    ├── config.yaml          # Optional overrides
+    └── data/                # Runtime logs and status
 ```
 
-**Key design:** Your backlogs (`backlog/`) are separate from the tool (`.aishore/`). You can safely update or replace `.aishore/` without losing your content.
+Your backlogs (`backlog/`) are always separate from the tool (`.aishore/`). Updates never touch your content.
 
-## Configuration (Optional)
+## Configuration
 
-Edit `.aishore/config.yaml` only if you need to override defaults:
+aishore works out of the box. Configure only if you need to override defaults.
+
+Edit `.aishore/config.yaml`:
 
 ```yaml
-project:
-  name: "my-project"
-
 validation:
   command: "npm run type-check && npm run lint && npm test"
   timeout: 120
@@ -148,62 +196,73 @@ notifications:
   on_complete: "notify-send 'aishore' \"Sprint $1: $2\""
 ```
 
-Or use environment variables:
+Or use environment variables (these take precedence over config.yaml):
 
-| Setting            | Env var                    | Default                        |
-|--------------------|----------------------------|--------------------------------|
-| Primary model      | `AISHORE_MODEL_PRIMARY`    | `claude-opus-4-6`              |
-| Fast model         | `AISHORE_MODEL_FAST`       | `claude-sonnet-4-6`            |
-| Agent timeout      | `AISHORE_AGENT_TIMEOUT`    | `3600`                         |
-| Validation command | `AISHORE_VALIDATE_CMD`     | *(none)*                       |
-| Validation timeout | `AISHORE_VALIDATE_TIMEOUT` | `120`                          |
-| Notify command     | `AISHORE_NOTIFY_CMD`       | *(none)*                       |
+| Setting | Env var | Default |
+|---------|---------|---------|
+| Primary model | `AISHORE_MODEL_PRIMARY` | `claude-opus-4-6` |
+| Fast model | `AISHORE_MODEL_FAST` | `claude-sonnet-4-6` |
+| Agent timeout | `AISHORE_AGENT_TIMEOUT` | `3600` |
+| Validation command | `AISHORE_VALIDATE_CMD` | *(none)* |
+| Validation timeout | `AISHORE_VALIDATE_TIMEOUT` | `120` |
+| Notify command | `AISHORE_NOTIFY_CMD` | *(none)* |
 
 ## Requirements
 
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) (`claude` command)
-- `jq` — JSON processor
+- `jq`
 - `bash` 4.4+
 - `git`
-- On macOS: `brew install coreutils` (for `gtimeout` used in validation timeouts)
+- On macOS: `brew install coreutils` (for `gtimeout`)
 
 ## Keeping Updated
 
 ```bash
 .aishore/aishore update --dry-run  # Check for updates
-.aishore/aishore update            # Update from upstream (checksum-verified)
-.aishore/aishore update --force    # Re-download even if same version
+.aishore/aishore update            # Update (checksum-verified)
 ```
 
-Updates fetch the CLI, agent prompts, and gitignore entries — verified against SHA-256 checksums. Your `backlog/` and `config.yaml` are never modified.
+Updates are verified against SHA-256 checksums. Your `backlog/` and `config.yaml` are never modified.
 
-If checksums cannot be fetched, the update aborts. Use `--force --no-verify` to bypass verification (not recommended).
+## Command Reference
 
-## How It Works
+<details>
+<summary>Full command list</summary>
 
-**Concurrency guard:** Only one aishore process runs at a time (uses `flock`).
+| Command | Description |
+|---------|-------------|
+| `init` | Interactive setup wizard |
+| `status` | Backlog overview and sprint readiness |
+| `backlog list` | List all items (features + bugs) |
+| `backlog list --status todo` | Filter by status |
+| `backlog list --type feat` | Filter by type (feat, bug) |
+| `backlog list --ready` | Show only sprint-ready items |
+| `backlog add` | Add a new item (interactive) |
+| `backlog add --title "..." --type bug` | Add with flags |
+| `backlog show <ID>` | Show full detail of one item |
+| `backlog edit <ID> --priority must` | Update fields on an item |
+| `backlog rm <ID>` | Remove an item |
+| `groom` | Groom bugs/tech debt (Tech Lead agent) |
+| `groom --backlog` | Groom features (Product Owner agent) |
+| `run [N]` | Run N sprints (default: 1) |
+| `run <ID>` | Run specific item by ID |
+| `run --dry-run` | Preview without running agents |
+| `run --auto-commit` | Auto-commit after each sprint |
+| `run --retries N` | Allow N retry attempts on failure |
+| `review` | Architecture review |
+| `review --update-docs` | Review and update project docs |
+| `review --since <commit>` | Review changes since commit |
+| `metrics` | Sprint metrics |
+| `metrics --json` | Metrics as JSON |
+| `clean` | Remove done items from backlogs |
+| `clean --dry-run` | Preview what would be removed |
+| `update` | Update from upstream (checksum-verified) |
+| `update --dry-run` | Check for updates without applying |
+| `checksums` | Regenerate checksums |
+| `version` | Show version |
+| `help` | Show usage |
 
-**Sprint execution:** The orchestrator picks a ready backlog item, invokes the developer agent via `claude --model`, then runs your validation command (if configured), then invokes the validator agent. Progress messages show elapsed time during agent execution.
-
-**Completion contract:** Agents signal completion by writing to `.aishore/data/status/result.json`:
-
-```json
-{"status": "pass", "summary": "implemented feature X"}
-```
-
-The orchestrator polls for this file, then proceeds to the next step.
-
-**Safe failure recovery:** On failure, the working tree is reset. Any pre-existing uncommitted changes are stashed before the sprint and restored afterward.
-
-**Failed item skipping:** When running multiple sprints (`run 5`), items that fail are excluded from subsequent picks in the same session.
-
-**Configuration precedence:** Environment variables override `config.yaml`, which overrides built-in defaults. This lets you set project defaults in config while overriding per-run via env vars.
-
-**Notifications:** Configure `notifications.on_complete` in `config.yaml` (or `AISHORE_NOTIFY_CMD` env var) to run a command on sprint completion. The command receives `$1=status` and `$2=item_id`.
-
-**Update integrity:** The `update` command fetches the remote `.aishore/VERSION` for comparison, stages all files into a temp directory, verifies SHA-256 checksums against `checksums.sha256`, and only installs if all files pass verification.
-
-**Version management:** `.aishore/VERSION` is the single source of truth. The CLI reads it at runtime.
+</details>
 
 ## License
 
