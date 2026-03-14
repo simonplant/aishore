@@ -130,6 +130,8 @@ Grooming agents review items, add implementation steps and acceptance criteria, 
 .aishore/aishore clean --dry-run               # Show what would be removed
 .aishore/aishore update                        # Update from upstream (checksum-verified)
 .aishore/aishore update --dry-run              # Check for updates without applying
+.aishore/aishore update --force                # Update even if already on latest
+.aishore/aishore update --force --no-verify    # Skip checksum verification
 .aishore/aishore checksums                     # Regenerate checksums after editing .aishore/ files
 .aishore/aishore help                          # Full command reference
 ```
@@ -195,6 +197,8 @@ Edit `.aishore/config.yaml` to override defaults, or use environment variables:
 ## Updating
 
 ```bash
-.aishore/aishore update --dry-run   # Check for updates
 .aishore/aishore update             # Checksum-verified update
+.aishore/aishore update --dry-run   # Check for updates without applying
+.aishore/aishore update --force     # Update even if already on latest version
+.aishore/aishore update --force --no-verify  # Skip checksum verification
 ```
