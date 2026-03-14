@@ -24,5 +24,14 @@ validation:
 # agent:
 #   timeout: 3600
 
+# Agent permissions (defaults shown)
+# Defaults allow full Bash access so developers can run build/test/lint commands
+# (npm install, pytest, go test, cargo build, etc.)
+# Restrict if you need a tighter sandbox.
+# permissions:
+#   developer: "Bash,Edit,Write,Read,Glob,Grep"
+#   validator: "Bash,Read,Write,Glob,Grep"
+#   reviewer: "Read,Glob,Grep"
+
 # Note: CLAUDE.md is auto-detected from project root
 # No context configuration needed

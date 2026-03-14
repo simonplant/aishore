@@ -5,6 +5,12 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-03-14
+
+### Fixed
+
+- **Default agent permissions too restrictive for non-git commands** ([#2](https://github.com/simonplant/aishore/issues/2)): Changed default developer permissions from `Bash(git:*),Edit,Write,Read,Glob,Grep` to `Bash,Edit,Write,Read,Glob,Grep` and validator from `Bash(git:*),Read,Glob,Grep` to `Bash,Read,Write,Glob,Grep`. This allows developer agents to run build/test/lint toolchain commands (`npm install`, `npm test`, `pytest`, `go test`, `cargo build`, etc.) without requiring a permissions override in `config.yaml`. The `--permission-mode acceptEdits` flag already provides a safety gate; restricting Bash to `git:*` was redundant and broke real workflows.
+
 ## [0.2.1] - 2026-03-12
 
 ### Changed
