@@ -22,10 +22,10 @@ jq empty backlog/*.json
 .aishore/aishore backlog show <ID>  # Show full detail of one item
 .aishore/aishore backlog edit <ID>  # Update fields on an item
 .aishore/aishore backlog rm <ID>    # Remove an item
-.aishore/aishore run [N]            # Run N sprints (default: 1)
+.aishore/aishore run [N]            # Run N sprints (branch, commit, merge, push per item)
 .aishore/aishore run <ID>           # Run specific item (e.g., FEAT-001)
 .aishore/aishore run --dry-run      # Preview without running agents
-.aishore/aishore run --auto-commit  # Auto-commit after each sprint
+.aishore/aishore run --no-merge     # Keep feature branches for PR review
 .aishore/aishore run --retries N    # Allow N retries on validation failure
 .aishore/aishore groom              # Tech lead: groom bugs
 .aishore/aishore groom --backlog    # Product owner: groom features
@@ -50,8 +50,10 @@ No build step — the tool is pure Bash.
 
 **Sprint execution flow:**
 ```
-Pick Item → Developer Agent → Validation Command → Validator Agent → Archive
+Pick Item → Create Branch (aishore/<ID>) → Developer Agent → Validation Command → Validator Agent → Commit → Merge → Archive
 ```
+
+**Git branching model:** Each sprint item runs on its own feature branch (`aishore/<ITEM-ID>`), created from the current branch. The developer agent commits its own work. On success, the branch is merged back with `--no-ff`, pushed, and the base branch pulls latest before the next item. On failure, the branch is deleted. Use `--no-merge` to keep branches for PR review (they get pushed to origin instead).
 
 **Directory structure:**
 ```
@@ -89,7 +91,7 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 **Concurrency:** Only one aishore process runs at a time, enforced via `flock` on `.aishore/data/status/.aishore.lock`.
 
-**Safe failure recovery:** Pre-existing uncommitted changes are stashed before sprints and restored afterward. Sprint failures reset the working tree without destroying unrelated work.
+**Safe failure recovery:** Pre-existing uncommitted changes are stashed before sprints and restored afterward. Sprint failures delete the feature branch and return to the base branch cleanly. The developer agent commits directly; the orchestrator has a safety net commit if the agent misses it.
 
 **Configuration precedence:** env vars > config.yaml > built-in defaults.
 
