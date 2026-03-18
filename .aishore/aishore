@@ -677,6 +677,44 @@ EOF
 #   output_format - "text" or "stream-json" (use "text" for --print capture)
 #   prompt        - full prompt string (including context @-files)
 # Optional: set AGENT_OUTPUT_FILE before calling to capture --print output to a file.
+# Optional: set GROOM_MONITOR=true to track backlog changes during the poll loop.
+
+# Helper: detect and report backlog file changes during grooming
+_check_groom_progress() {
+    local label="$1"
+    local changed=false
+
+    if [[ -f "$BACKLOG_DIR/backlog.json" ]]; then
+        local cur_hash
+        cur_hash=$(md5sum "$BACKLOG_DIR/backlog.json" 2>/dev/null | cut -d' ' -f1)
+        if [[ "$cur_hash" != "$last_backlog_hash" ]]; then
+            last_backlog_hash="$cur_hash"
+            changed=true
+            local ready total
+            ready=$(count_ready_items "$BACKLOG_DIR/backlog.json")
+            total=$(count_items "$BACKLOG_DIR/backlog.json")
+            log_agent "$label" "backlog.json updated — $total items ($ready ready)"
+        fi
+    fi
+
+    if [[ -f "$BACKLOG_DIR/bugs.json" ]]; then
+        local cur_hash
+        cur_hash=$(md5sum "$BACKLOG_DIR/bugs.json" 2>/dev/null | cut -d' ' -f1)
+        if [[ "$cur_hash" != "$last_bugs_hash" ]]; then
+            last_bugs_hash="$cur_hash"
+            changed=true
+            local ready total
+            ready=$(count_ready_items "$BACKLOG_DIR/bugs.json")
+            total=$(count_items "$BACKLOG_DIR/bugs.json")
+            log_agent "$label" "bugs.json updated — $total items ($ready ready)"
+        fi
+    fi
+
+    if [[ "$changed" != "true" && $((elapsed % 30)) -eq 0 ]]; then
+        log_agent "$label" "Working... (${elapsed}s elapsed)"
+    fi
+}
+
 run_agent_process() {
     local agent_label="$1"
     local model="$2"
@@ -727,6 +765,14 @@ run_agent_process() {
     local elapsed=0
     local got_result=false
 
+    # Progress monitoring: track backlog file changes during grooming
+    local monitor_backlogs="${GROOM_MONITOR:-false}"
+    local last_backlog_hash="" last_bugs_hash=""
+    if [[ "$monitor_backlogs" == "true" ]]; then
+        [[ -f "$BACKLOG_DIR/backlog.json" ]] && last_backlog_hash=$(md5sum "$BACKLOG_DIR/backlog.json" 2>/dev/null | cut -d' ' -f1)
+        [[ -f "$BACKLOG_DIR/bugs.json" ]] && last_bugs_hash=$(md5sum "$BACKLOG_DIR/bugs.json" 2>/dev/null | cut -d' ' -f1)
+    fi
+
     while [[ $elapsed -lt $AGENT_TIMEOUT ]]; do
         if ! kill -0 "$agent_pid" 2>/dev/null; then
             break
@@ -738,7 +784,11 @@ run_agent_process() {
         fi
         sleep 5
         elapsed=$((elapsed + 5))
-        if [[ $((elapsed % 30)) -eq 0 ]]; then
+
+        # Check for backlog changes and report progress
+        if [[ "$monitor_backlogs" == "true" && $((elapsed % 10)) -eq 0 ]]; then
+            _check_groom_progress "$agent_label"
+        elif [[ $((elapsed % 30)) -eq 0 ]]; then
             log_agent "$agent_label" "Waiting for agent... (${elapsed}s elapsed)"
         fi
     done
@@ -1535,23 +1585,130 @@ cmd_groom() {
         agent="tech-lead"
     fi
 
-    local ready_backlog
-    ready_backlog=$(count_ready_items "$BACKLOG_DIR/backlog.json")
-    local ready_bugs
-    ready_bugs=$(count_ready_items "$BACKLOG_DIR/bugs.json")
-    log_info "Current ready buffer: $((ready_backlog + ready_bugs)) items ($ready_backlog features, $ready_bugs bugs)"
-    echo ""
+    # --- Pre-launch summary ---
+    print_groom_summary
 
     local context_args="@$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
     [[ -f "$ARCHIVE_DIR/sprints.jsonl" ]] && context_args="$context_args @$ARCHIVE_DIR/sprints.jsonl"
 
-    log_info "Running $agent agent..."
+    # Snapshot backlog state for progress tracking
+    local snap_before
+    snap_before=$(snapshot_backlogs)
 
-    run_agent "$agent" "groom" "$MODEL_FAST" "$context_args"
+    log_info "Running $agent agent..."
+    echo ""
+
+    GROOM_MONITOR=true run_agent "$agent" "groom" "$MODEL_FAST" "$context_args"
+
+    # --- Post-groom diff ---
+    print_groom_diff "$snap_before"
 
     if ! check_result; then
         exit 1
     fi
+}
+
+# Print a rich summary of backlog state before grooming
+print_groom_summary() {
+    local backlog_file="$BACKLOG_DIR/backlog.json"
+    local bugs_file="$BACKLOG_DIR/bugs.json"
+
+    log_subheader "Current Status"
+
+    # Status counts
+    if [[ -f "$backlog_file" ]]; then
+        echo "  Features: $(count_by_status "$backlog_file" "todo") todo, $(count_by_status "$backlog_file" "in-progress") in-progress, $(count_by_status "$backlog_file" "done") done"
+    fi
+    if [[ -f "$bugs_file" ]]; then
+        echo "  Bugs:     $(count_by_status "$bugs_file" "todo") todo, $(count_by_status "$bugs_file" "in-progress") in-progress, $(count_by_status "$bugs_file" "done") done"
+    fi
+
+    # Ready buffer
+    local ready_backlog ready_bugs
+    ready_backlog=$(count_ready_items "$backlog_file")
+    ready_bugs=$(count_ready_items "$bugs_file")
+    echo ""
+    echo "  Ready for sprint: $((ready_backlog + ready_bugs)) ($ready_backlog features, $ready_bugs bugs)"
+
+    # Priority breakdown — highlight must/should items that need grooming
+    local has_highlights=false
+    for f in "$backlog_file" "$bugs_file"; do
+        [[ -f "$f" ]] || continue
+        local highlights
+        highlights=$(jq -r '
+            .items[]
+            | select((.priority == "must" or .priority == "should") and (.readyForSprint != true) and ((.status // "todo") != "done"))
+            | "  \(.priority | ascii_upcase)  \(.id): \(.title)"
+        ' "$f" 2>/dev/null)
+        if [[ -n "$highlights" ]]; then
+            if [[ "$has_highlights" == "false" ]]; then
+                echo ""
+                log_subheader "High Priority — Not Yet Ready"
+                has_highlights=true
+            fi
+            echo "$highlights"
+        fi
+    done
+
+    if [[ "$has_highlights" == "false" ]]; then
+        # Show a note if everything high-priority is already groomed
+        local must_should_total=0
+        for f in "$backlog_file" "$bugs_file"; do
+            [[ -f "$f" ]] || continue
+            local count
+            count=$(jq '[.items[] | select((.priority == "must" or .priority == "should") and ((.status // "todo") != "done"))] | length' "$f" 2>/dev/null || echo 0)
+            must_should_total=$((must_should_total + count))
+        done
+        if [[ "$must_should_total" -gt 0 ]]; then
+            echo ""
+            log_success "All $must_should_total must/should items are already sprint-ready"
+        fi
+    fi
+
+    echo ""
+}
+
+# Capture a snapshot of backlog item counts/ready state for diff
+snapshot_backlogs() {
+    local backlog_file="$BACKLOG_DIR/backlog.json"
+    local bugs_file="$BACKLOG_DIR/bugs.json"
+    local ready_f=0 ready_b=0 total_f=0 total_b=0
+    [[ -f "$backlog_file" ]] && { ready_f=$(count_ready_items "$backlog_file"); total_f=$(count_items "$backlog_file"); }
+    [[ -f "$bugs_file" ]] && { ready_b=$(count_ready_items "$bugs_file"); total_b=$(count_items "$bugs_file"); }
+    echo "$ready_f $ready_b $total_f $total_b"
+}
+
+# Show what changed after grooming
+print_groom_diff() {
+    local before="$1"
+    local snap_after
+    snap_after=$(snapshot_backlogs)
+
+    local rb_before rb_after rf_before rf_after tf_before tf_after tb_before tb_after
+    read -r rf_before rb_before tf_before tb_before <<< "$before"
+    read -r rf_after rb_after tf_after tb_after <<< "$snap_after"
+
+    local ready_before=$((rf_before + rb_before))
+    local ready_after=$((rf_after + rb_after))
+    local total_before=$((tf_before + tb_before))
+    local total_after=$((tf_after + tb_after))
+
+    echo ""
+    log_subheader "Grooming Results"
+
+    local new_items=$((total_after - total_before))
+    local new_ready=$((ready_after - ready_before))
+
+    if [[ "$new_items" -gt 0 ]]; then
+        log_success "$new_items new item(s) added"
+    fi
+    if [[ "$new_ready" -gt 0 ]]; then
+        log_success "$new_ready item(s) moved to sprint-ready"
+    elif [[ "$new_ready" -eq 0 && "$new_items" -eq 0 ]]; then
+        log_info "No changes to item counts"
+    fi
+
+    echo "  Ready: $ready_before → $ready_after  |  Total: $total_before → $total_after"
 }
 
 cmd_review() {
