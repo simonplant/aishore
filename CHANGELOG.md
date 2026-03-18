@@ -5,6 +5,13 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-18
+
+### Changed
+
+- **Autonomous developer agent** ([#6](https://github.com/simonplant/aishore/issues/6)): Rewrote developer agent prompt to act as a project manager driving sprint completion. Agent now reads the full backlog for context, aligns work to PRODUCT.md and ARCHITECTURE.md, fixes structural blockers in-scope, and logs discovered issues to the backlog automatically.
+- **Validation command injection**: Developer agent now receives the configured `validation.command` directly in its prompt, so it knows exactly what to run without guessing.
+
 ## [0.2.2] - 2026-03-14
 
 ### Fixed
