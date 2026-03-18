@@ -2929,6 +2929,44 @@ cmd_clean() {
     fi
 }
 
+cmd_usage() {
+    cat << EOF
+aishore - AI Sprint Runner (v$AISHORE_VERSION)
+
+Usage: .aishore/aishore <command> [options]
+
+Sprint:
+  auto <scope>      Autonomous mode (done, p0, p1, p2)
+  run [N|ID]        Run sprints or a specific item
+  groom             Groom bugs (--backlog for features)
+  review            Architecture review
+
+Backlog:
+  backlog list      List all items
+  backlog add       Add a new item
+  backlog show <ID> Show item detail
+  backlog edit <ID> Update an item
+  backlog rm <ID>   Remove an item
+
+Info:
+  status            Backlog overview and sprint readiness
+  metrics           Sprint metrics
+
+Maintenance:
+  init              Setup wizard
+  update            Update from upstream
+  clean             Remove done items
+  checksums         Regenerate checksums
+
+Examples:
+  .aishore/aishore auto done          # Drain entire backlog
+  .aishore/aishore run FEAT-001       # Run specific item
+  .aishore/aishore groom --backlog    # Groom features
+
+Run '.aishore/aishore help' for full command reference.
+EOF
+}
+
 cmd_help() {
     cat << EOF
 aishore - AI Sprint Runner (v$AISHORE_VERSION)
@@ -3053,7 +3091,7 @@ EOF
 main() {
     mkdir -p "$STATUS_DIR" "$LOGS_DIR" "$ARCHIVE_DIR"
 
-    local cmd="${1:-help}"
+    local cmd="${1:-usage}"
     shift || true
 
     case "$cmd" in
@@ -3070,9 +3108,10 @@ main() {
         init)    cmd_init "$@" ;;
         version|-v|--version) cmd_version ;;
         help|-h|--help) cmd_help ;;
+        usage) cmd_usage ;;
         *)
             log_error "Unknown command: $cmd"
-            cmd_help
+            cmd_usage
             exit 1
             ;;
     esac
