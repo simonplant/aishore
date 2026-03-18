@@ -804,16 +804,9 @@ run_agent() {
             agent_perms="${CFG_PERMS_DEVELOPER:-$PERMS_DEVELOPER}" ;;
     esac
 
-    # Inject validation command for developer agent
-    local validate_context=""
-    if [[ "$agent_name" == "developer" && -n "$VALIDATE_CMD" ]]; then
-        validate_context="
-Validation command: \`$VALIDATE_CMD\`"
-    fi
-
     local prompt
     prompt="$(cat "$prompt_file")
-${validate_context}${extra_prompt:+
+${extra_prompt:+
 $extra_prompt}
 
 ## Mode
