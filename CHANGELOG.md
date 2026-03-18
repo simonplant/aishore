@@ -5,6 +5,20 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-18
+
+### Changed
+
+- **Shared constants**: Extracted `BACKLOG_FILES` array and `ITEM_PROJECTION` jq expression, replacing ~10 hardcoded loops and 2 inline projections
+- **Config loading**: Consolidated 11 individual yq calls in `load_config()` and 8 env var checks in `_apply_env_overrides()` into data-driven mapping loops
+- **`cmd_run` decomposition**: Extracted `_run_dry_run()`, `_run_retry_loop()`, and `_handle_sprint_success()` — main loop is now a clear pick → branch → retry → success sequence
+- **`cmd_init` decomposition**: Extracted `_init_check_prereqs()`, `_init_detect_project()`, and `_init_scaffold_files()` — cmd_init is now a thin orchestrator
+- **`cmd_update` helper**: Extracted `_fetch_and_stage()` replacing 6 repetitive fetch+verify blocks with one-liner calls
+
+### Fixed
+
+- **Stale README**: Removed non-existent `--auto-commit` flag reference, added `auto` command rows to command reference table
+
 ## [0.2.3] - 2026-03-18
 
 ### Added

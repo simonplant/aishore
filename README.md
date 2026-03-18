@@ -114,7 +114,7 @@ The **Tech Lead agent** focuses on technical clarity — are the steps actionabl
 
 Each sprint is isolated. Pre-existing uncommitted changes are stashed beforehand and restored afterward. If a sprint fails, the working tree resets cleanly — your other work is never lost.
 
-Use `--auto-commit` to commit after each successful sprint, or `--retries N` to let failing items retry.
+Commits happen automatically on feature branches. Use `--retries N` to let failing items retry.
 
 ### 4. Review
 
@@ -242,13 +242,18 @@ Updates are verified against SHA-256 checksums. Your `backlog/` and `config.yaml
 | `backlog show <ID>` | Show full detail of one item |
 | `backlog edit <ID> --priority must` | Update fields on an item |
 | `backlog rm <ID>` | Remove an item |
+| `auto done` | Autonomous: drain entire backlog |
+| `auto p0` | Autonomous: complete all must items |
+| `auto p1` | Autonomous: complete all must + should items |
+| `auto p2` | Autonomous: complete all must + should + could items |
+| `auto <scope> --max-failures N` | Consecutive failures before stopping |
 | `groom` | Groom bugs/tech debt (Tech Lead agent) |
 | `groom --backlog` | Groom features (Product Owner agent) |
 | `run [N]` | Run N sprints (default: 1) |
 | `run <ID>` | Run specific item by ID |
 | `run --dry-run` | Preview without running agents |
-| `run --auto-commit` | Auto-commit after each sprint |
 | `run --retries N` | Allow N retry attempts on failure |
+| `run --no-merge` | Keep feature branches for PR review |
 | `review` | Architecture review |
 | `review --update-docs` | Review and update project docs |
 | `review --since <commit>` | Review changes since commit |
