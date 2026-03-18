@@ -719,12 +719,14 @@ run_agent_process() {
 
     local agent_pid=$!
     local elapsed=0
+    local got_result=false
 
     while [[ $elapsed -lt $AGENT_TIMEOUT ]]; do
         if ! kill -0 "$agent_pid" 2>/dev/null; then
             break
         fi
         if [[ -f "$STATUS_DIR/result.json" ]]; then
+            got_result=true
             sleep 2
             break
         fi
@@ -735,8 +737,11 @@ run_agent_process() {
         fi
     done
 
+    # Kill the process if it's still running
     if kill -0 "$agent_pid" 2>/dev/null; then
-        log_warning "Agent timed out after ${AGENT_TIMEOUT}s, killing..."
+        if [[ "$got_result" != "true" ]]; then
+            log_warning "Agent timed out after ${AGENT_TIMEOUT}s, killing..."
+        fi
         if [[ "$has_setsid" == true ]]; then
             kill -TERM -- -"$agent_pid" 2>/dev/null || kill -TERM "$agent_pid" 2>/dev/null
             sleep 2
