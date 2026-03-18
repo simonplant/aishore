@@ -93,6 +93,10 @@ CFG_PERMS_DEVELOPER=""
 CFG_PERMS_VALIDATOR=""
 CFG_PERMS_REVIEWER=""
 
+# Shared constants
+BACKLOG_FILES=("backlog.json" "bugs.json")
+ITEM_PROJECTION='{id, title, description, steps, acceptanceCriteria, priority, status: (.status // "todo"), passes: (.passes // false)}'
+
 # ============================================================================
 # COLORS & LOGGING (inlined from common.sh)
 # ============================================================================
@@ -354,7 +358,7 @@ pick_item() {
         full_item=$(find_item "$specific_id") || return 1
 
         # Project to sprint fields
-        item_json=$(echo "$full_item" | jq '{id, title, description, steps, acceptanceCriteria, priority, status: (.status // "todo"), passes: (.passes // false)}')
+        item_json=$(echo "$full_item" | jq "$ITEM_PROJECTION")
 
         local item_status
         item_status=$(echo "$item_json" | jq -r '.status')
@@ -390,7 +394,7 @@ pick_item() {
     done_ids_json=$(collect_done_ids)
 
     # Warn about self-referencing dependencies
-    for bf in "backlog.json" "bugs.json"; do
+    for bf in "${BACKLOG_FILES[@]}"; do
         local self_refs
         self_refs=$(jq -r '.items[] | select(.dependsOn != null) | select(.id as $self | .dependsOn | index($self) != null) | .id' "$BACKLOG_DIR/$bf" 2>/dev/null || true)
         if [[ -n "$self_refs" ]]; then
@@ -401,7 +405,7 @@ pick_item() {
     done
 
     # Auto-pick: highest priority ready item (excluding failed items and unmet dependencies)
-    for backlog in "backlog.json" "bugs.json"; do
+    for backlog in "${BACKLOG_FILES[@]}"; do
         item_json=$(jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" '
             [.items[] |
             select(.readyForSprint == true and (.passes == false or .passes == null) and (.status == "todo" or .status == null)) |
@@ -410,7 +414,7 @@ pick_item() {
             . + {_priorityOrder: (if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end)}] |
             sort_by(._priorityOrder) |
             first |
-            if . then {id, title, description, steps, acceptanceCriteria, priority, status: (.status // "todo"), passes: (.passes // false)} else empty end
+            if . then '"$ITEM_PROJECTION"' else empty end
         ' "$BACKLOG_DIR/$backlog" 2>/dev/null)
 
         if [[ -n "$item_json" && "$item_json" != "null" ]]; then
@@ -439,7 +443,7 @@ resolve_backlog_file() {
         BUG-*)  echo "bugs.json" ;;
         *)
             # Search both files
-            for f in "backlog.json" "bugs.json"; do
+            for f in "${BACKLOG_FILES[@]}"; do
                 if [[ -f "$BACKLOG_DIR/$f" ]] && jq -e --arg id "$id" '.items[] | select(.id == $id)' "$BACKLOG_DIR/$f" &>/dev/null; then
                     echo "$f"
                     return 0
@@ -465,7 +469,7 @@ find_item() {
 next_id() {
     local prefix="$1"
     local max=0
-    for f in "backlog.json" "bugs.json"; do
+    for f in "${BACKLOG_FILES[@]}"; do
         [[ -f "$BACKLOG_DIR/$f" ]] || continue
         local file_max
         file_max=$(jq -r --arg pfx "$prefix-" '[.items[].id | select(startswith($pfx)) | ltrimstr($pfx) | tonumber] | max // 0' "$BACKLOG_DIR/$f" 2>/dev/null || echo 0)
@@ -512,7 +516,7 @@ list_ready_items() {
 
 collect_done_ids() {
     local done_ids="[]"
-    for f in "backlog.json" "bugs.json"; do
+    for f in "${BACKLOG_FILES[@]}"; do
         [[ -f "$BACKLOG_DIR/$f" ]] || continue
         local ids
         ids=$(jq '[.items[] | select(.status == "done") | .id]' "$BACKLOG_DIR/$f" 2>/dev/null || echo "[]")
@@ -889,14 +893,14 @@ check_result() {
 save_backlog_snapshot() {
     local snapshot_dir="$STATUS_DIR/backlog-snapshot"
     mkdir -p "$snapshot_dir"
-    for f in "backlog.json" "bugs.json"; do
+    for f in "${BACKLOG_FILES[@]}"; do
         [[ -f "$BACKLOG_DIR/$f" ]] && cp "$BACKLOG_DIR/$f" "$snapshot_dir/$f" || true
     done
 }
 
 restore_backlog_snapshot() {
     local snapshot_dir="$STATUS_DIR/backlog-snapshot"
-    for f in "backlog.json" "bugs.json"; do
+    for f in "${BACKLOG_FILES[@]}"; do
         [[ -f "$snapshot_dir/$f" ]] && cp "$snapshot_dir/$f" "$BACKLOG_DIR/$f" || true
     done
 }
@@ -1197,7 +1201,7 @@ cmd_run() {
     # Helper: count total ready items across both backlogs
     _count_total_ready() {
         local _total=0
-        for _bf in "backlog.json" "bugs.json"; do
+        for _bf in "${BACKLOG_FILES[@]}"; do
             [[ -f "$BACKLOG_DIR/$_bf" ]] && _total=$((_total + $(count_ready_items "$BACKLOG_DIR/$_bf")))
         done
         echo "$_total"
@@ -2458,7 +2462,7 @@ cmd_backlog_list() {
     case "$filter_type" in
         feat|feature) files=("backlog.json") ;;
         bug)          files=("bugs.json") ;;
-        "")           files=("backlog.json" "bugs.json") ;;
+        "")           files=("${BACKLOG_FILES[@]}") ;;
         *) log_error "Invalid type: $filter_type (must be: feat, bug)"; return 1 ;;
     esac
 
