@@ -1028,6 +1028,229 @@ cmd_auto() {
     cmd_run --_auto "$scope" "$@"
 }
 
+# Dry-run handler for cmd_run.
+# Uses outer-scope locals: auto_mode, auto_scope, specific_id
+_run_dry_run() {
+    load_config
+    cd "$PROJECT_ROOT"
+
+    if [[ "$auto_mode" == "true" ]]; then
+        log_header "aishore auto $auto_scope - Dry Run"
+        echo "Project: $PROJECT_ROOT"
+        echo "Auto-groom: when ready < $AUTO_GROOM_THRESHOLD"
+        echo "Circuit breaker: $AUTO_MAX_FAILURES consecutive failures"
+    else
+        log_header "aishore - Dry Run"
+        echo "Project: $PROJECT_ROOT"
+    fi
+    echo ""
+
+    local item_json
+    if ! item_json=$(pick_item "$specific_id" ""); then
+        if [[ -n "$specific_id" ]]; then
+            log_error "Item not found: $specific_id — check backlog/backlog.json and backlog/bugs.json for valid item IDs"
+        else
+            log_warning "No ready items in backlog. Run '.aishore/aishore groom' to prepare items, or set readyForSprint: true in backlog/backlog.json"
+        fi
+        return 1
+    fi
+
+    local item_id item_title
+    item_id=$(echo "$item_json" | jq -r '.id')
+    item_title=$(echo "$item_json" | jq -r '.title // .description')
+
+    log_subheader "Selected Item"
+    echo "$item_json" | jq .
+    echo ""
+
+    log_subheader "Developer Prompt"
+    build_agent_prompt "developer" "implement"
+    echo ""
+
+    log_subheader "Validation Command"
+    if [[ -n "$VALIDATE_CMD" ]]; then
+        echo "$VALIDATE_CMD"
+    else
+        echo "none configured"
+    fi
+    echo ""
+
+    log_header "Dry run complete"
+    echo "Would pick: $item_id ($item_title)"
+    echo "Model: $MODEL_PRIMARY"
+    echo "Validation: ${VALIDATE_CMD:-none}"
+    return 0
+}
+
+# Developer → validation cmd → validator agent retry loop.
+# Uses outer-scope locals: retries, auto_mode, session_failures, sprint_passed,
+#   retry_extra_prompt, item_source, sprint_start, ITEM_ID
+_run_retry_loop() {
+    local attempt=0
+    sprint_passed=false
+    retry_extra_prompt=""
+
+    for ((attempt=0; attempt<=retries; attempt++)); do
+        if [[ $attempt -gt 0 ]]; then
+            log_info "Retry attempt $attempt/$retries"
+        fi
+
+        # Build failure context for auto mode (last 5 failures only)
+        local dev_extra_prompt="$retry_extra_prompt"
+        if [[ "$auto_mode" == "true" && ${#session_failures[@]} -gt 0 ]]; then
+            local failure_ctx=$'\n## Recent Failure Patterns\nAvoid similar mistakes:'
+            local sf_start=$(( ${#session_failures[@]} > 5 ? ${#session_failures[@]} - 5 : 0 ))
+            for ((sf_i=sf_start; sf_i<${#session_failures[@]}; sf_i++)); do
+                failure_ctx="$failure_ctx"$'\n'"- ${session_failures[$sf_i]}"
+            done
+            dev_extra_prompt="${dev_extra_prompt}${failure_ctx}"
+        fi
+
+        # Run developer agent
+        run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
+        if ! check_result; then
+            log_error "Implementation failed"
+            if [[ $attempt -lt $retries ]]; then
+                local fail_reason=""
+                [[ -f "$STATUS_DIR/result.json" ]] && fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
+                retry_extra_prompt="Previous attempt failed during implementation. Failure reason: ${fail_reason}. Fix the issues and ensure all acceptance criteria pass."
+                log_info "Will retry with failure context"
+                continue
+            fi
+            _record_sprint_failure "Implementation failed" "Implementation failed"
+            break
+        fi
+
+        # Run validation command (if configured)
+        local validate_failed=false
+        local validate_output=""
+        if [[ -n "$VALIDATE_CMD" ]]; then
+            log_info "Running validation: $VALIDATE_CMD"
+            local validate_ok=true
+            local validate_tmpfile
+            validate_tmpfile="$(ensure_tmpdir)/validate_output.txt"
+            if command -v timeout &>/dev/null; then
+                timeout "$VALIDATE_TIMEOUT" bash -c "$VALIDATE_CMD" >"$validate_tmpfile" 2>&1 || validate_ok=false
+            else
+                bash -c "$VALIDATE_CMD" >"$validate_tmpfile" 2>&1 || validate_ok=false
+            fi
+            validate_output=$(cat "$validate_tmpfile" 2>/dev/null || true)
+            rm -f "$validate_tmpfile"
+            if [[ "$validate_ok" != "true" ]]; then
+                log_error "Validation command failed"
+                validate_failed=true
+            else
+                log_success "Validation passed"
+            fi
+        fi
+
+        if [[ "$validate_failed" == "true" ]]; then
+            if [[ $attempt -lt $retries ]]; then
+                retry_extra_prompt="Previous attempt failed validation command ($VALIDATE_CMD). Validation output:
+${validate_output}
+Fix the issues and ensure all acceptance criteria pass."
+                log_info "Will retry with failure context"
+                continue
+            fi
+            _record_sprint_failure "Validation failed" "Validation command failed"
+            break
+        fi
+
+        # Run validator agent
+        run_agent "validator" "validate" "$MODEL_FAST"
+        if ! check_result; then
+            log_error "Validation failed"
+            if [[ $attempt -lt $retries ]]; then
+                local agent_fail_reason=""
+                [[ -f "$STATUS_DIR/result.json" ]] && agent_fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
+                retry_extra_prompt="Previous attempt failed validator agent review. Failure reason: ${agent_fail_reason}."
+                [[ -n "$validate_output" ]] && retry_extra_prompt="${retry_extra_prompt} Validation command output: ${validate_output}."
+                retry_extra_prompt="${retry_extra_prompt} Fix the issues and ensure all acceptance criteria pass."
+                log_info "Will retry with failure context"
+                continue
+            fi
+            _record_sprint_failure "Validator failed" "Validator agent rejected implementation"
+            break
+        fi
+
+        # All validations passed
+        sprint_passed=true
+        break
+    done
+
+    # Export total attempts for caller
+    total_attempts=$((attempt + 1))
+}
+
+# Handle post-sprint success: mark complete, safety commit, merge/push.
+# Uses outer-scope locals: ITEM_ID, item_source, total_attempts, sprint_start,
+#   passed, failed, consecutive_failures, groom_exhausted, no_merge, base_branch,
+#   sprint_results, sprint_items, sprint_times, FAILED_IDS
+# Returns 1 on merge conflict (caller should break).
+_handle_sprint_success() {
+    if mark_complete "$ITEM_ID" "$item_source" "$total_attempts"; then
+        log_success "Sprint complete: $ITEM_ID"
+        passed=$((passed + 1))
+        consecutive_failures=0
+        groom_exhausted=false
+        sprint_results+=("pass")
+        sprint_items+=("$ITEM_ID")
+        sprint_times+=("$(( $(date +%s) - sprint_start ))")
+        send_notification "pass" "$ITEM_ID"
+    else
+        log_error "Failed to mark $ITEM_ID complete"
+        failed=$((failed + 1))
+        FAILED_IDS["$ITEM_ID"]="Archival failed"
+        sprint_results+=("fail")
+        sprint_items+=("$ITEM_ID")
+        sprint_times+=("$(( $(date +%s) - sprint_start ))")
+        send_notification "fail" "$ITEM_ID"
+        return 0
+    fi
+
+    # Ensure agent's work is committed (safety net if agent missed it)
+    if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
+        log_warning "Agent left uncommitted changes — committing"
+        git add -A
+        git commit -m "feat($ITEM_ID): implement sprint item
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+    fi
+
+    # Merge feature branch back to base, push, and pull before next item
+    if [[ "$no_merge" == "true" ]]; then
+        log_info "Branch $AISHORE_FEATURE_BRANCH kept for review"
+        if git remote get-url origin &>/dev/null; then
+            git push -u origin "$AISHORE_FEATURE_BRANCH" 2>/dev/null || \
+                log_warning "Failed to push $AISHORE_FEATURE_BRANCH — push manually"
+        fi
+        git checkout "$base_branch"
+    else
+        log_info "Merging $AISHORE_FEATURE_BRANCH → $base_branch"
+        git checkout "$base_branch"
+        if git merge --no-ff "$AISHORE_FEATURE_BRANCH" -m "merge: $ITEM_ID sprint branch
+
+Co-Authored-By: Claude <noreply@anthropic.com>"; then
+            git branch -d "$AISHORE_FEATURE_BRANCH" 2>/dev/null || true
+            log_success "Merged and cleaned up $AISHORE_FEATURE_BRANCH"
+        else
+            log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
+            AISHORE_FEATURE_BRANCH=""
+            return 1
+        fi
+
+        if git remote get-url origin &>/dev/null; then
+            log_info "Syncing with remote"
+            git push origin "$base_branch" 2>/dev/null || \
+                log_warning "Failed to push — continuing offline"
+            git pull --rebase origin "$base_branch" 2>/dev/null || \
+                log_warning "Failed to pull — continuing with local state"
+        fi
+    fi
+    AISHORE_FEATURE_BRANCH=""
+    return 0
+}
+
 cmd_run() {
     require_tool jq
     require_tool git
@@ -1047,7 +1270,6 @@ cmd_run() {
             --dry-run) dry_run=true; shift ;;
             --no-merge) no_merge=true; shift ;;
             --_auto)
-                # Internal flag — set by cmd_auto, not user-facing
                 auto_mode=true
                 auto_scope="$2"
                 shift 2 ;;
@@ -1071,7 +1293,6 @@ cmd_run() {
                 if [[ "$1" =~ ^[0-9]+$ ]]; then
                     count="$1"
                 else
-                    # Assume it's an item ID (e.g., TEST-006, FEAT-001)
                     specific_id="$1"
                     count=1
                 fi
@@ -1079,62 +1300,9 @@ cmd_run() {
         esac
     done
 
-    # Dry-run mode: show what would happen without modifying anything
     if [[ "$dry_run" == "true" ]]; then
-        load_config
-        cd "$PROJECT_ROOT"
-
-        if [[ "$auto_mode" == "true" ]]; then
-            log_header "aishore auto $auto_scope - Dry Run"
-            echo "Project: $PROJECT_ROOT"
-            echo "Auto-groom: when ready < $AUTO_GROOM_THRESHOLD"
-            echo "Circuit breaker: $AUTO_MAX_FAILURES consecutive failures"
-        else
-            log_header "aishore - Dry Run"
-            echo "Project: $PROJECT_ROOT"
-        fi
-        echo ""
-
-        # Pick item (writes .item_source but that's a runtime file in .gitignore)
-        local item_json
-        if ! item_json=$(pick_item "$specific_id" ""); then
-            if [[ -n "$specific_id" ]]; then
-                log_error "Item not found: $specific_id — check backlog/backlog.json and backlog/bugs.json for valid item IDs"
-            else
-                log_warning "No ready items in backlog. Run '.aishore/aishore groom' to prepare items, or set readyForSprint: true in backlog/backlog.json"
-            fi
-            return 1
-        fi
-
-        local item_id item_title
-        item_id=$(echo "$item_json" | jq -r '.id')
-        item_title=$(echo "$item_json" | jq -r '.title // .description')
-
-        # Display selected item
-        log_subheader "Selected Item"
-        echo "$item_json" | jq .
-        echo ""
-
-        # Display developer prompt
-        log_subheader "Developer Prompt"
-        build_agent_prompt "developer" "implement"
-        echo ""
-
-        # Display validation command
-        log_subheader "Validation Command"
-        if [[ -n "$VALIDATE_CMD" ]]; then
-            echo "$VALIDATE_CMD"
-        else
-            echo "none configured"
-        fi
-        echo ""
-
-        # Summary
-        log_header "Dry run complete"
-        echo "Would pick: $item_id ($item_title)"
-        echo "Model: $MODEL_PRIMARY"
-        echo "Validation: ${VALIDATE_CMD:-none}"
-        return 0
+        _run_dry_run
+        return $?
     fi
 
     acquire_lock
@@ -1156,7 +1324,7 @@ cmd_run() {
     # Auto mode setup
     local scope_label=""
     if [[ "$auto_mode" == "true" ]]; then
-        count=9999  # loop exits on backlog empty or circuit breaker
+        count=9999
         case "$auto_scope" in
             p0)   auto_priorities="must";              scope_label="P0 (must)" ;;
             p1)   auto_priorities="must should";       scope_label="P0+P1 (must + should)" ;;
@@ -1182,7 +1350,6 @@ cmd_run() {
     [[ "$retries" -gt 0 ]] && echo "Retries: $retries"
     echo ""
 
-    # Save base branch for feature branching
     local base_branch
     base_branch=$(git rev-parse --abbrev-ref HEAD)
     AISHORE_BASE_BRANCH="$base_branch"
@@ -1195,12 +1362,10 @@ cmd_run() {
     local sprint_items=()
     local sprint_times=()
 
-    # Auto mode state
     local consecutive_failures=0
     local groom_exhausted=false
     local -a session_failures=()
 
-    # Helper: count total ready items across both backlogs
     _count_total_ready() {
         local _total=0
         for _bf in "${BACKLOG_FILES[@]}"; do
@@ -1209,8 +1374,6 @@ cmd_run() {
         echo "$_total"
     }
 
-    # Helper: record a sprint failure (called from 3 places in the retry loop)
-    # Usage: _record_sprint_failure "reason" "detail for mark_item_failed"
     _record_sprint_failure() {
         local reason="$1" detail="$2"
         failed=$((failed + 1))
@@ -1226,7 +1389,6 @@ cmd_run() {
     }
 
     for ((i=1; i<=count; i++)); do
-        # Auto mode: circuit breaker (check before logging sprint header)
         if [[ "$auto_mode" == "true" && "$consecutive_failures" -ge "$max_consecutive_failures" ]]; then
             log_error "Circuit breaker: $consecutive_failures consecutive failures — stopping"
             break
@@ -1259,7 +1421,7 @@ cmd_run() {
             fi
         fi
 
-        # Build comma-separated exclusion list from failed items
+        # Build exclusion list from failed items
         local skip_list=""
         for fid in "${!FAILED_IDS[@]}"; do
             [[ -n "$skip_list" ]] && skip_list="$skip_list,$fid" || skip_list="$fid"
@@ -1297,187 +1459,33 @@ cmd_run() {
         [[ -z "$item_source" ]] && { log_error "Failed to determine item source. Ensure the item exists in backlog/backlog.json or backlog/bugs.json and retry"; break; }
 
         create_sprint "$item_json" "$item_source"
-
-        # Snapshot backlog before developer runs (safety net for non-branching fallback)
         save_backlog_snapshot
 
-        # Create feature branch for this sprint item
+        # Create feature branch
         local branch_name="aishore/${ITEM_ID}"
-        # Sanitize branch name (replace spaces/special chars)
         branch_name=$(echo "$branch_name" | sed 's/[^a-zA-Z0-9/_-]/-/g')
         log_info "Creating branch: $branch_name"
         git checkout -b "$branch_name" 2>/dev/null || {
-            # Branch might already exist from a previous failed run
             git branch -D "$branch_name" 2>/dev/null || true
             git checkout -b "$branch_name"
         }
         AISHORE_FEATURE_BRANCH="$branch_name"
 
-        # Run developer and validation with retry loop
-        local attempt=0
+        # Developer → validation → validator (with retries)
         local sprint_passed=false
         local retry_extra_prompt=""
-
-        for ((attempt=0; attempt<=retries; attempt++)); do
-            if [[ $attempt -gt 0 ]]; then
-                log_info "Retry attempt $attempt/$retries"
-            fi
-
-            # Build failure context for auto mode (last 5 failures only)
-            local dev_extra_prompt="$retry_extra_prompt"
-            if [[ "$auto_mode" == "true" && ${#session_failures[@]} -gt 0 ]]; then
-                local failure_ctx=$'\n## Recent Failure Patterns\nAvoid similar mistakes:'
-                local sf_start=$(( ${#session_failures[@]} > 5 ? ${#session_failures[@]} - 5 : 0 ))
-                for ((sf_i=sf_start; sf_i<${#session_failures[@]}; sf_i++)); do
-                    failure_ctx="$failure_ctx"$'\n'"- ${session_failures[$sf_i]}"
-                done
-                dev_extra_prompt="${dev_extra_prompt}${failure_ctx}"
-            fi
-
-            # Run developer agent
-            run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
-            if ! check_result; then
-                log_error "Implementation failed"
-                if [[ $attempt -lt $retries ]]; then
-                    local fail_reason=""
-                    [[ -f "$STATUS_DIR/result.json" ]] && fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
-                    retry_extra_prompt="Previous attempt failed during implementation. Failure reason: ${fail_reason}. Fix the issues and ensure all acceptance criteria pass."
-                    log_info "Will retry with failure context"
-                    continue
-                fi
-                _record_sprint_failure "Implementation failed" "Implementation failed"
-                break
-            fi
-
-            # Run validation command (if configured)
-            local validate_failed=false
-            local validate_output=""
-            if [[ -n "$VALIDATE_CMD" ]]; then
-                log_info "Running validation: $VALIDATE_CMD"
-                local validate_ok=true
-                local validate_tmpfile
-                validate_tmpfile="$(ensure_tmpdir)/validate_output.txt"
-                if command -v timeout &>/dev/null; then
-                    timeout "$VALIDATE_TIMEOUT" bash -c "$VALIDATE_CMD" >"$validate_tmpfile" 2>&1 || validate_ok=false
-                else
-                    bash -c "$VALIDATE_CMD" >"$validate_tmpfile" 2>&1 || validate_ok=false
-                fi
-                validate_output=$(cat "$validate_tmpfile" 2>/dev/null || true)
-                rm -f "$validate_tmpfile"
-                if [[ "$validate_ok" != "true" ]]; then
-                    log_error "Validation command failed"
-                    validate_failed=true
-                else
-                    log_success "Validation passed"
-                fi
-            fi
-
-            if [[ "$validate_failed" == "true" ]]; then
-                if [[ $attempt -lt $retries ]]; then
-                    retry_extra_prompt="Previous attempt failed validation command ($VALIDATE_CMD). Validation output:
-${validate_output}
-Fix the issues and ensure all acceptance criteria pass."
-                    log_info "Will retry with failure context"
-                    continue
-                fi
-                _record_sprint_failure "Validation failed" "Validation command failed"
-                break
-            fi
-
-            # Run validator agent
-            run_agent "validator" "validate" "$MODEL_FAST"
-            if ! check_result; then
-                log_error "Validation failed"
-                if [[ $attempt -lt $retries ]]; then
-                    local agent_fail_reason=""
-                    [[ -f "$STATUS_DIR/result.json" ]] && agent_fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
-                    retry_extra_prompt="Previous attempt failed validator agent review. Failure reason: ${agent_fail_reason}."
-                    [[ -n "$validate_output" ]] && retry_extra_prompt="${retry_extra_prompt} Validation command output: ${validate_output}."
-                    retry_extra_prompt="${retry_extra_prompt} Fix the issues and ensure all acceptance criteria pass."
-                    log_info "Will retry with failure context"
-                    continue
-                fi
-                _record_sprint_failure "Validator failed" "Validator agent rejected implementation"
-                break
-            fi
-
-            # All validations passed
-            sprint_passed=true
-            break
-        done
-
-        # Track total attempts for archiving
-        local total_attempts=$((attempt + 1))
+        local total_attempts=1
+        _run_retry_loop
 
         if [[ "$sprint_passed" != "true" ]]; then
             [[ "$auto_mode" == "true" ]] && log_info "Progress: $passed passed, $failed failed, $(_count_total_ready) remaining ready"
             continue
         fi
 
-        # Success
-        if mark_complete "$ITEM_ID" "$item_source" "$total_attempts"; then
-            log_success "Sprint complete: $ITEM_ID"
-            passed=$((passed + 1))
-            consecutive_failures=0
-            groom_exhausted=false
-            sprint_results+=("pass")
-            sprint_items+=("$ITEM_ID")
-            sprint_times+=("$(( $(date +%s) - sprint_start ))")
-            send_notification "pass" "$ITEM_ID"
-        else
-            log_error "Failed to mark $ITEM_ID complete"
-            failed=$((failed + 1))
-            FAILED_IDS["$ITEM_ID"]="Archival failed"
-            sprint_results+=("fail")
-            sprint_items+=("$ITEM_ID")
-            sprint_times+=("$(( $(date +%s) - sprint_start ))")
-            send_notification "fail" "$ITEM_ID"
-            continue
+        # Success: mark complete, commit, merge/push
+        if ! _handle_sprint_success; then
+            break  # merge conflict
         fi
-
-        # Ensure agent's work is committed (safety net if agent missed it)
-        if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
-            log_warning "Agent left uncommitted changes — committing"
-            git add -A
-            git commit -m "feat($ITEM_ID): implement sprint item
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-        fi
-
-        # Merge feature branch back to base, push, and pull before next item
-        if [[ "$no_merge" == "true" ]]; then
-            log_info "Branch $AISHORE_FEATURE_BRANCH kept for review"
-            # Push the feature branch so it's available for PRs
-            if git remote get-url origin &>/dev/null; then
-                git push -u origin "$AISHORE_FEATURE_BRANCH" 2>/dev/null || \
-                    log_warning "Failed to push $AISHORE_FEATURE_BRANCH — push manually"
-            fi
-            git checkout "$base_branch"
-        else
-            log_info "Merging $AISHORE_FEATURE_BRANCH → $base_branch"
-            git checkout "$base_branch"
-            if git merge --no-ff "$AISHORE_FEATURE_BRANCH" -m "merge: $ITEM_ID sprint branch
-
-Co-Authored-By: Claude <noreply@anthropic.com>"; then
-                git branch -d "$AISHORE_FEATURE_BRANCH" 2>/dev/null || true
-                log_success "Merged and cleaned up $AISHORE_FEATURE_BRANCH"
-            else
-                log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
-                # Leave both branches intact for manual resolution
-                AISHORE_FEATURE_BRANCH=""
-                break
-            fi
-
-            # Push merged base branch and pull latest before next sprint
-            if git remote get-url origin &>/dev/null; then
-                log_info "Syncing with remote"
-                git push origin "$base_branch" 2>/dev/null || \
-                    log_warning "Failed to push — continuing offline"
-                git pull --rebase origin "$base_branch" 2>/dev/null || \
-                    log_warning "Failed to pull — continuing with local state"
-            fi
-        fi
-        AISHORE_FEATURE_BRANCH=""
 
         [[ "$auto_mode" == "true" ]] && log_info "Progress: $passed passed, $failed failed, $(_count_total_ready) remaining ready"
     done
