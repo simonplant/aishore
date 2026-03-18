@@ -22,6 +22,11 @@ jq empty backlog/*.json
 .aishore/aishore backlog show <ID>  # Show full detail of one item
 .aishore/aishore backlog edit <ID>  # Update fields on an item
 .aishore/aishore backlog rm <ID>    # Remove an item
+.aishore/aishore auto done           # Autonomous: drain entire backlog
+.aishore/aishore auto p1             # Autonomous: complete all must + should items
+.aishore/aishore auto p0             # Autonomous: complete all must items
+.aishore/aishore auto done --retries 2        # With per-item retries
+.aishore/aishore auto p1 --max-failures 3     # Custom circuit breaker
 .aishore/aishore run [N]            # Run N sprints (branch, commit, merge, push per item)
 .aishore/aishore run <ID>           # Run specific item (e.g., FEAT-001)
 .aishore/aishore run --dry-run      # Preview without running agents
@@ -52,6 +57,8 @@ No build step — the tool is pure Bash.
 ```
 Pick Item → Create Branch (aishore/<ID>) → Developer Agent → Validation Command → Validator Agent → Commit → Merge → Archive
 ```
+
+**Autonomous mode (`auto` command):** `auto <scope>` wraps the sprint loop with: priority-scoped item selection (p0/p1/p2/done), auto-grooming when ready items drop below threshold, session failure tracking passed to subsequent developer agents, and a circuit breaker that stops after N consecutive failures. `cmd_auto()` validates the scope and delegates to `cmd_run` via an internal `--_auto` flag — all sprint logic lives in one place.
 
 **Git branching model:** Each sprint item runs on its own feature branch (`aishore/<ITEM-ID>`), created from the current branch. The developer agent commits its own work. On success, the branch is merged back with `--no-ff`, pushed, and the base branch pulls latest before the next item. On failure, the branch is deleted. Use `--no-merge` to keep branches for PR review (they get pushed to origin instead).
 
@@ -87,7 +94,7 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 **Context auto-detection:** aishore automatically finds and uses `CLAUDE.md`, `PRODUCT.md`, and `ARCHITECTURE.md` from the project root (or `docs/` directory) as agent context.
 
-**Agent invocation:** All agent invocations go through `run_agent()`, which assembles the prompt, appends the completion contract, and delegates to `run_agent_process()`. Permissions vary by role: developer gets `Bash(git:*),Edit,Write,Read,Glob,Grep`; validator gets `Bash(git:*),Read,Glob,Grep`; reviewer gets `Read,Glob,Grep` (or with `Edit,Write` when `--update-docs` is used). Permissions are configurable in `config.yaml`.
+**Agent invocation:** All agent invocations go through `run_agent()`, which assembles the prompt, appends the completion contract (and validation command hint for developers), and delegates to `run_agent_process()`. Permissions vary by role: developer gets `Bash,Edit,Write,Read,Glob,Grep`; validator gets `Bash,Read,Write,Glob,Grep`; reviewer gets `Read,Glob,Grep` (or with `Edit,Write` when `--update-docs` is used). Permissions are configurable in `config.yaml`.
 
 **Concurrency:** Only one aishore process runs at a time, enforced via `flock` on `.aishore/data/status/.aishore.lock`.
 

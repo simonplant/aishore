@@ -5,6 +5,20 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-03-18
+
+### Added
+
+- **`auto` command — autonomous sprint orchestration** ([#6](https://github.com/simonplant/aishore/issues/6)): New top-level command that drives the backlog to completion autonomously. Scoped by priority: `auto done` (all items), `auto p1` (must + should), `auto p0` (must only), `auto p2` (must + should + could).
+  - Auto-grooms when ready items drop below threshold (tech-lead + product-owner agents)
+  - Tracks failure patterns across the session, passes context to subsequent developer agents
+  - Circuit breaker stops after N consecutive failures (default: 5, configurable via `--max-failures`)
+  - Priority scope filtering: stops when all in-scope items are complete
+  - Mission-oriented exit messages: "Mission complete", "Mission aborted" (circuit breaker), "Mission ended"
+  - Composes with `--retries`, `--no-merge`, and `--dry-run`
+- **Validation command injection**: Developer agent prompt now includes the configured validation command, so the agent knows what to run before signaling completion
+- **Auto mode configuration**: `auto.groom_threshold` and `auto.max_failures` in `config.yaml`, plus `AISHORE_AUTO_GROOM_THRESHOLD` and `AISHORE_AUTO_MAX_FAILURES` env vars
+
 ## [0.2.2] - 2026-03-14
 
 ### Fixed
