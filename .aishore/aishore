@@ -1733,26 +1733,10 @@ cmd_status() {
     fi
 }
 
-cmd_init() {
-    log_header "aishore setup wizard"
-    echo ""
-    echo "  This will walk you through setting up aishore for your project."
-    echo "  Press Enter to accept defaults shown in [brackets]."
-    echo ""
-
-    local reinit=false
-    if [[ -f "$BACKLOG_DIR/backlog.json" ]]; then
-        log_warning "aishore already initialized (backlog.json exists)"
-        read -r -p "  Reinitialize? This preserves existing backlogs. [y/N] " c
-        [[ $c != [yY] ]] && exit 0
-        reinit=true
-        echo ""
-    fi
-
-    # ── Step 1: Prerequisites ──────────────────────────────────────────
+# Check prerequisites for init: git, claude, jq
+_init_check_prereqs() {
     log_subheader "Step 1/6 — Prerequisites"
 
-    # Check git
     if git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree &>/dev/null; then
         log_success "Git repository detected"
     else
@@ -1762,7 +1746,6 @@ cmd_init() {
         exit 1
     fi
 
-    # Check Claude CLI
     if command -v claude &>/dev/null; then
         log_success "Claude CLI found ($(claude --version 2>/dev/null || echo 'installed'))"
     else
@@ -1771,7 +1754,6 @@ cmd_init() {
         exit 1
     fi
 
-    # Check jq (used for backlog manipulation)
     if command -v jq &>/dev/null; then
         log_success "jq found"
     else
@@ -1780,11 +1762,14 @@ cmd_init() {
     fi
 
     echo ""
+}
 
-    # ── Step 2: Project info ───────────────────────────────────────────
+# Detect project name, validation command, and existing docs.
+# Sets outer-scope locals: project_name, validate_cmd, prd_found, claude_md
+_init_detect_project() {
+    # ── Project info ──
     log_subheader "Step 2/6 — Project"
 
-    # Detect project name from package.json, Cargo.toml, or directory
     local detected_name=""
     if [[ -f "$PROJECT_ROOT/package.json" ]] && command -v jq &>/dev/null; then
         detected_name=$(jq -r '.name // empty' "$PROJECT_ROOT/package.json" 2>/dev/null || true)
@@ -1799,13 +1784,12 @@ cmd_init() {
 
     echo ""
 
-    # ── Step 3: Validation command ─────────────────────────────────────
+    # ── Validation command ──
     log_subheader "Step 3/6 — Validation"
     echo "  After each sprint, aishore runs a command to verify the code works."
     echo "  Examples: 'npm run build', 'cargo test', 'make check'"
     echo ""
 
-    # Detect likely validation command
     local detected_validate=""
     if [[ -f "$PROJECT_ROOT/package.json" ]]; then
         if command -v jq &>/dev/null; then
@@ -1842,13 +1826,12 @@ cmd_init() {
 
     echo ""
 
-    # ── Step 4: Product requirements ───────────────────────────────────
+    # ── Product requirements ──
     log_subheader "Step 4/6 — Product requirements"
     echo "  aishore works best when agents have context about what you're building."
     echo ""
 
-    # Check for existing requirements docs
-    local prd_found=""
+    prd_found=""
     for candidate in \
         "$PROJECT_ROOT/PRODUCT.md" "$PROJECT_ROOT/product.md" \
         "$PROJECT_ROOT/PRD.md" "$PROJECT_ROOT/prd.md" \
@@ -1862,7 +1845,6 @@ cmd_init() {
         fi
     done
 
-    local claude_md
     claude_md=$(find_claude_md)
 
     if [[ -n "$claude_md" ]]; then
@@ -1880,11 +1862,14 @@ cmd_init() {
     fi
 
     echo ""
+}
 
-    # ── Step 5: Create files ───────────────────────────────────────────
+# Create directories, config, backlogs, templates, .gitignore, CLAUDE.md.
+# Uses outer-scope locals: project_name, validate_cmd, claude_md, reinit
+# Sets outer-scope locals: product_found, arch_found
+_init_scaffold_files() {
     log_subheader "Step 5/6 — Scaffolding"
 
-    # Create directories
     mkdir -p "$STATUS_DIR" "$LOGS_DIR" "$ARCHIVE_DIR" "$AGENTS_DIR"
     log_success "Created directory structure"
 
@@ -2027,8 +2012,7 @@ DEOF
     # Scaffold project docs if missing
     local docs_dir="$PROJECT_ROOT/docs"
 
-    # PRODUCT.md
-    local product_found=false
+    product_found=false
     for p in "$PROJECT_ROOT/PRODUCT.md" "$PROJECT_ROOT/product.md" \
              "$docs_dir/PRODUCT.md" "$docs_dir/product.md" \
              "$PROJECT_ROOT/PRD.md" "$PROJECT_ROOT/prd.md" \
@@ -2067,8 +2051,7 @@ PEOF
         log_info "Found existing product doc: $p"
     fi
 
-    # ARCHITECTURE.md
-    local arch_found=false
+    arch_found=false
     for p in "$PROJECT_ROOT/ARCHITECTURE.md" "$docs_dir/ARCHITECTURE.md"; do
         [[ -f "$p" ]] && { arch_found=true; break; }
     done
@@ -2105,10 +2088,8 @@ AEOF
     local entries_file="$AISHORE_ROOT/gitignore-entries.txt"
     local gitignore_content=""
     if [[ -f "$entries_file" ]]; then
-        # Read entries from file, stripping comment lines and blank lines
         gitignore_content=$(grep -v '^#' "$entries_file" | grep -v '^$' || true)
     else
-        # Fallback to hardcoded entries
         gitignore_content=".aishore/data/logs/
 .aishore/data/status/result.json
 .aishore/data/status/.item_source
@@ -2143,14 +2124,39 @@ AEOF
     fi
 
     echo ""
+}
 
-    # ── Step 6: Summary & next steps ───────────────────────────────────
+cmd_init() {
+    log_header "aishore setup wizard"
+    echo ""
+    echo "  This will walk you through setting up aishore for your project."
+    echo "  Press Enter to accept defaults shown in [brackets]."
+    echo ""
+
+    local reinit=false
+    if [[ -f "$BACKLOG_DIR/backlog.json" ]]; then
+        log_warning "aishore already initialized (backlog.json exists)"
+        read -r -p "  Reinitialize? This preserves existing backlogs. [y/N] " c
+        [[ $c != [yY] ]] && exit 0
+        reinit=true
+        echo ""
+    fi
+
+    # Shared state across init steps
+    local project_name="" validate_cmd="" prd_found="" claude_md=""
+    local product_found=false arch_found=false
+
+    _init_check_prereqs
+    _init_detect_project
+    _init_scaffold_files
+
+    # ── Summary & next steps ──
     log_subheader "Step 6/6 — Ready"
     echo ""
     log_success "aishore initialized for $project_name"
     echo ""
 
-    # Status summary
+    local docs_dir="$PROJECT_ROOT/docs"
     echo "  Project:       $project_name"
     echo "  Validation:    ${validate_cmd:-<none>}"
     echo "  CLAUDE.md:     ${claude_md:-<not found>}"
@@ -2159,7 +2165,6 @@ AEOF
     echo "  Definitions:   $BACKLOG_DIR/DEFINITIONS.md"
     echo ""
 
-    # Contextual next steps based on what's missing
     echo -e "${CYAN}Next steps:${NC}"
     local step=1
 
