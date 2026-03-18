@@ -2319,65 +2319,40 @@ cmd_update() {
         return 0
     }
 
+    # Fetch a remote file into staging and verify its checksum.
+    # Args: remote_path local_path label checksum_key [required]
+    # Sets all_verified=false on failure. Exits on required file fetch failure.
+    _fetch_and_stage() {
+        local remote_path="$1" local_path="$2" label="$3" checksum_key="$4"
+        local required="${5:-false}"
+        log_info "Fetching $label..."
+        if ! $fetch_cmd "$repo_url/$remote_path" > "$local_path" 2>/dev/null; then
+            if [[ "$required" == "true" ]]; then
+                log_error "Failed to fetch $label"
+                exit 1
+            fi
+            log_error "Could not fetch $label"
+            all_verified=false
+            return
+        fi
+        if ! verify_or_abort "$local_path" "$label" "$checksum_key"; then
+            all_verified=false
+        fi
+    }
+
     # ── Phase 1: Fetch & verify all files into staging ──
     local staging_dir
     staging_dir="$(ensure_tmpdir)/update_staging"
     mkdir -p "$staging_dir/agents"
     local all_verified=true
 
-    # Stage VERSION file
-    log_info "Fetching VERSION..."
-    if ! $fetch_cmd "$repo_url/.aishore/VERSION" > "$staging_dir/VERSION" 2>/dev/null; then
-        log_error "Failed to fetch VERSION file"
-        exit 1
-    fi
-    if ! verify_or_abort "$staging_dir/VERSION" "VERSION" ".aishore/VERSION"; then
-        all_verified=false
-    fi
+    _fetch_and_stage ".aishore/VERSION" "$staging_dir/VERSION" "VERSION" ".aishore/VERSION" true
+    _fetch_and_stage ".aishore/aishore" "$staging_dir/aishore" "aishore" ".aishore/aishore" true
+    _fetch_and_stage ".aishore/README.md" "$staging_dir/README.md" "README.md" ".aishore/README.md"
+    _fetch_and_stage ".aishore/gitignore-entries.txt" "$staging_dir/gitignore-entries.txt" "gitignore-entries.txt" ".aishore/gitignore-entries.txt"
 
-    # Stage aishore script
-    log_info "Fetching aishore..."
-    if ! $fetch_cmd "$repo_url/.aishore/aishore" > "$staging_dir/aishore" 2>/dev/null; then
-        log_error "Failed to fetch aishore script"
-        exit 1
-    fi
-    if ! verify_or_abort "$staging_dir/aishore" "aishore" ".aishore/aishore"; then
-        all_verified=false
-    fi
-
-    # Stage README.md
-    log_info "Fetching README.md..."
-    if $fetch_cmd "$repo_url/.aishore/README.md" > "$staging_dir/README.md" 2>/dev/null; then
-        if ! verify_or_abort "$staging_dir/README.md" "README.md" ".aishore/README.md"; then
-            all_verified=false
-        fi
-    else
-        log_error "Could not fetch README.md"
-        all_verified=false
-    fi
-
-    # Stage gitignore-entries.txt
-    log_info "Fetching gitignore-entries.txt..."
-    if $fetch_cmd "$repo_url/.aishore/gitignore-entries.txt" > "$staging_dir/gitignore-entries.txt" 2>/dev/null; then
-        if ! verify_or_abort "$staging_dir/gitignore-entries.txt" "gitignore-entries.txt" ".aishore/gitignore-entries.txt"; then
-            all_verified=false
-        fi
-    else
-        log_error "Could not fetch gitignore-entries.txt"
-        all_verified=false
-    fi
-
-    # Stage agent prompts
     for agent in developer validator tech-lead product-owner architect; do
-        log_info "Fetching $agent.md..."
-        if $fetch_cmd "$repo_url/.aishore/agents/$agent.md" > "$staging_dir/agents/$agent.md" 2>/dev/null; then
-            if ! verify_or_abort "$staging_dir/agents/$agent.md" "$agent.md" ".aishore/agents/$agent.md"; then
-                all_verified=false
-            fi
-        else
-            log_error "Could not fetch $agent.md"
-            all_verified=false
-        fi
+        _fetch_and_stage ".aishore/agents/$agent.md" "$staging_dir/agents/$agent.md" "$agent.md" ".aishore/agents/$agent.md"
     done
 
     # ── Phase 2: Install (only if all verified) ──
