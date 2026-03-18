@@ -981,11 +981,13 @@ cmd_run() {
     local specific_id=""
     local retries=0
     local no_merge=false
+    local until_done=false
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --dry-run) dry_run=true; shift ;;
             --no-merge) no_merge=true; shift ;;
+            --until-done) until_done=true; count=9999; shift ;;
             --retries)
                 shift
                 if [[ $# -eq 0 || ! "$1" =~ ^[0-9]+$ ]]; then
@@ -1014,6 +1016,7 @@ cmd_run() {
 
         log_header "aishore - Dry Run"
         echo "Project: $PROJECT_ROOT"
+        [[ "$until_done" == "true" ]] && echo "Mode: until-done"
         echo ""
 
         # Pick item (writes .item_source but that's a runtime file in .gitignore)
@@ -1075,6 +1078,8 @@ cmd_run() {
     echo "Project: $PROJECT_ROOT"
     if [[ -n "$specific_id" ]]; then
         echo "Item: $specific_id"
+    elif [[ "$until_done" == "true" ]]; then
+        echo "Mode: until-done (run until backlog is clear or blocked)"
     else
         echo "Sprints: $count"
     fi
@@ -1332,7 +1337,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
         git stash pop >/dev/null 2>&1 || log_warning "Failed to restore stashed changes — run 'git stash pop' manually"
     fi
 
-    log_header "Results: $passed passed, $failed failed"
+    if [[ "$until_done" == "true" ]]; then
+        log_header "Results: $passed passed, $failed failed (until-done mode)"
+    else
+        log_header "Results: $passed passed, $failed failed"
+    fi
     [[ $failed -gt 0 || $passed -eq 0 ]] && exit 1 || exit 0
 }
 
@@ -1718,7 +1727,7 @@ project:
 
 validation:
   command: "$validate_cmd"
-  timeout: 120
+  timeout: 180
 
 # models:
 #   primary: "claude-opus-4-6"
@@ -2642,6 +2651,7 @@ Commands:
     --dry-run       Preview what would happen without running agents
     --no-merge      Keep feature branches for PR review (push, don't merge)
     --retries N     Allow up to N retry attempts on validation failure
+    --until-done    Keep running sprints until backlog is complete or blocked
 
   groom             Groom bugs/tech debt (Tech Lead mode)
     --backlog       Groom features instead (Product Owner mode)
@@ -2677,6 +2687,7 @@ Examples:
   .aishore/aishore run --dry-run FEAT-002  # Preview specific item
   .aishore/aishore run --no-merge 3     # Keep branches for PR review
   .aishore/aishore run --retries 2    # Allow 2 retries on failure
+  .aishore/aishore run --until-done     # Drive all sprints to completion autonomously
   .aishore/aishore groom
   .aishore/aishore update --dry-run
 

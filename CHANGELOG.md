@@ -5,6 +5,18 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`--until-done` flag for `run` command** ([#6](https://github.com/simonplant/aishore/issues/6)): Run sprints autonomously until the backlog is complete or blocked. Equivalent to a very large sprint count but with clearer intent. Example: `.aishore/aishore run --until-done`
+- **Developer agent PM behaviors** ([#6](https://github.com/simonplant/aishore/issues/6)): Developer agent now acts as project manager during implementation — fixing structural/repetitive issues in-scope, adding discovered blockers to the backlog via `backlog add`, and noting sprint order adjustments in commit messages
+- **Explicit validation command reference in developer agent** ([#6](https://github.com/simonplant/aishore/issues/6)): Developer agent now explicitly checks `.aishore/config.yaml` for `validation.command` rather than hardcoding stack-specific defaults
+
+### Changed
+
+- **Default validation timeout** raised from 120s to 180s to match recommended config in documentation
+
 ## [0.2.2] - 2026-03-14
 
 ### Fixed
