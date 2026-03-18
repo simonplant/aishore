@@ -13,7 +13,7 @@
 #   Rust:    "cargo test && cargo clippy"
 validation:
   command: ""
-  timeout: 120
+  timeout: 180
 
 # Models (defaults shown)
 # models:
