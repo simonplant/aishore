@@ -270,31 +270,25 @@ load_config() {
     [[ ! -f "$CONFIG_FILE" ]] && { _apply_env_overrides; return 0; }
 
     if command -v yq &> /dev/null; then
-        local cfg_val
-        cfg_val=$(yq -r '.validation.command // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
-        [[ -n "$cfg_val" ]] && VALIDATE_CMD="$cfg_val"
-        cfg_val=$(yq -r '.validation.timeout // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
-        [[ -n "$cfg_val" ]] && VALIDATE_TIMEOUT="$cfg_val"
-        cfg_val=$(yq -r '.models.primary // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
-        [[ -n "$cfg_val" ]] && MODEL_PRIMARY="$cfg_val"
-        cfg_val=$(yq -r '.models.fast // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
-        [[ -n "$cfg_val" ]] && MODEL_FAST="$cfg_val"
-        cfg_val=$(yq -r '.agent.timeout // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
-        [[ -n "$cfg_val" ]] && AGENT_TIMEOUT="$cfg_val"
-        cfg_val=$(yq -r '.notifications.on_complete // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
-        [[ -n "$cfg_val" ]] && NOTIFY_CMD="$cfg_val"
-        # Auto mode overrides
-        cfg_val=$(yq -r '.auto.groom_threshold // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
-        [[ -n "$cfg_val" ]] && AUTO_GROOM_THRESHOLD="$cfg_val"
-        cfg_val=$(yq -r '.auto.max_failures // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
-        [[ -n "$cfg_val" ]] && AUTO_MAX_FAILURES="$cfg_val"
-        # Permission overrides
-        cfg_val=$(yq -r '.permissions.developer // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
-        [[ -n "$cfg_val" ]] && CFG_PERMS_DEVELOPER="$cfg_val"
-        cfg_val=$(yq -r '.permissions.validator // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
-        [[ -n "$cfg_val" ]] && CFG_PERMS_VALIDATOR="$cfg_val"
-        cfg_val=$(yq -r '.permissions.reviewer // ""' "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
-        [[ -n "$cfg_val" ]] && CFG_PERMS_REVIEWER="$cfg_val"
+        local -a _cfg_map=(
+            ".validation.command    VALIDATE_CMD"
+            ".validation.timeout    VALIDATE_TIMEOUT"
+            ".models.primary        MODEL_PRIMARY"
+            ".models.fast           MODEL_FAST"
+            ".agent.timeout         AGENT_TIMEOUT"
+            ".notifications.on_complete NOTIFY_CMD"
+            ".auto.groom_threshold  AUTO_GROOM_THRESHOLD"
+            ".auto.max_failures     AUTO_MAX_FAILURES"
+            ".permissions.developer CFG_PERMS_DEVELOPER"
+            ".permissions.validator CFG_PERMS_VALIDATOR"
+            ".permissions.reviewer  CFG_PERMS_REVIEWER"
+        )
+        local cfg_val _key _var
+        for _entry in "${_cfg_map[@]}"; do
+            read -r _key _var <<< "$_entry"
+            cfg_val=$(yq -r "$_key // \"\"" "$CONFIG_FILE" 2>/dev/null) || cfg_val=""
+            [[ -n "$cfg_val" ]] && printf -v "$_var" '%s' "$cfg_val"
+        done
     else
         # Simple grep fallback for validation command only
         local cfg_cmd
@@ -312,14 +306,22 @@ load_config() {
 }
 
 _apply_env_overrides() {
-    [[ -n "${AISHORE_MODEL_PRIMARY:-}" ]] && MODEL_PRIMARY="$AISHORE_MODEL_PRIMARY"
-    [[ -n "${AISHORE_MODEL_FAST:-}" ]] && MODEL_FAST="$AISHORE_MODEL_FAST"
-    [[ -n "${AISHORE_AGENT_TIMEOUT:-}" ]] && AGENT_TIMEOUT="$AISHORE_AGENT_TIMEOUT"
-    [[ -n "${AISHORE_VALIDATE_CMD:-}" ]] && VALIDATE_CMD="$AISHORE_VALIDATE_CMD"
-    [[ -n "${AISHORE_VALIDATE_TIMEOUT:-}" ]] && VALIDATE_TIMEOUT="$AISHORE_VALIDATE_TIMEOUT"
-    [[ -n "${AISHORE_NOTIFY_CMD:-}" ]] && NOTIFY_CMD="$AISHORE_NOTIFY_CMD"
-    [[ -n "${AISHORE_AUTO_GROOM_THRESHOLD:-}" ]] && AUTO_GROOM_THRESHOLD="$AISHORE_AUTO_GROOM_THRESHOLD"
-    [[ -n "${AISHORE_AUTO_MAX_FAILURES:-}" ]] && AUTO_MAX_FAILURES="$AISHORE_AUTO_MAX_FAILURES"
+    local -a _env_map=(
+        "AISHORE_MODEL_PRIMARY      MODEL_PRIMARY"
+        "AISHORE_MODEL_FAST         MODEL_FAST"
+        "AISHORE_AGENT_TIMEOUT      AGENT_TIMEOUT"
+        "AISHORE_VALIDATE_CMD       VALIDATE_CMD"
+        "AISHORE_VALIDATE_TIMEOUT   VALIDATE_TIMEOUT"
+        "AISHORE_NOTIFY_CMD         NOTIFY_CMD"
+        "AISHORE_AUTO_GROOM_THRESHOLD AUTO_GROOM_THRESHOLD"
+        "AISHORE_AUTO_MAX_FAILURES  AUTO_MAX_FAILURES"
+    )
+    local _env_name _target_var
+    for _entry in "${_env_map[@]}"; do
+        read -r _env_name _target_var <<< "$_entry"
+        local _val="${!_env_name:-}"
+        [[ -n "$_val" ]] && printf -v "$_target_var" '%s' "$_val"
+    done
     return 0
 }
 
