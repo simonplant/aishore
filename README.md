@@ -1,6 +1,6 @@
 # aishore
 
-![Version](https://img.shields.io/badge/version-0.3.1-blue)
+![Version](https://img.shields.io/github/v/release/simonplant/aishore)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey)
 ![Shell](https://img.shields.io/badge/shell-bash%204.4%2B-green)

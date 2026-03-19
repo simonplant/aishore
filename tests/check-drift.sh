@@ -87,18 +87,11 @@ echo "── Version ──"
 file_version=$(cat "$SCRIPT_DIR/.aishore/VERSION")
 cli_version=$("$CLI" version 2>&1 | grep -oP 'version \K[\d.]+')
 help_version=$("$CLI" help 2>&1 | grep -oP '\(v\K[\d.]+')
-readme_version=$(grep -oP 'version-\K[\d.]+' "$README" | head -1)
 
 if [[ "$file_version" == "$cli_version" && "$cli_version" == "$help_version" ]]; then
     ok "VERSION=$file_version matches CLI and help"
 else
     drift error "Version mismatch: file=$file_version cli=$cli_version help=$help_version"
-fi
-
-if [[ "$file_version" == "$readme_version" ]]; then
-    ok "README badge matches VERSION"
-else
-    drift error "README badge=$readme_version but VERSION=$file_version"
 fi
 
 echo ""
