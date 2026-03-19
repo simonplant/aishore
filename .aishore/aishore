@@ -3169,7 +3169,7 @@ cmd_update() {
         # VERSION and aishore CLI are required
         [[ "$f" == ".aishore/VERSION" || "$f" == ".aishore/aishore" ]] && required=true
         _fetch_and_stage "$f" "$staging_dir/$f" "$basename_f" "$f" "$required"
-        ((file_count++))
+        ((file_count++)) || true
     done
 
     # ── Phase 2: Install (only if all verified) ──
