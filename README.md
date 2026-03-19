@@ -16,20 +16,28 @@ You: define intent + backlog  →  aishore develops, critiques, hardens  →  Yo
 
 ## How It Works
 
-aishore models a real sprint team with specialized AI agents:
+aishore models a real sprint team with specialized AI agents, coordinated by a central orchestrator:
 
 ```
-┌─────────┐    ┌───────────┐    ┌────────────┐    ┌───────────┐    ┌─────────┐
-│  Pick   │───▶│ Developer │───▶│ Validation │───▶│ Validator │───▶│ Archive │
-│  Item   │    │   Agent   │    │  Command   │    │   Agent   │    │  Done   │
-└─────────┘    └───────────┘    └────────────┘    └───────────┘    └─────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                  Sprint Orchestrator                                    │
+│                                                                                         │
+│  ┌──────┐  ┌────────┐  ┌───────────┐  ┌───────────┐  ┌────────┐  ┌───────────┐  ┌────────────┐
+│  │ Pick │─▶│ Branch │─▶│ Preflight │─▶│ Developer │─▶│ Verify │─▶│ Validator │─▶│   Merge    │
+│  │ Item │  │ Create │  │  Check    │  │   Agent   │  │  Suite │  │   Agent   │  │  Archive   │
+│  └──────┘  └────────┘  └───────────┘  └───────────┘  └────────┘  └───────────┘  └────────────┘
+│                                              │                           │                │
+│                                              └──── retry on failure ─────┘                │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-1. **Pick** — selects the highest-priority ready item from your backlog
-2. **Develop** — a Developer agent implements the feature using a 3-phase maturity protocol (implement → critique → harden)
-3. **Test** — your validation command runs (test suite, linter, type-checker)
-4. **Validate** — a Validator agent checks acceptance criteria and commander's intent against the actual changes
-5. **Archive** — completed work is recorded and the item is marked done
+1. **Pick** — the orchestrator selects the highest-priority ready item from your backlog
+2. **Branch** — creates an isolated feature branch (`aishore/<ID>`) from your current branch
+3. **Preflight** — runs your validation command against the baseline to ensure the codebase is clean before starting
+4. **Develop** — a Developer agent implements the feature using a 3-phase maturity protocol (implement → critique → harden)
+5. **Verify** — scope check, validation command, and AC verification commands all run
+6. **Validate** — a Validator agent checks acceptance criteria and commander's intent against the actual changes
+7. **Merge & Archive** — the orchestrator commits, merges the branch back, pushes, and archives the completed item
 
 Run `.aishore/aishore run 5` and it executes five sprints back-to-back. Failed items are skipped in subsequent picks so the batch keeps moving.
 
