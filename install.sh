@@ -146,7 +146,7 @@ install_aishore() {
     done <<< "$file_list"
 
     # Create directory structure
-    mkdir -p "$AISHORE_DIR"/{data/{logs,status}}
+    mkdir -p "$AISHORE_DIR/data/logs" "$AISHORE_DIR/data/status"
     for file in "${FILES[@]}"; do
         mkdir -p "$(dirname "$INSTALL_DIR/$file")"
     done
