@@ -3617,6 +3617,7 @@ cmd_clean() {
 cmd_usage() {
     cat << EOF
 aishore - AI Sprint Runner (v$AISHORE_VERSION)
+Copyright (C) 2026 Simon Plant. Licensed under AGPL-3.0. See LICENSE.
 
 Usage: .aishore/aishore <command> [options]
        .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--dry-run]
@@ -3658,6 +3659,7 @@ EOF
 cmd_help() {
     cat << EOF
 aishore - AI Sprint Runner (v$AISHORE_VERSION)
+Copyright (C) 2026 Simon Plant. Licensed under AGPL-3.0. See LICENSE.
 
 Usage: .aishore/aishore <command> [options]
        .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--dry-run]
