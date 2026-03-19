@@ -9,6 +9,7 @@
 #
 # Options:
 #   --init      Run 'aishore init' after install (creates backlog/)
+#   --force     Reinstall over existing installation (preserves config.yaml and backlog/)
 #   --dir PATH  Install to PATH instead of current directory
 
 set -euo pipefail
@@ -47,11 +48,16 @@ die()     { error "$1"; exit 1; }
 # Parse arguments
 INSTALL_DIR="."
 DO_INIT=false
+FORCE=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --init)
             DO_INIT=true
+            shift
+            ;;
+        --force)
+            FORCE=true
             shift
             ;;
         --dir)
@@ -160,13 +166,13 @@ install_aishore() {
 
     # Download and verify in staging
     local failed=0
+    local total=${#FILES[@]}
+    local fetched=0
     for file in "${FILES[@]}"; do
         local url="$BASE_URL/$file"
         local dest="$STAGING_DIR/$file"
         if curl -sSfL "$url" -o "$dest" 2>/dev/null; then
-            if verify_file "$dest" "$file"; then
-                success "Verified $(basename "$file")"
-            else
+            if ! verify_file "$dest" "$file"; then
                 error "Checksum mismatch: $file"
                 ((failed++))
             fi
@@ -174,7 +180,10 @@ install_aishore() {
             error "Failed to download $file"
             ((failed++))
         fi
+        ((fetched++)) || true
+        printf "\r  Downloading... [%d/%d]" "$fetched" "$total"
     done
+    printf "\r%40s\r" ""  # clear progress line
 
     if [[ $failed -gt 0 ]]; then
         die "$failed files failed — nothing was installed"
@@ -182,15 +191,16 @@ install_aishore() {
 
     # All verified — install
     mkdir -p "$AISHORE_DIR/data/logs" "$AISHORE_DIR/data/status"
+    echo "Installed:"
     for file in "${FILES[@]}"; do
         mkdir -p "$(dirname "$INSTALL_DIR/$file")"
         mv "$STAGING_DIR/$file" "$INSTALL_DIR/$file"
+        success "$file"
     done
     chmod +x "$AISHORE_DIR/aishore"
     touch "$AISHORE_DIR/data/logs/.gitkeep"
     touch "$AISHORE_DIR/data/status/.gitkeep"
-
-    success "aishore installed"
+    echo ""
 }
 
 run_init() {
@@ -240,14 +250,18 @@ main() {
 
     # Check for existing installation
     if detect_existing; then
-        warn "aishore already installed at $AISHORE_DIR"
-        echo ""
-        echo "To update:"
-        echo "  cd $INSTALL_DIR && .aishore/aishore update"
-        echo ""
-        echo "To reinstall:"
-        echo "  rm -rf $AISHORE_DIR && curl -sSL https://raw.githubusercontent.com/$REPO/main/install.sh | bash"
-        exit 0
+        if [[ "$FORCE" == "true" ]]; then
+            warn "Reinstalling over existing aishore at $AISHORE_DIR"
+        else
+            warn "aishore already installed at $AISHORE_DIR"
+            echo ""
+            echo "To update:"
+            echo "  cd $INSTALL_DIR && .aishore/aishore update"
+            echo ""
+            echo "To reinstall (preserves config.yaml and backlog/):"
+            echo "  curl -sSL https://raw.githubusercontent.com/$REPO/main/install.sh | bash -s -- --force"
+            exit 0
+        fi
     fi
 
     # Fresh install

@@ -3113,7 +3113,7 @@ cmd_update() {
         expected=$(get_expected_checksum "$checksum_key") || true
         if [[ -n "$expected" ]]; then
             if verify_checksum "$file" "$expected"; then
-                log_success "Checksum verified: $label"
+                : # verified — shown after install
             else
                 log_error "Checksum mismatch for $label — file may be corrupted or tampered"
                 return 1
@@ -3135,7 +3135,6 @@ cmd_update() {
     _fetch_and_stage() {
         local remote_path="$1" local_path="$2" label="$3" checksum_key="$4"
         local required="${5:-false}"
-        log_info "Fetching $label..."
         if ! $fetch_cmd "$repo_url/$remote_path" > "$local_path" 2>/dev/null; then
             if [[ "$required" == "true" ]]; then
                 log_error "Failed to fetch $label"
@@ -3154,14 +3153,15 @@ cmd_update() {
     local staging_dir
     staging_dir="$(ensure_tmpdir)/update_staging"
     local all_verified=true
-    local file_count=0
+    local file_count=${#update_files[@]}
 
     # Create staging subdirectories for all files
     for f in "${update_files[@]}"; do
         mkdir -p "$staging_dir/$(dirname "$f")"
     done
 
-    # Fetch and verify each file
+    # Fetch and verify each file (quiet — results shown after install)
+    local fetched=0
     for f in "${update_files[@]}"; do
         local basename_f
         basename_f=$(basename "$f")
@@ -3169,8 +3169,10 @@ cmd_update() {
         # VERSION and aishore CLI are required
         [[ "$f" == ".aishore/VERSION" || "$f" == ".aishore/aishore" ]] && required=true
         _fetch_and_stage "$f" "$staging_dir/$f" "$basename_f" "$f" "$required"
-        ((file_count++)) || true
+        ((fetched++)) || true
+        printf "\r  Downloading... [%d/%d]" "$fetched" "$file_count"
     done
+    printf "\r%40s\r" ""  # clear progress line
 
     # ── Phase 2: Install (only if all verified) ──
     if [[ "$all_verified" != "true" ]]; then
@@ -3178,16 +3180,18 @@ cmd_update() {
         exit 1
     fi
 
-    log_info "All files verified — installing..."
+    # Install and show each file
+    echo "Installed:"
     for f in "${update_files[@]}"; do
         local dest="$PROJECT_ROOT/$f"
         mkdir -p "$(dirname "$dest")"
         mv "$staging_dir/$f" "$dest"
+        log_success "$f"
     done
     chmod +x "$AISHORE_ROOT/aishore"
 
     echo ""
-    log_success "Updated to $remote_version ($file_count files installed)"
+    log_success "Updated to $remote_version ($file_count files)"
 }
 
 cmd_checksums() {
