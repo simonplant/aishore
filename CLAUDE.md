@@ -17,12 +17,14 @@ jq empty backlog/*.json
 
 # CLI commands
 .aishore/aishore init               # Interactive setup wizard
+.aishore/aishore init -y            # Non-interactive (accept detected defaults)
 .aishore/aishore backlog list       # List all items
 .aishore/aishore backlog add        # Add item (interactive or with flags)
 .aishore/aishore backlog show <ID>  # Show full detail of one item
 .aishore/aishore backlog edit <ID>  # Update fields on an item
 .aishore/aishore backlog check <ID> # Check readiness gates for an item
 .aishore/aishore backlog rm <ID>    # Remove an item (--force to skip confirmation)
+.aishore/aishore backlog populate   # AI-populate backlog from PRODUCT.md
 .aishore/aishore auto done           # Autonomous: drain entire backlog
 .aishore/aishore auto p0             # Autonomous: complete all must items
 .aishore/aishore auto p1             # Autonomous: complete all must + should items

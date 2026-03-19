@@ -52,10 +52,11 @@ curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh |
 Then run the setup wizard:
 
 ```bash
-.aishore/aishore init
+.aishore/aishore init          # Interactive setup
+.aishore/aishore init --yes    # Non-interactive (accept detected defaults)
 ```
 
-The wizard checks prerequisites, detects your project type, configures validation, and scaffolds `backlog/`.
+The wizard checks prerequisites, detects your project type, configures validation, and scaffolds `backlog/`. Use `--yes` (`-y`) for fully automated setup — it accepts all auto-detected values without prompting.
 
 <details>
 <summary>Manual installation</summary>
@@ -92,14 +93,20 @@ aishore follows a **populate → groom → run → review** cycle. This mirrors 
 
 ### 1. Populate the Backlog
 
-Add features and bugs to your backlog. Each item gets an ID, priority, and a commander's intent — a clear directive that defines what must be true when the work is done.
+Add features and bugs manually, or let AI populate from your product requirements:
 
 ```bash
+# AI-populate from PRODUCT.md (non-interactive)
+.aishore/aishore backlog populate
+
+# Or add items manually
 .aishore/aishore backlog add --title "OAuth2 login flow" --priority must \
   --intent "Users must authenticate securely or be told exactly why they can't."
 .aishore/aishore backlog add --title "Fix timeout on large uploads" --type bug \
   --intent "Large uploads must complete or give clear progress. Users must never stare at a frozen screen."
 ```
+
+`backlog populate` reads your `PRODUCT.md` (or `PRD.md`, `README.md`) and uses the Product Owner agent to break it into concrete, sprint-ready backlog items with intent, acceptance criteria, and priorities. It skips items already in the backlog.
 
 List what's in the backlog at any time:
 
@@ -178,7 +185,7 @@ Let aishore drain the backlog unattended. It auto-grooms when ready items run lo
 | **Developer** | Implements features following project conventions and maturity protocol | `run` |
 | **Validator** | Checks acceptance criteria and commander's intent against actual changes | `run` |
 | **Tech Lead** | Grooms bugs, adds steps and AC, ensures technical readiness | `groom` |
-| **Product Owner** | Grooms features, aligns priorities with product vision | `groom --backlog` |
+| **Product Owner** | Grooms features, aligns priorities with product vision; populates backlog from requirements | `groom --backlog`, `backlog populate` |
 | **Architect** | Reviews patterns, risks, code quality, and documentation | `review` |
 
 All agents automatically read your `CLAUDE.md`, `PRODUCT.md`, and `ARCHITECTURE.md` for project context.
@@ -248,6 +255,25 @@ Multiple flags can be combined in a single edit command.
 ```
 
 Checks: title, commander's intent (≥20 chars, must be a directive), steps, acceptance criteria, and step length.
+
+### `backlog populate`
+
+```bash
+.aishore/aishore backlog populate   # AI-populate backlog from product requirements
+```
+
+Reads your product requirements document (`PRODUCT.md`, `PRD.md`, or `README.md`) and uses the Product Owner agent to create backlog items. Checks existing items to avoid duplicates. Fully non-interactive — designed for agent-driven workflows.
+
+### `init`
+
+```bash
+.aishore/aishore init              # Interactive setup wizard
+.aishore/aishore init --yes        # Non-interactive (accept auto-detected defaults)
+```
+
+| Flag | Description |
+|------|-------------|
+| `-y`, `--yes` | Accept all auto-detected defaults without prompting |
 
 ### `run`
 

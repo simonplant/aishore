@@ -977,6 +977,22 @@ The \`intent\` field in sprint.json is a non-negotiable directive. Verify the im
         validate_hint="
 ## Commander's Intent
 Every item should have an \`intent\` field — a non-negotiable directive stating what must be true when done. Use \`--intent \"...\"\` when adding/editing items. Write it like an order, not a description."
+        if [[ "$agent_name" == "product-owner" && "$mode" == "populate" ]]; then
+            validate_hint="$validate_hint
+
+## Populate Mode
+You have been given a product requirements document. Your job is to populate the backlog from it:
+1. Read the product requirements document carefully
+2. Check the existing backlog to avoid duplicating items already present
+3. Break the product vision into concrete, implementable feature items
+4. For each feature, use the CLI to add it with full detail:
+   \`.aishore/aishore backlog add --type feat --title \"...\" --intent \"...\" --desc \"...\" --priority <must|should|could|future> --ac \"criterion 1\" --ac \"criterion 2\"\`
+5. Set priority based on user value and dependencies (must = MVP, should = important, could = nice-to-have, future = later)
+6. Write clear acceptance criteria that describe user-visible outcomes
+7. Write intent as a non-negotiable directive (>=20 chars), not a label
+8. Keep items small enough for a single sprint (one focused change per item)
+Do NOT edit JSON files directly — use only CLI commands."
+        fi
     fi
 
     local prompt
@@ -2423,6 +2439,8 @@ _init_check_prereqs() {
 # Detect project name, validation command, and existing docs.
 # Sets outer-scope locals: project_name, validate_cmd, prd_found, claude_md
 _init_detect_project() {
+    local auto_yes="${1:-false}"
+
     # ── Project info ──
     log_subheader "Step 2/6 — Project"
 
@@ -2435,8 +2453,13 @@ _init_detect_project() {
     fi
     [[ -z "$detected_name" ]] && detected_name=$(basename "$PROJECT_ROOT")
 
-    read -r -p "  Project name [$detected_name]: " project_name
-    project_name="${project_name:-$detected_name}"
+    if [[ "$auto_yes" == "true" ]]; then
+        project_name="$detected_name"
+        log_info "Project name: $project_name"
+    else
+        read -r -p "  Project name [$detected_name]: " project_name
+        project_name="${project_name:-$detected_name}"
+    fi
 
     echo ""
 
@@ -2473,7 +2496,14 @@ _init_detect_project() {
         detected_validate="go test ./..."
     fi
 
-    if [[ -n "$detected_validate" ]]; then
+    if [[ "$auto_yes" == "true" ]]; then
+        validate_cmd="${detected_validate:-}"
+        if [[ -n "$validate_cmd" ]]; then
+            log_info "Validation command: $validate_cmd"
+        else
+            log_info "No validation command detected — skipping"
+        fi
+    elif [[ -n "$detected_validate" ]]; then
         read -r -p "  Validation command [$detected_validate]: " validate_cmd
         validate_cmd="${validate_cmd:-$detected_validate}"
     else
@@ -2800,18 +2830,35 @@ AEOF
 }
 
 cmd_init() {
+    local auto_yes=false
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -y|--yes) auto_yes=true; shift ;;
+            *) log_error "Unknown option: $1"; return 1 ;;
+        esac
+    done
+
     log_header "aishore setup wizard"
     echo ""
-    echo "  This will walk you through setting up aishore for your project."
-    echo "  Press Enter to accept defaults shown in [brackets]."
+    if [[ "$auto_yes" == "true" ]]; then
+        echo "  Running non-interactively — accepting all detected defaults."
+    else
+        echo "  This will walk you through setting up aishore for your project."
+        echo "  Press Enter to accept defaults shown in [brackets]."
+    fi
     echo ""
 
     local reinit=false
     if [[ -f "$BACKLOG_DIR/backlog.json" ]]; then
         log_warning "aishore already initialized (backlog.json exists)"
-        read -r -p "  Reinitialize? This preserves existing backlogs. [y/N] " c
-        [[ $c != [yY] ]] && exit 0
-        reinit=true
+        if [[ "$auto_yes" == "true" ]]; then
+            reinit=true
+        else
+            read -r -p "  Reinitialize? This preserves existing backlogs. [y/N] " c
+            [[ $c != [yY] ]] && exit 0
+            reinit=true
+        fi
         echo ""
     fi
 
@@ -2820,7 +2867,7 @@ cmd_init() {
     local product_found=false arch_found=false
 
     _init_check_prereqs
-    _init_detect_project
+    _init_detect_project "$auto_yes"
     _init_scaffold_files
 
     # ── Summary & next steps ──
@@ -3135,9 +3182,10 @@ cmd_backlog() {
         edit)       cmd_backlog_edit "$@" ;;
         rm|remove)  cmd_backlog_rm "$@" ;;
         check)      cmd_backlog_check "$@" ;;
+        populate)   cmd_backlog_populate "$@" ;;
         *)
             log_error "Unknown backlog command: $subcmd"
-            echo "Usage: backlog {list|add|show|edit|check|rm}" >&2
+            echo "Usage: backlog {list|add|show|edit|check|rm|populate}" >&2
             return 1
             ;;
     esac
@@ -3155,6 +3203,55 @@ cmd_backlog_check() {
     else
         log_warning "$id has readiness warnings:"
         echo -e "$CHECK_GATES_WARNINGS"
+    fi
+}
+
+cmd_backlog_populate() {
+    acquire_lock
+    load_config
+    cd "$PROJECT_ROOT"
+
+    log_header "Product Owner: Populate Backlog"
+
+    # Find product requirements doc
+    local prd_file=""
+    for candidate in \
+        "$PROJECT_ROOT/PRODUCT.md" "$PROJECT_ROOT/product.md" \
+        "$PROJECT_ROOT/PRD.md" "$PROJECT_ROOT/prd.md" \
+        "$PROJECT_ROOT/docs/PRODUCT.md" "$PROJECT_ROOT/docs/product.md" \
+        "$PROJECT_ROOT/docs/PRD.md" "$PROJECT_ROOT/docs/prd.md" \
+        "$PROJECT_ROOT/docs/WEBSITE_BRIEF.md" \
+        "$PROJECT_ROOT/README.md"; do
+        if [[ -f "$candidate" ]]; then
+            prd_file="$candidate"
+            break
+        fi
+    done
+
+    if [[ -z "$prd_file" ]]; then
+        log_error "No product requirements doc found (PRODUCT.md, PRD.md, README.md, etc.)"
+        echo "  Create a PRODUCT.md or docs/PRODUCT.md describing what you're building."
+        return 1
+    fi
+
+    log_info "Using requirements from: $prd_file"
+
+    local context_args="@$prd_file @$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
+
+    # Snapshot backlog state for progress tracking
+    local snap_before
+    snap_before=$(snapshot_backlogs)
+
+    log_info "Running product-owner agent to populate backlog..."
+    echo ""
+
+    GROOM_MONITOR=true run_agent "product-owner" "populate" "$MODEL_FAST" "$context_args"
+
+    # --- Post-populate diff ---
+    print_groom_diff "$snap_before"
+
+    if ! check_result; then
+        exit 1
     fi
 }
 
@@ -3636,13 +3733,14 @@ Backlog:
   backlog edit <ID>  Update an item
   backlog check <ID> Check readiness gates
   backlog rm <ID>    Remove an item
+  backlog populate   Populate backlog from PRODUCT.md
 
 Info:
   status             Backlog overview and sprint readiness
   metrics            Sprint metrics
 
 Maintenance:
-  init               Setup wizard
+  init               Setup wizard (-y to accept defaults)
   update             Update from upstream
   clean              Remove done items
   checksums          Regenerate checksums
@@ -3689,6 +3787,7 @@ Commands:
   backlog check <ID> Check readiness gates (title, intent, steps, AC, step length)
   backlog rm <ID>   Remove an item (with confirmation)
     --force         Skip confirmation
+  backlog populate  Use AI to populate backlog from PRODUCT.md (non-interactive)
 
   auto <scope>      Autonomous mode — drive backlog to completion
     done            Drain entire backlog
@@ -3723,6 +3822,7 @@ Commands:
   clean             Remove done items (--dry-run to preview)
   checksums         Regenerate checksums.sha256 for update verification
   init              Setup wizard — checks prerequisites, configures project
+    -y, --yes       Accept all detected defaults (non-interactive)
   version, -v, --version   Show version
   help, -h, --help         Show this help
 

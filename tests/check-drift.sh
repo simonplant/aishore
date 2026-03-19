@@ -154,8 +154,8 @@ extract_code_flags() {
     local body
     body=$(sed -n "/^${func_name}()/,/^[a-z_]*() *{*$/p" "$CLI")
     {
-        # Case-statement patterns: --flag) or --flag|
-        echo "$body" | grep -oP '(?<=\s)--[\w-]+(?=\)|\|)'
+        # Case-statement patterns: --flag) or --flag| or -x|--flag)
+        echo "$body" | grep -oP '(?<=[\s|])--[\w-]+(?=\)|\|)'
         # Equality checks: == "--flag" or == '--flag'
         echo "$body" | grep -oP '==\s*["\x27]--[\w-]+["\x27]' | grep -oP '\-\-[\w-]+'
     } | grep -v '^--_' | sort -u
@@ -236,6 +236,7 @@ check_command_flags() {
 check_command_flags "cmd_run" "run"
 check_command_flags "cmd_auto" "auto"
 check_command_flags "cmd_update" "update"
+check_command_flags "cmd_init" "init"
 check_command_flags "cmd_backlog_add" "backlog add"
 check_command_flags "cmd_backlog_edit" "backlog edit"
 check_command_flags "cmd_backlog_list" "backlog list"
