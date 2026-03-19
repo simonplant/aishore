@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # aishore - AI Sprint Runner CLI
+# Copyright (C) 2026 Simon Plant. Licensed under AGPL-3.0. See LICENSE.
+#
 # A self-contained sprint orchestration tool for Claude Code
 #
 # Usage: .aishore/aishore <command> [options]
