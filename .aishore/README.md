@@ -45,14 +45,18 @@ All backlog operations use the `backlog` subcommand. Items live in `backlog/back
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--title "..."` | Item title (required) | — |
-| `--intent "..."` | Commander's intent — what must be true when done | *(none)* |
+| `--intent "..."` | Commander's intent — what must be true when done (**required for sprint**) | — |
 | `--type feat\|bug` | Feature or bug | `feat` |
 | `--desc "..."` | Description | *(none)* |
 | `--priority must\|should\|could\|future` | Priority level | `should` |
 | `--category "..."` | Category tag | *(none)* |
 | `--ready` | Mark as sprint-ready immediately | `false` |
+| `--ac "text"` | Add acceptance criterion (repeatable) | *(none)* |
+| `--ac-verify "cmd"` | Attach verification command to preceding `--ac` | *(none)* |
 
 IDs are auto-generated: `FEAT-001`, `FEAT-002`, ... or `BUG-001`, `BUG-002`, ...
+
+> **Note:** Items without a commander's intent (or with intent shorter than 20 characters) will not be picked for sprints. You can add items without intent for tracking, but they must have intent before they can execute.
 
 ### Show item detail
 
@@ -104,6 +108,7 @@ Multiple flags can be combined in a single edit command.
 .aishore/aishore run --dry-run      # Preview what would run without executing
 .aishore/aishore run --no-merge 3   # Keep feature branches for PR review
 .aishore/aishore run --retries 2    # Allow 2 retries on validation failure
+.aishore/aishore run --refine       # Refine spec on exhausted retries
 .aishore/aishore run --quick        # Skip maturity protocol (fast iteration)
 ```
 
@@ -160,10 +165,14 @@ Each backlog item has these fields:
 | `status` | string | `todo`, `in-progress`, or `done` |
 | `readyForSprint` | boolean | Whether item is ready for sprint execution |
 | `passes` | boolean | Set automatically after successful sprint |
+| `scope` | array | Glob patterns for scope checking (e.g., `["src/**", "tests/**"]`) |
 | `dependsOn` | array | IDs of items this depends on |
 | `groomedAt` | string | Date of last grooming (YYYY-MM-DD) |
 | `groomingNotes` | string | Notes from grooming |
 | `completedAt` | string | Completion timestamp (set automatically) |
+| `failCount` | number | Number of failed sprint attempts (auto-set) |
+| `lastFailAt` | string | Timestamp of last failure (auto-set) |
+| `lastFailReason` | string | Reason for last failure (auto-set) |
 
 ## Project Structure
 

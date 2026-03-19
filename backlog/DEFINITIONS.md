@@ -56,6 +56,7 @@ An item is done when:
   "category": "core",
   "steps": ["Step 1", "Step 2"],
   "acceptanceCriteria": ["AC 1", "AC 2"],
+  "scope": ["src/**", "tests/**"],
   "status": "todo",
   "passes": false,
   "readyForSprint": false,

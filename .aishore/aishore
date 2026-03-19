@@ -229,7 +229,7 @@ get_claudemd_snippet() {
 
 ## Sprint Orchestration (aishore)
 
-This project uses [aishore](https://github.com/simonweniger/aishore) for AI-assisted sprint management.
+This project uses [aishore](https://github.com/simonplant/aishore) for AI-assisted sprint management.
 
 ### Commands
 
@@ -2684,6 +2684,7 @@ An item is done when:
   "category": "core",
   "steps": ["Step 1", "Step 2"],
   "acceptanceCriteria": ["AC 1", "AC 2"],
+  "scope": ["src/**", "tests/**"],
   "status": "todo",
   "passes": false,
   "readyForSprint": false
