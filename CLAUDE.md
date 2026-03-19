@@ -21,6 +21,7 @@ jq empty backlog/*.json
 .aishore/aishore backlog add        # Add item (interactive or with flags)
 .aishore/aishore backlog show <ID>  # Show full detail of one item
 .aishore/aishore backlog edit <ID>  # Update fields on an item
+.aishore/aishore backlog check <ID> # Check readiness gates for an item
 .aishore/aishore backlog rm <ID>    # Remove an item
 .aishore/aishore auto done           # Autonomous: drain entire backlog
 .aishore/aishore auto p1             # Autonomous: complete all must + should items
@@ -32,6 +33,8 @@ jq empty backlog/*.json
 .aishore/aishore run --dry-run      # Preview without running agents
 .aishore/aishore run --no-merge     # Keep feature branches for PR review
 .aishore/aishore run --retries N    # Allow N retries on validation failure
+.aishore/aishore run --refine       # Refine spec on failure and retry once more
+.aishore/aishore run --quick        # Skip maturity protocol (fast iteration)
 .aishore/aishore groom              # Tech lead: groom bugs
 .aishore/aishore groom --backlog    # Product owner: groom features
 .aishore/aishore review             # Architecture review
@@ -55,8 +58,10 @@ No build step — the tool is pure Bash.
 
 **Sprint execution flow:**
 ```
-Pick Item → Create Branch (aishore/<ID>) → Developer Agent → Validation Command → Validator Agent → Commit → Merge → Archive
+Pick Item → Create Branch (aishore/<ID>) → Developer Agent (with maturity protocol) → Validation Command → Validator Agent → Commit → Merge → Archive
 ```
+
+**Maturity protocol:** By default, the developer agent runs a 3-phase cycle within a single session: (1) Implement — write the code, (2) Critique — shift to reviewer mindset, re-read all changes, verify each AC, hunt bugs/edge cases, fix everything found, (3) Harden — run full validation again, fix regressions, confirm all AC provably met. This keeps quality iteration inside the session where context is hot, rather than relying on external retry loops. Disable with `--quick` flag or `maturity.enabled: false` in config. Env var: `AISHORE_MATURITY`.
 
 **Autonomous mode (`auto` command):** `auto <scope>` wraps the sprint loop with: priority-scoped item selection (p0/p1/p2/done), auto-grooming when ready items drop below threshold, session failure tracking passed to subsequent developer agents, and a circuit breaker that stops after N consecutive failures. `cmd_auto()` validates the scope and delegates to `cmd_run` via an internal `--_auto` flag — all sprint logic lives in one place.
 
@@ -99,6 +104,16 @@ The orchestrator polls for this file, then proceeds to the next step.
 **Concurrency:** Only one aishore process runs at a time, enforced via `flock` on `.aishore/data/status/.aishore.lock`.
 
 **Safe failure recovery:** Pre-existing uncommitted changes are stashed before sprints and restored afterward. Sprint failures delete the feature branch and return to the base branch cleanly. The developer agent commits directly; the orchestrator has a safety net commit if the agent misses it.
+
+**Scope checking:** Items can have a `scope` array of glob patterns (e.g., `["src/**", "tests/**"]`). After the developer agent runs, changed files are checked against scope. `scope.mode: warn` (default) logs warnings; `scope.mode: strict` fails the sprint. Configure in `config.yaml` or `AISHORE_SCOPE_MODE` env var.
+
+**Testable acceptance criteria:** AC entries can be plain strings or `{text, verify}` objects. The `verify` field is a shell command run after validation; failures trigger retries. Use `--ac "text" --ac-verify "command"` in `backlog add`/`backlog edit`.
+
+**Readiness gates:** `backlog check <ID>` validates an item has a title, commander's intent (>=20 chars, must be a directive not a label), steps, acceptance criteria, and no too-short steps. `backlog edit <ID> --ready` warns on gate failures but doesn't block. **Intent is a hard gate at sprint time** — items without intent (or with intent <20 chars) are silently skipped by auto-pick and explicitly rejected when run by ID.
+
+**Baseline pre-flight:** Before the developer agent runs, the validation command is executed on the current codebase. If baseline fails, the sprint is aborted immediately.
+
+**Spec refinement:** `run --refine` uses an AI agent to refine the spec (steps + AC) when all retries are exhausted, then attempts one more developer cycle.
 
 **Configuration precedence:** env vars > config.yaml > built-in defaults.
 

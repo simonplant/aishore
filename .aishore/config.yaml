@@ -33,5 +33,16 @@ validation:
 #   validator: "Bash,Read,Write,Glob,Grep"
 #   reviewer: "Read,Glob,Grep"
 
+# Scope checking mode: "warn" (log and continue) or "strict" (fail sprint)
+# scope:
+#   mode: warn
+
+# Maturity protocol: developer agent runs implement → critique → harden phases
+# before signaling completion. Combined with commander's intent on each backlog
+# item, this ensures the developer builds the right thing to the right quality.
+# Disable with --quick flag on run command, or set to false here.
+# maturity:
+#   enabled: true
+
 # Note: CLAUDE.md is auto-detected from project root
 # No context configuration needed
