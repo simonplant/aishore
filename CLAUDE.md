@@ -22,12 +22,17 @@ jq empty backlog/*.json
 .aishore/aishore backlog show <ID>  # Show full detail of one item
 .aishore/aishore backlog edit <ID>  # Update fields on an item
 .aishore/aishore backlog check <ID> # Check readiness gates for an item
-.aishore/aishore backlog rm <ID>    # Remove an item
+.aishore/aishore backlog rm <ID>    # Remove an item (--force to skip confirmation)
 .aishore/aishore auto done           # Autonomous: drain entire backlog
-.aishore/aishore auto p1             # Autonomous: complete all must + should items
 .aishore/aishore auto p0             # Autonomous: complete all must items
+.aishore/aishore auto p1             # Autonomous: complete all must + should items
+.aishore/aishore auto p2             # Autonomous: complete all must + should + could items
 .aishore/aishore auto done --retries 2        # With per-item retries
 .aishore/aishore auto p1 --max-failures 3     # Custom circuit breaker
+.aishore/aishore auto done --no-merge         # Keep feature branches for PR review
+.aishore/aishore auto p1 --refine            # Refine spec on failure and retry
+.aishore/aishore auto done --quick            # Skip maturity protocol
+.aishore/aishore auto done --dry-run          # Preview first item without running
 .aishore/aishore run [N]            # Run N sprints (branch, commit, merge, push per item)
 .aishore/aishore run <ID>           # Run specific item (e.g., FEAT-001)
 .aishore/aishore run --dry-run      # Preview without running agents
@@ -47,6 +52,7 @@ jq empty backlog/*.json
 .aishore/aishore status             # Show backlog overview and sprint readiness
 .aishore/aishore update             # Update from upstream (checksum-verified)
 .aishore/aishore update --dry-run   # Check for updates without applying
+.aishore/aishore update --force     # Update even if already on latest
 .aishore/aishore checksums          # Regenerate checksums after editing .aishore/ files
 .aishore/aishore version            # Show version
 .aishore/aishore help               # Show usage

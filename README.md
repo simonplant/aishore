@@ -220,6 +220,8 @@ IDs are auto-generated: `FEAT-001`, `FEAT-002`, ... or `BUG-001`, `BUG-002`, ...
 | `--groomed-notes "..."` | Set grooming notes |
 | `--ac "text"` | Add acceptance criterion *(repeatable)* |
 | `--ac-verify "cmd"` | Attach verification command to preceding `--ac` |
+| `--scope "glob"` | Add scope glob *(repeatable)* |
+| `--clear-scope` | Reset scope to empty |
 
 Multiple flags can be combined in a single edit command.
 
@@ -272,6 +274,10 @@ Checks: title, commander's intent (≥20 chars, must be a directive), steps, acc
 |------|-------------|---------|
 | `--retries N` | Per-item retries on failure | `0` |
 | `--max-failures N` | Stop after N consecutive failures (circuit breaker) | `5` |
+| `--no-merge` | Keep feature branches for PR review (push instead of merge) | — |
+| `--refine` | Refine spec when retries exhausted, then retry once more | — |
+| `--quick` | Skip maturity protocol (fast iteration) | — |
+| `--dry-run` | Preview first item without running | — |
 
 ### `groom`
 
