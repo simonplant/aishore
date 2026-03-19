@@ -406,6 +406,8 @@ Or use environment variables (these take precedence over config.yaml):
 | Notify command | `notifications.on_complete` | `AISHORE_NOTIFY_CMD` | *(none)* |
 | Maturity protocol | `maturity.enabled` | `AISHORE_MATURITY` | `true` |
 | Scope mode | `scope.mode` | `AISHORE_SCOPE_MODE` | `warn` |
+| Auto-groom threshold | `auto.groom_threshold` | `AISHORE_AUTO_GROOM_THRESHOLD` | `3` |
+| Auto max failures | `auto.max_failures` | `AISHORE_AUTO_MAX_FAILURES` | `5` |
 
 **Precedence:** env vars > config.yaml > built-in defaults.
 

@@ -1313,7 +1313,7 @@ cmd_auto() {
     local scope="${1:-}"
 
     if [[ -z "$scope" ]]; then
-        log_error "Usage: auto {done|p0|p1|p2} [--retries N] [--no-merge] [--max-failures N] [--dry-run]"
+        log_error "Usage: auto {done|p0|p1|p2} [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--dry-run]"
         echo "" >&2
         echo "Scopes:" >&2
         echo "  done  Drain entire backlog to completion" >&2
@@ -3609,8 +3609,8 @@ cmd_usage() {
 aishore - AI Sprint Runner (v$AISHORE_VERSION)
 
 Usage: .aishore/aishore <command> [options]
-       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge]
-       .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--retries N]
+       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--dry-run]
+       .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--retries N] [--refine] [--quick]
 
 Sprint:
   auto <scope>       Autonomous mode (done, p0, p1, p2)
@@ -3650,8 +3650,8 @@ cmd_help() {
 aishore - AI Sprint Runner (v$AISHORE_VERSION)
 
 Usage: .aishore/aishore <command> [options]
-       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge]
-       .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--retries N]
+       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--dry-run]
+       .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--retries N] [--refine] [--quick]
 
 Commands:
   backlog list      List all items (features + bugs)
