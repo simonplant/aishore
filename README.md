@@ -426,7 +426,7 @@ Or use environment variables (these take precedence over config.yaml):
 .aishore/aishore update            # Update (checksum-verified)
 ```
 
-The updatable file list is discovered dynamically from the checksums manifest — no hardcoded lists. All paths are validated against traversal attacks. Your `backlog/` and `config.yaml` are never modified.
+Updates pull from the latest GitHub release tag (not `main`), so you always get a stable, tagged version. The file list is discovered dynamically from the checksums manifest. All paths are validated against traversal attacks. Your `backlog/` and `config.yaml` are never modified.
 
 ## License
 

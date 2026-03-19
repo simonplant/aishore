@@ -15,8 +15,21 @@ set -euo pipefail
 
 # Configuration
 REPO="simonplant/aishore"
-BRANCH="main"
-BASE_URL="https://raw.githubusercontent.com/$REPO/$BRANCH"
+API_URL="https://api.github.com/repos/$REPO/releases/latest"
+
+resolve_base_url() {
+    local tag
+    tag=$(curl -sSfL "$API_URL" 2>/dev/null | jq -r '.tag_name // empty') || true
+    if [[ -z "$tag" ]]; then
+        warn "Could not resolve latest release — falling back to main"
+        tag="main"
+    else
+        log "Latest release: $tag"
+    fi
+    echo "https://raw.githubusercontent.com/$REPO/$tag"
+}
+
+BASE_URL=""
 
 # Colors
 RED='\033[0;31m'
@@ -121,6 +134,9 @@ install_aishore() {
     log "Installing aishore to $INSTALL_DIR..."
     echo ""
 
+    # Resolve latest release tag
+    BASE_URL=$(resolve_base_url)
+
     # Discover files from checksums manifest
     log "Fetching file manifest..."
     local file_list
@@ -213,7 +229,7 @@ main() {
         echo "  cd $INSTALL_DIR && .aishore/aishore update"
         echo ""
         echo "To reinstall:"
-        echo "  rm -rf $AISHORE_DIR && curl -sSL $BASE_URL/install.sh | bash"
+        echo "  rm -rf $AISHORE_DIR && curl -sSL https://raw.githubusercontent.com/$REPO/main/install.sh | bash"
         exit 0
     fi
 

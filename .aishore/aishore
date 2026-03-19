@@ -2871,7 +2871,6 @@ cmd_version() {
 }
 
 cmd_update() {
-    local repo_url="https://raw.githubusercontent.com/simonplant/aishore/main"
     local dry_run=false
     local force=false
     local no_verify=false
@@ -2905,8 +2904,20 @@ cmd_update() {
         exit 1
     fi
 
-    # Fetch remote version from VERSION file
+    # Resolve latest release tag
+    local api_url="https://api.github.com/repos/simonplant/aishore/releases/latest"
     log_info "Checking for updates..."
+    local release_tag=""
+    release_tag=$($fetch_cmd "$api_url" 2>/dev/null | jq -r '.tag_name // empty') || true
+
+    if [[ -z "$release_tag" ]]; then
+        log_warning "Could not resolve latest release — falling back to main"
+        release_tag="main"
+    fi
+
+    local repo_url="https://raw.githubusercontent.com/simonplant/aishore/$release_tag"
+
+    # Fetch remote version from VERSION file
     local remote_version
     remote_version=$($fetch_cmd "$repo_url/.aishore/VERSION" 2>/dev/null | tr -d '[:space:]') || {
         log_error "Failed to fetch remote version from $repo_url/.aishore/VERSION"
@@ -2918,7 +2929,7 @@ cmd_update() {
         exit 1
     fi
 
-    echo "Remote version: $remote_version"
+    echo "Remote version: $remote_version (tag: $release_tag)"
     echo ""
 
     if [[ "$AISHORE_VERSION" == "$remote_version" ]] && [[ "$force" != "true" ]]; then
