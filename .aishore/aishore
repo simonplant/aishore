@@ -2877,11 +2877,18 @@ cmd_init() {
     echo ""
 
     local docs_dir="$PROJECT_ROOT/docs"
+    local found_product="" found_arch=""
+    for _p in "$docs_dir/PRODUCT.md" "$PROJECT_ROOT/PRODUCT.md"; do
+        [[ -f "$_p" ]] && { found_product="$_p"; break; }
+    done
+    for _p in "$docs_dir/ARCHITECTURE.md" "$PROJECT_ROOT/ARCHITECTURE.md"; do
+        [[ -f "$_p" ]] && { found_arch="$_p"; break; }
+    done
     echo "  Project:       $project_name"
     echo "  Validation:    ${validate_cmd:-<none>}"
     echo "  CLAUDE.md:     ${claude_md:-<not found>}"
-    echo "  PRODUCT.md:    $(ls "$docs_dir/PRODUCT.md" "$PROJECT_ROOT/PRODUCT.md" 2>/dev/null | head -1 || echo '<not found>')"
-    echo "  ARCHITECTURE:  $(ls "$docs_dir/ARCHITECTURE.md" "$PROJECT_ROOT/ARCHITECTURE.md" 2>/dev/null | head -1 || echo '<not found>')"
+    echo "  PRODUCT.md:    ${found_product:-<not found>}"
+    echo "  ARCHITECTURE:  ${found_arch:-<not found>}"
     echo "  Definitions:   $BACKLOG_DIR/DEFINITIONS.md"
     echo ""
 
@@ -3207,6 +3214,11 @@ cmd_backlog_check() {
 }
 
 cmd_backlog_populate() {
+    if [[ ! -f "$BACKLOG_DIR/backlog.json" ]]; then
+        log_error "aishore not initialized — run '.aishore/aishore init' first"
+        return 1
+    fi
+
     acquire_lock
     load_config
     cd "$PROJECT_ROOT"
