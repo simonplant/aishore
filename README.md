@@ -1,7 +1,7 @@
 # aishore
 
 ![Version](https://img.shields.io/badge/version-0.3.1-blue)
-![License](https://img.shields.io/badge/license-Proprietary-red)
+![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey)
 ![Shell](https://img.shields.io/badge/shell-bash%204.4%2B-green)
 ![Claude Code](https://img.shields.io/badge/requires-Claude%20Code%20CLI-blueviolet)
@@ -422,4 +422,6 @@ The updatable file list is discovered dynamically from the checksums manifest �
 
 ## License
 
-Proprietary — All Rights Reserved. See [LICENSE](LICENSE).
+AGPL-3.0 — see [LICENSE](LICENSE). Commercial licenses available for enterprise use — [open an issue](https://github.com/simonplant/aishore/issues) or contact the maintainer.
+
+By contributing, you agree to the [CLA](CONTRIBUTING.md#contributor-license-agreement-cla).

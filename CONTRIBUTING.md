@@ -126,6 +126,20 @@ When bumping versions:
 2. Run `.aishore/aishore checksums`
 3. CI verifies the runtime version matches the file
 
+## Contributor License Agreement (CLA)
+
+By submitting a pull request to this project, you agree that:
+
+1. **You grant the project maintainer (Simon Plant) a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license** to use, reproduce, modify, distribute, sublicense, and otherwise exploit your contributions in any form and for any purpose, including under licenses other than the AGPL-3.0.
+
+2. **You confirm that you have the right** to grant this license for all contributions you submit.
+
+3. **You understand that your contributions are public** and that a record of the contribution (including your name and email) may be maintained indefinitely.
+
+4. **This CLA allows the maintainer to offer commercial licenses** to the software that include your contributions, without requiring further permission from you.
+
+This agreement is necessary so that the project can be dual-licensed (AGPL-3.0 for open source use, commercial license for enterprise use) while incorporating community contributions.
+
 ## Questions?
 
 Open an issue for questions or suggestions.
