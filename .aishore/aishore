@@ -2672,6 +2672,16 @@ An item is done when:
 | L    | Significant feature, multiple components    |
 | XL   | Large feature, consider splitting           |
 
+## Writing Commander's Intent
+
+Intent is a non-negotiable directive — what must be true when the work is done.
+Write it like an order, not a description. State the outcome, not the implementation.
+
+Good: "Webhooks must deliver or tell the user why not. Silent failure is not acceptable."
+Bad:  "Improve webhook reliability" (vague, no bar, no consequence)
+
+See the full examples in this file after updating via groom or manually.
+
 ## Backlog Item Structure
 
 ```json
