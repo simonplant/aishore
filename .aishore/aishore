@@ -2941,7 +2941,7 @@ cmd_update() {
     log_info "Fetching checksums..."
     local checksums_content=""
     checksums_content=$($fetch_cmd "$repo_url/.aishore/checksums.sha256" 2>/dev/null) || {
-        log_error "Cannot fetch checksums — aborting (use --force --no-verify to skip)"
+        log_error "Cannot fetch checksums manifest — check connectivity and try again"
         exit 1
     }
 
@@ -3084,14 +3084,19 @@ cmd_checksums() {
     local checksum_file="$AISHORE_ROOT/checksums.sha256"
     local files=()
 
-    # Discover all distributable files (exclude config.yaml, checksums, data/)
-    while IFS= read -r -d '' f; do
-        local rel="${f#./}"
-        [[ "$rel" == ".aishore/config.yaml" ]] && continue
-        [[ "$rel" == ".aishore/checksums.sha256" ]] && continue
-        [[ "$rel" == .aishore/data/* ]] && continue
-        files+=("$rel")
-    done < <(find .aishore -type f -print0 | sort -z)
+    # Distributable files: VERSION, CLI, docs, and agent prompts
+    local distributable=(
+        .aishore/VERSION
+        .aishore/aishore
+        .aishore/README.md
+        .aishore/gitignore-entries.txt
+    )
+    for f in "$AGENTS_DIR"/*.md; do
+        [[ -f "$f" ]] && distributable+=(".aishore/agents/$(basename "$f")")
+    done
+    for f in "${distributable[@]}"; do
+        [[ -f "$f" ]] && files+=("$f")
+    done
 
     # Generate checksums
     local hash_cmd=()

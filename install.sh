@@ -97,8 +97,7 @@ discover_files() {
 
 verify_file() {
     local file="$1"
-    # Extract the .aishore/... relative path for manifest lookup
-    local rel_path="${file#"$INSTALL_DIR"/}"
+    local rel_path="$2"
     local expected
     expected=$(echo "$CHECKSUMS_CONTENT" | awk -v f="$rel_path" '$2 == f {print $1; exit}')
     [[ -z "$expected" ]] && return 1
@@ -134,22 +133,6 @@ detect_existing() {
     return 1
 }
 
-download_file() {
-    local file="$1"
-    local url="$BASE_URL/$file"
-    local dest="$INSTALL_DIR/$file"
-    local dir
-    dir="$(dirname "$dest")"
-
-    mkdir -p "$dir"
-
-    if curl -sSfL "$url" -o "$dest" 2>/dev/null; then
-        return 0
-    else
-        return 1
-    fi
-}
-
 install_aishore() {
     log "Installing aishore to $INSTALL_DIR..."
     echo ""
@@ -167,36 +150,44 @@ install_aishore() {
         FILES+=("$f")
     done <<< "$file_list"
 
-    # Create directory structure
-    mkdir -p "$AISHORE_DIR/data/logs" "$AISHORE_DIR/data/status"
+    # Stage all files to temp dir, verify, then install atomically
+    local staging_dir
+    staging_dir=$(mktemp -d)
+    trap 'rm -rf "$staging_dir"' EXIT
+
     for file in "${FILES[@]}"; do
-        mkdir -p "$(dirname "$INSTALL_DIR/$file")"
+        mkdir -p "$staging_dir/$(dirname "$file")"
     done
 
-    # Download and verify files
+    # Download and verify in staging
     local failed=0
     for file in "${FILES[@]}"; do
-        if download_file "$file"; then
-            if verify_file "$INSTALL_DIR/$file"; then
+        local url="$BASE_URL/$file"
+        local dest="$staging_dir/$file"
+        if curl -sSfL "$url" -o "$dest" 2>/dev/null; then
+            if verify_file "$dest" "$file"; then
                 success "Verified $(basename "$file")"
             else
                 error "Checksum mismatch: $file"
                 ((failed++))
             fi
         else
-            warn "Failed to download $file"
+            error "Failed to download $file"
             ((failed++))
         fi
     done
 
     if [[ $failed -gt 0 ]]; then
-        die "$failed files failed to download or verify"
+        die "$failed files failed — nothing was installed"
     fi
 
-    # Make CLI executable
+    # All verified — install
+    mkdir -p "$AISHORE_DIR/data/logs" "$AISHORE_DIR/data/status"
+    for file in "${FILES[@]}"; do
+        mkdir -p "$(dirname "$INSTALL_DIR/$file")"
+        mv "$staging_dir/$file" "$INSTALL_DIR/$file"
+    done
     chmod +x "$AISHORE_DIR/aishore"
-
-    # Create data directory placeholders
     touch "$AISHORE_DIR/data/logs/.gitkeep"
     touch "$AISHORE_DIR/data/status/.gitkeep"
 
