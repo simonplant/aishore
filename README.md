@@ -1,11 +1,11 @@
 # aishore
 
-**Autonomous sprint execution for Claude Code.**
+**Intent-driven autonomous development for Claude Code.**
 
-aishore is a drop-in tool that runs development sprints without you. You describe what needs building in a backlog, and aishore picks items, implements them with AI agents, validates the work, and archives the results. You come back to committed, tested code.
+aishore is a drop-in sprint orchestration tool that reliably develops software in a guided and automated way — aligned to commander's intent and quality standards. You define what must be true (intent), what to build (backlog), and how to verify it (acceptance criteria). aishore picks items, implements them through a maturity protocol (implement → critique → harden), validates against your intent, and archives completed work. You come back to code that was built right, for the right reasons.
 
 ```
-You: "Build these features"  →  aishore runs sprints  →  You: review completed work
+You: define intent + backlog  →  aishore develops, critiques, hardens  →  You: review quality work
 ```
 
 ## How It Works
@@ -20,9 +20,9 @@ aishore models a real sprint team with specialized AI agents:
 ```
 
 1. **Pick** — selects the highest-priority ready item from your backlog
-2. **Develop** — a Developer agent implements the feature, following your project's conventions
+2. **Develop** — a Developer agent implements the feature using a 3-phase maturity protocol (implement → critique → harden)
 3. **Test** — your validation command runs (test suite, linter, type-checker)
-4. **Validate** — a Validator agent checks acceptance criteria against the actual changes
+4. **Validate** — a Validator agent checks acceptance criteria and commander's intent against the actual changes
 5. **Archive** — completed work is recorded and the item is marked done
 
 Run `aishore run 5` and it executes five sprints back-to-back. Failed items are skipped in subsequent picks so the batch keeps moving.
@@ -60,6 +60,7 @@ cd /path/to/your/project && .aishore/aishore init
 ```bash
 # 1. Add a feature to the backlog
 .aishore/aishore backlog add --title "Add health check endpoint" \
+  --intent "Ops must know instantly if the service is alive or dead." \
   --desc "GET /health returns 200 with {status: ok}"
 
 # 2. Groom it (adds steps, acceptance criteria, marks it ready)
@@ -77,11 +78,13 @@ aishore follows a **populate → groom → run → review** cycle. This mirrors 
 
 ### 1. Populate the Backlog
 
-Add features and bugs to your backlog. Each item gets an ID, priority, and description.
+Add features and bugs to your backlog. Each item gets an ID, priority, and a commander's intent — a clear directive that defines what must be true when the work is done.
 
 ```bash
-.aishore/aishore backlog add --title "OAuth2 login flow" --priority must
-.aishore/aishore backlog add --title "Fix timeout on large uploads" --type bug
+.aishore/aishore backlog add --title "OAuth2 login flow" --priority must \
+  --intent "Users must authenticate securely or be told exactly why they can't."
+.aishore/aishore backlog add --title "Fix timeout on large uploads" --type bug \
+  --intent "Large uploads must complete or give clear progress. Users must never stare at a frozen screen."
 ```
 
 List what's in the backlog at any time:
@@ -206,6 +209,7 @@ Or use environment variables (these take precedence over config.yaml):
 | Validation command | `AISHORE_VALIDATE_CMD` | *(none)* |
 | Validation timeout | `AISHORE_VALIDATE_TIMEOUT` | `120` |
 | Notify command | `AISHORE_NOTIFY_CMD` | *(none)* |
+| Maturity protocol | `AISHORE_MATURITY` | `true` |
 
 ## Requirements
 
@@ -254,6 +258,7 @@ Updates are verified against SHA-256 checksums. Your `backlog/` and `config.yaml
 | `run --dry-run` | Preview without running agents |
 | `run --retries N` | Allow N retry attempts on failure |
 | `run --no-merge` | Keep feature branches for PR review |
+| `run --quick` | Skip maturity protocol (fast iteration) |
 | `review` | Architecture review |
 | `review --update-docs` | Review and update project docs |
 | `review --since <commit>` | Review changes since commit |

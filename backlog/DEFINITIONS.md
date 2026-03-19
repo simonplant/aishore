@@ -6,7 +6,7 @@ An item is ready for sprint when:
 
 | #   | Criteria                     | Description                                                    |
 | --- | ---------------------------- | -------------------------------------------------------------- |
-| 1   | **Clear Value**              | The "why" is understood - ties to a user outcome               |
+| 1   | **Commander's Intent**       | The `intent` field states what must be true when done          |
 | 2   | **Actionable Steps**         | Steps are clear enough for implementation                      |
 | 3   | **Testable AC**              | Acceptance criteria can be verified                            |
 | 4   | **No Blockers**              | Dependencies are resolved                                      |
@@ -50,7 +50,8 @@ An item is done when:
 {
   "id": "FEAT-001",
   "title": "Short title",
-  "description": "User-focused description",
+  "intent": "Webhooks must deliver or tell the user why not. Silent failure is not acceptable.",
+  "description": "Full description — what to build, context, technical notes, user scenarios",
   "priority": "should",
   "category": "core",
   "steps": ["Step 1", "Step 2"],
