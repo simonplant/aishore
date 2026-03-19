@@ -5,6 +5,35 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-03-19
+
+### Added
+
+- **`backlog populate` command**: AI-populates the backlog from PRODUCT.md (or PRD.md, README.md) using the Product Owner agent. Reads the product requirements document, decomposes the vision into concrete, right-sized backlog items with intent, acceptance criteria, and priorities. Checks existing items to avoid duplicates. Fully non-interactive — designed for agent-driven workflows.
+- **`init -y/--yes` flag**: Non-interactive initialization that accepts all auto-detected defaults (project name, validation command) without prompting. Enables fully hands-off setup: `init -y && backlog populate && auto done`.
+- **Intent-driven populate prompt**: The populate agent receives comprehensive guidance on intent-driven development — why intent matters to the downstream pipeline, gold-standard examples, bad-item examples with failure explanations, right-sizing guidance, and anti-patterns to avoid. DEFINITIONS.md is passed as additional context.
+- **Empty PRODUCT.md guard**: `backlog populate` detects scaffold templates (mostly comments/blanks) and refuses to run, preventing wasted agent calls on empty docs.
+
+### Fixed
+
+- **Init summary display**: Replaced fragile `ls` piping with explicit file existence checks — prevents spurious `<not found>` for freshly scaffolded docs.
+- **Populate init guard**: `backlog populate` checks for `backlog.json` and gives a clear "run init first" message instead of a confusing error.
+- **Drift script regex**: Fixed flag extraction to detect flags after pipe characters (e.g., `-y|--yes`), added `cmd_init` to flag parity checks.
+- **Copyright notice**: Help and usage output now show the copyright notice.
+
+### Documentation
+
+- Updated How It Works diagram to reflect actual sprint flow
+- All docs synced: README.md, CLAUDE.md, .aishore/README.md, help text
+
+## [0.3.1] - 2026-03-18
+
+### Fixed
+
+- **Installer stdout pollution**: Fixed staging_dir scope errors in install.sh
+- **Update checksum verification**: Hardened checksum verification in both update and install paths
+- **Distribution pipeline**: Checksum verification, dynamic file discovery from manifest
+
 ## [0.3.0] - 2026-03-18
 
 ### Changed

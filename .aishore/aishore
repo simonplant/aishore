@@ -3304,6 +3304,16 @@ cmd_backlog_populate() {
         return 1
     fi
 
+    # Guard against empty scaffold templates
+    local content_lines
+    content_lines=$(grep -cvE '^\s*$|^\s*#|^\s*<!--|^\s*-->|^\s*- \[ \]' "$prd_file" 2>/dev/null || echo 0)
+    if [[ "$content_lines" -lt 3 ]]; then
+        log_error "Product doc appears to be an empty template: $prd_file"
+        echo "  Fill in your product vision, target users, and core features before populating."
+        echo "  The backlog quality depends entirely on the quality of this document."
+        return 1
+    fi
+
     log_info "Using requirements from: $prd_file"
 
     local context_args="@$prd_file @$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
