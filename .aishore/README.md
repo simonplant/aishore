@@ -100,11 +100,32 @@ Grooming doesn't guarantee readiness — check with `backlog check <ID>` if item
 
 Auto mode grooms when ready items drop below threshold, tracks failures across items, and stops after N consecutive failures (circuit breaker, default 5).
 
+## Review
+
+After sprints complete, the Architect agent can review accumulated changes:
+
+```bash
+.aishore/aishore review                        # Architecture review (read-only)
+.aishore/aishore review --update-docs          # Review and update ARCHITECTURE.md / PRODUCT.md
+.aishore/aishore review --since abc123f        # Review changes since a specific commit
+```
+
+## Monitor & Maintain
+
+```bash
+.aishore/aishore status             # Backlog overview and sprint readiness
+.aishore/aishore metrics            # Sprint velocity, pass rates, trends
+.aishore/aishore metrics --json     # Machine-readable metrics
+.aishore/aishore clean              # Remove done items from backlogs
+.aishore/aishore clean --dry-run    # Preview what would be removed
+```
+
 ## Update
 
 ```bash
 .aishore/aishore update             # Checksum-verified update
 .aishore/aishore update --dry-run   # Check without applying
+.aishore/aishore update --force     # Re-download even if already on latest
 ```
 
 Only `.aishore/` is replaced. Your `backlog/` and `config.yaml` are never touched.

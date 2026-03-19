@@ -292,6 +292,68 @@ done
 
 echo ""
 
+# ─── 8. Getting-started guide (.aishore/README.md) ──────────────────────────
+
+GUIDE="$SCRIPT_DIR/.aishore/README.md"
+
+if [[ -f "$GUIDE" ]]; then
+    echo "── Getting-Started Guide (.aishore/README.md) ──"
+
+    # Check that primary commands from help appear in the guide
+    # (guide is a quick-reference, so we check major commands only)
+    major_cmds="auto run groom review status metrics clean update"
+    for cmd in $major_cmds; do
+        if grep -Fq "$cmd" "$GUIDE" 2>/dev/null; then
+            ok "Guide mentions '$cmd'"
+        else
+            drift error "Guide missing command '$cmd'"
+        fi
+    done
+
+    # Check that flags mentioned in the guide actually exist in help
+    guide_flags=$(grep -oP '\-\-[\w-]+' "$GUIDE" | sort -u)
+    while IFS= read -r flag; do
+        [[ -z "$flag" ]] && continue
+        if grep -Fq -- "$flag" <<< "$all_help_flags" 2>/dev/null; then
+            ok "Guide flag $flag exists in help"
+        else
+            # Check if it's a valid code flag not in help (like --force for update)
+            if grep -Fq -- "$flag" "$CLI" 2>/dev/null; then
+                ok "Guide flag $flag exists in code"
+            else
+                drift error "Guide mentions $flag but it doesn't exist in code or help"
+            fi
+        fi
+    done <<< "$guide_flags"
+
+    # Check env vars mentioned in guide exist in code
+    guide_envvars=$(grep -oP 'AISHORE_\w+' "$GUIDE" | sort -u)
+    for var in $guide_envvars; do
+        if grep -Fq "$var" "$CLI" 2>/dev/null; then
+            ok "Guide env var $var exists in code"
+        else
+            drift error "Guide mentions $var but it doesn't exist in code"
+        fi
+    done
+
+    # Check config keys mentioned in guide exist in code's config parser
+    # Match config keys like "models.primary", "scope.mode" — exclude URLs, filenames, etc.
+    guide_config_keys=$(grep -oP '(?<![/\w])[\w]+\.[\w]+(?![\w./])' "$GUIDE" \
+        | grep -v '\.\(sh\|md\|json\|yaml\|yml\|jsonl\|lock\|txt\)$' \
+        | grep -v 'github\.\|githubusercontent\.\|aishore\.' \
+        | sort -u)
+    while IFS= read -r key; do
+        [[ -z "$key" ]] && continue
+        if grep -Fq "$key" "$CLI" 2>/dev/null; then
+            ok "Guide config key $key exists in code"
+        else
+            drift error "Guide mentions config key $key but it doesn't exist in code"
+        fi
+    done <<< "$guide_config_keys"
+
+    echo ""
+fi
+
 # ─── Summary ─────────────────────────────────────────────────────────────────
 
 echo "═══════════════════════════════════════"
