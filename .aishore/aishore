@@ -2941,13 +2941,8 @@ cmd_update() {
     log_info "Fetching checksums..."
     local checksums_content=""
     checksums_content=$($fetch_cmd "$repo_url/.aishore/checksums.sha256" 2>/dev/null) || {
-        if [[ "$no_verify" == "true" ]]; then
-            log_warning "Remote checksums unavailable — falling back to local manifest"
-            checksums_content=$(cat "$AISHORE_ROOT/checksums.sha256" 2>/dev/null) || checksums_content=""
-        else
-            log_error "Cannot fetch checksums — aborting (use --force --no-verify to skip)"
-            exit 1
-        fi
+        log_error "Cannot fetch checksums — aborting (use --force --no-verify to skip)"
+        exit 1
     }
 
     # Build file list from checksums manifest (with path validation)
@@ -2997,7 +2992,7 @@ cmd_update() {
     get_expected_checksum() {
         local filepath="$1"
         [[ -z "$checksums_content" ]] && { echo ""; return 0; }
-        echo "$checksums_content" | grep -F "$filepath" | awk '{print $1}' | head -1 || true
+        echo "$checksums_content" | awk -v f="$filepath" '$2 == f {print $1; exit}' || true
     }
 
     verify_or_abort() {
@@ -3087,17 +3082,16 @@ cmd_checksums() {
     cd "$PROJECT_ROOT"
 
     local checksum_file="$AISHORE_ROOT/checksums.sha256"
-    local files=(
-        .aishore/VERSION
-        .aishore/aishore
-        .aishore/README.md
-        .aishore/gitignore-entries.txt
-    )
+    local files=()
 
-    # Add all agent prompts
-    for f in "$AGENTS_DIR"/*.md; do
-        [[ -f "$f" ]] && files+=(".aishore/agents/$(basename "$f")")
-    done
+    # Discover all distributable files (exclude config.yaml, checksums, data/)
+    while IFS= read -r -d '' f; do
+        local rel="${f#./}"
+        [[ "$rel" == ".aishore/config.yaml" ]] && continue
+        [[ "$rel" == ".aishore/checksums.sha256" ]] && continue
+        [[ "$rel" == .aishore/data/* ]] && continue
+        files+=("$rel")
+    done < <(find .aishore -type f -print0 | sort -z)
 
     # Generate checksums
     local hash_cmd=()

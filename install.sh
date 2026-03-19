@@ -68,11 +68,12 @@ done
 INSTALL_DIR="$(cd "$INSTALL_DIR" 2>/dev/null && pwd)" || die "Directory not found: $INSTALL_DIR"
 AISHORE_DIR="$INSTALL_DIR/.aishore"
 
+# Checksums manifest content (populated by discover_files)
+CHECKSUMS_CONTENT=""
+
 # Files to download — discovered from checksums manifest
 discover_files() {
-    local checksums
-    checksums=$(curl -sSfL "$BASE_URL/.aishore/checksums.sha256" 2>/dev/null) || \
-        die "Failed to fetch checksums manifest from $BASE_URL/.aishore/checksums.sha256"
+    [[ -z "$CHECKSUMS_CONTENT" ]] && die "Checksums manifest not loaded"
     local files=()
     while IFS= read -r line; do
         local fpath
@@ -87,11 +88,30 @@ discover_files() {
             continue
         fi
         files+=("$fpath")
-    done <<< "$checksums"
+    done <<< "$CHECKSUMS_CONTENT"
     if [[ ${#files[@]} -eq 0 ]]; then
         die "No files found in checksums manifest"
     fi
     printf '%s\n' "${files[@]}"
+}
+
+verify_file() {
+    local file="$1"
+    # Extract the .aishore/... relative path for manifest lookup
+    local rel_path="${file#"$INSTALL_DIR"/}"
+    local expected
+    expected=$(echo "$CHECKSUMS_CONTENT" | awk -v f="$rel_path" '$2 == f {print $1; exit}')
+    [[ -z "$expected" ]] && return 1
+    local actual
+    if command -v sha256sum >/dev/null 2>&1; then
+        actual=$(sha256sum "$file" | cut -d' ' -f1)
+    elif command -v shasum >/dev/null 2>&1; then
+        actual=$(shasum -a 256 "$file" | cut -d' ' -f1)
+    else
+        warn "No sha256sum or shasum — skipping verification"
+        return 0
+    fi
+    [[ "$actual" == "$expected" ]]
 }
 
 FILES=()
@@ -137,8 +157,10 @@ install_aishore() {
     # Resolve latest release tag
     BASE_URL=$(resolve_base_url)
 
-    # Discover files from checksums manifest
+    # Fetch checksums manifest and discover files
     log "Fetching file manifest..."
+    CHECKSUMS_CONTENT=$(curl -sSfL "$BASE_URL/.aishore/checksums.sha256" 2>/dev/null) || \
+        die "Failed to fetch checksums manifest"
     local file_list
     file_list=$(discover_files)
     while IFS= read -r f; do
@@ -151,11 +173,16 @@ install_aishore() {
         mkdir -p "$(dirname "$INSTALL_DIR/$file")"
     done
 
-    # Download files
+    # Download and verify files
     local failed=0
     for file in "${FILES[@]}"; do
         if download_file "$file"; then
-            success "Downloaded $(basename "$file")"
+            if verify_file "$INSTALL_DIR/$file"; then
+                success "Verified $(basename "$file")"
+            else
+                error "Checksum mismatch: $file"
+                ((failed++))
+            fi
         else
             warn "Failed to download $file"
             ((failed++))
@@ -163,7 +190,7 @@ install_aishore() {
     done
 
     if [[ $failed -gt 0 ]]; then
-        warn "$failed files failed to download"
+        die "$failed files failed to download or verify"
     fi
 
     # Make CLI executable
