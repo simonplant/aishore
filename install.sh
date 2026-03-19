@@ -21,10 +21,10 @@ resolve_base_url() {
     local tag
     tag=$(curl -sSfL "$API_URL" 2>/dev/null | jq -r '.tag_name // empty') || true
     if [[ -z "$tag" ]]; then
-        warn "Could not resolve latest release — falling back to main"
+        warn "Could not resolve latest release — falling back to main" >&2
         tag="main"
     else
-        log "Latest release: $tag"
+        log "Latest release: $tag" >&2
     fi
     echo "https://raw.githubusercontent.com/$REPO/$tag"
 }
@@ -151,19 +151,18 @@ install_aishore() {
     done <<< "$file_list"
 
     # Stage all files to temp dir, verify, then install atomically
-    local staging_dir
-    staging_dir=$(mktemp -d)
-    trap 'rm -rf "$staging_dir"' EXIT
+    STAGING_DIR=$(mktemp -d)
+    trap 'rm -rf "$STAGING_DIR"' EXIT
 
     for file in "${FILES[@]}"; do
-        mkdir -p "$staging_dir/$(dirname "$file")"
+        mkdir -p "$STAGING_DIR/$(dirname "$file")"
     done
 
     # Download and verify in staging
     local failed=0
     for file in "${FILES[@]}"; do
         local url="$BASE_URL/$file"
-        local dest="$staging_dir/$file"
+        local dest="$STAGING_DIR/$file"
         if curl -sSfL "$url" -o "$dest" 2>/dev/null; then
             if verify_file "$dest" "$file"; then
                 success "Verified $(basename "$file")"
@@ -185,7 +184,7 @@ install_aishore() {
     mkdir -p "$AISHORE_DIR/data/logs" "$AISHORE_DIR/data/status"
     for file in "${FILES[@]}"; do
         mkdir -p "$(dirname "$INSTALL_DIR/$file")"
-        mv "$staging_dir/$file" "$INSTALL_DIR/$file"
+        mv "$STAGING_DIR/$file" "$INSTALL_DIR/$file"
     done
     chmod +x "$AISHORE_DIR/aishore"
     touch "$AISHORE_DIR/data/logs/.gitkeep"
