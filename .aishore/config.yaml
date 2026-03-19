@@ -1,48 +1,30 @@
-# aishore configuration (optional - defaults are sensible)
-# All settings here override built-in defaults
+# aishore configuration — override defaults here or via env vars
+# Full reference: .aishore/aishore help
 
-# Project name (optional, for display)
-# project:
-#   name: "My Project"
-
-# Validation command - customize for your stack
-# Examples:
-#   Node.js: "npm run type-check && npm run lint && npm test"
-#   Python:  "pytest && mypy . && ruff check ."
-#   Go:      "go test ./... && go vet ./..."
-#   Rust:    "cargo test && cargo clippy"
+# Validation command for your stack (e.g., "npm test && npm run lint")
 validation:
   command: ""
   timeout: 120
 
-# Models (defaults shown)
+# Models (uncomment to override)
 # models:
 #   primary: "claude-opus-4-6"
 #   fast: "claude-sonnet-4-6"
 
-# Agent settings (defaults shown)
+# Agent settings
 # agent:
 #   timeout: 3600
 
-# Agent permissions (defaults shown)
-# Defaults allow full Bash access so developers can run build/test/lint commands
-# (npm install, pytest, go test, cargo build, etc.)
-# Restrict if you need a tighter sandbox.
+# Permissions (restrict for tighter sandbox)
 # permissions:
 #   developer: "Bash,Edit,Write,Read,Glob,Grep"
 #   validator: "Bash,Read,Write,Glob,Grep"
 #   reviewer: "Read,Glob,Grep"
 
-# Scope checking mode: "warn" (log and continue) or "strict" (fail sprint)
+# Scope checking: "warn" or "strict"
 # scope:
 #   mode: warn
 
-# Maturity protocol: developer agent runs implement → critique → harden phases
-# before signaling completion. Combined with commander's intent on each backlog
-# item, this ensures the developer builds the right thing to the right quality.
-# Disable with --quick flag on run command, or set to false here.
+# Maturity protocol (implement → critique → harden). Disable with --quick flag.
 # maturity:
 #   enabled: true
-
-# Note: CLAUDE.md is auto-detected from project root
-# No context configuration needed

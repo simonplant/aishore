@@ -1,5 +1,11 @@
 # aishore
 
+![Version](https://img.shields.io/badge/version-0.3.1-blue)
+![License](https://img.shields.io/badge/license-Proprietary-red)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey)
+![Shell](https://img.shields.io/badge/shell-bash%204.4%2B-green)
+![Claude Code](https://img.shields.io/badge/requires-Claude%20Code%20CLI-blueviolet)
+
 **Intent-driven autonomous development for Claude Code.**
 
 aishore is a drop-in sprint orchestration tool that reliably develops software in a guided and automated way — aligned to commander's intent and quality standards. You define what must be true (intent), what to build (backlog), and how to verify it (acceptance criteria). aishore picks items, implements them through a maturity protocol (implement → critique → harden), validates against your intent, and archives completed work. You come back to code that was built right, for the right reasons.
@@ -25,7 +31,7 @@ aishore models a real sprint team with specialized AI agents:
 4. **Validate** — a Validator agent checks acceptance criteria and commander's intent against the actual changes
 5. **Archive** — completed work is recorded and the item is marked done
 
-Run `aishore run 5` and it executes five sprints back-to-back. Failed items are skipped in subsequent picks so the batch keeps moving.
+Run `.aishore/aishore run 5` and it executes five sprints back-to-back. Failed items are skipped in subsequent picks so the batch keeps moving.
 
 ## Getting Started
 
@@ -91,7 +97,7 @@ List what's in the backlog at any time:
 
 ```bash
 .aishore/aishore backlog list
-.aishore/aishore backlog list --ready    # Only sprint-ready items
+.aishore/aishore backlog list --ready     # Only sprint-ready items
 .aishore/aishore backlog list --type bug  # Only bugs
 ```
 
@@ -109,15 +115,15 @@ The **Tech Lead agent** focuses on technical clarity — are the steps actionabl
 ### 3. Run Sprints
 
 ```bash
-.aishore/aishore run           # Run one sprint
-.aishore/aishore run 5         # Run five sprints back-to-back
-.aishore/aishore run FEAT-003  # Run a specific item
-.aishore/aishore run --dry-run # Preview what would run without executing
+.aishore/aishore run                # Run one sprint
+.aishore/aishore run 5              # Run five sprints back-to-back
+.aishore/aishore run FEAT-003       # Run a specific item
+.aishore/aishore run --dry-run      # Preview what would run without executing
 ```
 
 Each sprint is isolated. Pre-existing uncommitted changes are stashed beforehand and restored afterward. If a sprint fails, the working tree resets cleanly — your other work is never lost.
 
-Commits happen automatically on feature branches. Use `--retries N` to let failing items retry.
+Commits happen automatically on feature branches. Use `--retries N` to let failing items retry, and `--refine` to have an AI agent improve the spec when retries are exhausted.
 
 ### 4. Review
 
@@ -144,17 +150,184 @@ Clean up completed items when they accumulate:
 .aishore/aishore clean --dry-run # Preview what would be removed
 ```
 
+## Autonomous Mode
+
+Let aishore drain the backlog unattended. It auto-grooms when ready items run low and stops on repeated failures.
+
+```bash
+.aishore/aishore auto done                     # Drain entire backlog
+.aishore/aishore auto p0                       # Complete all must (P0) items
+.aishore/aishore auto p1                       # Complete all must + should items
+.aishore/aishore auto p2                       # Complete all must + should + could items
+.aishore/aishore auto done --retries 2         # Per-item retries on failure
+.aishore/aishore auto p1 --max-failures 3      # Stop after 3 consecutive failures
+```
+
 ## Agent Roles
 
-| Agent | Role | When |
-|-------|------|------|
-| **Developer** | Implements features following project conventions | `run` |
-| **Validator** | Checks acceptance criteria against actual changes | `run` |
-| **Tech Lead** | Grooms bugs, ensures technical readiness | `groom` |
-| **Product Owner** | Grooms features, aligns with product vision | `groom --backlog` |
-| **Architect** | Reviews patterns, risks, and code quality | `review` |
+| Agent | Role | Invoked by |
+|-------|------|------------|
+| **Developer** | Implements features following project conventions and maturity protocol | `run` |
+| **Validator** | Checks acceptance criteria and commander's intent against actual changes | `run` |
+| **Tech Lead** | Grooms bugs, adds steps and AC, ensures technical readiness | `groom` |
+| **Product Owner** | Grooms features, aligns priorities with product vision | `groom --backlog` |
+| **Architect** | Reviews patterns, risks, code quality, and documentation | `review` |
 
 All agents automatically read your `CLAUDE.md`, `PRODUCT.md`, and `ARCHITECTURE.md` for project context.
+
+## Complete Flag Reference
+
+### `backlog add`
+
+```bash
+.aishore/aishore backlog add                         # Interactive mode
+.aishore/aishore backlog add --title "..." [flags]   # Non-interactive
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--title "..."` | Item title | *(required)* |
+| `--intent "..."` | Commander's intent — what must be true when done | *(required for sprint)* |
+| `--type feat\|bug` | Feature or bug | `feat` |
+| `--desc "..."` | Full description | *(none)* |
+| `--priority must\|should\|could\|future` | Priority level | `should` |
+| `--category "..."` | Category tag | *(none)* |
+| `--ready` | Mark as sprint-ready immediately | `false` |
+| `--ac "text"` | Add acceptance criterion *(repeatable)* | *(none)* |
+| `--ac-verify "cmd"` | Attach verification command to preceding `--ac` | *(none)* |
+
+IDs are auto-generated: `FEAT-001`, `FEAT-002`, ... or `BUG-001`, `BUG-002`, ...
+
+> **Note:** Items without a commander's intent (or with intent shorter than 20 characters) will not be picked for sprints. You can add items without intent for tracking, but they must have intent before they can execute.
+
+### `backlog edit`
+
+```bash
+.aishore/aishore backlog edit <ID> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--title "..."` | Change title |
+| `--intent "..."` | Set commander's intent |
+| `--desc "..."` | Change description |
+| `--priority must\|should\|could\|future` | Change priority |
+| `--status todo\|in-progress\|done` | Change status |
+| `--category "..."` | Change category |
+| `--ready` | Mark as sprint-ready |
+| `--no-ready` | Unmark from sprint-ready |
+| `--groomed-at [YYYY-MM-DD]` | Set groomed date (defaults to today) |
+| `--groomed-notes "..."` | Set grooming notes |
+| `--ac "text"` | Add acceptance criterion *(repeatable)* |
+| `--ac-verify "cmd"` | Attach verification command to preceding `--ac` |
+
+Multiple flags can be combined in a single edit command.
+
+### `backlog list`
+
+| Flag | Description |
+|------|-------------|
+| `--type feat\|bug` | Filter by type |
+| `--status todo\|in-progress\|done` | Filter by status |
+| `--ready` | Show only sprint-ready items |
+
+### `backlog check`
+
+```bash
+.aishore/aishore backlog check <ID>    # Validate readiness gates for an item
+```
+
+Checks: title, commander's intent (≥20 chars, must be a directive), steps, acceptance criteria, and step length.
+
+### `run`
+
+```bash
+.aishore/aishore run [N|ID] [flags]
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `[N]` | Number of sprints to run | `1` |
+| `[ID]` | Run a specific item by ID (e.g., `FEAT-001`) | — |
+| `--dry-run` | Preview what would run without executing | — |
+| `--no-merge` | Keep feature branches for PR review (push instead of merge) | — |
+| `--retries N` | Allow N retry attempts on validation failure | `0` |
+| `--refine` | Refine spec (steps + AC) when retries exhausted, then retry once more | — |
+| `--quick` | Skip maturity protocol (fast iteration) | — |
+
+### `auto`
+
+```bash
+.aishore/aishore auto <scope> [flags]
+```
+
+| Scope | Items included |
+|-------|---------------|
+| `p0` | `must` priority only |
+| `p1` | `must` + `should` |
+| `p2` | `must` + `should` + `could` |
+| `done` | All priorities (drain entire backlog) |
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--retries N` | Per-item retries on failure | `0` |
+| `--max-failures N` | Stop after N consecutive failures (circuit breaker) | `5` |
+
+### `groom`
+
+| Flag | Description |
+|------|-------------|
+| `--backlog` | Product Owner mode: groom features instead of bugs |
+
+### `review`
+
+| Flag | Description |
+|------|-------------|
+| `--update-docs` | Allow the architect to update `ARCHITECTURE.md` / `PRODUCT.md` and add backlog items |
+| `--since <commit>` | Review changes since a specific commit |
+
+### Other Commands
+
+| Command | Description |
+|---------|-------------|
+| `status` | Backlog overview and sprint readiness |
+| `metrics` | Sprint velocity, pass rates, trends |
+| `metrics --json` | Machine-readable metrics |
+| `clean` | Remove done items from backlogs |
+| `clean --dry-run` | Preview what would be removed |
+| `update` | Update from upstream (checksum-verified) |
+| `update --dry-run` | Check for updates without applying |
+| `update --force` | Update even if already on latest version |
+| `update --force --no-verify` | Skip checksum verification |
+| `checksums` | Regenerate checksums after editing `.aishore/` files |
+| `version` | Show version |
+| `help` | Show full command reference |
+
+## Item Schema
+
+Each backlog item has these fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Auto-generated (`FEAT-001`, `BUG-001`) |
+| `title` | string | Short descriptive title |
+| `intent` | string | Commander's intent — non-negotiable directive |
+| `description` | string | Full description — what to build, context, scope boundaries |
+| `priority` | string | `must`, `should`, `could`, or `future` |
+| `category` | string | Organizational tag |
+| `steps` | array | Implementation steps (added by grooming) |
+| `acceptanceCriteria` | array | Verifiable acceptance criteria (string or `{text, verify}` objects) |
+| `scope` | array | Glob patterns for scope checking (e.g., `["src/**", "tests/**"]`) |
+| `status` | string | `todo`, `in-progress`, or `done` |
+| `readyForSprint` | boolean | Whether item is ready for sprint execution |
+| `passes` | boolean | Set automatically after successful sprint |
+| `dependsOn` | array | IDs of items this depends on |
+| `groomedAt` | string | Date of last grooming (YYYY-MM-DD) |
+| `groomingNotes` | string | Notes from grooming |
+| `completedAt` | string | Completion timestamp (auto-set) |
+| `failCount` | number | Number of failed sprint attempts (auto-set) |
+| `lastFailAt` | string | Timestamp of last failure (auto-set) |
+| `lastFailReason` | string | Reason for last failure (auto-set) |
 
 ## Project Structure
 
@@ -170,9 +343,11 @@ your-project/
 ├── CLAUDE.md                # Project context (auto-detected)
 └── .aishore/                # TOOL (updatable, replaceable)
     ├── aishore              # Single-file CLI (Bash)
-    ├── agents/              # Agent prompts
+    ├── VERSION              # Version (single source of truth)
+    ├── checksums.sha256     # SHA-256 checksums for update verification
+    ├── agents/              # Agent prompts (developer, validator, tech-lead, product-owner, architect)
     ├── config.yaml          # Optional overrides
-    └── data/                # Runtime logs and status
+    └── data/                # Runtime (logs, status)
 ```
 
 Your backlogs (`backlog/`) are always separate from the tool (`.aishore/`). Updates never touch your content.
@@ -195,21 +370,38 @@ models:
 agent:
   timeout: 3600
 
+# Scope checking: "warn" (log and continue) or "strict" (fail sprint)
+scope:
+  mode: warn
+
+# Maturity protocol: implement → critique → harden (disable with --quick)
+maturity:
+  enabled: true
+
+# Agent permissions (restrict for tighter sandbox)
+permissions:
+  developer: "Bash,Edit,Write,Read,Glob,Grep"
+  validator: "Bash,Read,Write,Glob,Grep"
+  reviewer: "Read,Glob,Grep"
+
 notifications:
   on_complete: "notify-send 'aishore' \"Sprint $1: $2\""
 ```
 
 Or use environment variables (these take precedence over config.yaml):
 
-| Setting | Env var | Default |
-|---------|---------|---------|
-| Primary model | `AISHORE_MODEL_PRIMARY` | `claude-opus-4-6` |
-| Fast model | `AISHORE_MODEL_FAST` | `claude-sonnet-4-6` |
-| Agent timeout | `AISHORE_AGENT_TIMEOUT` | `3600` |
-| Validation command | `AISHORE_VALIDATE_CMD` | *(none)* |
-| Validation timeout | `AISHORE_VALIDATE_TIMEOUT` | `120` |
-| Notify command | `AISHORE_NOTIFY_CMD` | *(none)* |
-| Maturity protocol | `AISHORE_MATURITY` | `true` |
+| Setting | Config key | Env var | Default |
+|---------|-----------|---------|---------|
+| Validation command | `validation.command` | `AISHORE_VALIDATE_CMD` | *(none)* |
+| Validation timeout | `validation.timeout` | `AISHORE_VALIDATE_TIMEOUT` | `120` |
+| Primary model | `models.primary` | `AISHORE_MODEL_PRIMARY` | `claude-opus-4-6` |
+| Fast model | `models.fast` | `AISHORE_MODEL_FAST` | `claude-sonnet-4-6` |
+| Agent timeout | `agent.timeout` | `AISHORE_AGENT_TIMEOUT` | `3600` |
+| Notify command | `notifications.on_complete` | `AISHORE_NOTIFY_CMD` | *(none)* |
+| Maturity protocol | `maturity.enabled` | `AISHORE_MATURITY` | `true` |
+| Scope mode | `scope.mode` | `AISHORE_SCOPE_MODE` | `warn` |
+
+**Precedence:** env vars > config.yaml > built-in defaults.
 
 ## Requirements
 
@@ -227,52 +419,6 @@ Or use environment variables (these take precedence over config.yaml):
 ```
 
 Updates are verified against SHA-256 checksums. Your `backlog/` and `config.yaml` are never modified.
-
-## Command Reference
-
-<details>
-<summary>Full command list</summary>
-
-| Command | Description |
-|---------|-------------|
-| `init` | Interactive setup wizard |
-| `status` | Backlog overview and sprint readiness |
-| `backlog list` | List all items (features + bugs) |
-| `backlog list --status todo` | Filter by status |
-| `backlog list --type feat` | Filter by type (feat, bug) |
-| `backlog list --ready` | Show only sprint-ready items |
-| `backlog add` | Add a new item (interactive) |
-| `backlog add --title "..." --type bug` | Add with flags |
-| `backlog show <ID>` | Show full detail of one item |
-| `backlog edit <ID> --priority must` | Update fields on an item |
-| `backlog rm <ID>` | Remove an item |
-| `auto done` | Autonomous: drain entire backlog |
-| `auto p0` | Autonomous: complete all must items |
-| `auto p1` | Autonomous: complete all must + should items |
-| `auto p2` | Autonomous: complete all must + should + could items |
-| `auto <scope> --max-failures N` | Consecutive failures before stopping |
-| `groom` | Groom bugs/tech debt (Tech Lead agent) |
-| `groom --backlog` | Groom features (Product Owner agent) |
-| `run [N]` | Run N sprints (default: 1) |
-| `run <ID>` | Run specific item by ID |
-| `run --dry-run` | Preview without running agents |
-| `run --retries N` | Allow N retry attempts on failure |
-| `run --no-merge` | Keep feature branches for PR review |
-| `run --quick` | Skip maturity protocol (fast iteration) |
-| `review` | Architecture review |
-| `review --update-docs` | Review and update project docs |
-| `review --since <commit>` | Review changes since commit |
-| `metrics` | Sprint metrics |
-| `metrics --json` | Metrics as JSON |
-| `clean` | Remove done items from backlogs |
-| `clean --dry-run` | Preview what would be removed |
-| `update` | Update from upstream (checksum-verified) |
-| `update --dry-run` | Check for updates without applying |
-| `checksums` | Regenerate checksums |
-| `version` | Show version |
-| `help` | Show usage |
-
-</details>
 
 ## License
 
