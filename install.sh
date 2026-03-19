@@ -55,18 +55,33 @@ done
 INSTALL_DIR="$(cd "$INSTALL_DIR" 2>/dev/null && pwd)" || die "Directory not found: $INSTALL_DIR"
 AISHORE_DIR="$INSTALL_DIR/.aishore"
 
-# Files to download
-FILES=(
-    ".aishore/VERSION"
-    ".aishore/aishore"
-    ".aishore/README.md"
-    ".aishore/gitignore-entries.txt"
-    ".aishore/agents/developer.md"
-    ".aishore/agents/validator.md"
-    ".aishore/agents/tech-lead.md"
-    ".aishore/agents/product-owner.md"
-    ".aishore/agents/architect.md"
-)
+# Files to download — discovered from checksums manifest
+discover_files() {
+    local checksums
+    checksums=$(curl -sSfL "$BASE_URL/.aishore/checksums.sha256" 2>/dev/null) || \
+        die "Failed to fetch checksums manifest from $BASE_URL/.aishore/checksums.sha256"
+    local files=()
+    while IFS= read -r line; do
+        local fpath
+        fpath=$(echo "$line" | awk '{print $2}')
+        [[ -z "$fpath" ]] && continue
+        # Validate: must be inside .aishore/, no traversal, no absolute paths
+        if [[ "$fpath" != .aishore/* ]] || [[ "$fpath" == *..* ]] || [[ "$fpath" == /* ]]; then
+            die "Unsafe path in checksums manifest: $fpath"
+        fi
+        # Protect user config from overwrite
+        if [[ "$fpath" == ".aishore/config.yaml" ]]; then
+            continue
+        fi
+        files+=("$fpath")
+    done <<< "$checksums"
+    if [[ ${#files[@]} -eq 0 ]]; then
+        die "No files found in checksums manifest"
+    fi
+    printf '%s\n' "${files[@]}"
+}
+
+FILES=()
 
 # ============================================================================
 # FUNCTIONS
@@ -106,8 +121,19 @@ install_aishore() {
     log "Installing aishore to $INSTALL_DIR..."
     echo ""
 
+    # Discover files from checksums manifest
+    log "Fetching file manifest..."
+    local file_list
+    file_list=$(discover_files)
+    while IFS= read -r f; do
+        FILES+=("$f")
+    done <<< "$file_list"
+
     # Create directory structure
-    mkdir -p "$AISHORE_DIR"/{agents,data/{logs,status}}
+    mkdir -p "$AISHORE_DIR"/{data/{logs,status}}
+    for file in "${FILES[@]}"; do
+        mkdir -p "$(dirname "$INSTALL_DIR/$file")"
+    done
 
     # Download files
     local failed=0

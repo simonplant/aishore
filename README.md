@@ -418,7 +418,7 @@ Or use environment variables (these take precedence over config.yaml):
 .aishore/aishore update            # Update (checksum-verified)
 ```
 
-Updates are verified against SHA-256 checksums. Your `backlog/` and `config.yaml` are never modified.
+The updatable file list is discovered dynamically from the checksums manifest — no hardcoded lists. All paths are validated against traversal attacks. Your `backlog/` and `config.yaml` are never modified.
 
 ## License
 

@@ -117,7 +117,7 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 **Configuration precedence:** env vars > config.yaml > built-in defaults.
 
-**Update integrity:** The `update` command fetches the remote `.aishore/VERSION` for comparison, then stages all files into a temp directory, verifies SHA-256 checksums against `checksums.sha256`, and only installs if all files pass verification.
+**Update integrity:** The `update` command and `install.sh` both discover which files to fetch by parsing the remote `checksums.sha256` manifest — no hardcoded file lists. All paths are validated (must start with `.aishore/`, no `..` traversal, no absolute paths) and `config.yaml` is explicitly skipped to protect user config. Files are staged to a temp directory, verified against SHA-256 checksums, and only installed if all checks pass. Adding a new distributable file requires only dropping the file and running `aishore checksums`.
 
 **Version management:** `.aishore/VERSION` is the single source of truth. The CLI reads it at runtime.
 
