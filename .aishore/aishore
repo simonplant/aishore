@@ -981,17 +981,47 @@ Every item should have an \`intent\` field — a non-negotiable directive statin
             validate_hint="$validate_hint
 
 ## Populate Mode
-You have been given a product requirements document. Your job is to populate the backlog from it:
+You have been given a product requirements document. Your job is to populate the backlog from it.
+
+### Process
 1. Read the product requirements document carefully
-2. Check the existing backlog to avoid duplicating items already present
+2. Check the existing backlog (\`.aishore/aishore backlog list\`) to avoid duplicating items already present
 3. Break the product vision into concrete, implementable feature items
-4. For each feature, use the CLI to add it with full detail:
-   \`.aishore/aishore backlog add --type feat --title \"...\" --intent \"...\" --desc \"...\" --priority <must|should|could|future> --ac \"criterion 1\" --ac \"criterion 2\"\`
-5. Set priority based on user value and dependencies (must = MVP, should = important, could = nice-to-have, future = later)
-6. Write clear acceptance criteria that describe user-visible outcomes
-7. Write intent as a non-negotiable directive (>=20 chars), not a label
-8. Keep items small enough for a single sprint (one focused change per item)
-Do NOT edit JSON files directly — use only CLI commands."
+4. For each feature, add it using the CLI with full detail (see example below)
+5. Do NOT edit JSON files directly — use only CLI commands
+
+### Quality Standards
+- **Intent** is a non-negotiable directive (>=20 chars). Write like an order, not a description. State the outcome, not the implementation.
+- **AC** should describe user-visible outcomes, not implementation steps
+- **Priority**: must = MVP/blocking, should = important, could = nice-to-have, future = later
+- **Size**: each item should be completable in a single sprint (one focused change). Split large features into multiple items.
+- **Description**: include enough context for a developer who hasn't read the product doc
+
+### Example — High Quality Item
+\`\`\`bash
+.aishore/aishore backlog add \\\\
+  --type feat \\\\
+  --title \"OAuth2 login flow\" \\\\
+  --intent \"Users authenticate securely or are told exactly why they cannot. Never a blank screen or silent failure.\" \\\\
+  --desc \"Implement OAuth2 authorization code flow with Google as the first provider. Include token refresh, secure storage, and graceful error handling for network failures and denied permissions.\" \\\\
+  --priority must \\\\
+  --ac \"User can sign in with Google and sees their profile name\" \\\\
+  --ac \"Invalid/expired tokens trigger automatic refresh without user action\" \\\\
+  --ac \"Auth errors show a specific, actionable message (not a generic error page)\" \\\\
+  --ac \"Signed-out users attempting protected routes are redirected to login\"
+\`\`\`
+
+### Example — Bad Item (Do NOT Create Items Like This)
+- Title: \"Improve auth\" (vague)
+- Intent: \"Add login\" (too short, implementation not outcome)
+- No AC or generic AC like \"it works\"
+- Too large: \"Build the entire backend\" (should be split)
+
+### Anti-Patterns to Avoid
+- Padding intent to meet the 20-char minimum with filler words
+- Copy-pasting the product doc verbatim into descriptions
+- Creating items that overlap significantly in scope
+- AC that just restate the title"
         fi
     fi
 
@@ -3249,6 +3279,8 @@ cmd_backlog_populate() {
     log_info "Using requirements from: $prd_file"
 
     local context_args="@$prd_file @$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
+    # Include definitions doc for quality examples if available
+    [[ -f "$BACKLOG_DIR/DEFINITIONS.md" ]] && context_args="$context_args @$BACKLOG_DIR/DEFINITIONS.md"
 
     # Snapshot backlog state for progress tracking
     local snap_before
