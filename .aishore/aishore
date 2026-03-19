@@ -1312,12 +1312,12 @@ cmd_auto() {
 
     if [[ -z "$scope" ]]; then
         log_error "Usage: auto {done|p0|p1|p2} [--retries N] [--no-merge] [--max-failures N] [--dry-run]"
-        echo ""
-        echo "Scopes:"
-        echo "  done  Drain entire backlog to completion"
-        echo "  p0    Complete all P0 (must) items"
-        echo "  p1    Complete all P0+P1 (must + should) items"
-        echo "  p2    Complete all P0–P2 (must + should + could) items"
+        echo "" >&2
+        echo "Scopes:" >&2
+        echo "  done  Drain entire backlog to completion" >&2
+        echo "  p0    Complete all P0 (must) items" >&2
+        echo "  p1    Complete all P0+P1 (must + should) items" >&2
+        echo "  p2    Complete all P0–P2 (must + should + could) items" >&2
         return 1
     fi
 
@@ -3101,7 +3101,7 @@ cmd_backlog() {
         check)      cmd_backlog_check "$@" ;;
         *)
             log_error "Unknown backlog command: $subcmd"
-            echo "Usage: backlog {list|add|show|edit|check|rm}"
+            echo "Usage: backlog {list|add|show|edit|check|rm}" >&2
             return 1
             ;;
     esac
@@ -3583,29 +3583,32 @@ cmd_usage() {
 aishore - AI Sprint Runner (v$AISHORE_VERSION)
 
 Usage: .aishore/aishore <command> [options]
+       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge]
+       .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--retries N]
 
 Sprint:
-  auto <scope>      Autonomous mode (done, p0, p1, p2)
-  run [N|ID]        Run sprints or a specific item
-  groom             Groom bugs (--backlog for features)
-  review            Architecture review
+  auto <scope>       Autonomous mode (done, p0, p1, p2)
+  run [N|ID]         Run sprints or a specific item
+  groom              Groom bugs (--backlog for features)
+  review             Architecture review
 
 Backlog:
-  backlog list      List all items
-  backlog add       Add a new item
-  backlog show <ID> Show item detail
-  backlog edit <ID> Update an item
-  backlog rm <ID>   Remove an item
+  backlog list       List all items
+  backlog add        Add a new item
+  backlog show <ID>  Show item detail
+  backlog edit <ID>  Update an item
+  backlog check <ID> Check readiness gates
+  backlog rm <ID>    Remove an item
 
 Info:
-  status            Backlog overview and sprint readiness
-  metrics           Sprint metrics
+  status             Backlog overview and sprint readiness
+  metrics            Sprint metrics
 
 Maintenance:
-  init              Setup wizard
-  update            Update from upstream
-  clean             Remove done items
-  checksums         Regenerate checksums
+  init               Setup wizard
+  update             Update from upstream
+  clean              Remove done items
+  checksums          Regenerate checksums
 
 Examples:
   .aishore/aishore auto done          # Drain entire backlog
@@ -3621,6 +3624,8 @@ cmd_help() {
 aishore - AI Sprint Runner (v$AISHORE_VERSION)
 
 Usage: .aishore/aishore <command> [options]
+       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge]
+       .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--retries N]
 
 Commands:
   backlog list      List all items (features + bugs)
@@ -3656,6 +3661,7 @@ Commands:
     --retries N     Per-item retry attempts on failure
     --no-merge      Keep feature branches for PR review
     --refine        Refine spec on exhausted retries and try once more
+    --quick         Skip maturity protocol (fast iteration)
     --dry-run       Preview first item without running
 
   run [count]       Run N sprints (default: 1, feature branches, push/pull)
@@ -3673,74 +3679,30 @@ Commands:
     --update-docs   Allow updates to docs
     --since <hash>  Review since specific commit
 
-  metrics           Show sprint metrics
-    --json          Output as JSON
-
+  metrics           Show sprint metrics (--json for JSON output)
   status            Show backlog overview and sprint readiness
-
-  update            Update aishore from upstream
-    --dry-run       Check for updates without applying
-    --check         Alias for --dry-run
-    --force         Update even if already on latest version
-    --no-verify     Skip checksum verification (use with --force)
-
-  clean             Remove done items from backlog and bugs
-    --dry-run       Show what would be removed without changing files
-
+  update            Update from upstream (--dry-run to check, --force to override)
+  clean             Remove done items (--dry-run to preview)
   checksums         Regenerate checksums.sha256 for update verification
   init              Setup wizard — checks prerequisites, configures project
-  version           Show version
-  help              Show this help
+  version, -v, --version   Show version
+  help, -h, --help         Show this help
 
 Examples:
   .aishore/aishore auto done            # Drain entire backlog autonomously
-  .aishore/aishore auto p1              # Complete all must + should items
-  .aishore/aishore auto p1 --retries 2  # With per-item retries
-  .aishore/aishore auto done --no-merge # Keep branches for PR review
-  .aishore/aishore run                  # Run 1 sprint
-  .aishore/aishore run 5               # Run 5 sprints
-  .aishore/aishore run FEAT-001        # Run specific item
-  .aishore/aishore run --no-merge 3    # Keep branches for PR review
-  .aishore/aishore groom
-  .aishore/aishore update --dry-run
+  .aishore/aishore auto p1 --retries 2  # Complete must + should, with retries
+  .aishore/aishore run FEAT-001         # Run specific item
+  .aishore/aishore run --no-merge 3     # Keep branches for PR review
+  .aishore/aishore groom --backlog      # Groom features
+  .aishore/aishore update --dry-run     # Check for updates
 
 Files:
   backlog/backlog.json    Your feature backlog (user content)
   backlog/bugs.json       Your bugs/tech debt (user content)
   backlog/sprint.json     Current sprint state
   .aishore/config.yaml    Optional configuration overrides
-  .aishore/agents/        Agent prompts (updated by 'update')
 
-Environment Variables:
-  AISHORE_MODEL_PRIMARY     Primary model (default: claude-opus-4-6)
-  AISHORE_MODEL_FAST        Fast model (default: claude-sonnet-4-6)
-  AISHORE_AGENT_TIMEOUT     Agent timeout in seconds (default: 3600)
-  AISHORE_VALIDATE_CMD      Validation command to run after implementation
-  AISHORE_VALIDATE_TIMEOUT  Validation command timeout in seconds (default: 120)
-  AISHORE_NOTIFY_CMD        Command to run on sprint completion (receives \$1=status, \$2=item_id)
-  AISHORE_AUTO_GROOM_THRESHOLD  Ready items below this triggers auto-groom (default: 3)
-  AISHORE_AUTO_MAX_FAILURES     Max consecutive failures before stopping (default: 5)
-  AISHORE_SCOPE_MODE            Scope checking mode: warn (default) or strict
-  AISHORE_MATURITY              Maturity protocol: true (default) or false
-
-Agent Permissions:
-  Each agent role has a default permission set:
-    developer       Bash,Edit,Write,Read,Glob,Grep
-    validator       Bash,Read,Write,Glob,Grep
-    reviewer        Read,Glob,Grep  (with --update-docs: Read,Glob,Grep,Edit,Write)
-    groom agents    Same as developer (they update backlog files)
-
-  Override in config.yaml:
-    permissions:
-      developer: "Bash,Edit,Write,Read,Glob,Grep"
-      validator: "Bash,Read,Write,Glob,Grep"
-      reviewer: "Read,Glob,Grep"
-
-Trust Model:
-  The 'update' command fetches from GitHub and verifies SHA-256 checksums.
-  If checksums cannot be fetched, the update aborts unless --force --no-verify
-  is passed. This ensures integrity but does NOT verify authorship — you trust
-  the upstream repository and your network path to it.
+See README.md for environment variables, agent permissions, and configuration.
 EOF
 }
 
@@ -3771,7 +3733,7 @@ main() {
         usage) cmd_usage ;;
         *)
             log_error "Unknown command: $cmd"
-            cmd_usage
+            cmd_usage >&2
             exit 1
             ;;
     esac
