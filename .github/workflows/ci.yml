@@ -39,35 +39,25 @@ jobs:
       - name: Check script is executable
         run: test -x .aishore/aishore
 
-      - name: Syntax check all scripts
-        run: |
-          bash -n .aishore/aishore
-          bash -n install.sh
-
-      - name: Test help command
-        run: .aishore/aishore help
-
-      - name: Test version command
-        run: .aishore/aishore version
+      - name: Syntax check install.sh
+        run: bash -n install.sh
 
       - name: Test metrics command
         run: .aishore/aishore metrics
 
-      - name: Validate JSON files
-        run: |
-          jq empty backlog/backlog.json
-          jq empty backlog/bugs.json
-          jq empty backlog/sprint.json
+  drift:
+    name: Drift Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
 
-      - name: Check version consistency
+      - name: Install dependencies
         run: |
-          file_version=$(cat .aishore/VERSION)
-          # Check runtime version matches VERSION file
-          runtime_version=$(.aishore/aishore version | awk '{print $NF}')
-          if [ "$file_version" != "$runtime_version" ]; then
-            echo "Version mismatch: .aishore/VERSION=$file_version, runtime=$runtime_version"
-            exit 1
-          fi
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Check code ↔ help ↔ docs alignment
+        run: bash tests/check-drift.sh --ci
 
   macos:
     name: macOS Compatibility
