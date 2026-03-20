@@ -1461,7 +1461,7 @@ cmd_auto() {
     local scope="${1:-}"
 
     if [[ -z "$scope" ]]; then
-        log_error "Usage: auto {done|p0|p1|p2} [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--dry-run]"
+        log_error "Usage: auto {done|p0|p1|p2} [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--auto-review] [--dry-run]"
         echo "" >&2
         echo "Scopes:" >&2
         echo "  done  Drain entire backlog to completion" >&2
@@ -1867,6 +1867,7 @@ cmd_run() {
     local auto_mode=false
     local auto_scope=""
     local auto_priorities=""
+    local auto_review=false
     local max_consecutive_failures=""
 
     while [[ $# -gt 0 ]]; do
@@ -1875,6 +1876,7 @@ cmd_run() {
             --no-merge) no_merge=true; shift ;;
             --refine) refine_on_exhaust=true; shift ;;
             --quick) quick_mode=true; shift ;;
+            --auto-review) auto_review=true; shift ;;
             --_auto)
                 auto_mode=true
                 auto_scope="$2"
@@ -2162,6 +2164,76 @@ cmd_run() {
         log_info "Restoring pre-existing uncommitted changes"
         AISHORE_DID_STASH=""
         git stash pop >/dev/null 2>&1 || log_warning "Failed to restore stashed changes — run 'git stash pop' manually"
+    fi
+
+    # Auto mode: offer architecture review when backlog is fully drained
+    if [[ "$auto_mode" == "true" && $failed -eq 0 && $passed -gt 0 ]]; then
+        local run_review=false
+        if [[ "$auto_review" == "true" ]]; then
+            run_review=true
+        else
+            echo ""
+            log_info "All items complete. Run architecture review to evaluate accumulated changes?"
+            read -r -p "  Run architecture review? [y/N] " _review_answer
+            [[ "$_review_answer" == "y" || "$_review_answer" == "Y" ]] && run_review=true
+        fi
+
+        if [[ "$run_review" == "true" ]]; then
+            # Count items before review
+            local _items_before=0
+            for _bf in "${BACKLOG_FILES[@]}"; do
+                [[ -f "$BACKLOG_DIR/$_bf" ]] && _items_before=$((_items_before + $(count_items "$BACKLOG_DIR/$_bf")))
+            done
+
+            log_header "Architecture Review"
+            echo "Mode: Read-only"
+            echo ""
+
+            local review_context="@$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
+            local recent_sprints; recent_sprints=$(recent_sprints_file 20)
+            [[ -n "$recent_sprints" ]] && review_context="$review_context $recent_sprints"
+
+            local review_extra="## Additional Context
+Read-only review. Do not modify files."
+
+            local review_output
+            review_output="$(ensure_tmpdir)/review_output.txt"
+
+            log_info "Running architect agent..."
+            run_agent "architect" "review" "$MODEL_PRIMARY" "$review_context" "$review_output" "$review_extra" || true
+
+            local review_log
+            review_log="$DATA_DIR/logs/review-$(date +%Y%m%dT%H%M%S).md"
+            if [[ -s "$review_output" ]]; then
+                cp "$review_output" "$review_log"
+                log_info "Review output saved to: $review_log"
+            fi
+
+            if [[ -s "$review_output" ]]; then
+                echo ""
+                echo "═══════════════════════════════════════════"
+                echo "  ARCHITECTURE REVIEW OUTPUT"
+                echo "═══════════════════════════════════════════"
+                echo ""
+                cat "$review_output"
+                echo ""
+            fi
+
+            if check_result; then
+                # Check if new backlog items were added during review
+                local _items_after=0
+                for _bf in "${BACKLOG_FILES[@]}"; do
+                    [[ -f "$BACKLOG_DIR/$_bf" ]] && _items_after=$((_items_after + $(count_items "$BACKLOG_DIR/$_bf")))
+                done
+                if [[ "$_items_after" -gt "$_items_before" ]]; then
+                    local _new_count=$((_items_after - _items_before))
+                    echo ""
+                    log_info "Hint: $_new_count new item(s) added to the backlog during review. Run '.aishore/aishore auto done' to continue."
+                fi
+            else
+                log_warning "Architecture review did not complete successfully"
+            fi
+        fi
     fi
 
     if [[ "$auto_mode" == "true" ]]; then
@@ -3905,7 +3977,7 @@ aishore - AI Sprint Runner (v$AISHORE_VERSION)
 Copyright (C) 2026 Simon Plant. Licensed under AGPL-3.0. See LICENSE.
 
 Usage: .aishore/aishore <command> [options]
-       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--dry-run]
+       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--auto-review] [--dry-run]
        .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--retries N] [--refine] [--quick]
 
 Sprint:
@@ -3948,7 +4020,7 @@ aishore - AI Sprint Runner (v$AISHORE_VERSION)
 Copyright (C) 2026 Simon Plant. Licensed under AGPL-3.0. See LICENSE.
 
 Usage: .aishore/aishore <command> [options]
-       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--dry-run]
+       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--auto-review] [--dry-run]
        .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--retries N] [--refine] [--quick]
 
 Commands:
@@ -3987,6 +4059,7 @@ Commands:
     --no-merge      Keep feature branches for PR review
     --refine        Refine spec on exhausted retries and try once more
     --quick         Skip maturity protocol (fast iteration)
+    --auto-review   Run architecture review automatically after completion
     --dry-run       Preview first item without running
 
   run [count]       Run N sprints (default: 1, feature branches, push/pull)
