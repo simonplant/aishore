@@ -3569,6 +3569,7 @@ cmd_backlog_list() {
 
 cmd_backlog_add() {
     local item_type="feat" title="" intent="" desc="" priority="should" category="" ready=false
+    local depends_on=""
     local -a ac_entries=()
     local pending_ac=""
 
@@ -3581,6 +3582,8 @@ cmd_backlog_add() {
             --priority)  priority="$2"; shift 2 ;;
             --category)  category="$2"; shift 2 ;;
             --ready)     ready=true; shift ;;
+            --depends-on)
+                depends_on="$2"; shift 2 ;;
             --ac)
                 # Flush any pending AC entry as plain string
                 if [[ -n "$pending_ac" ]]; then
@@ -3664,6 +3667,12 @@ cmd_backlog_add() {
         ac_json="$ac_json]"
     fi
 
+    # Build dependsOn array
+    local depends_json="[]"
+    if [[ -n "$depends_on" ]]; then
+        depends_json=$(printf '%s' "$depends_on" | tr ',' '\n' | jq -R . | jq -s .)
+    fi
+
     # Create item and append
     if ! add_item "$target_file" \
         --arg id "$new_id" \
@@ -3674,6 +3683,7 @@ cmd_backlog_add() {
         --arg category "$category" \
         --argjson ready "$ready" \
         --argjson ac_arr "$ac_json" \
+        --argjson deps "$depends_json" \
         '.items += [{
             id: $id,
             title: $title,
@@ -3683,6 +3693,7 @@ cmd_backlog_add() {
             category: (if $category == "" then null else $category end),
             steps: [],
             acceptanceCriteria: $ac_arr,
+            dependsOn: (if ($deps | length) > 0 then $deps else [] end),
             status: "todo",
             passes: false,
             readyForSprint: $ready
@@ -3728,7 +3739,7 @@ cmd_backlog_show() {
 
 cmd_backlog_edit() {
     local id="${1:-}"
-    [[ -z "$id" ]] && { log_error "Usage: backlog edit <ID> [--title ...] [--intent ...] [--priority ...] [--status ...] [--desc ...] [--category ...] [--ready] [--no-ready]"; return 1; }
+    [[ -z "$id" ]] && { log_error "Usage: backlog edit <ID> [--title ...] [--intent ...] [--priority ...] [--status ...] [--desc ...] [--category ...] [--depends-on ...] [--ready] [--no-ready]"; return 1; }
     shift
 
     # Verify item exists
@@ -3803,6 +3814,14 @@ cmd_backlog_edit() {
                 jq_updates="$jq_updates | .scope = []"
                 update_desc="$update_desc scope"
                 shift ;;
+            --depends-on)
+                validate_arg "$1" "${2:-}" || return 1
+                local deps_json
+                deps_json=$(printf '%s' "$2" | tr ',' '\n' | jq -R . | jq -s .)
+                jq_updates="$jq_updates | .dependsOn = \$deps"
+                updates+=("--argjson" "deps" "$deps_json")
+                update_desc="$update_desc dependsOn"
+                shift 2 ;;
             --ac)
                 validate_arg "$1" "${2:-}" || return 1
                 # Flush any pending AC entry
@@ -3877,7 +3896,7 @@ cmd_backlog_edit() {
     fi
 
     if [[ -z "$jq_updates" ]]; then
-        log_error "No updates specified. Use --title, --priority, --status, --desc, --category, --ready, --no-ready, --scope, --ac, --ac-verify"
+        log_error "No updates specified. Use --title, --priority, --status, --desc, --category, --ready, --no-ready, --scope, --depends-on, --ac, --ac-verify"
         return 1
     fi
 
