@@ -32,3 +32,7 @@ validation:
 # Maturity protocol (implement → critique → harden). Disable with --quick flag.
 # maturity:
 #   enabled: true
+
+# Merge strategy: "merge" (default, --no-ff) or "squash" (single commit per item)
+# merge:
+#   strategy: merge
