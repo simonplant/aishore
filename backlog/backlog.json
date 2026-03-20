@@ -335,6 +335,247 @@
       "passes": true,
       "readyForSprint": false,
       "completedAt": "2026-03-20T15:28:54-07:00"
+    },
+    {
+      "id": "FEAT-014",
+      "title": "Create docs/ARCHITECTURE.md — unified system architecture document",
+      "intent": "A developer evaluating aishore must understand how the system works from a single document — not by reading six files and piecing it together.",
+      "description": "Architecture content is fragmented across README.md (How It Works, The Workflow, Agent Roles, Item Schema, Project Structure), CLAUDE.md (Architecture section: sprint execution flow, maturity protocol, git branching, directory structure, completion contract, context auto-detection, agent invocation, concurrency, safe failure recovery, scope checking, testable AC, readiness gates, baseline pre-flight, spec refinement), CONTRIBUTING.md (Architecture section, Key Design Decisions), .aishore/agents/*.md (5 agent role files defining review focus areas and process), and backlog/DEFINITIONS.md (Definition of Ready, Definition of Done, Commander's Intent). The unified document must cover: system overview with pipeline diagram, the maturity protocol (implement-critique-harden) and why it exists, agent roles and data flow between them, git branching model, directory structure, design decisions with rationale, and the completion contract. Source from existing content — do not invent claims.",
+      "priority": "must",
+      "category": "documentation",
+      "steps": [
+        "Create docs/ directory if it does not exist",
+        "Read README.md sections: How It Works (pipeline diagram + 7-step flow), The Workflow (populate/groom/run/review), Agent Roles (table), Item Schema, Project Structure",
+        "Read CLAUDE.md Architecture section: sprint execution flow, maturity protocol, git branching model, directory structure, completion contract, context auto-detection, agent invocation, concurrency, safe failure recovery, scope checking, testable AC, readiness gates, baseline pre-flight, spec refinement, update integrity, version management",
+        "Read CONTRIBUTING.md: Architecture section, Key Design Decisions subsection, Version Management subsection",
+        "Read .aishore/agents/architect.md, developer.md, product-owner.md, tech-lead.md, validator.md for role definitions and process descriptions",
+        "Read backlog/DEFINITIONS.md for Definition of Ready, Definition of Done, Commander's Intent",
+        "Compose docs/ARCHITECTURE.md with these sections: Overview (pipeline diagram from README), The Maturity Protocol (from CLAUDE.md — why implement-critique-harden exists), Agent System (roles table from README + data flow from agent files), Git Branching Model (from CLAUDE.md), Directory Structure (from README Project Structure + CLAUDE.md), Design Decisions (from CONTRIBUTING.md Key Design Decisions, expanded with rationale), Quality Gates (from DEFINITIONS.md DoR/DoD + CLAUDE.md readiness gates/completion contract)",
+        "Verify all claims in the document are sourced from existing files — flag any gaps as TODO rather than inventing content"
+      ],
+      "acceptanceCriteria": [
+        "docs/ARCHITECTURE.md exists and covers: system overview with pipeline diagram, maturity protocol with rationale, agent roles and responsibilities, git branching model, directory structure, design decisions with rationale, quality gates (DoR/DoD/completion contract)",
+        "Every substantive claim in the document can be traced to an existing source file (README.md, CLAUDE.md, CONTRIBUTING.md, agent files, or DEFINITIONS.md)",
+        "The document reads as a coherent narrative for a developer evaluating the project — not a copy-paste collage",
+        "No content is duplicated verbatim from README.md — the README will link here instead"
+      ],
+      "scope": ["docs/ARCHITECTURE.md"],
+      "dependsOn": [],
+      "status": "todo",
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-015",
+      "title": "Create docs/QUICKSTART.md — zero to first completed sprint",
+      "intent": "A new user must go from git clone to a completed sprint in under 10 minutes using a single document — if they have to jump between files they will abandon the tool.",
+      "description": "The quickstart content exists but is split between README.md (Quick Start: install + first sprint commands) and .aishore/README.md (Setup, The Intent-Driven Model, Create Backlog Items, What Makes an Item Sprint-Ready, Groom, Run Sprints, Troubleshooting). The .aishore/README.md is essentially already a quickstart guide but is hidden inside a dotfolder where no one will find it. The unified quickstart must walk through: prerequisites check, installation (curl or manual), init wizard, writing your first intent and backlog item, grooming, running a sprint, and what success looks like at each step. Include expected terminal output so users know they're on the right track. Source from .aishore/README.md as primary content, README.md Quick Start for the install path.",
+      "priority": "must",
+      "category": "documentation",
+      "steps": [
+        "Read .aishore/README.md sections: Setup (init commands, config.yaml validation), The Intent-Driven Model (how to write intent — good/bad examples), Create Backlog Items (add command, flags, testable AC examples), What Makes an Item Sprint-Ready (5 readiness gates), Groom (what grooming does), Run Sprints (what happens during a sprint), Troubleshooting (common failures and fixes)",
+        "Read README.md Quick Start section (install via curl, manual install, first sprint 3-step block)",
+        "Read backlog/DEFINITIONS.md Commander's Intent section for good/bad intent examples",
+        "Compose docs/QUICKSTART.md with these sections: Prerequisites (bash 4.4+, Claude Code CLI, jq, git), Install (curl one-liner + manual option), Initialize (init wizard walkthrough with expected output), Write Your First Intent (from .aishore/README.md intent model + DEFINITIONS.md examples), Add a Backlog Item (from .aishore/README.md create items), Groom (what it does, expected output), Run Your First Sprint (command + what to expect at each pipeline stage), Verify Success (how to confirm the sprint completed correctly), Troubleshooting (from .aishore/README.md troubleshooting section)",
+        "Add expected terminal output blocks after each command so users can verify they are on track",
+        "Verify the end-to-end flow works: a user following only this document should reach a completed sprint"
+      ],
+      "acceptanceCriteria": [
+        "docs/QUICKSTART.md exists and covers: prerequisites, install, init, first intent, first backlog item, groom, run sprint, verify success, troubleshooting",
+        "Each step includes the exact command to run and expected terminal output",
+        "A user following only this document (without reading any other file) can go from zero to a completed sprint",
+        "Content is sourced from .aishore/README.md and README.md — not invented",
+        "The document does not exceed 300 lines — it is a quickstart, not a manual"
+      ],
+      "scope": ["docs/QUICKSTART.md"],
+      "dependsOn": [],
+      "status": "todo",
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-016",
+      "title": "Create docs/CONFIGURATION.md — every knob, what it does, safe defaults",
+      "intent": "Users must be able to find and understand every configuration option in one place — undocumented config options are invisible features.",
+      "description": "Configuration content is split between README.md (Configuration section: config.yaml example with 6 settings + environment variable table with 11 AISHORE_* vars + Complete Flag Reference for every CLI command) and CLAUDE.md (configuration precedence: env vars > config.yaml > defaults, scope checking modes, maturity protocol settings, agent permission descriptions). The unified document must cover: config.yaml with every option annotated, all environment variables with precedence rules, CLI flag reference grouped by command, and agent permissions. The current README Configuration section is a good foundation but only shows a subset of config.yaml options. The Complete Flag Reference section (~100 lines) should move here entirely.",
+      "priority": "should",
+      "category": "documentation",
+      "steps": [
+        "Read README.md Configuration section (config.yaml example, environment variable table)",
+        "Read README.md Complete Flag Reference section (all flags for backlog add/edit/list/check/populate/history, init, run, auto, groom, review, and other commands)",
+        "Read CLAUDE.md for: configuration precedence note, scope checking modes, maturity protocol settings, agent permission descriptions",
+        "Read .aishore/config.yaml for the actual config file schema with all available options",
+        "Compose docs/CONFIGURATION.md with these sections: Configuration File (annotated config.yaml with every option, its type, default value, and what it controls), Environment Variables (full table with precedence rules), CLI Flag Reference (moved from README Complete Flag Reference, grouped by command), Agent Permissions (what each permission enables, security implications), Configuration Precedence (env > config.yaml > defaults, with examples)",
+        "For each config option, document: name, type, default value, what it controls, when to change it"
+      ],
+      "acceptanceCriteria": [
+        "docs/CONFIGURATION.md exists and documents every config.yaml option, every AISHORE_* environment variable, and every CLI flag",
+        "Each option includes: name, type, default, description, and when to change it",
+        "Configuration precedence (env > config.yaml > defaults) is clearly explained",
+        "The Complete Flag Reference from README.md is fully represented here",
+        "No undocumented options remain — every setting in config.yaml and every AISHORE_* env var has an entry"
+      ],
+      "scope": ["docs/CONFIGURATION.md"],
+      "dependsOn": [],
+      "status": "todo",
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-017",
+      "title": "Create docs/PROBLEMS.md — the pain points aishore solves, with evidence",
+      "intent": "People search for problems, not solutions — this document must rank for the frustrations that drive users to aishore.",
+      "description": "This is the weakest content area. The only existing source is README.md's 'Why aishore?' section (two paragraphs: vibe coding breaks at scale, no memory between sessions, no quality gate, no batch work). The document needs to articulate specific, googleable failure modes: context loss between AI coding sessions, no regression detection in AI-generated code, no audit trail for AI development decisions, one-shot prompting fails for multi-feature work, no quality gate between AI implementation and merge, AI agents don't self-critique without structure. For each problem, describe the pain as the user experiences it, link evidence where possible (forum posts, tweets, articles about vibe coding limitations), and explain concretely how aishore addresses it. This is part documentation, part SEO, part positioning.",
+      "priority": "should",
+      "category": "documentation",
+      "steps": [
+        "Read README.md 'Why aishore?' section for the seed content (vibe coding limitations, no memory, no quality gate, no batch work)",
+        "Read README.md opening paragraphs for the positioning statement (structured intent-based batch development with inline critic loops)",
+        "Read .aishore/README.md 'The Intent-Driven Model' section for implicit problem statements (why intent-driven is needed vs ad-hoc)",
+        "Compose docs/PROBLEMS.md with one section per problem, each structured as: Problem heading (stated as user would search for it), Description of the pain (2-3 sentences, concrete), Evidence section (link to real discussions — GitHub issues, forum posts, articles about AI coding limitations — or mark as TODO if evidence needs gathering), How aishore addresses this (concrete explanation referencing specific aishore features)",
+        "Cover at minimum these problems: AI coding context loss between sessions, No quality gates on AI-generated code, One-shot prompting fails at project scale, No audit trail for AI development decisions, AI agents don't self-critique without structure, No way to batch AI development work",
+        "Write problem headings as search queries: e.g. 'AI-generated code has no quality gate before merge' not 'Quality Gates'"
+      ],
+      "acceptanceCriteria": [
+        "docs/PROBLEMS.md exists with at least 6 distinct problem sections",
+        "Each problem is stated as a user would search for it (search-friendly heading)",
+        "Each problem section includes: pain description, evidence or TODO placeholder for evidence, and how aishore addresses it",
+        "The document does not read as marketing copy — it reads as honest problem documentation with concrete solutions",
+        "Problems reference specific aishore features (maturity protocol, commander's intent, backlog system) not vague claims"
+      ],
+      "scope": ["docs/PROBLEMS.md"],
+      "dependsOn": [],
+      "status": "todo",
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-018",
+      "title": "Create docs/ROADMAP.md — what's planned, what's missing, what's prioritized",
+      "intent": "Contributors and evaluators must see where the project is going — a project with no visible roadmap looks abandoned or directionless.",
+      "description": "No roadmap document exists. The trajectory can be inferred from CHANGELOG.md (15 releases, v0.1.0 through v0.3.2, showing evolution from basic sprint runner to autonomous mode with grooming, validation, and diagnostics) and from known limitations (single-repo only, bash-only CLI, Claude Code dependency, no multi-language agent support, no remote/CI execution mode, no plugin system for custom agents). The roadmap should be organized as Now (active work) / Next (committed direction) / Later (vision) / Known Limitations (honest about current constraints). This is a lightweight document — 50-100 lines, not a product spec.",
+      "priority": "could",
+      "category": "documentation",
+      "steps": [
+        "Read CHANGELOG.md to understand the project trajectory and what has shipped (v0.1.0 through v0.3.2)",
+        "Review backlog/backlog.json and backlog/bugs.json for any remaining todo items that indicate planned work",
+        "Compose docs/ROADMAP.md with sections: Current Version (what v0.3.x delivers — summarize from CHANGELOG), Now (any active backlog items), Next (committed direction based on trajectory: what the next releases will focus on), Later (vision items: multi-repo support, CI/CD integration, plugin system, non-Claude agent support), Known Limitations (honest list: bash-only, single-repo, Claude Code dependency, macOS/Linux only)",
+        "Keep the document under 100 lines — this is a signpost, not a spec",
+        "Include a 'Want to help?' line at the bottom linking to docs/CONTRIBUTING.md"
+      ],
+      "acceptanceCriteria": [
+        "docs/ROADMAP.md exists with sections: Current Version, Now, Next, Later, Known Limitations",
+        "Known Limitations is honest about real constraints (bash-only, single-repo, Claude Code dependency)",
+        "The document is under 100 lines",
+        "Each roadmap item is a clear statement, not a vague aspiration"
+      ],
+      "scope": ["docs/ROADMAP.md"],
+      "dependsOn": [],
+      "status": "todo",
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-019",
+      "title": "Move CONTRIBUTING.md to docs/CONTRIBUTING.md and update references",
+      "intent": "All documentation must live in docs/ for consistency — a contributor looking in docs/ must find contribution guidelines there, not hunt at the repo root.",
+      "description": "CONTRIBUTING.md exists at repo root with complete content: Development Setup, Requirements, Code Style (bash conventions + naming table), Linting and Testing (shellcheck, syntax check, smoke test, JSON validation, checksums), Pull Request Process, Commit Convention table, Architecture section, and CLA. The move is straightforward: relocate the file, replace the inline Architecture section with a link to docs/ARCHITECTURE.md (FEAT-014), and add a section on agent prompt authoring (how to modify files in .aishore/agents/ and test prompt changes). Update any references to CONTRIBUTING.md in README.md and other files to point to the new location. GitHub will still find CONTRIBUTING.md via the docs/ path for its contributing prompt.",
+      "priority": "should",
+      "category": "documentation",
+      "steps": [
+        "Move CONTRIBUTING.md to docs/CONTRIBUTING.md",
+        "In docs/CONTRIBUTING.md, replace the inline Architecture section with a link: 'See [ARCHITECTURE.md](ARCHITECTURE.md) for system architecture and design decisions'",
+        "Add a new section 'Agent Prompt Authoring' explaining how to modify .aishore/agents/*.md files, what each agent file controls, and how to test prompt changes",
+        "Search all files for references to CONTRIBUTING.md and update paths to docs/CONTRIBUTING.md",
+        "Verify README.md Contributing section links to docs/CONTRIBUTING.md"
+      ],
+      "acceptanceCriteria": [
+        "docs/CONTRIBUTING.md exists with all original content preserved",
+        "CONTRIBUTING.md no longer exists at repo root",
+        "The inline Architecture section is replaced with a link to docs/ARCHITECTURE.md",
+        "An Agent Prompt Authoring section exists explaining how to modify agent files",
+        "All references to CONTRIBUTING.md across the repo point to docs/CONTRIBUTING.md"
+      ],
+      "scope": ["CONTRIBUTING.md", "docs/CONTRIBUTING.md", "README.md"],
+      "dependsOn": ["FEAT-014"],
+      "status": "todo",
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-020",
+      "title": "Move CHANGELOG.md to docs/CHANGELOG.md and update references",
+      "intent": "All documentation must live in docs/ for consistency — changelog is documentation, not a build artifact.",
+      "description": "CHANGELOG.md exists at repo root with 15 well-structured releases (v0.1.0 through v0.3.2) using Added/Changed/Fixed/Removed/Documentation sections. This is a pure file move. Update any references to CHANGELOG.md in README.md, CONTRIBUTING.md, and other files to point to docs/CHANGELOG.md. Consider leaving a symlink at the root for tools that expect CHANGELOG.md at the repo root, but only if a concrete tool dependency is identified.",
+      "priority": "could",
+      "category": "documentation",
+      "steps": [
+        "Move CHANGELOG.md to docs/CHANGELOG.md",
+        "Search all files for references to CHANGELOG.md and update paths to docs/CHANGELOG.md",
+        "Verify README.md links to docs/CHANGELOG.md",
+        "Verify no build scripts or CI workflows reference CHANGELOG.md at the root"
+      ],
+      "acceptanceCriteria": [
+        "docs/CHANGELOG.md exists with all original content preserved",
+        "CHANGELOG.md no longer exists at repo root",
+        "All references across the repo point to docs/CHANGELOG.md",
+        "CI workflows (if any reference CHANGELOG.md) still work"
+      ],
+      "scope": ["CHANGELOG.md", "docs/CHANGELOG.md", "README.md"],
+      "dependsOn": [],
+      "status": "todo",
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-021",
+      "title": "Slim README.md to storefront format — problem, solution, quickstart, links",
+      "intent": "The README must sell the project in 60 seconds — everything else belongs in docs/. A 500-line README is a wall, not a welcome mat.",
+      "description": "The current README.md is approximately 500 lines and contains content that belongs in 4 different docs/ files. After FEAT-014 through FEAT-020 create the destination files, the README must be cut to storefront format: badges, one-sentence pitch, one-paragraph description, The Problem (2-3 sentences from 'Why aishore?'), Quick Start (install + first sprint — 3 steps max, link to docs/QUICKSTART.md), How It Works (1 paragraph + pipeline diagram, link to docs/ARCHITECTURE.md), Status (honest alpha/beta/stable + what works/doesn't), Links section (all docs/ files with one-line descriptions), Author section (name, what you're building, open to roles). Remove entirely: How It Works detail, The Workflow, Autonomous Mode, Agent Roles table, Complete Flag Reference, Item Schema, Project Structure, Configuration section, Requirements, Keeping Updated. All of this content will already exist in docs/ files.",
+      "priority": "must",
+      "category": "documentation",
+      "steps": [
+        "Verify that docs/ARCHITECTURE.md, docs/QUICKSTART.md, docs/CONFIGURATION.md, docs/PROBLEMS.md, docs/CONTRIBUTING.md, and docs/CHANGELOG.md all exist (dependencies must be complete)",
+        "Keep in README.md: badges, opening tagline and paragraph, the flow diagram (You: define intent → aishore develops → You: review), 'Why aishore?' condensed to 2-3 sentences",
+        "Keep in README.md: Quick Start section but trim to just: install one-liner, init command, first sprint 3-step block, then 'See [full quickstart](docs/QUICKSTART.md)' link",
+        "Keep in README.md: How It Works but trim to 1 paragraph + the pipeline ASCII diagram + link to docs/ARCHITECTURE.md",
+        "Add a Status section: current version, stability level, what works well, what's rough",
+        "Add a Links section listing every docs/ file with a one-line description",
+        "Add an Author section: Simon Plant, building AI infrastructure tools, open to roles, GitHub/Twitter links",
+        "Remove entirely: The Workflow (4 subsections), Autonomous Mode, Agent Roles table, Complete Flag Reference (all subcommand flag tables), Item Schema, Project Structure, Configuration (config.yaml + env var table), Requirements, Keeping Updated",
+        "Verify all removed content has a home in a docs/ file — nothing should be lost, only relocated"
+      ],
+      "acceptanceCriteria": [
+        "README.md is under 120 lines (currently ~500)",
+        "README.md contains only: badges, pitch, problem statement, quick start (abbreviated), how it works (abbreviated), status, links to docs/, author section",
+        "Every section removed from README.md has a corresponding docs/ file that contains the content",
+        "No content is lost — everything is either in README.md or linked from it via docs/",
+        "README.md links section includes: Architecture, Quickstart, Configuration, Problems, Roadmap, Contributing, Changelog"
+      ],
+      "scope": ["README.md"],
+      "dependsOn": ["FEAT-014", "FEAT-015", "FEAT-016", "FEAT-017", "FEAT-018", "FEAT-019", "FEAT-020"],
+      "status": "todo",
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-022",
+      "title": "Add .doc-standard.yaml schema file for doc structure enforcement",
+      "intent": "The repo must declare its doc standard version and structure so automated checks can validate compliance — undeclared standards are unenforceable.",
+      "description": "This is part of a cross-repo documentation standard (see repo-docs-system.md in the std-docs repo). The .doc-standard.yaml file declares: schema version, project metadata (name, tagline, category), required files list, cross-repo links to sibling projects (ClawHQ, Easy-Markdown, GigOS), and author info for consistency enforcement. This file enables a future GitHub Action (doc-check.yml) to validate that all required docs exist and the README follows the template structure. The schema is lightweight — under 30 lines of YAML.",
+      "priority": "could",
+      "category": "documentation",
+      "steps": [
+        "Create .doc-standard.yaml at repo root",
+        "Set schema_version to '1.0'",
+        "Set project name to 'aishore', tagline to 'Autonomous sprint orchestration for Claude Code', category to 'tool'",
+        "List required_files matching the docs/ structure: README.md, docs/ARCHITECTURE.md, docs/QUICKSTART.md, docs/CONFIGURATION.md, docs/PROBLEMS.md, docs/ROADMAP.md, docs/CONTRIBUTING.md, docs/CHANGELOG.md",
+        "Add portfolio section with sibling repos: ClawHQ (complementary), Easy-Markdown (related), GigOS (related)",
+        "Add author section: name Simon Plant, location Santa Barbara CA, status 'Building AI infrastructure tools. Open to roles.'",
+        "Verify the file is valid YAML"
+      ],
+      "acceptanceCriteria": [
+        ".doc-standard.yaml exists at repo root and is valid YAML",
+        "File declares schema_version, project metadata, required_files list, portfolio sibling repos, and author info",
+        "required_files list matches the actual docs/ file structure created by FEAT-014 through FEAT-020",
+        "Portfolio section lists ClawHQ, Easy-Markdown, and GigOS with correct GitHub URLs"
+      ],
+      "scope": [".doc-standard.yaml"],
+      "dependsOn": ["FEAT-021"],
+      "status": "todo",
+      "readyForSprint": false
     }
   ]
 }
