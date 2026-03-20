@@ -45,11 +45,12 @@
         "After a merge conflict aborts a multi-sprint run, output lists item IDs that were queued but not started",
         "Batch summary accurately reflects items not attempted due to early abort"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Real UX gap: users lose track of which items were skipped after a merge conflict abort. Needs pre-loop item list and post-abort diff reporting."
+      "groomingNotes": "Real UX gap: users lose track of which items were skipped after a merge conflict abort. Needs pre-loop item list and post-abort diff reporting.",
+      "completedAt": "2026-03-20T11:14:54-07:00"
     },
     {
       "id": "BUG-003",
