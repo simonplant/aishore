@@ -1,30 +1,32 @@
 {
-  "sprintId": "sprint-1774040176",
-  "startedAt": "2026-03-20T13:56:16-07:00",
+  "sprintId": "sprint-1774041924",
+  "startedAt": "2026-03-20T14:25:24-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-026",
-    "title": "backlog edit --groomed-at accepts invalid date values without validation",
-    "intent": "backlog edit --groomed-at must reject non-date values — silently storing garbage in groomedAt corrupts item metadata and is inconsistent with backlog history --since which validates the same YYYY-MM-DD format.",
-    "description": "In cmd_backlog_edit(), the --groomed-at case at lines 3934-3945 accepts any non-empty value that doesn't start with '--' as a valid date. There is no format check. Running 'backlog edit FEAT-001 --groomed-at notadate' silently stores 'notadate' in groomedAt. In contrast, cmd_backlog_history() validates its --since date argument against ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ before using it (lines 4022-4024). The groomedAt field is displayed in backlog show and used for tracking grooming activity, so invalid values undermine tooling built on this field. Fix: add the same regex validation used in cmd_backlog_history() --since.",
-    "sourceBacklog": "bugs.json",
+    "id": "FEAT-007",
+    "title": "Configurable auto-fix command (fix_cmd)",
+    "intent": "Lint-fixable issues must be auto-resolved before validation.",
+    "description": "",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "In .aishore/aishore, find cmd_backlog_edit() and locate the --groomed-at case (around line 3934)",
-      "After reading gdate from $2, add a format check: if \\! [[ \"$gdate\" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then log_error \"Invalid date format: $gdate (expected YYYY-MM-DD)\"; return 1; fi",
-      "This check should only apply when the user provided a value (shift 2 path), not the default-to-today path (shift 1 path)",
-      "Verify: 'backlog edit <ID> --groomed-at baddate' errors; 'backlog edit <ID> --groomed-at 2026-01-01' works; 'backlog edit <ID> --groomed-at' sets today's date"
+      "Add fix_cmd config (config.yaml, AISHORE_FIX_CMD)",
+      "Run fix_cmd after developer agent completes",
+      "Warn on failure but do not abort sprint",
+      "On retry, run fix_cmd before developer re-attempts",
+      "Tell developer agent prompt that fix_cmd will auto-run"
     ],
     "acceptanceCriteria": [
-      "backlog edit <ID> --groomed-at notadate exits non-zero and prints an error about invalid date format",
-      "backlog edit <ID> --groomed-at 2026-03-20 still sets groomedAt correctly",
-      "backlog edit <ID> --groomed-at (no value) still uses today's date as the default",
-      "Error message includes expected format: YYYY-MM-DD"
+      "fix_cmd runs after developer agent",
+      "AISHORE_FIX_CMD env var takes precedence",
+      "fix_cmd failure warns but does not abort",
+      "On retry, fix_cmd runs before re-attempt",
+      "Unchanged when fix_cmd is unset"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T13:56:16-07:00",
+    "startedAt": "2026-03-20T14:25:24-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T13:58:39-07:00"
+    "completedAt": "2026-03-20T14:29:43-07:00"
   },
-  "completedAt": "2026-03-20T13:58:39-07:00",
+  "completedAt": "2026-03-20T14:29:43-07:00",
   "attempts": 1
 }
