@@ -1903,6 +1903,10 @@ cmd_run() {
                 retries="$1"
                 shift ;;
             *)
+                if [[ "$1" == --* ]]; then
+                    log_error "Unknown option: $1"
+                    return 1
+                fi
                 if [[ "$1" =~ ^[0-9]+$ ]]; then
                     count="$1"
                 else
