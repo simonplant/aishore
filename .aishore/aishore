@@ -1923,10 +1923,19 @@ _handle_sprint_success() {
     # Ensure agent's work is committed (safety net if agent missed it)
     if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
         log_warning "Agent left uncommitted changes — committing"
+        local safety_summary
+        safety_summary=$(jq -r '.summary // ""' "$STATUS_DIR/result.json" 2>/dev/null || echo "")
+        safety_summary="${safety_summary:0:500}"
         git add -A
-        git commit -m "feat($ITEM_ID): implement sprint item
+        if [[ -n "$safety_summary" ]]; then
+            git commit -m "feat($ITEM_ID): $safety_summary
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
+        else
+            git commit -m "feat($ITEM_ID): implement sprint item
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+        fi
     fi
 
     # Worktree mode: copy result.json back, then remove worktree and restore paths
@@ -1966,6 +1975,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
         if git merge --squash "$AISHORE_FEATURE_BRANCH"; then
             local dev_summary
             dev_summary=$(jq -r '.summary // "implement sprint item"' "$STATUS_DIR/result.json" 2>/dev/null || echo "implement sprint item")
+            dev_summary="${dev_summary:0:500}"
             git commit -m "feat($ITEM_ID): $dev_summary
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -1987,7 +1997,16 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
     else
         log_info "Merging $AISHORE_FEATURE_BRANCH → $base_branch"
         git checkout "$base_branch"
-        if git merge --no-ff "$AISHORE_FEATURE_BRANCH" -m "merge: $ITEM_ID sprint branch
+        local merge_summary
+        merge_summary=$(jq -r '.summary // ""' "$STATUS_DIR/result.json" 2>/dev/null || echo "")
+        merge_summary="${merge_summary:0:500}"
+        local merge_msg
+        if [[ -n "$merge_summary" ]]; then
+            merge_msg="merge: $ITEM_ID $merge_summary"
+        else
+            merge_msg="merge: $ITEM_ID sprint branch"
+        fi
+        if git merge --no-ff "$AISHORE_FEATURE_BRANCH" -m "$merge_msg
 
 Co-Authored-By: Claude <noreply@anthropic.com>"; then
             git branch -d "$AISHORE_FEATURE_BRANCH" 2>/dev/null || true
