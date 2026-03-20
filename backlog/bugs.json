@@ -242,11 +242,12 @@
         "grep confirms no other callers of remove_items_by_status exist with full paths"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Tech debt: path convention inconsistency between remove_items_by_status and the other CRUD helpers. Small refactor with one call site to update. Low risk — only one caller exists today (cmd_clean)."
+      "groomingNotes": "Tech debt: path convention inconsistency between remove_items_by_status and the other CRUD helpers. Small refactor with one call site to update. Low risk — only one caller exists today (cmd_clean).",
+      "completedAt": "2026-03-20T12:27:27-07:00"
     },
     {
       "id": "BUG-011",
