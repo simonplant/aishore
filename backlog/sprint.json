@@ -1,31 +1,32 @@
 {
-  "sprintId": "sprint-1774031247",
-  "startedAt": "2026-03-20T11:27:27-07:00",
+  "sprintId": "sprint-1774031451",
+  "startedAt": "2026-03-20T11:30:51-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-003",
-    "title": "backlog check flags unmet dependsOn as a readiness gate",
-    "intent": "backlog check must surface unmet dependencies so users know an item cannot safely run — dependency violations must be visible before sprint time, not discovered after.",
-    "description": "backlog check <ID> currently validates title, intent, steps, and AC. It does not check whether items listed in dependsOn exist and are done. If an item depends on FEAT-001 and FEAT-001 is still todo, the check should warn (or fail, depending on mode). This is a companion to FEAT-001 (picker enforcement) — between the two, the system prevents dependency violations at both check-time and pick-time. Implementation: in the readiness gate logic, for each ID in dependsOn, verify the item exists in any backlog file and has status=done.",
+    "id": "FEAT-002",
+    "title": "Trigger architecture review after auto done drains backlog",
+    "intent": "When auto done finishes, the user must get an architecture review so accumulated changes are evaluated while context is still fresh — not days later.",
+    "description": "When auto done or auto p* fully drains all in-scope items (exit reason: all items complete, not circuit-breaker abort), aishore should offer to run an architecture review. This closes the loop on the autonomous workflow: populate → groom → auto → review. The review should be opt-in (prompt or --auto-review flag), not forced. The Architect agent already exists; this is about wiring the trigger. Also consider: after the review, the architect may add items to the backlog — auto mode should surface this as a next-step hint.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "In .aishore/aishore, find cmd_backlog_check() where readiness warnings are assembled",
-      "After existing checks (title, intent, steps, AC), add a loop over .dependsOn // []",
-      "For each dependency ID, call find_item (or scan backlog JSON files) to locate the item",
-      "If the dependency is not found, emit a warning: dependency ID not found in any backlog",
-      "If found but status != done, emit a warning showing the dependency ID and its current status",
-      "Ensure warning format matches other readiness gate messages"
+      "In .aishore/aishore, find cmd_auto() and identify the loop exit paths: all-done vs circuit-breaker abort",
+      "Add a variable to track which exit path was taken (all-done vs abort)",
+      "On all-done exit, check for --auto-review flag; if set, skip prompt and run review directly",
+      "If --auto-review is absent, print a prompt asking the user whether to run architecture review",
+      "Invoke cmd_review (or equivalent) when confirmed",
+      "After review completes, check if new items exist in any backlog file and print a next-step hint if found"
     ],
     "acceptanceCriteria": [
-      "backlog check <ID> warns when any dependsOn item does not have status: done",
-      "Warning includes the dependency ID and its current status (or 'not found' if missing from all backlogs)",
-      "Items with no dependsOn field or an empty array pass this check without warnings"
+      "After auto done completes all items (not circuit-breaker abort), user is prompted to run architecture review",
+      "The --auto-review flag skips the prompt and runs architecture review automatically",
+      "No review prompt is shown when auto exits via circuit-breaker abort",
+      "If new backlog items exist after review completes, a next-step hint is printed"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T11:27:27-07:00",
+    "startedAt": "2026-03-20T11:30:51-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T11:30:50-07:00"
+    "completedAt": "2026-03-20T11:37:59-07:00"
   },
-  "completedAt": "2026-03-20T11:30:50-07:00",
+  "completedAt": "2026-03-20T11:37:59-07:00",
   "attempts": 1
 }

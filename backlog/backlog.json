@@ -48,11 +48,12 @@
         "No review prompt is shown when auto exits via circuit-breaker abort",
         "If new backlog items exist after review completes, a next-step hint is printed"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Steps and AC added. Architect agent already exists; this is wiring, not building. Main risk: cleanly distinguishing all-done vs abort exit path in cmd_auto()."
+      "groomingNotes": "Steps and AC added. Architect agent already exists; this is wiring, not building. Main risk: cleanly distinguishing all-done vs abort exit path in cmd_auto().",
+      "completedAt": "2026-03-20T11:37:59-07:00"
     },
     {
       "id": "FEAT-003",
