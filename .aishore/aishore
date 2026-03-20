@@ -3465,6 +3465,7 @@ cmd_backlog_check() {
     else
         log_warning "$id has readiness warnings:"
         echo -e "$CHECK_GATES_WARNINGS"
+        return 1
     fi
 }
 
