@@ -1,32 +1,31 @@
 {
-  "sprintId": "sprint-1774041924",
-  "startedAt": "2026-03-20T14:25:24-07:00",
+  "sprintId": "sprint-1774042184",
+  "startedAt": "2026-03-20T14:29:44-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-007",
-    "title": "Configurable auto-fix command (fix_cmd)",
-    "intent": "Lint-fixable issues must be auto-resolved before validation.",
+    "id": "FEAT-008",
+    "title": "Squash-merge feature branches into single commit",
+    "intent": "Each sprint item must produce exactly one clean commit on the target branch.",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Add fix_cmd config (config.yaml, AISHORE_FIX_CMD)",
-      "Run fix_cmd after developer agent completes",
-      "Warn on failure but do not abort sprint",
-      "On retry, run fix_cmd before developer re-attempts",
-      "Tell developer agent prompt that fix_cmd will auto-run"
+      "Add merge_strategy config default merge, option squash",
+      "When squash, use git merge --squash",
+      "Create commit using developer agent summary",
+      "Follow conventional commit format"
     ],
     "acceptanceCriteria": [
-      "fix_cmd runs after developer agent",
-      "AISHORE_FIX_CMD env var takes precedence",
-      "fix_cmd failure warns but does not abort",
-      "On retry, fix_cmd runs before re-attempt",
-      "Unchanged when fix_cmd is unset"
+      "merge_strategy squash causes squash-merge",
+      "AISHORE_MERGE_STRATEGY=squash env var works",
+      "Exactly one commit per sprint item",
+      "Squash commit includes developer summary",
+      "Default no-ff merge unchanged"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T14:25:24-07:00",
+    "startedAt": "2026-03-20T14:29:44-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T14:29:43-07:00"
+    "completedAt": "2026-03-20T14:37:48-07:00"
   },
-  "completedAt": "2026-03-20T14:29:43-07:00",
+  "completedAt": "2026-03-20T14:37:48-07:00",
   "attempts": 1
 }

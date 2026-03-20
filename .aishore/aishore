@@ -87,6 +87,7 @@ AUTO_MAX_FAILURES="5"
 SCOPE_MODE="warn"
 MATURITY_ENABLED="true"
 OUTPUT_TRUNCATE_LINES="50"
+MERGE_STRATEGY="merge"
 
 # Default permission sets per agent role
 PERMS_DEVELOPER="Bash,Edit,Write,Read,Glob,Grep"
@@ -282,6 +283,7 @@ load_config() {
             ".scope.mode            SCOPE_MODE"
             ".maturity.enabled      MATURITY_ENABLED"
             ".output.truncate_lines OUTPUT_TRUNCATE_LINES"
+            ".merge.strategy        MERGE_STRATEGY"
             ".permissions.developer CFG_PERMS_DEVELOPER"
             ".permissions.validator CFG_PERMS_VALIDATOR"
             ".permissions.reviewer  CFG_PERMS_REVIEWER"
@@ -322,6 +324,7 @@ _apply_env_overrides() {
         "AISHORE_SCOPE_MODE        SCOPE_MODE"
         "AISHORE_MATURITY          MATURITY_ENABLED"
         "AISHORE_OUTPUT_TRUNCATE_LINES OUTPUT_TRUNCATE_LINES"
+        "AISHORE_MERGE_STRATEGY    MERGE_STRATEGY"
     )
     local _env_name _target_var
     for _entry in "${_env_map[@]}"; do
@@ -1872,6 +1875,30 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
                 log_warning "Failed to push $AISHORE_FEATURE_BRANCH — push manually"
         fi
         git checkout "$base_branch"
+    elif [[ "$MERGE_STRATEGY" == "squash" ]]; then
+        log_info "Squash-merging $AISHORE_FEATURE_BRANCH → $base_branch"
+        git checkout "$base_branch"
+        if git merge --squash "$AISHORE_FEATURE_BRANCH"; then
+            local dev_summary
+            dev_summary=$(jq -r '.summary // "implement sprint item"' "$STATUS_DIR/result.json" 2>/dev/null || echo "implement sprint item")
+            git commit -m "feat($ITEM_ID): $dev_summary
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+            git branch -D "$AISHORE_FEATURE_BRANCH" 2>/dev/null || true
+            log_success "Squash-merged and cleaned up $AISHORE_FEATURE_BRANCH"
+        else
+            log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
+            AISHORE_FEATURE_BRANCH=""
+            return 1
+        fi
+
+        if git remote get-url origin &>/dev/null; then
+            log_info "Syncing with remote"
+            git push origin "$base_branch" 2>/dev/null || \
+                log_warning "Failed to push — continuing offline"
+            git pull --rebase origin "$base_branch" 2>/dev/null || \
+                log_warning "Failed to pull — continuing with local state"
+        fi
     else
         log_info "Merging $AISHORE_FEATURE_BRANCH → $base_branch"
         git checkout "$base_branch"
