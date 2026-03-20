@@ -80,6 +80,7 @@ MODEL_FAST="claude-sonnet-4-6"
 AGENT_TIMEOUT="3600"
 VALIDATE_CMD=""
 VALIDATE_TIMEOUT="120"
+FIX_CMD=""
 NOTIFY_CMD=""
 AUTO_GROOM_THRESHOLD="3"
 AUTO_MAX_FAILURES="5"
@@ -271,6 +272,7 @@ load_config() {
         local -a _cfg_map=(
             ".validation.command    VALIDATE_CMD"
             ".validation.timeout    VALIDATE_TIMEOUT"
+            ".fix.command           FIX_CMD"
             ".models.primary        MODEL_PRIMARY"
             ".models.fast           MODEL_FAST"
             ".agent.timeout         AGENT_TIMEOUT"
@@ -313,6 +315,7 @@ _apply_env_overrides() {
         "AISHORE_AGENT_TIMEOUT      AGENT_TIMEOUT"
         "AISHORE_VALIDATE_CMD       VALIDATE_CMD"
         "AISHORE_VALIDATE_TIMEOUT   VALIDATE_TIMEOUT"
+        "AISHORE_FIX_CMD            FIX_CMD"
         "AISHORE_NOTIFY_CMD         NOTIFY_CMD"
         "AISHORE_AUTO_GROOM_THRESHOLD AUTO_GROOM_THRESHOLD"
         "AISHORE_AUTO_MAX_FAILURES  AUTO_MAX_FAILURES"
@@ -1014,6 +1017,13 @@ build_agent_prompt() {
 ## Commander's Intent
 The \`intent\` field in sprint.json is a non-negotiable directive — what must be true when done. When the spec is unclear or steps seem wrong, intent is the order you follow."
 
+        if [[ -n "$FIX_CMD" ]]; then
+            validate_hint="$validate_hint
+
+## Auto-Fix
+After you finish, the orchestrator will automatically run \`$FIX_CMD\` to fix lint/formatting issues. Do not worry about auto-fixable style issues — focus on correctness and AC."
+        fi
+
         if [[ "$MATURITY_ENABLED" == "true" ]]; then
             validate_hint="$validate_hint
 
@@ -1683,6 +1693,14 @@ _run_retry_loop() {
             dev_extra_prompt="${dev_extra_prompt}${failure_ctx}"
         fi
 
+        # On retry, run fix_cmd before developer re-attempts
+        if [[ $attempt -gt 0 && -n "$FIX_CMD" ]]; then
+            log_info "Running fix command before retry: $FIX_CMD"
+            if ! bash -c "$FIX_CMD" 2>&1; then
+                log_warning "Fix command failed before retry (continuing anyway)"
+            fi
+        fi
+
         # Run developer agent
         run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
         if ! check_result; then
@@ -1696,6 +1714,14 @@ _run_retry_loop() {
             fi
             _record_sprint_failure "Implementation failed" "Implementation failed"
             break
+        fi
+
+        # Run fix_cmd after developer agent completes (e.g., auto-format, lint --fix)
+        if [[ -n "$FIX_CMD" ]]; then
+            log_info "Running fix command: $FIX_CMD"
+            if ! bash -c "$FIX_CMD" 2>&1; then
+                log_warning "Fix command failed (continuing anyway)"
+            fi
         fi
 
         # Check scope violations (after developer, before validation)

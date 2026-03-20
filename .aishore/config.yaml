@@ -6,6 +6,10 @@ validation:
   command: ""
   timeout: 120
 
+# Auto-fix command run after developer agent (e.g., "npm run lint -- --fix")
+# fix:
+#   command: ""
+
 # Models (uncomment to override)
 # models:
 #   primary: "claude-opus-4-6"
