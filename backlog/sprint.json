@@ -1,30 +1,30 @@
 {
-  "sprintId": "sprint-1774038668",
-  "startedAt": "2026-03-20T13:31:08-07:00",
+  "sprintId": "sprint-1774039670",
+  "startedAt": "2026-03-20T13:47:50-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-021",
-    "title": "backlog list --status and --type flags missing validate_arg for empty values",
-    "intent": "backlog list must reject flag calls with missing values — silently accepting an empty filter silently changes which items are shown, leading to misleading output.",
-    "description": "In cmd_backlog_list(), the --status and --type flag cases do 'filter_status=\"$2\"; shift 2' without calling validate_arg first. If a user runs 'backlog list --status' without a value, $2 is empty, filter_status gets set to empty string, and the subsequent jq filter produces unexpected results. cmd_backlog_add and cmd_backlog_edit consistently call validate_arg for all value-bearing flags. The fix is to add validate_arg calls in the --status and --type cases, consistent with the established pattern.",
+    "id": "BUG-026",
+    "title": "backlog edit --groomed-at accepts invalid date values without validation",
+    "intent": "backlog edit --groomed-at must reject non-date values — silently storing garbage in groomedAt corrupts item metadata and is inconsistent with backlog history --since which validates the same YYYY-MM-DD format.",
+    "description": "In cmd_backlog_edit(), the --groomed-at case at lines 3934-3945 accepts any non-empty value that doesn't start with '--' as a valid date. There is no format check. Running 'backlog edit FEAT-001 --groomed-at notadate' silently stores 'notadate' in groomedAt. In contrast, cmd_backlog_history() validates its --since date argument against ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ before using it (lines 4022-4024). The groomedAt field is displayed in backlog show and used for tracking grooming activity, so invalid values undermine tooling built on this field. Fix: add the same regex validation used in cmd_backlog_history() --since.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_backlog_list() and locate the --status and --type flag cases (around line 3546-3552)",
-      "Add 'validate_arg \"$1\" \"${2:-}\" || return 1' before each assignment, matching the pattern in cmd_backlog_add/edit",
-      "Verify that 'backlog list --status' (no value) prints an error and exits non-zero",
-      "Verify that 'backlog list --type' (no value) prints an error and exits non-zero",
-      "Verify that 'backlog list --status todo' and 'backlog list --type bug' still work correctly"
+      "In .aishore/aishore, find cmd_backlog_edit() and locate the --groomed-at case (around line 3934)",
+      "After reading gdate from $2, add a format check: if \\! [[ \"$gdate\" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then log_error \"Invalid date format: $gdate (expected YYYY-MM-DD)\"; return 1; fi",
+      "This check should only apply when the user provided a value (shift 2 path), not the default-to-today path (shift 1 path)",
+      "Verify: 'backlog edit <ID> --groomed-at baddate' errors; 'backlog edit <ID> --groomed-at 2026-01-01' works; 'backlog edit <ID> --groomed-at' sets today's date"
     ],
     "acceptanceCriteria": [
-      "backlog list --status (no value) exits non-zero with an error message",
-      "backlog list --type (no value) exits non-zero with an error message",
-      "backlog list --status todo and backlog list --type bug still work correctly"
+      "backlog edit <ID> --groomed-at notadate exits non-zero and prints an error about invalid date format",
+      "backlog edit <ID> --groomed-at 2026-03-20 still sets groomedAt correctly",
+      "backlog edit <ID> --groomed-at (no value) still uses today's date as the default",
+      "Error message includes expected format: YYYY-MM-DD"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T13:31:08-07:00",
+    "startedAt": "2026-03-20T13:47:50-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T13:33:11-07:00"
+    "completedAt": "2026-03-20T13:51:18-07:00"
   },
-  "completedAt": "2026-03-20T13:33:11-07:00",
+  "completedAt": "2026-03-20T13:51:18-07:00",
   "attempts": 1
 }
