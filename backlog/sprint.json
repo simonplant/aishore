@@ -1,29 +1,29 @@
 {
-  "sprintId": "sprint-1774035182",
-  "startedAt": "2026-03-20T12:33:02-07:00",
+  "sprintId": "sprint-1774035310",
+  "startedAt": "2026-03-20T12:35:10-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-014",
-    "title": "cmd_backlog_populate silently ignores unknown options",
-    "intent": "cmd_backlog_populate must reject unknown flags — silently discarding options is inconsistent with the established error-handling pattern and hides user mistakes",
-    "description": "cmd_backlog_populate() (around line 3457) performs no option parsing at all. Any flag passed to 'backlog populate' is silently ignored. Most other commands use a while/case loop with a catch-all that calls log_error and returns 1. Fix: add a proper option parsing loop. populate currently takes no flags, so any argument is an error — the loop body should be just the catch-all that rejects everything.",
+    "id": "BUG-015",
+    "title": "cmd_run treats unknown flags as item IDs instead of erroring",
+    "intent": "cmd_run must reject unrecognized flags — silently accepting unknown options as item IDs causes confusing behavior where typos like --dry_run are interpreted as sprint IDs and silently do nothing",
+    "description": "cmd_run() has a catch-all in its option parsing loop (around line 1905) that accepts any non-flag positional argument as either a count or a specific item ID. This means unknown flags like '--dry_run' (intended as --dry-run) or '--retries' (missing value) are silently interpreted as item IDs, producing a 'no item found' error rather than 'unknown option'. The fix is to detect that an argument starts with '--' in the catch-all and reject it as an unknown option before treating it as a positional.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_backlog_populate() and identify the current argument handling (none)",
-      "Add a while/case loop before the function body that rejects unknown options with log_error 'Unknown option: $1' and returns 1",
-      "Verify that 'backlog populate' with no arguments still works correctly",
-      "Verify that 'backlog populate --typo' now prints an error and exits non-zero"
+      "In .aishore/aishore, find cmd_run() and locate the catch-all in the option parsing loop (around line 1905-1912)",
+      "In the catch-all branch, before the existing logic, add: if [[ \"$1\" == --* ]]; then log_error \"Unknown option: $1\"; return 1; fi",
+      "Verify that 'run 3', 'run FEAT-001', and 'run' without arguments still work correctly",
+      "Verify that 'run --typo' now prints an error and exits non-zero"
     ],
     "acceptanceCriteria": [
-      "backlog populate --unknown-flag exits with a non-zero status and prints 'Unknown option: --unknown-flag'",
-      "backlog populate with no arguments still works correctly",
-      "Error message matches the format used by other commands"
+      "aishore run --unknown-flag exits with a non-zero status and prints an error message",
+      "aishore run N (numeric count), aishore run <ID>, and aishore run still work correctly",
+      "Error message matches the format used by other commands: 'Unknown option: <flag>'"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T12:33:02-07:00",
+    "startedAt": "2026-03-20T12:35:10-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T12:35:08-07:00"
+    "completedAt": "2026-03-20T12:37:09-07:00"
   },
-  "completedAt": "2026-03-20T12:35:08-07:00",
+  "completedAt": "2026-03-20T12:37:09-07:00",
   "attempts": 1
 }
