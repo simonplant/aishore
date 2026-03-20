@@ -4246,6 +4246,7 @@ Commands:
     --retries N     Allow up to N retry attempts on validation failure
     --refine        Refine spec on exhausted retries and try once more
     --quick         Skip maturity protocol (fast iteration)
+    --auto-review   Run architecture review after completion
 
   groom             Groom bugs/tech debt (Tech Lead mode)
     --backlog       Groom features instead (Product Owner mode)

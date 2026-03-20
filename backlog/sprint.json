@@ -1,29 +1,30 @@
 {
-  "sprintId": "sprint-1774038513",
-  "startedAt": "2026-03-20T13:28:33-07:00",
+  "sprintId": "sprint-1774038668",
+  "startedAt": "2026-03-20T13:31:08-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-025",
-    "title": "cmd_review --since flag missing validate_arg for empty value",
-    "intent": "cmd_review must reject --since without a value — silently consuming the next flag as a commit hash causes the review to run with wrong scope, giving users false confidence the review covered the intended range.",
-    "description": "In cmd_review(), the --since flag case at line 2428 does 'since=\"$2\"; shift 2' with no validate_arg call. If the user runs 'aishore review --since' without a commit hash, $2 is either empty or the next flag (e.g. --update-docs). Under set -u, an empty $2 accessed as a positional parameter would cause an unbound variable error; but since $2 is accessed inside a case branch where shift already happened, it just silently sets since to \"\" or the wrong value. All other value-bearing flags across the codebase call validate_arg first. Compare with cmd_backlog_history --since at lines 4019-4025, which correctly validates the value before using it.",
+    "id": "BUG-021",
+    "title": "backlog list --status and --type flags missing validate_arg for empty values",
+    "intent": "backlog list must reject flag calls with missing values — silently accepting an empty filter silently changes which items are shown, leading to misleading output.",
+    "description": "In cmd_backlog_list(), the --status and --type flag cases do 'filter_status=\"$2\"; shift 2' without calling validate_arg first. If a user runs 'backlog list --status' without a value, $2 is empty, filter_status gets set to empty string, and the subsequent jq filter produces unexpected results. cmd_backlog_add and cmd_backlog_edit consistently call validate_arg for all value-bearing flags. The fix is to add validate_arg calls in the --status and --type cases, consistent with the established pattern.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_review() and locate the --since case at line 2428",
-      "Add validate_arg \"$1\" \"${2:-}\" || return 1 before the assignment, matching the pattern used in cmd_backlog_edit()",
-      "Verify that 'aishore review --since' (no value) now exits non-zero with an error",
-      "Verify that 'aishore review --since abc123' and 'aishore review --since abc --update-docs' still work"
+      "In .aishore/aishore, find cmd_backlog_list() and locate the --status and --type flag cases (around line 3546-3552)",
+      "Add 'validate_arg \"$1\" \"${2:-}\" || return 1' before each assignment, matching the pattern in cmd_backlog_add/edit",
+      "Verify that 'backlog list --status' (no value) prints an error and exits non-zero",
+      "Verify that 'backlog list --type' (no value) prints an error and exits non-zero",
+      "Verify that 'backlog list --status todo' and 'backlog list --type bug' still work correctly"
     ],
     "acceptanceCriteria": [
-      "aishore review --since (no value) exits non-zero with a clear error message",
-      "aishore review --since <commit> and aishore review --since --update-docs still work correctly",
-      "Error message matches the validate_arg pattern used by other flags"
+      "backlog list --status (no value) exits non-zero with an error message",
+      "backlog list --type (no value) exits non-zero with an error message",
+      "backlog list --status todo and backlog list --type bug still work correctly"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T13:28:33-07:00",
+    "startedAt": "2026-03-20T13:31:08-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T13:31:07-07:00"
+    "completedAt": "2026-03-20T13:33:11-07:00"
   },
-  "completedAt": "2026-03-20T13:31:07-07:00",
+  "completedAt": "2026-03-20T13:33:11-07:00",
   "attempts": 1
 }

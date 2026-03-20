@@ -24,6 +24,7 @@ jq empty backlog/*.json
 .aishore/aishore backlog edit <ID>  # Update fields on an item
 .aishore/aishore backlog check <ID> # Check readiness gates for an item
 .aishore/aishore backlog rm <ID>    # Remove an item (--force to skip confirmation)
+.aishore/aishore backlog history    # List completed sprint items
 .aishore/aishore backlog populate   # AI-populate backlog from PRODUCT.md
 .aishore/aishore auto done           # Autonomous: drain entire backlog
 .aishore/aishore auto p0             # Autonomous: complete all must items
