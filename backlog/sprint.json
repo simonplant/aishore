@@ -1,25 +1,24 @@
 {
-  "sprintId": "sprint-1774032880",
-  "startedAt": "2026-03-20T11:54:40-07:00",
+  "sprintId": "sprint-1774033117",
+  "startedAt": "2026-03-20T11:58:37-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-006",
-    "title": "backlog add and edit have no --step flag for setting implementation steps",
-    "intent": "Users must be able to add and replace implementation steps via CLI without hand-editing JSON — steps are required for sprint readiness and a missing flag forces a manual workaround.",
-    "description": "backlog add creates items with steps: [] and backlog edit has no flag to append or replace steps. The only way to populate the steps array is to edit the backlog JSON directly, which violates the CLI-first design. Both commands already follow a consistent flag pattern (--ac for AC entries, --scope for scope patterns). Steps should follow the same pattern: --step adds one step (repeatable), --clear-steps resets the array. This unblocks grooming items without requiring JSON editing.",
+    "id": "BUG-007",
+    "title": "backlog show renders AC {text, verify} objects as raw JSON instead of plain text",
+    "intent": "backlog show must display acceptance criteria as readable text — when entries are {text, verify} objects, only the text should be shown, not the JSON structure.",
+    "description": "When backlog edit --ac 'Some check' --ac-verify 'make test' is used, the AC entry is stored as a JSON object {\"text\": \"Some check\", \"verify\": \"make test\"}. In cmd_backlog_show(), the jq display expression at line ~3720 uses (.acceptanceCriteria // [] | .[] | \"  - \\(.)\"), which calls tojson on the entire object, producing output like: '  - {\"text\":\"Some check\",\"verify\":\"make test\"}'. The fix is to check entry type: if it's a string, show it as-is; if it's an object, extract .text (and optionally show the verify command in a shorter form).",
     "sourceBacklog": "bugs.json",
     "steps": [],
     "acceptanceCriteria": [
-      "backlog add --step 'Do X' creates an item with steps: [\"Do X\"]",
-      "backlog add --step 'Do X' --step 'Do Y' creates steps in order",
-      "backlog edit <ID> --step 'Do X' appends X to the existing steps array",
-      "backlog edit <ID> --clear-steps resets steps to empty array"
+      "backlog show <ID> displays plain-string AC entries unchanged",
+      "backlog show <ID> displays {text, verify} AC entries as the .text value only (not raw JSON)",
+      "backlog show <ID> optionally shows verify command on same or next line in a readable format"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T11:54:40-07:00",
+    "startedAt": "2026-03-20T11:58:37-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T11:58:36-07:00"
+    "completedAt": "2026-03-20T12:00:45-07:00"
   },
-  "completedAt": "2026-03-20T11:58:36-07:00",
+  "completedAt": "2026-03-20T12:00:45-07:00",
   "attempts": 1
 }

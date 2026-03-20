@@ -162,11 +162,12 @@
         "backlog show <ID> displays {text, verify} AC entries as the .text value only (not raw JSON)",
         "backlog show <ID> optionally shows verify command on same or next line in a readable format"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Fix location: cmd_backlog_show() jq expression around line 3720. Current: (.acceptanceCriteria // [] | .[] | \"  - \\(.)\"). Fix: (.acceptanceCriteria // [] | .[] | \"  - \\(if type == \"object\" then .text + (if .verify then \" [verify: \\(.verify)]\" else \"\" end) else . end)\"). Run: backlog add with --ac 'plain' --ac 'text' --ac-verify 'cmd' then backlog show to confirm. This is a display-only fix — no data changes."
+      "groomingNotes": "Fix location: cmd_backlog_show() jq expression around line 3720. Current: (.acceptanceCriteria // [] | .[] | \"  - \\(.)\"). Fix: (.acceptanceCriteria // [] | .[] | \"  - \\(if type == \"object\" then .text + (if .verify then \" [verify: \\(.verify)]\" else \"\" end) else . end)\"). Run: backlog add with --ac 'plain' --ac 'text' --ac-verify 'cmd' then backlog show to confirm. This is a display-only fix — no data changes.",
+      "completedAt": "2026-03-20T12:00:45-07:00"
     }
   ]
 }
