@@ -3930,12 +3930,7 @@ cmd_backlog_edit() {
         local first=true
         for entry in "${ac_entries[@]}"; do
             [[ "$first" == "true" ]] && first=false || ac_json="$ac_json,"
-            # If entry starts with { it's already JSON, otherwise it's a jq-encoded string
-            if [[ "$entry" == "{"* ]]; then
-                ac_json="$ac_json$entry"
-            else
-                ac_json="$ac_json$entry"
-            fi
+            ac_json="$ac_json$entry"
         done
         ac_json="$ac_json]"
         jq_updates="$jq_updates | .acceptanceCriteria = ((.acceptanceCriteria // []) + \$newac)"
