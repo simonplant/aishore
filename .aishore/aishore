@@ -577,12 +577,20 @@ check_readiness_gates() {
 next_id() {
     local prefix="$1"
     local max=0
+    # Check active backlog files
     for f in "${BACKLOG_FILES[@]}"; do
         [[ -f "$BACKLOG_DIR/$f" ]] || continue
         local file_max
         file_max=$(jq -r --arg pfx "$prefix-" '[.items[].id | select(startswith($pfx)) | ltrimstr($pfx) | tonumber] | max // 0' "$BACKLOG_DIR/$f" 2>/dev/null || echo 0)
         [[ "$file_max" -gt "$max" ]] && max="$file_max"
     done
+    # Check archive to prevent ID reuse after items are completed/removed
+    local archive_file="$BACKLOG_DIR/archive/sprints.jsonl"
+    if [[ -f "$archive_file" ]]; then
+        local archive_max
+        archive_max=$(jq -r --arg pfx "$prefix-" '.itemId | select(startswith($pfx)) | ltrimstr($pfx) | tonumber' "$archive_file" 2>/dev/null | sort -rn | head -1)
+        [[ -n "$archive_max" && "$archive_max" -gt "$max" ]] && max="$archive_max"
+    fi
     printf "%s-%03d" "$prefix" "$((max + 1))"
 }
 
@@ -2326,10 +2334,21 @@ cmd_groom() {
     local snap_before
     snap_before=$(snapshot_backlogs)
 
+    # Snapshot existing items so we can protect them from groomer overwrites
+    local groom_snap_dir
+    groom_snap_dir=$(mktemp -d)
+    for f in "${BACKLOG_FILES[@]}"; do
+        [[ -f "$BACKLOG_DIR/$f" ]] && cp "$BACKLOG_DIR/$f" "$groom_snap_dir/$f"
+    done
+
     log_info "Running $agent agent..."
     echo ""
 
     GROOM_MONITOR=true run_agent "$agent" "groom" "$MODEL_FAST" "$context_args"
+
+    # Protect pre-existing items from groomer modifications/deletions
+    protect_items_from_groom "$groom_snap_dir"
+    rm -rf "$groom_snap_dir"
 
     # --- Post-groom diff ---
     print_groom_diff "$snap_before"
@@ -2397,6 +2416,84 @@ print_groom_summary() {
     fi
 
     echo ""
+}
+
+# Protect pre-existing items from groomer overwrites.
+# Compares post-groom backlogs against the pre-groom snapshot.
+# Restores any items that were modified or deleted by the groomer.
+# Only groomer-added NEW items (IDs not in the snapshot) are kept.
+protect_items_from_groom() {
+    local snap_dir="$1"
+    local restored=0 deleted_restored=0
+
+    for f in "${BACKLOG_FILES[@]}"; do
+        local snap_file="$snap_dir/$f"
+        local live_file="$BACKLOG_DIR/$f"
+        [[ -f "$snap_file" ]] || continue
+        [[ -f "$live_file" ]] || continue
+
+        # Get list of IDs that existed before grooming
+        local old_ids
+        old_ids=$(jq -r '.items[].id' "$snap_file" 2>/dev/null)
+        [[ -z "$old_ids" ]] && continue
+
+        # For each pre-existing ID, check if it was modified or deleted
+        local id
+        while IFS= read -r id; do
+            [[ -z "$id" ]] && continue
+
+            # Get the original item
+            local original
+            original=$(jq -c --arg id "$id" '.items[] | select(.id == $id)' "$snap_file" 2>/dev/null)
+            [[ -z "$original" ]] && continue
+
+            # Check if this item still exists in the live file
+            local current
+            current=$(jq -c --arg id "$id" '.items[] | select(.id == $id)' "$live_file" 2>/dev/null)
+
+            if [[ -z "$current" ]]; then
+                # Item was deleted by groomer — restore it
+                local tmp
+                tmp=$(jq --argjson item "$original" '.items += [$item]' "$live_file")
+                printf '%s\n' "$tmp" > "$live_file"
+                deleted_restored=$((deleted_restored + 1))
+            elif [[ "$current" != "$original" ]]; then
+                # Item was modified by groomer — only allow safe field changes
+                # Safe: readyForSprint, groomedAt, groomedNotes, priority
+                # Unsafe: title, intent, description, steps, acceptanceCriteria, id
+                local was_modified
+                was_modified=$(jq -n --argjson old "$original" --argjson new "$current" '
+                    ($old.title != $new.title) or
+                    ($old.intent != $new.intent) or
+                    ($old.description != $new.description) or
+                    ($old.steps != $new.steps) or
+                    ($old.acceptanceCriteria != $new.acceptanceCriteria)
+                ')
+                if [[ "$was_modified" == "true" ]]; then
+                    # Restore original item content but keep groomer's safe fields
+                    local merged
+                    merged=$(jq -n --argjson old "$original" --argjson new "$current" '
+                        $old
+                        | .readyForSprint = ($new.readyForSprint // $old.readyForSprint)
+                        | .groomedAt = ($new.groomedAt // $old.groomedAt)
+                        | .groomedNotes = ($new.groomedNotes // $old.groomedNotes)
+                        | .priority = ($new.priority // $old.priority)
+                    ')
+                    local tmp
+                    tmp=$(jq --arg id "$id" --argjson item "$merged" '
+                        .items = [.items[] | if .id == $id then $item else . end]
+                    ' "$live_file")
+                    printf '%s\n' "$tmp" > "$live_file"
+                    restored=$((restored + 1))
+                fi
+            fi
+        done <<< "$old_ids"
+    done
+
+    local total=$((restored + deleted_restored))
+    if [[ "$total" -gt 0 ]]; then
+        log_warn "Groomer protection: restored $total pre-existing item(s) ($deleted_restored deleted, $restored modified)"
+    fi
 }
 
 # Capture a snapshot of backlog item counts/ready state for diff
