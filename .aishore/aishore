@@ -585,6 +585,21 @@ check_readiness_gates() {
         done <<< "$deps"
     fi
 
+    # Complexity heuristic: flag under-specified items that may need more prescriptive specs
+    local complexity_hints=""
+    if [[ "$step_count" -lt 3 && "$step_count" -gt 0 ]]; then
+        complexity_hints="${complexity_hints}    • Only $step_count step(s) — consider breaking the work into 3+ concrete steps\n"
+    fi
+    local has_scope
+    has_scope=$(echo "$item" | jq '[.scope // [] | .[]] | length')
+    if [[ "$has_scope" -eq 0 ]]; then
+        complexity_hints="${complexity_hints}    • No scope defined — add file path globs to constrain where changes land\n"
+    fi
+    if [[ -n "$complexity_hints" ]]; then
+        warnings="${warnings}  - Item may be under-specified (advisory):\n${complexity_hints}"
+        has_warning=true
+    fi
+
     CHECK_GATES_WARNINGS="$warnings"
     if [[ "$has_warning" == "true" ]]; then
         return 1
@@ -1584,6 +1599,15 @@ _run_dry_run() {
     echo "$item_json" | jq .
     echo ""
 
+    # Advisory complexity warning in dry-run
+    if ! check_readiness_gates "$item_id" 2>/dev/null; then
+        if echo -e "$CHECK_GATES_WARNINGS" | grep -q "under-specified"; then
+            log_warning "$item_id may be under-specified — consider adding more steps or scope"
+            echo -e "$CHECK_GATES_WARNINGS" | grep -A 50 "under-specified"
+            echo ""
+        fi
+    fi
+
     log_subheader "Developer Prompt"
     build_agent_prompt "developer" "implement"
     echo ""
@@ -2246,6 +2270,14 @@ cmd_run() {
 
         create_sprint "$item_json" "$item_source"
         save_backlog_snapshot
+
+        # Advisory complexity warning (does not block sprint)
+        if ! check_readiness_gates "$ITEM_ID" 2>/dev/null; then
+            if echo -e "$CHECK_GATES_WARNINGS" | grep -q "under-specified"; then
+                log_warning "$ITEM_ID may be under-specified — consider adding more steps or scope"
+                echo -e "$CHECK_GATES_WARNINGS" | grep -A 50 "under-specified"
+            fi
+        fi
 
         # Create feature branch
         local branch_name="aishore/${ITEM_ID}"
