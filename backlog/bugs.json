@@ -71,11 +71,12 @@
         "backlog edit --ac and --ac-verify still produce valid JSON items",
         "backlog check on an item with AC entries shows no regression"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Tech debt: dead if/else branches mislead future developers. Trivial fix — remove the conditional."
+      "groomingNotes": "Tech debt: dead if/else branches mislead future developers. Trivial fix — remove the conditional.",
+      "completedAt": "2026-03-20T12:14:19-07:00"
     },
     {
       "id": "BUG-004",

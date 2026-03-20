@@ -1,29 +1,30 @@
 {
-  "sprintId": "sprint-1774033723",
-  "startedAt": "2026-03-20T12:08:43-07:00",
+  "sprintId": "sprint-1774033878",
+  "startedAt": "2026-03-20T12:11:18-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-009",
-    "title": "backlog edit has no --clear-ac flag to reset acceptance criteria",
-    "intent": "Users must be able to reset AC via CLI — without --clear-ac, wrong AC entries require hand-editing JSON, violating the CLI-first design principle.",
-    "description": "backlog edit --step has a companion --clear-steps flag; backlog edit --scope has a companion --clear-scope flag. But --ac has no --clear-ac. Once AC entries are added, the only way to remove them is to hand-edit the backlog JSON. This is inconsistent with the established pattern and violates CLI-first design. Fix: add --clear-ac to cmd_backlog_edit() that resets acceptanceCriteria to [], following the same pattern as --clear-steps.",
+    "id": "BUG-003",
+    "title": "Dead if/else branch in AC JSON construction is misleading",
+    "intent": "AC JSON construction code must not have dead branches that confuse maintainers",
+    "description": "In cmd_backlog_edit(), the AC entry builder has an if/else that checks whether an entry starts with '{' (JSON object) vs plain string, but both branches execute the identical statement: ac_json=\"$ac_json$entry\". The distinction is never acted upon. This is dead/misleading code that could hide future bugs if someone adds logic to only one branch.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_backlog_edit() and locate the --clear-steps case as reference (around line 3843-3846)",
-      "Add a --clear-ac case: set jq_updates with .acceptanceCriteria = [] and update update_desc",
-      "Add --clear-ac documentation to the help text in cmd_backlog_edit error message and cmd_help",
-      "Test: backlog edit BUG-003 --clear-ac (verify AC resets), then backlog edit BUG-003 --ac 'New' (verify fresh entry appears)"
+      "In .aishore/aishore, find the AC JSON construction block in cmd_backlog_edit() (around line 3688)",
+      "Identify the if/else that checks whether an entry starts with \"{\" — both branches do the same thing",
+      "Remove the if/else and keep just the single statement: ac_json=\"$ac_json$entry\"",
+      "Verify that backlog edit --ac and --ac-verify still produce valid JSON items",
+      "Run .aishore/aishore backlog check on an item with AC entries to confirm no regression"
     ],
     "acceptanceCriteria": [
-      "backlog edit <ID> --clear-ac resets acceptanceCriteria to []",
-      "backlog edit <ID> --clear-ac --ac 'New AC' results in only the new entry present",
-      "--clear-ac appears in the backlog edit help output"
+      "The if/else branch is removed, only the single common statement remains",
+      "backlog edit --ac and --ac-verify still produce valid JSON items",
+      "backlog check on an item with AC entries shows no regression"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T12:08:43-07:00",
+    "startedAt": "2026-03-20T12:11:18-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T12:11:16-07:00"
+    "completedAt": "2026-03-20T12:14:19-07:00"
   },
-  "completedAt": "2026-03-20T12:11:16-07:00",
+  "completedAt": "2026-03-20T12:14:19-07:00",
   "attempts": 1
 }
