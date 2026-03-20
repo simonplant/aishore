@@ -3456,6 +3456,7 @@ cmd_backlog() {
 cmd_backlog_check() {
     local id="${1:-}"
     [[ -z "$id" ]] && { log_error "Usage: backlog check <ID>"; return 1; }
+    [[ $# -gt 1 ]] && { log_error "Unexpected argument: ${2}"; return 1; }
 
     # Verify item exists
     find_item "$id" >/dev/null || return 1
@@ -3768,6 +3769,7 @@ cmd_backlog_add() {
 cmd_backlog_show() {
     local id="${1:-}"
     [[ -z "$id" ]] && { log_error "Usage: backlog show <ID>"; return 1; }
+    [[ $# -gt 1 ]] && { log_error "Unexpected argument: ${2}"; return 1; }
 
     local item
     item=$(find_item "$id") || return 1

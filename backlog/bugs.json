@@ -452,11 +452,12 @@
         "backlog show <ID> and backlog check <ID> with exactly one argument still work correctly"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Both cmd_backlog_show and cmd_backlog_check silently drop extra positional args. Additive check: if $# > 1 after extracting ID, error out. Low risk, two functions to fix."
+      "groomingNotes": "Both cmd_backlog_show and cmd_backlog_check silently drop extra positional args. Additive check: if $# > 1 after extracting ID, error out. Low risk, two functions to fix.",
+      "completedAt": "2026-03-20T12:55:35-07:00"
     },
     {
       "id": "BUG-019",
