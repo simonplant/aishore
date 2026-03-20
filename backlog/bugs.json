@@ -633,11 +633,12 @@
         "Error message matches the validate_arg pattern used by other flags"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Same class as BUG-021 (missing validate_arg for value-bearing flag). The cmd_review --since case is the only remaining value-bearing flag without validate_arg in cmd_review. One-line fix. Compare with cmd_backlog_history --since which correctly validates at lines 4019-4025. Low risk, additive only."
+      "groomingNotes": "Same class as BUG-021 (missing validate_arg for value-bearing flag). The cmd_review --since case is the only remaining value-bearing flag without validate_arg in cmd_review. One-line fix. Compare with cmd_backlog_history --since which correctly validates at lines 4019-4025. Low risk, additive only.",
+      "completedAt": "2026-03-20T13:31:07-07:00"
     },
     {
       "id": "BUG-026",
