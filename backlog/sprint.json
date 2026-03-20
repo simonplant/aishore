@@ -1,29 +1,29 @@
 {
-  "sprintId": "sprint-1774038394",
-  "startedAt": "2026-03-20T13:26:34-07:00",
+  "sprintId": "sprint-1774038513",
+  "startedAt": "2026-03-20T13:28:33-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-024",
-    "title": "backlog add --ac-verify missing validate_arg allows empty verify command",
-    "intent": "backlog add must reject --ac-verify without a value — an empty verify command silently creates a broken AC entry that fails at sprint verification time with no clear error.",
-    "description": "In cmd_backlog_add(), all value-bearing flags call validate_arg except --ac-verify (lines 3652-3659). The companion cmd_backlog_edit() correctly calls validate_arg for --ac-verify at line 3915. Without the guard, 'backlog add --ac \"check it\" --ac-verify' (no value) either causes an unbound variable crash under set -u or silently creates {\"text\":\"check it\",\"verify\":\"\"} with an empty verify command. At sprint time, the empty verify command fails with a confusing error rather than at edit time where the fix is obvious.",
+    "id": "BUG-025",
+    "title": "cmd_review --since flag missing validate_arg for empty value",
+    "intent": "cmd_review must reject --since without a value — silently consuming the next flag as a commit hash causes the review to run with wrong scope, giving users false confidence the review covered the intended range.",
+    "description": "In cmd_review(), the --since flag case at line 2428 does 'since=\"$2\"; shift 2' with no validate_arg call. If the user runs 'aishore review --since' without a commit hash, $2 is either empty or the next flag (e.g. --update-docs). Under set -u, an empty $2 accessed as a positional parameter would cause an unbound variable error; but since $2 is accessed inside a case branch where shift already happened, it just silently sets since to \"\" or the wrong value. All other value-bearing flags across the codebase call validate_arg first. Compare with cmd_backlog_history --since at lines 4019-4025, which correctly validates the value before using it.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_backlog_add() and locate the --ac-verify case (around line 3652)",
-      "Add validate_arg \"$1\" \"${2:-}\" || return 1 before the if [[ -z \"$pending_ac\" ]] check, matching line 3915 in cmd_backlog_edit()",
-      "Verify: 'backlog add --ac \"check\" --ac-verify' (no value) prints error and exits non-zero",
-      "Verify: 'backlog add --ac \"check\" --ac-verify \"make test\"' still creates the correct AC entry"
+      "In .aishore/aishore, find cmd_review() and locate the --since case at line 2428",
+      "Add validate_arg \"$1\" \"${2:-}\" || return 1 before the assignment, matching the pattern used in cmd_backlog_edit()",
+      "Verify that 'aishore review --since' (no value) now exits non-zero with an error",
+      "Verify that 'aishore review --since abc123' and 'aishore review --since abc --update-docs' still work"
     ],
     "acceptanceCriteria": [
-      "backlog add --ac 'text' --ac-verify (no value) exits non-zero and prints an error",
-      "backlog add --ac 'text' --ac-verify 'cmd' still works correctly",
-      "validate_arg is called for --ac-verify consistent with cmd_backlog_edit"
+      "aishore review --since (no value) exits non-zero with a clear error message",
+      "aishore review --since <commit> and aishore review --since --update-docs still work correctly",
+      "Error message matches the validate_arg pattern used by other flags"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T13:26:34-07:00",
+    "startedAt": "2026-03-20T13:28:33-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T13:28:32-07:00"
+    "completedAt": "2026-03-20T13:31:07-07:00"
   },
-  "completedAt": "2026-03-20T13:28:32-07:00",
+  "completedAt": "2026-03-20T13:31:07-07:00",
   "attempts": 1
 }

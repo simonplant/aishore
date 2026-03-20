@@ -2425,7 +2425,7 @@ cmd_review() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --update-docs) update_docs=true; shift ;;
-            --since) since="$2"; shift 2 ;;
+            --since) validate_arg "$1" "${2:-}" || return 1; since="$2"; shift 2 ;;
             *) log_error "Unknown option: $1"; return 1 ;;
         esac
     done
@@ -4209,13 +4209,15 @@ Commands:
     --ac "text"     Add acceptance criterion (repeatable)
     --ac-verify "cmd"  Attach verify command to preceding --ac
     --step "text"   Add implementation step (repeatable, ordered)
+    --depends-on ID Add dependency on another item (repeatable)
   backlog show <ID> Show full detail of one item
   backlog edit <ID> Update fields on an item
     --title, --intent, --desc, --priority, --status, --category, --ready, --no-ready,
     --groomed-at [date], --groomed-notes "...",
     --step "text"   Append implementation step (repeatable), --clear-steps to reset,
     --scope "glob"  Add scope glob (repeatable), --clear-scope to reset,
-    --ac "text", --ac-verify "cmd"  Append testable acceptance criteria, --clear-ac to reset
+    --ac "text", --ac-verify "cmd"  Append testable acceptance criteria, --clear-ac to reset,
+    --depends-on ID  Add dependency (repeatable)
   backlog check <ID> Check readiness gates (title, intent, steps, AC, step length)
   backlog rm <ID>   Remove an item (with confirmation)
     --force         Skip confirmation
