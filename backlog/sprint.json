@@ -1,29 +1,29 @@
 {
-  "sprintId": "sprint-1774033581",
-  "startedAt": "2026-03-20T12:06:21-07:00",
+  "sprintId": "sprint-1774033723",
+  "startedAt": "2026-03-20T12:08:43-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-008",
-    "title": "VALIDATE_CMD output injected untruncated into retry prompts",
-    "intent": "Retry prompts must not contain unbounded validation output — token bloat degrades AI fix quality and can push critical context out of attention.",
-    "description": "In _run_retry_loop(), validate_output is captured with 'cat $validate_tmpfile' (no truncation limit) and injected raw into retry_extra_prompt. run_ac_verification() and the pre-flight check both apply OUTPUT_TRUNCATE_LINES truncation, but the VALIDATE_CMD retry path does not. For verbose test suites (cargo test, pytest, mocha), this produces thousands of lines in the retry prompt, degrading AI quality. The validator-agent retry path at line ~1769 has the same issue.",
+    "id": "BUG-009",
+    "title": "backlog edit has no --clear-ac flag to reset acceptance criteria",
+    "intent": "Users must be able to reset AC via CLI — without --clear-ac, wrong AC entries require hand-editing JSON, violating the CLI-first design principle.",
+    "description": "backlog edit --step has a companion --clear-steps flag; backlog edit --scope has a companion --clear-scope flag. But --ac has no --clear-ac. Once AC entries are added, the only way to remove them is to hand-edit the backlog JSON. This is inconsistent with the established pattern and violates CLI-first design. Fix: add --clear-ac to cmd_backlog_edit() that resets acceptanceCriteria to [], following the same pattern as --clear-steps.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find _run_retry_loop() and locate the validate_output capture: validate_output=$(cat \"$validate_tmpfile\" 2>/dev/null || true)",
-      "Replace the cat with the same truncation pattern used in run_ac_verification(): capture wc -l, use tail -n $OUTPUT_TRUNCATE_LINES, prepend '[... output truncated, showing last N of M lines]' if truncated",
-      "Verify the validator-agent retry path also uses the truncated validate_output (line ~1769)",
-      "Confirm pre-flight check already has truncation (it does, around line 1650); no change needed there"
+      "In .aishore/aishore, find cmd_backlog_edit() and locate the --clear-steps case as reference (around line 3843-3846)",
+      "Add a --clear-ac case: set jq_updates with .acceptanceCriteria = [] and update update_desc",
+      "Add --clear-ac documentation to the help text in cmd_backlog_edit error message and cmd_help",
+      "Test: backlog edit BUG-003 --clear-ac (verify AC resets), then backlog edit BUG-003 --ac 'New' (verify fresh entry appears)"
     ],
     "acceptanceCriteria": [
-      "VALIDATE_CMD output injected into retry prompts is truncated to OUTPUT_TRUNCATE_LINES lines",
-      "When output is truncated, the retry prompt includes a '[... output truncated, showing last N of M lines]' indicator",
-      "Truncation matches the pattern used in run_ac_verification() for consistency"
+      "backlog edit <ID> --clear-ac resets acceptanceCriteria to []",
+      "backlog edit <ID> --clear-ac --ac 'New AC' results in only the new entry present",
+      "--clear-ac appears in the backlog edit help output"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T12:06:21-07:00",
+    "startedAt": "2026-03-20T12:08:43-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T12:08:42-07:00"
+    "completedAt": "2026-03-20T12:11:16-07:00"
   },
-  "completedAt": "2026-03-20T12:08:42-07:00",
+  "completedAt": "2026-03-20T12:11:16-07:00",
   "attempts": 1
 }
