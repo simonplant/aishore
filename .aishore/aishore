@@ -1356,12 +1356,18 @@ mark_item_failed() {
     local item_id="$1"
     local reason="$2"
     local source="$3"
-    [[ -z "$source" ]] && return 0
+    if [[ -z "$source" ]]; then
+        log_warning "Cannot record failure for '$item_id': source backlog unknown"
+        return 0
+    fi
     local now
     now=$(date -Iseconds)
-    update_item "$source" "$item_id" \
+    if ! update_item "$source" "$item_id" \
         '| . + {lastFailReason: $reason, lastFailAt: $ts, failCount: ((.failCount // 0) + 1)}' \
-        --arg reason "$reason" --arg ts "$now" 2>/dev/null || true
+        --arg reason "$reason" --arg ts "$now" 2>/dev/null; then
+        log_warning "Failed to record sprint failure for $item_id"
+    fi
+    return 0
 }
 
 handle_sprint_failure() {
