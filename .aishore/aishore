@@ -42,8 +42,8 @@ cleanup_exit() {
     fi
     # Restore stashed changes on unexpected exit
     if [[ "$AISHORE_DID_STASH" == "true" ]]; then
-        git stash pop >/dev/null 2>&1 || true
         AISHORE_DID_STASH=""
+        restore_stash || true
     fi
     [[ -n "$AISHORE_TMPDIR" && -d "$AISHORE_TMPDIR" ]] && rm -rf "$AISHORE_TMPDIR"
     return 0
@@ -134,6 +134,24 @@ log_warning() { echo -e "${YELLOW}⚠ $1${NC}"; }
 log_error()   { echo -e "${RED}✗ $1${NC}" >&2; }
 log_info()    { echo -e "${CYAN}$1${NC}"; }
 log_agent()   { echo -e "${MAGENTA}[$1]${NC} $2"; }
+
+restore_stash() {
+    local pop_output
+    if pop_output=$(git stash pop 2>&1); then
+        return 0
+    fi
+    # Show the git error output (conflicts, etc.)
+    [[ -n "$pop_output" ]] && echo "$pop_output"
+    log_warning "Failed to restore stashed changes (likely due to conflicts)"
+    local stash_contents
+    stash_contents=$(git stash show 2>/dev/null) || true
+    if [[ -n "$stash_contents" ]]; then
+        log_warning "Stashed files:"
+        echo "$stash_contents"
+    fi
+    log_warning "To resolve: run 'git stash show' to see files, then 'git stash pop' and fix conflicts"
+    return 1
+}
 
 # ============================================================================
 # UTILITIES (inlined from common.sh)
@@ -2404,7 +2422,7 @@ cmd_run() {
     if [[ "$did_stash" == "true" ]]; then
         log_info "Restoring pre-existing uncommitted changes"
         AISHORE_DID_STASH=""
-        git stash pop >/dev/null 2>&1 || log_warning "Failed to restore stashed changes — run 'git stash pop' manually"
+        restore_stash || true
     fi
 
     # Auto mode: offer architecture review when backlog is fully drained
