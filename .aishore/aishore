@@ -3580,6 +3580,7 @@ cmd_backlog_add() {
     local depends_on=""
     local -a ac_entries=()
     local pending_ac=""
+    local -a step_entries=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -3606,6 +3607,10 @@ cmd_backlog_add() {
                 fi
                 ac_entries+=("{\"text\":$(printf '%s' "$pending_ac" | jq -Rs .),\"verify\":$(printf '%s' "$2" | jq -Rs .)}")
                 pending_ac=""
+                shift 2 ;;
+            --step)
+                validate_arg "$1" "${2:-}" || return 1
+                step_entries+=("$2")
                 shift 2 ;;
             *) log_error "Unknown option: $1"; return 1 ;;
         esac
@@ -3675,6 +3680,12 @@ cmd_backlog_add() {
         ac_json="$ac_json]"
     fi
 
+    # Build steps array
+    local steps_json="[]"
+    if [[ ${#step_entries[@]} -gt 0 ]]; then
+        steps_json=$(printf '%s\n' "${step_entries[@]}" | jq -R . | jq -s .)
+    fi
+
     # Build dependsOn array
     local depends_json="[]"
     if [[ -n "$depends_on" ]]; then
@@ -3692,6 +3703,7 @@ cmd_backlog_add() {
         --argjson ready "$ready" \
         --argjson ac_arr "$ac_json" \
         --argjson deps "$depends_json" \
+        --argjson steps_arr "$steps_json" \
         '.items += [{
             id: $id,
             title: $title,
@@ -3699,7 +3711,7 @@ cmd_backlog_add() {
             description: $desc,
             priority: $priority,
             category: (if $category == "" then null else $category end),
-            steps: [],
+            steps: $steps_arr,
             acceptanceCriteria: $ac_arr,
             dependsOn: (if ($deps | length) > 0 then $deps else [] end),
             status: "todo",
@@ -3763,6 +3775,7 @@ cmd_backlog_edit() {
     local -a ac_entries=()
     local pending_ac=""
     local -a scope_vals=()
+    local -a step_vals=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -3821,6 +3834,15 @@ cmd_backlog_edit() {
             --clear-scope)
                 jq_updates="$jq_updates | .scope = []"
                 update_desc="$update_desc scope"
+                shift ;;
+            --step)
+                validate_arg "$1" "${2:-}" || return 1
+                step_vals+=("$2")
+                update_desc="$update_desc steps"
+                shift 2 ;;
+            --clear-steps)
+                jq_updates="$jq_updates | .steps = []"
+                update_desc="$update_desc steps"
                 shift ;;
             --depends-on)
                 validate_arg "$1" "${2:-}" || return 1
@@ -3885,6 +3907,14 @@ cmd_backlog_edit() {
         updates+=("--argjson" "newscope" "$scope_json")
     fi
 
+    # Build steps jq update if any --step flags were used
+    if [[ ${#step_vals[@]} -gt 0 ]]; then
+        local steps_json
+        steps_json=$(printf '%s\n' "${step_vals[@]}" | jq -R . | jq -s .)
+        jq_updates="$jq_updates | .steps = ((.steps // []) + \$newsteps)"
+        updates+=("--argjson" "newsteps" "$steps_json")
+    fi
+
     # Build AC jq update if any --ac flags were used
     if [[ ${#ac_entries[@]} -gt 0 ]]; then
         local ac_json="["
@@ -3904,7 +3934,7 @@ cmd_backlog_edit() {
     fi
 
     if [[ -z "$jq_updates" ]]; then
-        log_error "No updates specified. Use --title, --priority, --status, --desc, --category, --ready, --no-ready, --scope, --depends-on, --ac, --ac-verify"
+        log_error "No updates specified. Use --title, --priority, --status, --desc, --category, --ready, --no-ready, --step, --clear-steps, --scope, --depends-on, --ac, --ac-verify"
         return 1
     fi
 
@@ -4065,10 +4095,12 @@ Commands:
     --ready         Mark as ready for sprint
     --ac "text"     Add acceptance criterion (repeatable)
     --ac-verify "cmd"  Attach verify command to preceding --ac
+    --step "text"   Add implementation step (repeatable, ordered)
   backlog show <ID> Show full detail of one item
   backlog edit <ID> Update fields on an item
     --title, --intent, --desc, --priority, --status, --category, --ready, --no-ready,
     --groomed-at [date], --groomed-notes "...",
+    --step "text"   Append implementation step (repeatable), --clear-steps to reset,
     --scope "glob"  Add scope glob (repeatable), --clear-scope to reset,
     --ac "text", --ac-verify "cmd"  Append testable acceptance criteria
   backlog check <ID> Check readiness gates (title, intent, steps, AC, step length)

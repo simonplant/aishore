@@ -1,24 +1,25 @@
 {
-  "sprintId": "sprint-1774032439",
-  "startedAt": "2026-03-20T11:47:19-07:00",
+  "sprintId": "sprint-1774032880",
+  "startedAt": "2026-03-20T11:54:40-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-005",
-    "title": "backlog list flags items with unmet dependsOn dependencies",
-    "intent": "backlog list must visually surface dependency blockers so users can see at a glance which items cannot be picked yet — invisible blockers cause wasted grooming and sprint failures.",
-    "description": "backlog list currently shows items with status, priority, and readyForSprint but gives no signal that an item has unresolved dependsOn constraints. A user looking at the list cannot tell which items are blocked versus which are truly ready. The fix is to add a visual marker in the list output when an item has one or more dependsOn entries whose items are not status: done. The marker should be minimal (e.g., a [blocked] tag or a ✗ in a deps column) and only appear when blockers exist.",
-    "sourceBacklog": "backlog.json",
+    "id": "BUG-006",
+    "title": "backlog add and edit have no --step flag for setting implementation steps",
+    "intent": "Users must be able to add and replace implementation steps via CLI without hand-editing JSON — steps are required for sprint readiness and a missing flag forces a manual workaround.",
+    "description": "backlog add creates items with steps: [] and backlog edit has no flag to append or replace steps. The only way to populate the steps array is to edit the backlog JSON directly, which violates the CLI-first design. Both commands already follow a consistent flag pattern (--ac for AC entries, --scope for scope patterns). Steps should follow the same pattern: --step adds one step (repeatable), --clear-steps resets the array. This unblocks grooming items without requiring JSON editing.",
+    "sourceBacklog": "bugs.json",
     "steps": [],
     "acceptanceCriteria": [
-      "backlog list shows a visual indicator next to items whose dependsOn items are not all status: done",
-      "backlog list shows no indicator for items with no dependsOn, or when all dependencies are done",
-      "The indicator includes a count or list of blocking IDs so the user can investigate"
+      "backlog add --step 'Do X' creates an item with steps: [\"Do X\"]",
+      "backlog add --step 'Do X' --step 'Do Y' creates steps in order",
+      "backlog edit <ID> --step 'Do X' appends X to the existing steps array",
+      "backlog edit <ID> --clear-steps resets steps to empty array"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T11:47:19-07:00",
+    "startedAt": "2026-03-20T11:54:40-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T11:51:37-07:00"
+    "completedAt": "2026-03-20T11:58:36-07:00"
   },
-  "completedAt": "2026-03-20T11:51:37-07:00",
+  "completedAt": "2026-03-20T11:58:36-07:00",
   "attempts": 1
 }
