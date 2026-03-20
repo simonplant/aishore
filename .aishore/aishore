@@ -93,6 +93,8 @@ FIX_CMD=""
 NOTIFY_CMD=""
 AUTO_GROOM_THRESHOLD="3"
 AUTO_MAX_FAILURES="5"
+GROOM_MAX_ITEMS="10"
+GROOM_MIN_PRIORITY="should"
 SCOPE_MODE="warn"
 MATURITY_ENABLED="true"
 OUTPUT_TRUNCATE_LINES="50"
@@ -309,6 +311,8 @@ load_config() {
             ".notifications.on_complete NOTIFY_CMD"
             ".auto.groom_threshold  AUTO_GROOM_THRESHOLD"
             ".auto.max_failures     AUTO_MAX_FAILURES"
+            ".groom.max_items       GROOM_MAX_ITEMS"
+            ".groom.min_priority    GROOM_MIN_PRIORITY"
             ".scope.mode            SCOPE_MODE"
             ".maturity.enabled      MATURITY_ENABLED"
             ".output.truncate_lines OUTPUT_TRUNCATE_LINES"
@@ -352,6 +356,8 @@ _apply_env_overrides() {
         "AISHORE_NOTIFY_CMD         NOTIFY_CMD"
         "AISHORE_AUTO_GROOM_THRESHOLD AUTO_GROOM_THRESHOLD"
         "AISHORE_AUTO_MAX_FAILURES  AUTO_MAX_FAILURES"
+        "AISHORE_GROOM_MAX_ITEMS    GROOM_MAX_ITEMS"
+        "AISHORE_GROOM_MIN_PRIORITY GROOM_MIN_PRIORITY"
         "AISHORE_SCOPE_MODE        SCOPE_MODE"
         "AISHORE_MATURITY          MATURITY_ENABLED"
         "AISHORE_OUTPUT_TRUNCATE_LINES OUTPUT_TRUNCATE_LINES"
@@ -1104,7 +1110,12 @@ The \`intent\` field in sprint.json is a non-negotiable directive. Verify the im
     elif [[ "$agent_name" == "tech-lead" || "$agent_name" == "product-owner" ]]; then
         validate_hint="
 ## Commander's Intent
-Every item should have an \`intent\` field — a non-negotiable directive stating what must be true when done. Use \`--intent \"...\"\` when adding/editing items. Write it like an order, not a description."
+Every item should have an \`intent\` field — a non-negotiable directive stating what must be true when done. Use \`--intent \"...\"\` when adding/editing items. Write it like an order, not a description.
+
+## Grooming Limits
+- **Maximum items per session:** $GROOM_MAX_ITEMS — stop adding new items after this cap. Focus on the highest-value items first.
+- **Minimum priority threshold:** $GROOM_MIN_PRIORITY — only add items at \`$GROOM_MIN_PRIORITY\` priority or higher. Skip lower-priority items (log them in your summary but do not add them).
+- When you reach the cap or run out of items above the threshold, stop and signal completion. Do not generate busywork."
         if [[ "$agent_name" == "product-owner" && "$mode" == "populate" ]]; then
             validate_hint="$validate_hint
 
@@ -2257,10 +2268,22 @@ cmd_run() {
                 local groom_context="@$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
                 local recent_sprints; recent_sprints=$(recent_sprints_file 20)
                 [[ -n "$recent_sprints" ]] && groom_context="$groom_context $recent_sprints"
+                # Snapshot for groom limit enforcement
+                local auto_groom_snap
+                auto_groom_snap=$(mktemp -d)
+                for _agf in "${BACKLOG_FILES[@]}"; do
+                    [[ -f "$BACKLOG_DIR/$_agf" ]] && cp "$BACKLOG_DIR/$_agf" "$auto_groom_snap/$_agf"
+                done
                 run_agent "tech-lead" "groom" "$MODEL_FAST" "$groom_context" || true
                 check_result || log_warning "Tech-lead groom did not pass — continuing"
                 run_agent "product-owner" "groom" "$MODEL_FAST" "$groom_context" || true
                 check_result || log_warning "Product-owner groom did not pass — continuing"
+                # Enforce groom limits in auto mode
+                enforce_groom_limits "$auto_groom_snap"
+                rm -rf "$auto_groom_snap"
+                if [[ "$GROOM_ITEMS_SKIPPED" -gt 0 ]]; then
+                    log_info "Auto-groom: $GROOM_ITEMS_ADDED item(s) added, $GROOM_ITEMS_SKIPPED skipped (limits: max=$GROOM_MAX_ITEMS, min_priority=$GROOM_MIN_PRIORITY)"
+                fi
                 if [[ "$(_count_total_ready)" -le "$total_ready" ]]; then
                     log_warning "Groom did not produce new ready items — pausing auto-groom"
                     groom_exhausted=true
@@ -2558,6 +2581,9 @@ cmd_groom() {
 
     # Protect pre-existing items from groomer modifications/deletions
     protect_items_from_groom "$groom_snap_dir"
+
+    # Enforce groom limits (max items, min priority)
+    enforce_groom_limits "$groom_snap_dir"
     rm -rf "$groom_snap_dir"
 
     # --- Post-groom diff ---
@@ -2716,6 +2742,85 @@ snapshot_backlogs() {
     echo "$ready_f $ready_b $total_f $total_b"
 }
 
+# Enforce groom limits: max items and min priority.
+# Removes new items that exceed the cap or fall below the priority threshold.
+# Sets GROOM_ITEMS_ADDED and GROOM_ITEMS_SKIPPED for summary reporting.
+GROOM_ITEMS_ADDED=0
+GROOM_ITEMS_SKIPPED=0
+enforce_groom_limits() {
+    local snap_dir="$1"
+    local max_items="$GROOM_MAX_ITEMS"
+    local min_priority="$GROOM_MIN_PRIORITY"
+    GROOM_ITEMS_ADDED=0
+    GROOM_ITEMS_SKIPPED=0
+
+    # Priority rank: must=0, should=1, could=2, future=3
+    local -A prio_rank=([must]=0 [should]=1 [could]=2 [future]=3)
+    local min_rank="${prio_rank[$min_priority]:-1}"
+
+    for f in "${BACKLOG_FILES[@]}"; do
+        local snap_file="$snap_dir/$f"
+        local live_file="$BACKLOG_DIR/$f"
+        [[ -f "$snap_file" ]] || continue
+        [[ -f "$live_file" ]] || continue
+
+        # Get IDs that existed before grooming
+        local old_ids
+        old_ids=$(jq -r '.items[].id' "$snap_file" 2>/dev/null || true)
+
+        # Get new items (IDs not in the snapshot)
+        local new_items_json
+        if [[ -n "$old_ids" ]]; then
+            local old_ids_array
+            old_ids_array=$(printf '%s\n' "$old_ids" | jq -R . | jq -s .)
+            new_items_json=$(jq --argjson old "$old_ids_array" \
+                '[.items[] | select(.id as $id | $old | index($id) | not)]' "$live_file" 2>/dev/null)
+        else
+            new_items_json=$(jq '.items' "$live_file" 2>/dev/null)
+        fi
+
+        local new_count
+        new_count=$(printf '%s' "$new_items_json" | jq 'length' 2>/dev/null || echo 0)
+        [[ "$new_count" -eq 0 ]] && continue
+
+        # Filter out items below min priority
+        local removed_ids=()
+        local kept=0
+        local i
+        for ((i = 0; i < new_count; i++)); do
+            local item_id item_prio
+            item_id=$(printf '%s' "$new_items_json" | jq -r ".[$i].id")
+            item_prio=$(printf '%s' "$new_items_json" | jq -r ".[$i].priority // \"could\"")
+            local item_rank="${prio_rank[$item_prio]:-2}"
+
+            if [[ "$item_rank" -gt "$min_rank" ]]; then
+                # Below threshold — remove
+                removed_ids+=("$item_id")
+                log_info "Groom limit: skipped $item_id (priority: $item_prio, below $min_priority threshold)"
+            elif [[ "$kept" -ge "$max_items" ]]; then
+                # Over cap — remove
+                removed_ids+=("$item_id")
+                log_info "Groom limit: skipped $item_id (exceeded max $max_items items)"
+            else
+                kept=$((kept + 1))
+            fi
+        done
+
+        GROOM_ITEMS_ADDED=$((GROOM_ITEMS_ADDED + kept))
+        GROOM_ITEMS_SKIPPED=$((GROOM_ITEMS_SKIPPED + ${#removed_ids[@]}))
+
+        # Remove filtered items from the live file
+        if [[ ${#removed_ids[@]} -gt 0 ]]; then
+            local ids_to_remove
+            ids_to_remove=$(printf '%s\n' "${removed_ids[@]}" | jq -R . | jq -s .)
+            local tmp
+            tmp=$(jq --argjson rm "$ids_to_remove" \
+                '.items = [.items[] | select(.id as $id | $rm | index($id) | not)]' "$live_file")
+            printf '%s\n' "$tmp" > "$live_file"
+        fi
+    done
+}
+
 # Show what changed after grooming
 print_groom_diff() {
     local before="$1"
@@ -2740,6 +2845,9 @@ print_groom_diff() {
     if [[ "$new_items" -gt 0 ]]; then
         log_success "$new_items new item(s) added"
     fi
+    if [[ "$GROOM_ITEMS_SKIPPED" -gt 0 ]]; then
+        log_info "$GROOM_ITEMS_SKIPPED item(s) skipped by groom limits (max=$GROOM_MAX_ITEMS, min_priority=$GROOM_MIN_PRIORITY)"
+    fi
     if [[ "$new_ready" -gt 0 ]]; then
         log_success "$new_ready item(s) moved to sprint-ready"
     elif [[ "$new_ready" -eq 0 && "$new_items" -eq 0 ]]; then
@@ -2747,6 +2855,9 @@ print_groom_diff() {
     fi
 
     echo "  Ready: $ready_before → $ready_after  |  Total: $total_before → $total_after"
+    if [[ "$GROOM_ITEMS_ADDED" -gt 0 || "$GROOM_ITEMS_SKIPPED" -gt 0 ]]; then
+        echo "  Added: $GROOM_ITEMS_ADDED  |  Skipped: $GROOM_ITEMS_SKIPPED"
+    fi
 }
 
 cmd_review() {
