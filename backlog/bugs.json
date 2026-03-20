@@ -125,7 +125,7 @@
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "PO re-review: bumped to must. Silent config failure on first run destroys new-user trust at exactly the moment they're evaluating the tool. If yq isn't installed (common), every override they set is a lie. No other item has this failure mode — the user did everything right and gets wrong behavior with no signal. Must fix before new user onboarding can be considered reliable.",
+      "groomingNotes": "PO re-review: bumped to must. Silent config failure on first run destroys new-user trust at exactly the moment they're evaluating the tool. If yq isn't installed (common), every override they set is a lie. No other item has this failure mode — the user did everything right and gets wrong behavior with no signal. Must fix before new user onboarding can be considered reliable. NOTE: First sprint attempt was rejected by validator agent (failCount: 1). Implementation must ensure the warning fires unconditionally when config.yaml exists with non-empty content and yq is absent — the grep-detection fallback must NOT gate the warning.",
       "lastFailReason": "Validator agent rejected implementation",
       "lastFailAt": "2026-03-20T11:54:40-07:00",
       "failCount": 1
@@ -247,6 +247,83 @@
       "readyForSprint": true,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Tech debt: path convention inconsistency between remove_items_by_status and the other CRUD helpers. Small refactor with one call site to update. Low risk — only one caller exists today (cmd_clean)."
+    },
+    {
+      "id": "BUG-011",
+      "title": "cmd_review silently ignores unknown options",
+      "intent": "cmd_review must reject unknown flags immediately — silently discarding options lets typos pass undetected and erodes user trust in the CLI",
+      "description": "cmd_review() parses --update-docs and --since but its catch-all branch is '* ) shift ;;' at line 2414, silently discarding any unrecognized flag. Most other commands (cmd_clean, cmd_backlog_add, etc.) reject unknown options with log_error and return 1. A user who mistypes '--update_docs' or '--since-commit' will get no error — the command runs silently in the wrong mode. Fix: replace the silent '* ) shift' with '* ) log_error \"Unknown option: $1\"; return 1' to match the established pattern.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find cmd_review() and locate the option parsing loop (around line 2410-2416)",
+        "Replace the catch-all '* ) shift ;;' with '* ) log_error \"Unknown option: $1\"; return 1 ;;'",
+        "Verify that valid options --update-docs and --since still work normally",
+        "Verify that 'aishore review --typo' now prints an error and exits non-zero"
+      ],
+      "acceptanceCriteria": [
+        "aishore review --unknown-flag exits with a non-zero status and prints an error message",
+        "aishore review --update-docs and aishore review --since <commit> still work correctly",
+        "Error message matches the format used by other commands: 'Unknown option: <flag>'"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Confirmed at line 2414: catch-all '* ) shift' drops unknown flags silently. Pattern inconsistency vs cmd_clean, cmd_backlog_add and others which all use log_error + return 1. One-line fix. Low risk — additive error handling only."
+    },
+    {
+      "id": "BUG-012",
+      "title": "cmd_update silently ignores unknown options",
+      "intent": "cmd_update must reject unknown flags — silently discarding options can make users believe a flag like --force or --dry-run took effect when it did not, potentially causing unintended updates",
+      "description": "cmd_update() parses --dry-run, --check, --force, and --no-verify but its catch-all is '* ) shift ;;' at line 3174, silently discarding unknown flags. This is especially dangerous here: a user who mistypes '--dry-run' (e.g., '--dryrun' or '--dry_run') will get no error and the update will proceed as a live update — exactly the behavior they were trying to avoid. Fix: replace '* ) shift' with '* ) log_error \"Unknown option: $1\"; return 1' to match the established pattern in cmd_clean, cmd_backlog_add, etc.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find cmd_update() and locate the option parsing loop (around line 3169-3176)",
+        "Replace the catch-all '* ) shift ;;' with '* ) log_error \"Unknown option: $1\"; return 1 ;;'",
+        "Verify that valid options --dry-run, --force, --no-verify still work normally",
+        "Verify that 'aishore update --typo' now prints an error and exits non-zero"
+      ],
+      "acceptanceCriteria": [
+        "aishore update --unknown-flag exits with a non-zero status and prints an error message",
+        "aishore update --dry-run, --force, and --no-verify --force all still work correctly",
+        "Error message matches the format used by other commands: 'Unknown option: <flag>'"
+      ],
+      "dependsOn": [],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Bumped to must: a mistyped --dry-run (e.g. --dryrun or --dry_run) silently executes a live update — the user explicitly tried to preview and got destructive action with no warning. This is the same class of failure as BUG-005 (silent config ignore). update is a state-changing, potentially irreversible operation; the --dry-run flag is a safety net that must be reliable. One-line fix, but high consequence if missed.",
+      "completedAt": "2026-03-20T12:23:47-07:00"
+    },
+    {
+      "id": "BUG-013",
+      "title": "cmd_groom and cmd_metrics silently accept unknown options",
+      "intent": "All CLI commands must reject unknown flags — silent acceptance of garbage input makes the CLI unpredictable and violates the established error-handling pattern",
+      "description": "cmd_groom() at line 2262 checks only '${1:-}' == '--backlog' without a proper arg-parsing loop, so any extra argument after --backlog is silently ignored. cmd_metrics() at line 2470 does the same: checks only '${1:-}' == '--json'. Neither reports an error for unknown flags like '--bogus'. Both should use a proper while/case loop with a catch-all that calls log_error and returns 1, consistent with cmd_clean, cmd_backlog_add, and other commands in the same script.",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find cmd_groom() (line 2258) and replace the single-line check '[\\[ \"${1:-}\" == \"--backlog\" ]]' with a proper while/case loop that handles --backlog and rejects unknown options",
+        "In .aishore/aishore, find cmd_metrics() (line 2466) and replace the single-line check '[\\[ \"${1:-}\" == \"--json\" ]]' with a proper while/case loop that handles --json and rejects unknown options",
+        "Verify that 'aishore groom --backlog' and 'aishore groom' still work correctly",
+        "Verify that 'aishore metrics --json' and 'aishore metrics' still work correctly",
+        "Verify that 'aishore groom --typo' and 'aishore metrics --typo' now print an error and exit non-zero"
+      ],
+      "acceptanceCriteria": [
+        "aishore groom --unknown-flag exits with a non-zero status and prints 'Unknown option: --unknown-flag'",
+        "aishore metrics --unknown-flag exits with a non-zero status and prints 'Unknown option: --unknown-flag'",
+        "aishore groom, aishore groom --backlog, aishore metrics, and aishore metrics --json all continue to work correctly"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Both cmd_groom (line 2262) and cmd_metrics (line 2470) use single-check pattern instead of proper while/case loop. Lower severity than BUG-011/012 since these commands have fewer dangerous flags, but still violates CLI consistency. Two functions to fix, same pattern each. Low risk."
     }
   ]
 }

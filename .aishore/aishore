@@ -3171,7 +3171,7 @@ cmd_update() {
             --dry-run|--check) dry_run=true; shift ;;
             --force) force=true; shift ;;
             --no-verify) no_verify=true; shift ;;
-            *) shift ;;
+            *) log_error "Unknown option: $1"; return 1 ;;
         esac
     done
 
