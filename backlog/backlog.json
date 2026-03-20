@@ -149,6 +149,182 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "PO bump to should: we now have 20 sprint entries in the archive from today's session. Users who want to answer 'what did I complete today?' or audit a sprint run are blocked until this ships — they must read raw JSONL. The metrics command covers aggregates; history fills the item-level gap. With real data in the archive, this feature has immediate user value rather than speculative future value. Bumped from could.",
       "completedAt": "2026-03-20T13:08:16-07:00"
+    },
+    {
+      "id": "FEAT-007",
+      "title": "Configurable auto-fix command (fix_cmd)",
+      "intent": "Lint-fixable issues must be auto-resolved before validation.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Add fix_cmd config (config.yaml, AISHORE_FIX_CMD)",
+        "Run fix_cmd after developer agent completes",
+        "Warn on failure but do not abort sprint",
+        "On retry, run fix_cmd before developer re-attempts",
+        "Tell developer agent prompt that fix_cmd will auto-run"
+      ],
+      "acceptanceCriteria": [
+        "fix_cmd runs after developer agent",
+        "AISHORE_FIX_CMD env var takes precedence",
+        "fix_cmd failure warns but does not abort",
+        "On retry, fix_cmd runs before re-attempt",
+        "Unchanged when fix_cmd is unset"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-008",
+      "title": "Squash-merge feature branches into single commit",
+      "intent": "Each sprint item must produce exactly one clean commit on the target branch.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Add merge_strategy config default merge, option squash",
+        "When squash, use git merge --squash",
+        "Create commit using developer agent summary",
+        "Follow conventional commit format"
+      ],
+      "acceptanceCriteria": [
+        "merge_strategy squash causes squash-merge",
+        "AISHORE_MERGE_STRATEGY=squash env var works",
+        "Exactly one commit per sprint item",
+        "Squash commit includes developer summary",
+        "Default no-ff merge unchanged"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-009",
+      "title": "Create GitHub PR instead of merging (pr flag)",
+      "intent": "Users must be able to review sprint output before it lands on the target branch.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Add pr flag to cmd_run and cmd_auto",
+        "Add create_pr config (config.yaml, AISHORE_CREATE_PR)",
+        "pr flag implies no-merge",
+        "After pushing, run gh pr create with item title and agent summaries",
+        "Fall back to no-merge if gh unavailable"
+      ],
+      "acceptanceCriteria": [
+        "pr flag creates a GitHub PR",
+        "PR title includes item ID and title",
+        "PR body includes agent summaries",
+        "Falls back to no-merge if gh not installed",
+        "create_pr true in config makes PR default"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-010",
+      "title": "Failed sprint diagnostics — better crash output",
+      "intent": "When a sprint fails, the user must see enough context to diagnose why immediately.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "On agent failure, tail last 20 lines of agent log",
+        "Include agent stderr if captured",
+        "Add diagnose flag for extended diagnostics",
+        "Store last failure context in .aishore/data/status/"
+      ],
+      "acceptanceCriteria": [
+        "Agent crash shows last 20 lines of log",
+        "diagnose flag shows extended diagnostics",
+        "Agent log path always printed on failure",
+        "Successful sprints unaffected"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-011",
+      "title": "Git worktree isolation mode for sprints",
+      "intent": "Sprint execution must never risk losing uncommitted work.",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Add isolation config default stash, option worktree",
+        "When worktree, create git worktree for sprint branch",
+        "Run developer agent in worktree directory",
+        "Merge worktree branch on success",
+        "Clean up worktree on success or failure"
+      ],
+      "acceptanceCriteria": [
+        "isolation worktree causes sprints in git worktree",
+        "AISHORE_ISOLATION=worktree env var works",
+        "Uncommitted changes untouched",
+        "Worktree cleaned up",
+        "Default stash behavior unchanged"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-012",
+      "title": "Backlog sync — detect manually completed items",
+      "intent": "The backlog must reflect reality. Items completed outside aishore should be detectable.",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Add backlog sync subcommand",
+        "Check todo items scope against git history",
+        "Flag items whose changes appear on current branch",
+        "Prompt to mark flagged items done",
+        "Add auto and dry-run flags"
+      ],
+      "acceptanceCriteria": [
+        "backlog sync lists apparently completed items",
+        "Items flagged based on scope and git history",
+        "dry-run shows candidates only",
+        "auto marks flagged items done"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-013",
+      "title": "Item complexity gate — warn on under-specified creative work",
+      "intent": "Creative items must be flagged to guide users toward prescriptive specs.",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Add complexity heuristic to backlog check",
+        "Flag items lacking file paths or with fewer than 3 steps",
+        "Suggest more prescriptive steps",
+        "Log warning before sprint"
+      ],
+      "acceptanceCriteria": [
+        "backlog check flags vague items",
+        "Warning is advisory not blocking",
+        "Specific items do not trigger warning",
+        "Warning suggests how to improve spec"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
     }
   ]
 }
