@@ -2411,7 +2411,7 @@ cmd_review() {
         case "$1" in
             --update-docs) update_docs=true; shift ;;
             --since) since="$2"; shift 2 ;;
-            *) shift ;;
+            *) log_error "Unknown option: $1"; return 1 ;;
         esac
     done
 
