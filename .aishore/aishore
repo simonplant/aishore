@@ -3585,6 +3585,7 @@ cmd_backlog_list() {
     for f in "${files[@]}"; do
         [[ -f "$BACKLOG_DIR/$f" ]] || continue
         local items
+        # shellcheck disable=SC1010
         items=$(jq -r --argjson done "$done_ids" "[$jq_filter] | sort_by(if .priority == \"must\" then 0 elif .priority == \"should\" then 1 elif .priority == \"could\" then 2 else 3 end) | .[] | [.id, .priority // \"-\", .status // \"todo\", (if .readyForSprint then \"yes\" else \"no\" end), ((.dependsOn // []) | map(select(. as \$d | \$done | index(\$d) | not)) | if length == 0 then \"-\" else join(\",\") end), .title] | @tsv" "$BACKLOG_DIR/$f" 2>/dev/null) || continue
         if [[ -n "$items" ]]; then
             while IFS=$'\t' read -r id pri status ready blocked title; do
