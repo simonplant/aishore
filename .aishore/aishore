@@ -336,9 +336,9 @@ load_config() {
         local cfg_cmd
         cfg_cmd=$(grep -E '^\s*command:' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*command:\s*//' | tr -d '"' || echo "")
         [[ -n "$cfg_cmd" ]] && VALIDATE_CMD="$cfg_cmd"
-        # Warn if config.yaml has uncommented model/agent settings that yq would parse
-        if grep -qE '^[^#]*(models|agent|permissions):' "$CONFIG_FILE" 2>/dev/null; then
-            log_warning "config.yaml has model/timeout settings but yq is not installed — those settings are ignored. Install yq for full config support: https://github.com/mikefarah/yq#install"
+        # Always warn when config.yaml has content but yq is unavailable
+        if grep -qE '[^[:space:]]' "$CONFIG_FILE" 2>/dev/null; then
+            log_warning "config.yaml exists but yq is not installed — most settings in ${CONFIG_FILE} are being ignored (only validation.command is read via fallback). yq is a lightweight YAML processor. Install it for full config support: https://github.com/mikefarah/yq#install"
         fi
     fi
 
