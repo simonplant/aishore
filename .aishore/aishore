@@ -3455,6 +3455,12 @@ cmd_backlog_check() {
 }
 
 cmd_backlog_populate() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            *) log_error "Unknown option: $1"; return 1 ;;
+        esac
+    done
+
     if [[ ! -f "$BACKLOG_DIR/backlog.json" ]]; then
         log_error "aishore not initialized — run '.aishore/aishore init' first"
         return 1
