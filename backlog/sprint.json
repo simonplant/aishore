@@ -1,31 +1,32 @@
 {
-  "sprintId": "sprint-1774042184",
-  "startedAt": "2026-03-20T14:29:44-07:00",
+  "sprintId": "sprint-1774042799",
+  "startedAt": "2026-03-20T14:39:59-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-008",
-    "title": "Squash-merge feature branches into single commit",
-    "intent": "Each sprint item must produce exactly one clean commit on the target branch.",
+    "id": "FEAT-009",
+    "title": "Create GitHub PR instead of merging (pr flag)",
+    "intent": "Users must be able to review sprint output before it lands on the target branch.",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Add merge_strategy config default merge, option squash",
-      "When squash, use git merge --squash",
-      "Create commit using developer agent summary",
-      "Follow conventional commit format"
+      "Add pr flag to cmd_run and cmd_auto",
+      "Add create_pr config (config.yaml, AISHORE_CREATE_PR)",
+      "pr flag implies no-merge",
+      "After pushing, run gh pr create with item title and agent summaries",
+      "Fall back to no-merge if gh unavailable"
     ],
     "acceptanceCriteria": [
-      "merge_strategy squash causes squash-merge",
-      "AISHORE_MERGE_STRATEGY=squash env var works",
-      "Exactly one commit per sprint item",
-      "Squash commit includes developer summary",
-      "Default no-ff merge unchanged"
+      "pr flag creates a GitHub PR",
+      "PR title includes item ID and title",
+      "PR body includes agent summaries",
+      "Falls back to no-merge if gh not installed",
+      "create_pr true in config makes PR default"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T14:29:44-07:00",
+    "startedAt": "2026-03-20T14:39:59-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T14:37:48-07:00"
+    "completedAt": "2026-03-20T14:49:27-07:00"
   },
-  "completedAt": "2026-03-20T14:37:48-07:00",
+  "completedAt": "2026-03-20T14:49:27-07:00",
   "attempts": 1
 }
