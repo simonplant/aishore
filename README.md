@@ -1,47 +1,28 @@
 # aishore
 
-![Version](https://img.shields.io/github/v/release/simonplant/aishore)
-![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
-![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey)
-![Shell](https://img.shields.io/badge/shell-bash%204.4%2B-green)
-![Claude Code](https://img.shields.io/badge/requires-Claude%20Code%20CLI-blueviolet)
+[![Version](https://img.shields.io/github/v/release/simonplant/aishore)](https://github.com/simonplant/aishore/releases)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey)]()
+[![Shell](https://img.shields.io/badge/shell-bash%204.4%2B-green)]()
+[![Claude Code](https://img.shields.io/badge/requires-Claude%20Code%20CLI-blueviolet)](https://docs.anthropic.com/en/docs/claude-code)
 
-**Intent-driven autonomous development for Claude Code.**
+**Autonomous sprint orchestration for Claude Code -- from backlog to merged code, hands-off.**
 
-aishore is a drop-in sprint orchestration tool that reliably develops software in a guided and automated way — aligned to commander's intent and quality standards. You define what must be true (intent), what to build (backlog), and how to verify it (acceptance criteria). aishore picks items, implements them through a maturity protocol (implement → critique → harden), validates against your intent, and archives completed work. You come back to code that was built right, for the right reasons.
-
-```
-You: define intent + backlog  →  aishore develops, critiques, hardens  →  You: review quality work
-```
-
-## How It Works
-
-aishore models a real sprint team with specialized AI agents, coordinated by a central orchestrator:
+aishore is a drop-in sprint orchestration tool that reliably develops software in a guided and automated way -- aligned to commander's intent and quality standards. You define what must be true (intent), what to build (backlog), and how to verify it (acceptance criteria). aishore picks items, implements them through a maturity protocol (implement, critique, harden), validates against your intent, and archives completed work. You come back to code that was built right, for the right reasons.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                                  Sprint Orchestrator                                    │
-│                                                                                         │
-│  ┌──────┐  ┌────────┐  ┌───────────┐  ┌───────────┐  ┌────────┐  ┌───────────┐  ┌────────────┐
-│  │ Pick │─▶│ Branch │─▶│ Preflight │─▶│ Developer │─▶│ Verify │─▶│ Validator │─▶│   Merge    │
-│  │ Item │  │ Create │  │  Check    │  │   Agent   │  │  Suite │  │   Agent   │  │  Archive   │
-│  └──────┘  └────────┘  └───────────┘  └───────────┘  └────────┘  └───────────┘  └────────────┘
-│                                              │                           │                │
-│                                              └──── retry on failure ─────┘                │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
+You: define intent + backlog  -->  aishore develops, critiques, hardens  -->  You: review quality work
 ```
 
-1. **Pick** — the orchestrator selects the highest-priority ready item from your backlog
-2. **Branch** — creates an isolated feature branch (`aishore/<ID>`) from your current branch
-3. **Preflight** — runs your validation command against the baseline to ensure the codebase is clean before starting
-4. **Develop** — a Developer agent implements the feature using a 3-phase maturity protocol (implement → critique → harden)
-5. **Verify** — scope check, validation command, and AC verification commands all run
-6. **Validate** — a Validator agent checks acceptance criteria and commander's intent against the actual changes
-7. **Merge & Archive** — the orchestrator commits, merges the branch back, pushes, and archives the completed item
+## Why aishore?
 
-Run `.aishore/aishore run 5` and it executes five sprints back-to-back. Failed items are skipped in subsequent picks so the batch keeps moving.
+Vibe coding showed that AI can write code from natural language. But "just vibe it" breaks down at project scale: there is no memory between sessions, no quality gate, no way to batch work or hold the AI to a standard.
 
-## Getting Started
+aishore is the next step -- **structured intent-based batch development with inline critic loops**. Instead of one-shot prompting, you express *intent* (what must be true when done) and let aishore run full development sprints autonomously. Each feature goes through an implement-critique-harden cycle inside a single context-rich session, catching bugs and edge cases before they escape. The result is not just code, but code that was reviewed and hardened by an AI critic while the implementation context was still hot.
+
+This is not vibe coding. This is **sprint coding** -- repeatable, auditable, and scalable.
+
+## Quick Start
 
 ### Install
 
@@ -56,7 +37,7 @@ Then run the setup wizard:
 .aishore/aishore init --yes    # Non-interactive (accept detected defaults)
 ```
 
-The wizard checks prerequisites, detects your project type, configures validation, and scaffolds `backlog/`. Use `--yes` (`-y`) for fully automated setup — it accepts all auto-detected values without prompting.
+The wizard checks prerequisites, detects your project type, configures validation, and scaffolds `backlog/`. Use `--yes` (`-y`) for fully automated setup -- it accepts all auto-detected values without prompting.
 
 <details>
 <summary>Manual installation</summary>
@@ -87,9 +68,44 @@ cd /path/to/your/project && .aishore/aishore init
 
 That's it. The developer agent reads the item, explores your codebase, implements the feature, and the validator confirms it meets the acceptance criteria.
 
+## Key Features
+
+- **Autonomous sprints** -- pick, branch, implement, validate, merge, archive. Run one or batch five back-to-back with `.aishore/aishore run 5`.
+- **Backlog management** -- add items manually or AI-populate from your product requirements doc. Filter by type, status, or priority.
+- **Maturity protocol** -- every feature goes through implement, critique, harden inside a single session. The AI reviews its own work while context is hot.
+- **Grooming** -- a Tech Lead agent refines bugs for technical clarity; a Product Owner agent aligns features with product vision.
+- **Validation and review** -- scope checking, acceptance criteria verification, and an Architect agent for post-sprint architecture review.
+- **Autonomous mode** -- `auto done` drains the entire backlog unattended, with auto-grooming, circuit breakers, and spec refinement on failure.
+- **Safe by default** -- feature branches isolate each sprint, uncommitted work is stashed and restored, failures clean up automatically.
+
+## How It Works
+
+aishore models a real sprint team with specialized AI agents, coordinated by a central orchestrator:
+
+```
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│                                  Sprint Orchestrator                                  │
+│                                                                                       │
+│  ┌──────┐  ┌────────┐  ┌───────────┐  ┌───────────┐  ┌────────┐  ┌─────────┐  ┌──────────┐
+│  │ Pick │->│ Branch │->│ Preflight │->│ Developer │->│ Verify │->│Validator│->│  Merge   │
+│  │ Item │  │ Create │  │  Check    │  │   Agent   │  │  Suite │  │  Agent  │  │ Archive  │
+│  └──────┘  └────────┘  └───────────┘  └───────────┘  └────────┘  └─────────┘  └──────────┘
+│                                              │                         │              │
+│                                              └──── retry on failure ───┘              │
+└───────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+1. **Pick** -- selects the highest-priority ready item from your backlog
+2. **Branch** -- creates an isolated feature branch (`aishore/<ID>`) from your current branch
+3. **Preflight** -- runs your validation command against the baseline to ensure the codebase is clean
+4. **Develop** -- a Developer agent implements the feature using a 3-phase maturity protocol (implement, critique, harden)
+5. **Verify** -- scope check, validation command, and AC verification commands all run
+6. **Validate** -- a Validator agent checks acceptance criteria and commander's intent against the actual changes
+7. **Merge & Archive** -- commits, merges the branch back, pushes, and archives the completed item
+
 ## The Workflow
 
-aishore follows a **populate → groom → run → review** cycle. This mirrors how a real team works: product fills the backlog, leads refine it, developers execute, and architects review.
+aishore follows a **populate, groom, run, review** cycle. This mirrors how a real team works: product fills the backlog, leads refine it, developers execute, and architects review.
 
 ### 1. Populate the Backlog
 
@@ -125,7 +141,7 @@ Grooming turns rough ideas into sprint-ready items by adding implementation step
 .aishore/aishore groom --backlog    # Product Owner: grooms features for value alignment
 ```
 
-The **Tech Lead agent** focuses on technical clarity — are the steps actionable? Are the acceptance criteria testable? The **Product Owner agent** focuses on value — are we building the right things in the right order?
+The **Tech Lead agent** focuses on technical clarity -- are the steps actionable? Are the acceptance criteria testable? The **Product Owner agent** focuses on value -- are we building the right things in the right order?
 
 ### 3. Run Sprints
 
@@ -136,7 +152,7 @@ The **Tech Lead agent** focuses on technical clarity — are the steps actionabl
 .aishore/aishore run --dry-run      # Preview what would run without executing
 ```
 
-Each sprint is isolated. Pre-existing uncommitted changes are stashed beforehand and restored afterward. If a sprint fails, the working tree resets cleanly — your other work is never lost.
+Each sprint is isolated. Pre-existing uncommitted changes are stashed beforehand and restored afterward. If a sprint fails, the working tree resets cleanly -- your other work is never lost.
 
 Commits happen automatically on feature branches. Use `--retries N` to let failing items retry, and `--refine` to have an AI agent improve the spec when retries are exhausted.
 
@@ -202,7 +218,7 @@ All agents automatically read your `CLAUDE.md`, `PRODUCT.md`, and `ARCHITECTURE.
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--title "..."` | Item title | *(required)* |
-| `--intent "..."` | Commander's intent — what must be true when done | *(required for sprint)* |
+| `--intent "..."` | Commander's intent -- what must be true when done | *(required for sprint)* |
 | `--type feat\|bug` | Feature or bug | `feat` |
 | `--desc "..."` | Full description | *(none)* |
 | `--priority must\|should\|could\|future` | Priority level | `should` |
@@ -260,7 +276,7 @@ Multiple flags can be combined in a single edit command.
 .aishore/aishore backlog check <ID>    # Validate readiness gates for an item
 ```
 
-Checks: title, commander's intent (≥20 chars, must be a directive), steps, acceptance criteria, and step length.
+Checks: title, commander's intent (>=20 chars, must be a directive not a label), steps, acceptance criteria, and step length.
 
 ### `backlog populate`
 
@@ -268,7 +284,7 @@ Checks: title, commander's intent (≥20 chars, must be a directive), steps, acc
 .aishore/aishore backlog populate   # AI-populate backlog from product requirements
 ```
 
-Reads your product requirements document (`PRODUCT.md`, `PRD.md`, or `README.md`) and uses the Product Owner agent to create backlog items. Checks existing items to avoid duplicates. Fully non-interactive — designed for agent-driven workflows.
+Reads your product requirements document (`PRODUCT.md`, `PRD.md`, or `README.md`) and uses the Product Owner agent to create backlog items. Checks existing items to avoid duplicates. Fully non-interactive -- designed for agent-driven workflows.
 
 ### `backlog history`
 
@@ -303,12 +319,12 @@ Reads your product requirements document (`PRODUCT.md`, `PRD.md`, or `README.md`
 | Flag | Description | Default |
 |------|-------------|---------|
 | `[N]` | Number of sprints to run | `1` |
-| `[ID]` | Run a specific item by ID (e.g., `FEAT-001`) | — |
-| `--dry-run` | Preview what would run without executing | — |
-| `--no-merge` | Keep feature branches for PR review (push instead of merge) | — |
+| `[ID]` | Run a specific item by ID (e.g., `FEAT-001`) | -- |
+| `--dry-run` | Preview what would run without executing | -- |
+| `--no-merge` | Keep feature branches for PR review (push instead of merge) | -- |
 | `--retries N` | Allow N retry attempts on validation failure | `0` |
-| `--refine` | Refine spec (steps + AC) when retries exhausted, then retry once more | — |
-| `--quick` | Skip maturity protocol (fast iteration) | — |
+| `--refine` | Refine spec (steps + AC) when retries exhausted, then retry once more | -- |
+| `--quick` | Skip maturity protocol (fast iteration) | -- |
 
 ### `auto`
 
@@ -327,11 +343,11 @@ Reads your product requirements document (`PRODUCT.md`, `PRD.md`, or `README.md`
 |------|-------------|---------|
 | `--retries N` | Per-item retries on failure | `0` |
 | `--max-failures N` | Stop after N consecutive failures (circuit breaker) | `5` |
-| `--no-merge` | Keep feature branches for PR review (push instead of merge) | — |
-| `--refine` | Refine spec when retries exhausted, then retry once more | — |
-| `--quick` | Skip maturity protocol (fast iteration) | — |
-| `--auto-review` | Run architecture review automatically after completion | — |
-| `--dry-run` | Preview first item without running | — |
+| `--no-merge` | Keep feature branches for PR review (push instead of merge) | -- |
+| `--refine` | Refine spec when retries exhausted, then retry once more | -- |
+| `--quick` | Skip maturity protocol (fast iteration) | -- |
+| `--auto-review` | Run architecture review automatically after completion | -- |
+| `--dry-run` | Preview first item without running | -- |
 
 ### `groom`
 
@@ -371,8 +387,8 @@ Each backlog item has these fields:
 |-------|------|-------------|
 | `id` | string | Auto-generated (`FEAT-001`, `BUG-001`) |
 | `title` | string | Short descriptive title |
-| `intent` | string | Commander's intent — non-negotiable directive |
-| `description` | string | Full description — what to build, context, scope boundaries |
+| `intent` | string | Commander's intent -- non-negotiable directive |
+| `description` | string | Full description -- what to build, context, scope boundaries |
 | `priority` | string | `must`, `should`, `could`, or `future` |
 | `category` | string | Organizational tag |
 | `steps` | array | Implementation steps (added by grooming) |
@@ -434,7 +450,7 @@ agent:
 scope:
   mode: warn
 
-# Maturity protocol: implement → critique → harden (disable with --quick)
+# Maturity protocol: implement -> critique -> harden (disable with --quick)
 maturity:
   enabled: true
 
@@ -483,8 +499,18 @@ Or use environment variables (these take precedence over config.yaml):
 
 Updates pull from the latest GitHub release tag (not `main`), so you always get a stable, tagged version. The file list is discovered dynamically from the checksums manifest. All paths are validated against traversal attacks. Your `backlog/` and `config.yaml` are never modified.
 
-## License
+## Contributing
 
-AGPL-3.0 — see [LICENSE](LICENSE). Commercial licenses available for enterprise use — [open an issue](https://github.com/simonplant/aishore/issues) or contact the maintainer.
+Contributions are welcome! Whether it is a bug fix, new feature, documentation improvement, or idea -- please open a PR or issue.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and the pull request process.
 
 By contributing, you agree to the [CLA](CONTRIBUTING.md#contributor-license-agreement-cla).
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).
+
+```
+Copyright 2025-2026 Simon Plant
+```
