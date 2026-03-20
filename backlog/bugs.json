@@ -425,11 +425,12 @@
         "validate_arg is called for --type, --title, --intent, --desc, --priority, --category, and --depends-on"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "cmd_backlog_edit already validates all flags with validate_arg; cmd_backlog_add inconsistently skips it for most flags. Additive fix — add validate_arg calls. Low risk, small scope."
+      "groomingNotes": "cmd_backlog_edit already validates all flags with validate_arg; cmd_backlog_add inconsistently skips it for most flags. Additive fix — add validate_arg calls. Low risk, small scope.",
+      "completedAt": "2026-03-20T12:41:01-07:00"
     },
     {
       "id": "BUG-018",
