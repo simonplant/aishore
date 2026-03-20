@@ -139,6 +139,20 @@ log_error()   { echo -e "${RED}✗ $1${NC}" >&2; }
 log_info()    { echo -e "${CYAN}$1${NC}"; }
 log_agent()   { echo -e "${MAGENTA}[$1]${NC} $2"; }
 
+# Truncate file content to last OUTPUT_TRUNCATE_LINES lines, prepending notice if truncated.
+# Usage: result=$(truncate_output "$tmpfile")
+truncate_output() {
+    local file="$1"
+    local total_lines
+    total_lines=$(wc -l < "$file" 2>/dev/null || echo 0)
+    local output
+    output=$(tail -n "$OUTPUT_TRUNCATE_LINES" "$file" 2>/dev/null || true)
+    if [[ "$total_lines" -gt "$OUTPUT_TRUNCATE_LINES" ]]; then
+        output="[... output truncated, showing last $OUTPUT_TRUNCATE_LINES of $total_lines lines]"$'\n'"$output"
+    fi
+    printf '%s' "$output"
+}
+
 restore_stash() {
     local pop_output
     if pop_output=$(git stash pop 2>&1); then
@@ -686,7 +700,7 @@ count_ready_items() {
 
 list_ready_items() {
     local file="$1"
-    jq -r '.items[] | select(.readyForSprint == true) | "  \(.id): \(.title)"' "$file" 2>/dev/null
+    jq -r '.items[] | select(.readyForSprint == true and (.passes == false or .passes == null)) | "  \(.id): \(.title)"' "$file" 2>/dev/null
 }
 
 # List all auto-pickable item IDs in priority order (same filter as pick_item but returns all)
@@ -1419,12 +1433,7 @@ run_ac_verification() {
             bash -c "$ac_cmd" >"$ac_tmpfile" 2>&1 || ac_ok=false
         fi
         local ac_output
-        local total_lines
-        total_lines=$(wc -l < "$ac_tmpfile" 2>/dev/null || echo 0)
-        ac_output=$(tail -n "$OUTPUT_TRUNCATE_LINES" "$ac_tmpfile" 2>/dev/null || true)
-        if [[ "$total_lines" -gt "$OUTPUT_TRUNCATE_LINES" ]]; then
-            ac_output="[... output truncated, showing last $OUTPUT_TRUNCATE_LINES of $total_lines lines]"$'\n'"$ac_output"
-        fi
+        ac_output=$(truncate_output "$ac_tmpfile")
         rm -f "$ac_tmpfile"
 
         if [[ "$ac_ok" == "true" ]]; then
@@ -1751,14 +1760,30 @@ Output ONLY the JSON object, no markdown fences, no explanation."
         --print
     )
 
+    local refine_timeout="${AGENT_TIMEOUT:-3600}"
+    local timeout_cmd="timeout"
+    command -v gtimeout &>/dev/null && timeout_cmd="gtimeout"
+
     if [[ "$has_setsid" == true ]]; then
-        setsid env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+        setsid "$timeout_cmd" "$refine_timeout" env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
             claude "${claude_args[@]}" \
-            -p "$refinement_prompt" > "$refine_output_file" 2>&1
+            -p "$refinement_prompt" > "$refine_output_file" 2>&1 || {
+            local exit_code=$?
+            if [[ $exit_code -eq 124 ]]; then
+                log_warning "Refinement agent timed out after ${refine_timeout}s"
+                return 1
+            fi
+        }
     else
-        env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+        "$timeout_cmd" "$refine_timeout" env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
             claude "${claude_args[@]}" \
-            -p "$refinement_prompt" > "$refine_output_file" 2>&1
+            -p "$refinement_prompt" > "$refine_output_file" 2>&1 || {
+            local exit_code=$?
+            if [[ $exit_code -eq 124 ]]; then
+                log_warning "Refinement agent timed out after ${refine_timeout}s"
+                return 1
+            fi
+        }
     fi
 
     local raw_output
@@ -1814,12 +1839,7 @@ _run_retry_loop() {
         fi
         if [[ "$preflight_ok" != "true" ]]; then
             local preflight_output
-            local preflight_total_lines
-            preflight_total_lines=$(wc -l < "$preflight_tmpfile" 2>/dev/null || echo 0)
-            preflight_output=$(tail -n "$OUTPUT_TRUNCATE_LINES" "$preflight_tmpfile" 2>/dev/null || true)
-            if [[ "$preflight_total_lines" -gt "$OUTPUT_TRUNCATE_LINES" ]]; then
-                preflight_output="[... output truncated, showing last $OUTPUT_TRUNCATE_LINES of $preflight_total_lines lines]"$'\n'"$preflight_output"
-            fi
+            preflight_output=$(truncate_output "$preflight_tmpfile")
             rm -f "$preflight_tmpfile"
             log_error "Pre-flight validation failed — baseline is broken"
             log_error "Output (truncated): $preflight_output"
@@ -1904,12 +1924,7 @@ Only modify files matching the declared scope globs. Fix the issues."
             else
                 bash -c "$VALIDATE_CMD" >"$validate_tmpfile" 2>&1 || validate_ok=false
             fi
-            local validate_total_lines
-            validate_total_lines=$(wc -l < "$validate_tmpfile" 2>/dev/null || echo 0)
-            validate_output=$(tail -n "$OUTPUT_TRUNCATE_LINES" "$validate_tmpfile" 2>/dev/null || true)
-            if [[ "$validate_total_lines" -gt "$OUTPUT_TRUNCATE_LINES" ]]; then
-                validate_output="[... output truncated, showing last $OUTPUT_TRUNCATE_LINES of $validate_total_lines lines]"$'\n'"$validate_output"
-            fi
+            validate_output=$(truncate_output "$validate_tmpfile")
             rm -f "$validate_tmpfile"
             if [[ "$validate_ok" != "true" ]]; then
                 log_error "Validation command failed"
@@ -2783,7 +2798,7 @@ protect_items_from_groom() {
 
     local total=$((restored + deleted_restored))
     if [[ "$total" -gt 0 ]]; then
-        log_warn "Groomer protection: restored $total pre-existing item(s) ($deleted_restored deleted, $restored modified)"
+        log_warning "Groomer protection: restored $total pre-existing item(s) ($deleted_restored deleted, $restored modified)"
     fi
 }
 
@@ -2813,6 +2828,9 @@ enforce_groom_limits() {
     local -A prio_rank=([must]=0 [should]=1 [could]=2 [future]=3)
     local min_rank="${prio_rank[$min_priority]:-1}"
 
+    # Global kept counter — max_items applies across all files
+    local global_kept=0
+
     for f in "${BACKLOG_FILES[@]}"; do
         local snap_file="$snap_dir/$f"
         local live_file="$BACKLOG_DIR/$f"
@@ -2840,7 +2858,6 @@ enforce_groom_limits() {
 
         # Filter out items below min priority
         local removed_ids=()
-        local kept=0
         local i
         for ((i = 0; i < new_count; i++)); do
             local item_id item_prio
@@ -2852,16 +2869,15 @@ enforce_groom_limits() {
                 # Below threshold — remove
                 removed_ids+=("$item_id")
                 log_info "Groom limit: skipped $item_id (priority: $item_prio, below $min_priority threshold)"
-            elif [[ "$kept" -ge "$max_items" ]]; then
-                # Over cap — remove
+            elif [[ "$global_kept" -ge "$max_items" ]]; then
+                # Over global cap — remove
                 removed_ids+=("$item_id")
                 log_info "Groom limit: skipped $item_id (exceeded max $max_items items)"
             else
-                kept=$((kept + 1))
+                global_kept=$((global_kept + 1))
             fi
         done
 
-        GROOM_ITEMS_ADDED=$((GROOM_ITEMS_ADDED + kept))
         GROOM_ITEMS_SKIPPED=$((GROOM_ITEMS_SKIPPED + ${#removed_ids[@]}))
 
         # Remove filtered items from the live file
@@ -2874,6 +2890,8 @@ enforce_groom_limits() {
             printf '%s\n' "$tmp" > "$live_file"
         fi
     done
+
+    GROOM_ITEMS_ADDED="$global_kept"
 }
 
 # Show what changed after grooming
@@ -4649,7 +4667,6 @@ cmd_backlog_sync() {
             [[ ${#globs[@]} -eq 0 ]] && continue
 
             # Check if any changed files match any scope glob
-            local matched_files=""
             local match_count=0
             while IFS= read -r file; do
                 [[ -z "$file" ]] && continue
@@ -4657,7 +4674,6 @@ cmd_backlog_sync() {
                     local pattern="${glob//\*\*/*}"
                     # shellcheck disable=SC2254,SC2053
                     if [[ "$file" == $pattern ]]; then
-                        matched_files="${matched_files}    ${file}\n"
                         match_count=$((match_count + 1))
                         break
                     fi
