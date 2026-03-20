@@ -3895,7 +3895,7 @@ cmd_backlog_edit() {
                 validate_arg "$1" "${2:-}" || return 1
                 # Flush any pending AC entry
                 if [[ -n "$pending_ac" ]]; then
-                    ac_entries+=("$pending_ac")
+                    ac_entries+=("$(printf '%s' "$pending_ac" | jq -Rs .)")
                 fi
                 pending_ac="$2"
                 update_desc="$update_desc ac"
