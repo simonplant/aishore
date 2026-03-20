@@ -1,30 +1,29 @@
 {
-  "sprintId": "sprint-1774030040",
-  "startedAt": "2026-03-20T11:07:20-07:00",
+  "sprintId": "sprint-1774030496",
+  "startedAt": "2026-03-20T11:14:56-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-002",
-    "title": "Merge conflict breaks multi-sprint loop without logging skipped items",
-    "intent": "When a merge conflict aborts a multi-sprint run, the output must clearly list which items were not attempted",
-    "description": "In cmd_run(), when _handle_sprint_success() returns non-zero (merge conflict), the loop breaks immediately. Items queued but not yet attempted are silently abandoned. The batch summary only covers items that were started. This makes it hard to know what needs to be re-run after resolving the conflict.",
+    "id": "BUG-004",
+    "title": "AC verify command output truncated at 1000 bytes, may cut mid-character",
+    "intent": "AC verification failure output must be complete enough to diagnose the problem",
+    "description": "run_ac_verification() uses 'head -c 1000' to cap output from AC verify commands. This can cut multi-byte UTF-8 characters in half, producing garbled text. Even for ASCII, 1000 bytes is often too small for test output. The truncated output is injected into prompts, where incomplete stack traces or error messages reduce the AI's ability to fix issues.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find the main sprint loop in cmd_run() that calls _handle_sprint_success()",
-      "Before the loop, build an ordered list of all items that will be attempted in this batch",
-      "On break (merge conflict), compute the set difference: all queued items minus started items",
-      "Log each not-attempted item ID with a clear message before breaking",
-      "Ensure print_batch_summary or a post-loop block surfaces the skipped items count and IDs",
-      "Test with two queued items where the first causes a merge conflict"
+      "In .aishore/aishore, find run_ac_verification() where it uses head -c 1000 to cap output",
+      "Replace byte-based truncation (head -c 1000) with line-based truncation (e.g. tail -n 50 or head -n 50)",
+      "Or use a higher byte limit (e.g. 5000) that is unlikely to split useful error output",
+      "Consider adding a truncation indicator (e.g. \"[... output truncated]\") so the AI knows output was cut",
+      "Verify AC verify failure output is readable in retry prompts after the change"
     ],
     "acceptanceCriteria": [
-      "After a merge conflict aborts a multi-sprint run, output lists item IDs that were queued but not started",
-      "Batch summary accurately reflects items not attempted due to early abort"
+      "AC verify output is not split mid-character (use line-based truncation instead of byte truncation)",
+      "Truncation limit is configurable or set to a value adequate for typical test output (e.g., 3000 chars)"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T11:07:20-07:00",
+    "startedAt": "2026-03-20T11:14:56-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T11:14:54-07:00"
+    "completedAt": "2026-03-20T11:17:40-07:00"
   },
-  "completedAt": "2026-03-20T11:14:54-07:00",
+  "completedAt": "2026-03-20T11:17:40-07:00",
   "attempts": 1
 }

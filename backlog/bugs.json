@@ -94,11 +94,12 @@
         "AC verify output is not split mid-character (use line-based truncation instead of byte truncation)",
         "Truncation limit is configurable or set to a value adequate for typical test output (e.g., 3000 chars)"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "PO review: bumped to should. Truncated error output directly hurts sprint recovery — the AI has less signal to fix failures. More failures = less value delivered. 1000 byte limit is too small for real test output and the byte-split-char bug is a correctness issue."
+      "groomingNotes": "PO review: bumped to should. Truncated error output directly hurts sprint recovery — the AI has less signal to fix failures. More failures = less value delivered. 1000 byte limit is too small for real test output and the byte-split-char bug is a correctness issue.",
+      "completedAt": "2026-03-20T11:17:40-07:00"
     },
     {
       "id": "BUG-005",
