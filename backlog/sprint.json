@@ -1,28 +1,28 @@
 {
-  "sprintId": "sprint-1774036155",
-  "startedAt": "2026-03-20T12:49:15-07:00",
+  "sprintId": "sprint-1774036329",
+  "startedAt": "2026-03-20T12:52:09-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-020",
-    "title": "cmd_backlog_edit flushes pending AC entry without JSON encoding",
-    "intent": "AC entries appended via --ac must be correctly JSON-encoded — unencoded special characters silently produce invalid JSON and corrupt the backlog.",
-    "description": "In cmd_backlog_edit(), when a second --ac flag is encountered, the pending AC entry from the prior --ac is flushed to ac_entries with 'ac_entries+=(\"$pending_ac\")' (line ~3898) — no JSON encoding. cmd_backlog_add() correctly uses 'ac_entries+=(\"\"\\\"$pending_ac\\\"\"\")' in the same flush path. If the AC text contains '\"', backslash, or other JSON metacharacters, the constructed JSON will be invalid, silently corrupting the item's acceptanceCriteria. The final-flush path at line ~3942 IS correctly encoded — only the mid-loop flush is broken.",
+    "id": "BUG-019",
+    "title": "cmd_backlog_check returns 0 when readiness gates fail",
+    "intent": "backlog check must return non-zero when gates fail — callers and scripts must be able to rely on exit status to detect unready items.",
+    "description": "cmd_backlog_check() calls check_readiness_gates() and logs warnings on failure, but does not return 1. The function exits 0 regardless of gate outcome. Any script using 'backlog check $ID && do_something' will proceed even when gates fail, undermining the purpose of the check command. Fix: add 'return 1' in the else branch after printing gate warnings.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_backlog_edit() and locate the --ac case (around line 3894)",
-      "Find the flush block: 'if [[ -n \"$pending_ac\" ]]; then ac_entries+=(\"$pending_ac\"); fi'",
-      "Replace the flush with the encoded form matching cmd_backlog_add: 'ac_entries+=(\"\\\"\\\"$pending_ac\\\"\"\")'",
-      "Verify: 'backlog edit <ID> --ac 'has \"quotes\"' --ac 'second entry'' produces valid JSON in the backlog file"
+      "In .aishore/aishore, find cmd_backlog_check() (around line 3456)",
+      "After the 'echo -e \"$CHECK_GATES_WARNINGS\"' line in the else branch, add 'return 1'",
+      "Verify that 'backlog check <ready-ID>' exits 0 and 'backlog check <unready-ID>' exits non-zero"
     ],
     "acceptanceCriteria": [
-      "backlog edit <ID> --ac 'text with \"quotes\"' --ac 'second' stores both entries with proper JSON encoding",
-      "backlog edit with plain AC entries (no special chars) still works correctly after the fix"
+      "backlog check <ID> exits non-zero when any readiness gate fails",
+      "backlog check <ID> exits 0 when all readiness gates pass",
+      "Exit status matches the log output — if warnings are printed, exit is non-zero"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T12:49:15-07:00",
+    "startedAt": "2026-03-20T12:52:09-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T12:52:08-07:00"
+    "completedAt": "2026-03-20T12:54:00-07:00"
   },
-  "completedAt": "2026-03-20T12:52:08-07:00",
+  "completedAt": "2026-03-20T12:54:00-07:00",
   "attempts": 1
 }

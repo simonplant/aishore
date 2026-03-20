@@ -476,11 +476,12 @@
         "Exit status matches the log output — if warnings are printed, exit is non-zero"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Clear behavioral bug: gates failing but exit 0 is wrong. One-line fix — add return 1 in else branch. Low risk, high value for automation users."
+      "groomingNotes": "Clear behavioral bug: gates failing but exit 0 is wrong. One-line fix — add return 1 in else branch. Low risk, high value for automation users.",
+      "completedAt": "2026-03-20T12:54:00-07:00"
     },
     {
       "id": "BUG-020",
