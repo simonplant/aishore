@@ -1,30 +1,29 @@
 {
-  "sprintId": "sprint-1774047044",
-  "startedAt": "2026-03-20T15:50:44-07:00",
+  "sprintId": "sprint-1774047769",
+  "startedAt": "2026-03-20T16:02:49-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-010",
-    "title": "Failed sprint diagnostics — better crash output",
-    "intent": "When a sprint fails, the user must see enough context to diagnose why immediately.",
-    "description": "",
-    "sourceBacklog": "backlog.json",
+    "id": "BUG-005",
+    "title": "config.yaml silently ignored when yq unavailable and no warning shown",
+    "intent": "Users must be clearly warned when their config.yaml changes are being silently ignored due to missing yq",
+    "description": "load_config() falls back to grep-based parsing when yq is not installed. This fallback is much less reliable and can silently ignore valid configuration. The warning is only triggered if uncommented settings are detected by grep. A config file that uses valid YAML but is structured in a way grep misses will be silently ignored, leaving the user thinking their overrides are active when they are not.",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "On agent failure, tail last 20 lines of agent log",
-      "Include agent stderr if captured",
-      "Add diagnose flag for extended diagnostics",
-      "Store last failure context in .aishore/data/status/"
+      "In .aishore/aishore, find load_config() where yq availability is checked (around line 267)",
+      "Add an early check: if config.yaml exists and has non-empty content, and yq is not available, always emit a warning",
+      "Warning should name the config file, explain what is being ignored, and give install instructions for yq",
+      "Ensure the warning is shown regardless of whether grep finds any settings",
+      "Test by creating a config.yaml with a setting and running aishore without yq installed"
     ],
     "acceptanceCriteria": [
-      "Agent crash shows last 20 lines of log",
-      "diagnose flag shows extended diagnostics",
-      "Agent log path always printed on failure",
-      "Successful sprints unaffected"
+      "When yq is absent and config.yaml exists with content, a clear warning is always shown regardless of grep detection",
+      "Warning text explains what yq is and how to install it"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T15:50:44-07:00",
+    "startedAt": "2026-03-20T16:02:49-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T16:02:47-07:00"
+    "completedAt": "2026-03-20T16:04:47-07:00"
   },
-  "completedAt": "2026-03-20T16:02:47-07:00",
+  "completedAt": "2026-03-20T16:04:47-07:00",
   "attempts": 1
 }
