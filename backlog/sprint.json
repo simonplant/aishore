@@ -1,28 +1,29 @@
 {
-  "sprintId": "sprint-1774036329",
-  "startedAt": "2026-03-20T12:52:09-07:00",
+  "sprintId": "sprint-1774036442",
+  "startedAt": "2026-03-20T12:54:02-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-019",
-    "title": "cmd_backlog_check returns 0 when readiness gates fail",
-    "intent": "backlog check must return non-zero when gates fail — callers and scripts must be able to rely on exit status to detect unready items.",
-    "description": "cmd_backlog_check() calls check_readiness_gates() and logs warnings on failure, but does not return 1. The function exits 0 regardless of gate outcome. Any script using 'backlog check $ID && do_something' will proceed even when gates fail, undermining the purpose of the check command. Fix: add 'return 1' in the else branch after printing gate warnings.",
+    "id": "BUG-018",
+    "title": "cmd_backlog_show and cmd_backlog_check silently accept extra positional arguments",
+    "intent": "backlog show and backlog check must reject extra arguments — silently ignoring them makes 'backlog show FEAT-001 FEAT-002' appear to succeed while only processing the first ID, giving users false confidence",
+    "description": "cmd_backlog_show() extracts $1 as the item ID and ignores anything after it. cmd_backlog_check() does the same. Both commands silently accept extra arguments: 'backlog show FEAT-001 FEAT-002' processes only FEAT-001 without any error, which is misleading. The fix for each is to check that exactly one positional argument was given and reject anything extra with log_error.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_backlog_check() (around line 3456)",
-      "After the 'echo -e \"$CHECK_GATES_WARNINGS\"' line in the else branch, add 'return 1'",
-      "Verify that 'backlog check <ready-ID>' exits 0 and 'backlog check <unready-ID>' exits non-zero"
+      "In .aishore/aishore, find cmd_backlog_show() and after extracting the ID from $1, check if $# -gt 1 and emit log_error 'Unexpected argument: ${2}' and return 1",
+      "In .aishore/aishore, find cmd_backlog_check() and apply the same fix — after extracting the ID, check for extra arguments and error",
+      "Verify that 'backlog show FEAT-001' and 'backlog check FEAT-001' still work correctly",
+      "Verify that 'backlog show FEAT-001 FEAT-002' and 'backlog check FEAT-001 --typo' now print an error and exit non-zero"
     ],
     "acceptanceCriteria": [
-      "backlog check <ID> exits non-zero when any readiness gate fails",
-      "backlog check <ID> exits 0 when all readiness gates pass",
-      "Exit status matches the log output — if warnings are printed, exit is non-zero"
+      "backlog show <ID> <extra> exits non-zero and prints an error about the unexpected argument",
+      "backlog check <ID> <extra> exits non-zero and prints an error about the unexpected argument",
+      "backlog show <ID> and backlog check <ID> with exactly one argument still work correctly"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T12:52:09-07:00",
+    "startedAt": "2026-03-20T12:54:02-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T12:54:00-07:00"
+    "completedAt": "2026-03-20T12:55:35-07:00"
   },
-  "completedAt": "2026-03-20T12:54:00-07:00",
+  "completedAt": "2026-03-20T12:55:35-07:00",
   "attempts": 1
 }
