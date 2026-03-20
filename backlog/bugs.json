@@ -123,7 +123,10 @@
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "PO re-review: bumped to must. Silent config failure on first run destroys new-user trust at exactly the moment they're evaluating the tool. If yq isn't installed (common), every override they set is a lie. No other item has this failure mode — the user did everything right and gets wrong behavior with no signal. Must fix before new user onboarding can be considered reliable."
+      "groomingNotes": "PO re-review: bumped to must. Silent config failure on first run destroys new-user trust at exactly the moment they're evaluating the tool. If yq isn't installed (common), every override they set is a lie. No other item has this failure mode — the user did everything right and gets wrong behavior with no signal. Must fix before new user onboarding can be considered reliable.",
+      "lastFailReason": "Validator agent rejected implementation",
+      "lastFailAt": "2026-03-20T11:54:40-07:00",
+      "failCount": 1
     },
     {
       "id": "BUG-006",
@@ -139,11 +142,12 @@
         "backlog edit <ID> --step 'Do X' appends X to the existing steps array",
         "backlog edit <ID> --clear-steps resets steps to empty array"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "New item added during groom session. Implementation pattern mirrors --ac/--scope: local steps array, --step appends one entry per flag call, --clear-steps resets. In cmd_backlog_add(): add local steps_entries=() array, --step flag appends to it, build steps_json from the array, pass --argjson steps_arr to add_item, set steps: $steps_arr (replacing the hardcoded steps: []). In cmd_backlog_edit(): add --step flag that accumulates entries same as --ac, build steps JSON, use jq_updates += '| .steps = ((.steps // []) + $newsteps)'. Add --clear-steps: jq_updates += '| .steps = []'. --ready flag warning about no steps is expected (bootstrapping issue)."
+      "groomingNotes": "New item added during groom session. Implementation pattern mirrors --ac/--scope: local steps array, --step appends one entry per flag call, --clear-steps resets. In cmd_backlog_add(): add local steps_entries=() array, --step flag appends to it, build steps_json from the array, pass --argjson steps_arr to add_item, set steps: $steps_arr (replacing the hardcoded steps: []). In cmd_backlog_edit(): add --step flag that accumulates entries same as --ac, build steps JSON, use jq_updates += '| .steps = ((.steps // []) + $newsteps)'. Add --clear-steps: jq_updates += '| .steps = []'. --ready flag warning about no steps is expected (bootstrapping issue).",
+      "completedAt": "2026-03-20T11:58:36-07:00"
     },
     {
       "id": "BUG-007",
