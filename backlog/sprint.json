@@ -1,31 +1,30 @@
 {
-  "sprintId": "sprint-1774045984",
-  "startedAt": "2026-03-20T15:33:04-07:00",
+  "sprintId": "sprint-1774046158",
+  "startedAt": "2026-03-20T15:35:58-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-028",
-    "title": "Commit messages are generic — agent summaries discarded",
-    "intent": "Every commit message must describe what changed and why. Generic messages make git log useless.",
+    "id": "BUG-027",
+    "title": "Stash pop fails silently on conflicts after sprint failure",
+    "intent": "Users must always know the state of their uncommitted changes. Silent data loss is unacceptable.",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Capture developer agent summary from result.json",
-      "Use agent summary as safety-net commit message body",
-      "Use agent summary in merge commit message",
-      "Fall back to generic message if no summary",
-      "Truncate long summaries to 500 chars"
+      "Stop suppressing stderr from git stash pop",
+      "On pop failure, run git stash show and display output",
+      "Use log_warning with actionable guidance",
+      "In EXIT trap, apply same visible-failure treatment"
     ],
     "acceptanceCriteria": [
-      "Safety-net commit includes developer summary",
-      "Merge commit includes agent summary",
-      "Falls back to template if no summary",
-      "Follows conventional commit format"
+      "When stash pop fails, stderr is visible",
+      "log_warning shows stashed files",
+      "Warning includes actionable guidance",
+      "Normal stash pop still works silently"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T15:33:04-07:00",
+    "startedAt": "2026-03-20T15:35:58-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T15:35:57-07:00"
+    "completedAt": "2026-03-20T15:39:36-07:00"
   },
-  "completedAt": "2026-03-20T15:35:57-07:00",
+  "completedAt": "2026-03-20T15:39:36-07:00",
   "attempts": 1
 }

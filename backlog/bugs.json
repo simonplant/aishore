@@ -688,9 +688,10 @@
         "Normal stash pop still works silently"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-20T15:39:36-07:00"
     },
     {
       "id": "BUG-028",
