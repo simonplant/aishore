@@ -24,9 +24,18 @@ AISHORE_TMPDIR=""
 AISHORE_DID_STASH=""
 AISHORE_BASE_BRANCH=""
 AISHORE_FEATURE_BRANCH=""
+AISHORE_WORKTREE_DIR=""
 cleanup_exit() {
-    # Clean up feature branch on unexpected exit
-    if [[ -n "$AISHORE_FEATURE_BRANCH" && -n "$AISHORE_BASE_BRANCH" ]]; then
+    # Clean up worktree on unexpected exit
+    if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
+        cd "$PROJECT_ROOT" 2>/dev/null || true
+        git worktree remove "$AISHORE_WORKTREE_DIR" --force 2>/dev/null || true
+        [[ -d "$AISHORE_WORKTREE_DIR" ]] && rm -rf "$AISHORE_WORKTREE_DIR" 2>/dev/null || true
+        [[ -n "$AISHORE_FEATURE_BRANCH" ]] && git branch -D "$AISHORE_FEATURE_BRANCH" >/dev/null 2>&1 || true
+        AISHORE_WORKTREE_DIR=""
+        AISHORE_FEATURE_BRANCH=""
+    elif [[ -n "$AISHORE_FEATURE_BRANCH" && -n "$AISHORE_BASE_BRANCH" ]]; then
+        # Clean up feature branch on unexpected exit (stash mode)
         git checkout "$AISHORE_BASE_BRANCH" >/dev/null 2>&1 || true
         git branch -D "$AISHORE_FEATURE_BRANCH" >/dev/null 2>&1 || true
         AISHORE_FEATURE_BRANCH=""
@@ -89,6 +98,7 @@ MATURITY_ENABLED="true"
 OUTPUT_TRUNCATE_LINES="50"
 MERGE_STRATEGY="merge"
 CREATE_PR="false"
+ISOLATION_MODE="stash"
 
 # Default permission sets per agent role
 PERMS_DEVELOPER="Bash,Edit,Write,Read,Glob,Grep"
@@ -286,6 +296,7 @@ load_config() {
             ".output.truncate_lines OUTPUT_TRUNCATE_LINES"
             ".merge.strategy        MERGE_STRATEGY"
             ".pr.create             CREATE_PR"
+            ".isolation.mode        ISOLATION_MODE"
             ".permissions.developer CFG_PERMS_DEVELOPER"
             ".permissions.validator CFG_PERMS_VALIDATOR"
             ".permissions.reviewer  CFG_PERMS_REVIEWER"
@@ -328,6 +339,7 @@ _apply_env_overrides() {
         "AISHORE_OUTPUT_TRUNCATE_LINES OUTPUT_TRUNCATE_LINES"
         "AISHORE_MERGE_STRATEGY    MERGE_STRATEGY"
         "AISHORE_CREATE_PR         CREATE_PR"
+        "AISHORE_ISOLATION         ISOLATION_MODE"
     )
     local _env_name _target_var
     for _entry in "${_env_map[@]}"; do
@@ -1394,11 +1406,34 @@ mark_item_failed() {
     return 0
 }
 
+_cleanup_worktree() {
+    # Remove worktree and restore paths to original project root
+    if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
+        cd "$PROJECT_ROOT" 2>/dev/null || true
+        git worktree remove "$AISHORE_WORKTREE_DIR" --force 2>/dev/null || true
+        [[ -d "$AISHORE_WORKTREE_DIR" ]] && rm -rf "$AISHORE_WORKTREE_DIR" 2>/dev/null || true
+        AISHORE_WORKTREE_DIR=""
+
+        # Restore paths to original project
+        STATUS_DIR="$DATA_DIR/status"
+        LOGS_DIR="$DATA_DIR/logs"
+        BACKLOG_DIR="$PROJECT_ROOT/backlog"
+        ARCHIVE_DIR="$BACKLOG_DIR/archive"
+    fi
+}
+
 handle_sprint_failure() {
     log_warning "Resetting working tree after sprint failure"
-    # If on a feature branch, switch back to base and delete the branch
-    # (base branch still has backlog state from earlier successful sprints)
-    if [[ -n "$AISHORE_FEATURE_BRANCH" && -n "$AISHORE_BASE_BRANCH" ]]; then
+
+    if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
+        # Worktree mode: remove worktree and delete the branch
+        local fb="$AISHORE_FEATURE_BRANCH"
+        AISHORE_FEATURE_BRANCH=""
+        _cleanup_worktree
+        [[ -n "$fb" ]] && git branch -D "$fb" 2>/dev/null || true
+    elif [[ -n "$AISHORE_FEATURE_BRANCH" && -n "$AISHORE_BASE_BRANCH" ]]; then
+        # Stash mode: switch back to base and delete the branch
+        # (base branch still has backlog state from earlier successful sprints)
         local fb="$AISHORE_FEATURE_BRANCH"
         AISHORE_FEATURE_BRANCH=""
         git checkout "$AISHORE_BASE_BRANCH" 2>/dev/null || true
@@ -1870,6 +1905,14 @@ _handle_sprint_success() {
 Co-Authored-By: Claude <noreply@anthropic.com>"
     fi
 
+    # Worktree mode: copy result.json back, then remove worktree and restore paths
+    # The feature branch (with all commits) is shared via git, so merge works from original dir
+    if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
+        # Preserve result.json for PR body / squash message
+        [[ -f "$STATUS_DIR/result.json" ]] && cp "$STATUS_DIR/result.json" "$DATA_DIR/status/result.json"
+        _cleanup_worktree
+    fi
+
     # Merge feature branch back to base, push, and pull before next item
     if [[ "$no_merge" == "true" ]]; then
         log_info "Branch $AISHORE_FEATURE_BRANCH kept for review"
@@ -2030,13 +2073,24 @@ cmd_run() {
         fi
     fi
 
+    # Validate isolation mode
+    if [[ "$ISOLATION_MODE" != "stash" && "$ISOLATION_MODE" != "worktree" ]]; then
+        log_error "Invalid isolation mode: $ISOLATION_MODE (expected 'stash' or 'worktree')"
+        return 1
+    fi
+
     # Stash pre-existing uncommitted changes so sprints don't destroy them
+    # (skipped in worktree mode — uncommitted changes stay untouched in original tree)
     local did_stash=false
-    if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
-        log_warning "Stashing pre-existing uncommitted changes"
-        git stash push -u -m "aishore: pre-sprint stash" >/dev/null 2>&1
-        did_stash=true
-        AISHORE_DID_STASH=true
+    if [[ "$ISOLATION_MODE" == "stash" ]]; then
+        if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
+            log_warning "Stashing pre-existing uncommitted changes"
+            git stash push -u -m "aishore: pre-sprint stash" >/dev/null 2>&1
+            did_stash=true
+            AISHORE_DID_STASH=true
+        fi
+    elif [[ "$ISOLATION_MODE" == "worktree" ]]; then
+        log_info "Isolation: worktree (uncommitted changes untouched)"
     fi
 
     # Resolve max_consecutive_failures: flag > config > default
@@ -2066,6 +2120,7 @@ cmd_run() {
     else
         echo "Sprints: $count"
     fi
+    echo "Isolation: $ISOLATION_MODE"
     echo "Branching: feature branches (agent commits)"
     [[ "$no_merge" == "true" ]] && echo "Merge: disabled (branches kept for review)"
     [[ "$retries" -gt 0 ]] && echo "Retries: $retries"
@@ -2196,11 +2251,36 @@ cmd_run() {
         local branch_name="aishore/${ITEM_ID}"
         branch_name=$(echo "$branch_name" | sed 's/[^a-zA-Z0-9/_-]/-/g')
         log_info "Creating branch: $branch_name"
-        git checkout -b "$branch_name" 2>/dev/null || {
+
+        if [[ "$ISOLATION_MODE" == "worktree" ]]; then
+            # Worktree isolation: create a separate working directory for the sprint
+            local wt_dir
+            wt_dir=$(mktemp -d "${TMPDIR:-/tmp}/aishore-wt-XXXXXX")
+            rmdir "$wt_dir"  # git worktree add needs a non-existing path
             git branch -D "$branch_name" 2>/dev/null || true
-            git checkout -b "$branch_name"
-        }
-        AISHORE_FEATURE_BRANCH="$branch_name"
+            git worktree add "$wt_dir" -b "$branch_name"
+            AISHORE_WORKTREE_DIR="$wt_dir"
+            AISHORE_FEATURE_BRANCH="$branch_name"
+
+            # Redirect paths into the worktree so agents and polling work there
+            STATUS_DIR="$wt_dir/.aishore/data/status"
+            LOGS_DIR="$wt_dir/.aishore/data/logs"
+            BACKLOG_DIR="$wt_dir/backlog"
+            ARCHIVE_DIR="$BACKLOG_DIR/archive"
+            mkdir -p "$STATUS_DIR" "$LOGS_DIR" "$ARCHIVE_DIR"
+
+            # Copy current sprint.json into worktree backlog (create_sprint wrote to original)
+            cp "$PROJECT_ROOT/backlog/sprint.json" "$BACKLOG_DIR/sprint.json"
+
+            cd "$wt_dir"
+            log_info "Worktree created: $wt_dir"
+        else
+            git checkout -b "$branch_name" 2>/dev/null || {
+                git branch -D "$branch_name" 2>/dev/null || true
+                git checkout -b "$branch_name"
+            }
+            AISHORE_FEATURE_BRANCH="$branch_name"
+        fi
 
         # Developer → validation → validator (with retries)
         local sprint_passed=false

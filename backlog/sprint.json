@@ -1,32 +1,32 @@
 {
-  "sprintId": "sprint-1774042799",
-  "startedAt": "2026-03-20T14:39:59-07:00",
+  "sprintId": "sprint-1774044152",
+  "startedAt": "2026-03-20T15:02:32-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-009",
-    "title": "Create GitHub PR instead of merging (pr flag)",
-    "intent": "Users must be able to review sprint output before it lands on the target branch.",
+    "id": "FEAT-011",
+    "title": "Git worktree isolation mode for sprints",
+    "intent": "Sprint execution must never risk losing uncommitted work.",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Add pr flag to cmd_run and cmd_auto",
-      "Add create_pr config (config.yaml, AISHORE_CREATE_PR)",
-      "pr flag implies no-merge",
-      "After pushing, run gh pr create with item title and agent summaries",
-      "Fall back to no-merge if gh unavailable"
+      "Add isolation config default stash, option worktree",
+      "When worktree, create git worktree for sprint branch",
+      "Run developer agent in worktree directory",
+      "Merge worktree branch on success",
+      "Clean up worktree on success or failure"
     ],
     "acceptanceCriteria": [
-      "pr flag creates a GitHub PR",
-      "PR title includes item ID and title",
-      "PR body includes agent summaries",
-      "Falls back to no-merge if gh not installed",
-      "create_pr true in config makes PR default"
+      "isolation worktree causes sprints in git worktree",
+      "AISHORE_ISOLATION=worktree env var works",
+      "Uncommitted changes untouched",
+      "Worktree cleaned up",
+      "Default stash behavior unchanged"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T14:39:59-07:00",
+    "startedAt": "2026-03-20T15:02:32-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T14:49:27-07:00"
+    "completedAt": "2026-03-20T15:13:40-07:00"
   },
-  "completedAt": "2026-03-20T14:49:27-07:00",
+  "completedAt": "2026-03-20T15:13:40-07:00",
   "attempts": 1
 }

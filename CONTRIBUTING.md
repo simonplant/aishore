@@ -136,9 +136,9 @@ By submitting a pull request to this project, you agree that:
 
 3. **You understand that your contributions are public** and that a record of the contribution (including your name and email) may be maintained indefinitely.
 
-4. **This CLA allows the maintainer to offer commercial licenses** to the software that include your contributions, without requiring further permission from you.
+4. **This CLA allows the maintainer to relicense** the software (including your contributions) under different terms if needed, without requiring further permission from you.
 
-This agreement is necessary so that the project can be dual-licensed (AGPL-3.0 for open source use, commercial license for enterprise use) while incorporating community contributions.
+This agreement ensures the project can evolve its licensing while incorporating community contributions. The project is currently licensed under the Apache License 2.0.
 
 ## Questions?
 

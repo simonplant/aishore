@@ -252,7 +252,10 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true
+      "readyForSprint": true,
+      "lastFailReason": "Validator agent rejected implementation",
+      "lastFailAt": "2026-03-20T15:02:32-07:00",
+      "failCount": 1
     },
     {
       "id": "FEAT-011",
@@ -276,9 +279,10 @@
         "Default stash behavior unchanged"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-20T15:13:40-07:00"
     },
     {
       "id": "FEAT-012",
