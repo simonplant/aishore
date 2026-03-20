@@ -168,6 +168,82 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "Fix location: cmd_backlog_show() jq expression around line 3720. Current: (.acceptanceCriteria // [] | .[] | \"  - \\(.)\"). Fix: (.acceptanceCriteria // [] | .[] | \"  - \\(if type == \"object\" then .text + (if .verify then \" [verify: \\(.verify)]\" else \"\" end) else . end)\"). Run: backlog add with --ac 'plain' --ac 'text' --ac-verify 'cmd' then backlog show to confirm. This is a display-only fix — no data changes.",
       "completedAt": "2026-03-20T12:00:45-07:00"
+    },
+    {
+      "id": "BUG-008",
+      "title": "VALIDATE_CMD output injected untruncated into retry prompts",
+      "intent": "Retry prompts must not contain unbounded validation output — token bloat degrades AI fix quality and can push critical context out of attention.",
+      "description": "In _run_retry_loop(), validate_output is captured with 'cat $validate_tmpfile' (no truncation limit) and injected raw into retry_extra_prompt. run_ac_verification() and the pre-flight check both apply OUTPUT_TRUNCATE_LINES truncation, but the VALIDATE_CMD retry path does not. For verbose test suites (cargo test, pytest, mocha), this produces thousands of lines in the retry prompt, degrading AI quality. The validator-agent retry path at line ~1769 has the same issue.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find _run_retry_loop() and locate the validate_output capture: validate_output=$(cat \"$validate_tmpfile\" 2>/dev/null || true)",
+        "Replace the cat with the same truncation pattern used in run_ac_verification(): capture wc -l, use tail -n $OUTPUT_TRUNCATE_LINES, prepend '[... output truncated, showing last N of M lines]' if truncated",
+        "Verify the validator-agent retry path also uses the truncated validate_output (line ~1769)",
+        "Confirm pre-flight check already has truncation (it does, around line 1650); no change needed there"
+      ],
+      "acceptanceCriteria": [
+        "VALIDATE_CMD output injected into retry prompts is truncated to OUTPUT_TRUNCATE_LINES lines",
+        "When output is truncated, the retry prompt includes a '[... output truncated, showing last N of M lines]' indicator",
+        "Truncation matches the pattern used in run_ac_verification() for consistency"
+      ],
+      "dependsOn": [],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Same pattern as BUG-004 (AC verify truncation) but missed for the VALIDATE_CMD retry path. Fix is additive — apply OUTPUT_TRUNCATE_LINES truncation at one spot in _run_retry_loop(). Low risk, clear scope.",
+      "completedAt": "2026-03-20T12:08:42-07:00"
+    },
+    {
+      "id": "BUG-009",
+      "title": "backlog edit has no --clear-ac flag to reset acceptance criteria",
+      "intent": "Users must be able to reset AC via CLI — without --clear-ac, wrong AC entries require hand-editing JSON, violating the CLI-first design principle.",
+      "description": "backlog edit --step has a companion --clear-steps flag; backlog edit --scope has a companion --clear-scope flag. But --ac has no --clear-ac. Once AC entries are added, the only way to remove them is to hand-edit the backlog JSON. This is inconsistent with the established pattern and violates CLI-first design. Fix: add --clear-ac to cmd_backlog_edit() that resets acceptanceCriteria to [], following the same pattern as --clear-steps.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find cmd_backlog_edit() and locate the --clear-steps case as reference (around line 3843-3846)",
+        "Add a --clear-ac case: set jq_updates with .acceptanceCriteria = [] and update update_desc",
+        "Add --clear-ac documentation to the help text in cmd_backlog_edit error message and cmd_help",
+        "Test: backlog edit BUG-003 --clear-ac (verify AC resets), then backlog edit BUG-003 --ac 'New' (verify fresh entry appears)"
+      ],
+      "acceptanceCriteria": [
+        "backlog edit <ID> --clear-ac resets acceptanceCriteria to []",
+        "backlog edit <ID> --clear-ac --ac 'New AC' results in only the new entry present",
+        "--clear-ac appears in the backlog edit help output"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Clear pattern mismatch — --clear-steps and --clear-scope both exist, --clear-ac does not. Fix is additive, one case block in cmd_backlog_edit plus help text update. Low risk."
+    },
+    {
+      "id": "BUG-010",
+      "title": "remove_items_by_status takes full path while other CRUD helpers take relative filename",
+      "intent": "Backlog CRUD helpers must use a consistent path convention — the current asymmetry is a latent footgun that will cause silent wrong-file operations when new callers are added.",
+      "description": "update_item() and remove_item() accept a relative filename (e.g. 'backlog.json') and prepend BACKLOG_DIR internally. remove_items_by_status() takes a full path directly. Callers today are consistent, but the asymmetry is not documented and will cause bugs when someone adds a new call site with the wrong convention. Fix: change remove_items_by_status to accept a relative filename and prepend BACKLOG_DIR internally, matching the established pattern.",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find remove_items_by_status() around line 703 and update it to accept a relative filename like update_item() and remove_item()",
+        "Change the jq command argument from '$file' to '$BACKLOG_DIR/$file'",
+        "Update cmd_clean() callers (line ~4025-4026) to pass just the filename ('backlog.json', 'bugs.json') instead of the full path variables",
+        "Run .aishore/aishore clean --dry-run and then clean on a test setup to confirm no regression"
+      ],
+      "acceptanceCriteria": [
+        "remove_items_by_status accepts a relative filename consistent with update_item and remove_item",
+        "cmd_clean still correctly removes done items after the refactor",
+        "grep confirms no other callers of remove_items_by_status exist with full paths"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Tech debt: path convention inconsistency between remove_items_by_status and the other CRUD helpers. Small refactor with one call site to update. Low risk — only one caller exists today (cmd_clean)."
     }
   ]
 }
