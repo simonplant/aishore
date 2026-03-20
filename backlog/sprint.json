@@ -1,30 +1,28 @@
 {
-  "sprintId": "sprint-1774035662",
-  "startedAt": "2026-03-20T12:41:02-07:00",
+  "sprintId": "sprint-1774036155",
+  "startedAt": "2026-03-20T12:49:15-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-013",
-    "title": "cmd_groom and cmd_metrics silently accept unknown options",
-    "intent": "All CLI commands must reject unknown flags — silent acceptance of garbage input makes the CLI unpredictable and violates the established error-handling pattern",
-    "description": "cmd_groom() at line 2262 checks only '${1:-}' == '--backlog' without a proper arg-parsing loop, so any extra argument after --backlog is silently ignored. cmd_metrics() at line 2470 does the same: checks only '${1:-}' == '--json'. Neither reports an error for unknown flags like '--bogus'. Both should use a proper while/case loop with a catch-all that calls log_error and returns 1, consistent with cmd_clean, cmd_backlog_add, and other commands in the same script.",
+    "id": "BUG-020",
+    "title": "cmd_backlog_edit flushes pending AC entry without JSON encoding",
+    "intent": "AC entries appended via --ac must be correctly JSON-encoded — unencoded special characters silently produce invalid JSON and corrupt the backlog.",
+    "description": "In cmd_backlog_edit(), when a second --ac flag is encountered, the pending AC entry from the prior --ac is flushed to ac_entries with 'ac_entries+=(\"$pending_ac\")' (line ~3898) — no JSON encoding. cmd_backlog_add() correctly uses 'ac_entries+=(\"\"\\\"$pending_ac\\\"\"\")' in the same flush path. If the AC text contains '\"', backslash, or other JSON metacharacters, the constructed JSON will be invalid, silently corrupting the item's acceptanceCriteria. The final-flush path at line ~3942 IS correctly encoded — only the mid-loop flush is broken.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_groom() (line 2258) and replace the single-line check '[\\[ \"${1:-}\" == \"--backlog\" ]]' with a proper while/case loop that handles --backlog and rejects unknown options",
-      "In .aishore/aishore, find cmd_metrics() (line 2466) and replace the single-line check '[\\[ \"${1:-}\" == \"--json\" ]]' with a proper while/case loop that handles --json and rejects unknown options",
-      "Verify that 'aishore groom --backlog' and 'aishore groom' still work correctly",
-      "Verify that 'aishore metrics --json' and 'aishore metrics' still work correctly",
-      "Verify that 'aishore groom --typo' and 'aishore metrics --typo' now print an error and exit non-zero"
+      "In .aishore/aishore, find cmd_backlog_edit() and locate the --ac case (around line 3894)",
+      "Find the flush block: 'if [[ -n \"$pending_ac\" ]]; then ac_entries+=(\"$pending_ac\"); fi'",
+      "Replace the flush with the encoded form matching cmd_backlog_add: 'ac_entries+=(\"\\\"\\\"$pending_ac\\\"\"\")'",
+      "Verify: 'backlog edit <ID> --ac 'has \"quotes\"' --ac 'second entry'' produces valid JSON in the backlog file"
     ],
     "acceptanceCriteria": [
-      "aishore groom --unknown-flag exits with a non-zero status and prints 'Unknown option: --unknown-flag'",
-      "aishore metrics --unknown-flag exits with a non-zero status and prints 'Unknown option: --unknown-flag'",
-      "aishore groom, aishore groom --backlog, aishore metrics, and aishore metrics --json all continue to work correctly"
+      "backlog edit <ID> --ac 'text with \"quotes\"' --ac 'second' stores both entries with proper JSON encoding",
+      "backlog edit with plain AC entries (no special chars) still works correctly after the fix"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T12:41:02-07:00",
+    "startedAt": "2026-03-20T12:49:15-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T12:43:00-07:00"
+    "completedAt": "2026-03-20T12:52:08-07:00"
   },
-  "completedAt": "2026-03-20T12:43:00-07:00",
+  "completedAt": "2026-03-20T12:52:08-07:00",
   "attempts": 1
 }

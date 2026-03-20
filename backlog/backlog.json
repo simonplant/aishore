@@ -121,6 +121,24 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "Kept as could. Depends on FEAT-004 being done first — visibility of blocked items only delivers value once users can actually set dependsOn via CLI. Low implementation risk (display-only change), but lower user value until FEAT-004 ships. AC are concrete.",
       "completedAt": "2026-03-20T11:51:37-07:00"
+    },
+    {
+      "id": "FEAT-006",
+      "title": "backlog history command for querying completed sprint items",
+      "intent": "Users must be able to query what was completed and when without parsing JSONL by hand — sprint history should be as discoverable as the backlog itself.",
+      "description": "The archive/sprints.jsonl file records every completed sprint (itemId, date, status, duration, filesChanged, etc.) but there is no CLI command to query it. Users who want to know 'what did I complete this week?' or 'how many items passed vs failed?' must read raw JSONL. A 'backlog history' subcommand (or 'aishore history') should let users list recent completions, filter by date range or status, and surface per-item summaries. The metrics command gives aggregates; history would give the item-level view.",
+      "priority": "could",
+      "category": null,
+      "steps": [],
+      "acceptanceCriteria": [
+        "backlog history (or aishore history) lists completed sprint items with ID, date, and status",
+        "backlog history --since YYYY-MM-DD filters to items completed on or after that date",
+        "backlog history --failed shows only items where status \\!= complete"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
     }
   ]
 }
