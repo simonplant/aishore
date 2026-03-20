@@ -267,11 +267,12 @@
         "Error message matches the format used by other commands: 'Unknown option: <flag>'"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Confirmed at line 2414: catch-all '* ) shift' drops unknown flags silently. Pattern inconsistency vs cmd_clean, cmd_backlog_add and others which all use log_error + return 1. One-line fix. Low risk — additive error handling only."
+      "groomingNotes": "Confirmed at line 2414: catch-all '* ) shift' drops unknown flags silently. Pattern inconsistency vs cmd_clean, cmd_backlog_add and others which all use log_error + return 1. One-line fix. Low risk — additive error handling only.",
+      "completedAt": "2026-03-20T12:25:52-07:00"
     },
     {
       "id": "BUG-012",

@@ -1,29 +1,29 @@
 {
-  "sprintId": "sprint-1774034498",
-  "startedAt": "2026-03-20T12:21:38-07:00",
+  "sprintId": "sprint-1774034629",
+  "startedAt": "2026-03-20T12:23:49-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-012",
-    "title": "cmd_update silently ignores unknown options",
-    "intent": "cmd_update must reject unknown flags — silently discarding options can make users believe a flag like --force or --dry-run took effect when it did not, potentially causing unintended updates",
-    "description": "cmd_update() parses --dry-run, --check, --force, and --no-verify but its catch-all is '* ) shift ;;' at line 3174, silently discarding unknown flags. This is especially dangerous here: a user who mistypes '--dry-run' (e.g., '--dryrun' or '--dry_run') will get no error and the update will proceed as a live update — exactly the behavior they were trying to avoid. Fix: replace '* ) shift' with '* ) log_error \"Unknown option: $1\"; return 1' to match the established pattern in cmd_clean, cmd_backlog_add, etc.",
+    "id": "BUG-011",
+    "title": "cmd_review silently ignores unknown options",
+    "intent": "cmd_review must reject unknown flags immediately — silently discarding options lets typos pass undetected and erodes user trust in the CLI",
+    "description": "cmd_review() parses --update-docs and --since but its catch-all branch is '* ) shift ;;' at line 2414, silently discarding any unrecognized flag. Most other commands (cmd_clean, cmd_backlog_add, etc.) reject unknown options with log_error and return 1. A user who mistypes '--update_docs' or '--since-commit' will get no error — the command runs silently in the wrong mode. Fix: replace the silent '* ) shift' with '* ) log_error \"Unknown option: $1\"; return 1' to match the established pattern.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_update() and locate the option parsing loop (around line 3169-3176)",
+      "In .aishore/aishore, find cmd_review() and locate the option parsing loop (around line 2410-2416)",
       "Replace the catch-all '* ) shift ;;' with '* ) log_error \"Unknown option: $1\"; return 1 ;;'",
-      "Verify that valid options --dry-run, --force, --no-verify still work normally",
-      "Verify that 'aishore update --typo' now prints an error and exits non-zero"
+      "Verify that valid options --update-docs and --since still work normally",
+      "Verify that 'aishore review --typo' now prints an error and exits non-zero"
     ],
     "acceptanceCriteria": [
-      "aishore update --unknown-flag exits with a non-zero status and prints an error message",
-      "aishore update --dry-run, --force, and --no-verify --force all still work correctly",
+      "aishore review --unknown-flag exits with a non-zero status and prints an error message",
+      "aishore review --update-docs and aishore review --since <commit> still work correctly",
       "Error message matches the format used by other commands: 'Unknown option: <flag>'"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T12:21:38-07:00",
+    "startedAt": "2026-03-20T12:23:49-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T12:23:47-07:00"
+    "completedAt": "2026-03-20T12:25:52-07:00"
   },
-  "completedAt": "2026-03-20T12:23:47-07:00",
+  "completedAt": "2026-03-20T12:25:52-07:00",
   "attempts": 1
 }
