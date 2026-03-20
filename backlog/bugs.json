@@ -581,11 +581,12 @@
         "Sprint execution continues even if mark_item_failed cannot write (best-effort semantics preserved)"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "|| true suppresses all errors including legitimate write failures. Best-effort semantics should still apply (don't abort sprint on metadata write failure), but we should warn. Split: empty source_file case (item not found = expected, keep silent) vs write failure case (unexpected = log_warn). Low risk, additive warning only."
+      "groomingNotes": "|| true suppresses all errors including legitimate write failures. Best-effort semantics should still apply (don't abort sprint on metadata write failure), but we should warn. Split: empty source_file case (item not found = expected, keep silent) vs write failure case (unexpected = log_warn). Low risk, additive warning only.",
+      "completedAt": "2026-03-20T13:15:00-07:00"
     }
   ]
 }
