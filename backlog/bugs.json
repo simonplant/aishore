@@ -127,8 +127,8 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "PO re-review (failCount: 2): Two sprint attempts rejected. The validator has confirmed: the warning must fire unconditionally when config.yaml exists with non-empty content and yq is absent. The grep-detection fallback MUST NOT gate the warning — this was the failure mode in both attempts. Implementation checklist: (1) check if yq is absent, (2) check if config.yaml exists and is non-empty, (3) if both true, print warning immediately before any grep fallback logic runs. Do not mix the warning into the grep-detection branch. The warning is unconditional; grep-based fallback is optional and may still run after warning. Must fix before new-user onboarding can be considered reliable.",
       "lastFailReason": "Validator agent rejected implementation",
-      "lastFailAt": "2026-03-20T13:56:15-07:00",
-      "failCount": 3
+      "lastFailAt": "2026-03-20T15:33:03-07:00",
+      "failCount": 4
     },
     {
       "id": "BUG-006",
@@ -713,9 +713,10 @@
         "Follows conventional commit format"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-20T15:35:57-07:00"
     },
     {
       "id": "BUG-029",
