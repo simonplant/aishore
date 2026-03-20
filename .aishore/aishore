@@ -3774,7 +3774,7 @@ cmd_backlog_show() {
 
 cmd_backlog_edit() {
     local id="${1:-}"
-    [[ -z "$id" ]] && { log_error "Usage: backlog edit <ID> [--title ...] [--intent ...] [--priority ...] [--status ...] [--desc ...] [--category ...] [--depends-on ...] [--ready] [--no-ready]"; return 1; }
+    [[ -z "$id" ]] && { log_error "Usage: backlog edit <ID> [--title ...] [--intent ...] [--priority ...] [--status ...] [--desc ...] [--category ...] [--depends-on ...] [--ready] [--no-ready] [--step ...] [--clear-steps] [--scope ...] [--clear-scope] [--ac ...] [--ac-verify ...] [--clear-ac] [--groomed-at ...] [--groomed-notes ...]"; return 1; }
     shift
 
     # Verify item exists
@@ -3948,7 +3948,7 @@ cmd_backlog_edit() {
     fi
 
     if [[ -z "$jq_updates" ]]; then
-        log_error "No updates specified. Use --title, --priority, --status, --desc, --category, --ready, --no-ready, --step, --clear-steps, --scope, --clear-scope, --depends-on, --ac, --ac-verify, --clear-ac"
+        log_error "No updates specified. Use --title, --intent, --priority, --status, --desc, --category, --depends-on, --ready, --no-ready, --step, --clear-steps, --scope, --clear-scope, --ac, --ac-verify, --clear-ac, --groomed-at, --groomed-notes"
         return 1
     fi
 
