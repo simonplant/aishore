@@ -1,30 +1,31 @@
 {
-  "sprintId": "sprint-1774030964",
-  "startedAt": "2026-03-20T11:22:44-07:00",
+  "sprintId": "sprint-1774031247",
+  "startedAt": "2026-03-20T11:27:27-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-001",
-    "title": "Enforce dependsOn ordering in sprint picker",
-    "intent": "Items with unmet dependencies must never be picked before their prerequisites are done — build order must be correct or autonomous mode is unsafe.",
-    "description": "The item schema has a dependsOn array (list of prerequisite IDs), but the sprint picker does not enforce it. In auto mode, if FEAT-002 depends on FEAT-001 but FEAT-001 isn't done yet, FEAT-002 can still be picked first, producing incorrect or incomplete implementations. The picker (find_next_item / auto-pick path) must skip any item whose dependsOn items are not all marked done before picking it. backlog check should also flag unmet dependencies as a readiness gate.",
+    "id": "FEAT-003",
+    "title": "backlog check flags unmet dependsOn as a readiness gate",
+    "intent": "backlog check must surface unmet dependencies so users know an item cannot safely run — dependency violations must be visible before sprint time, not discovered after.",
+    "description": "backlog check <ID> currently validates title, intent, steps, and AC. It does not check whether items listed in dependsOn exist and are done. If an item depends on FEAT-001 and FEAT-001 is still todo, the check should warn (or fail, depending on mode). This is a companion to FEAT-001 (picker enforcement) — between the two, the system prevents dependency violations at both check-time and pick-time. Implementation: in the readiness gate logic, for each ID in dependsOn, verify the item exists in any backlog file and has status=done.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "In .aishore/aishore, find find_next_item() and locate where candidate items are filtered by priority scope",
-      "For each candidate item, read its dependsOn array (default empty if missing)",
-      "For each dependency ID in dependsOn, search all backlog JSON files and verify that item has status=done",
-      "Skip the candidate if any dependency is not done; move to the next candidate",
-      "Verify that items with all dependencies met are still picked normally"
+      "In .aishore/aishore, find cmd_backlog_check() where readiness warnings are assembled",
+      "After existing checks (title, intent, steps, AC), add a loop over .dependsOn // []",
+      "For each dependency ID, call find_item (or scan backlog JSON files) to locate the item",
+      "If the dependency is not found, emit a warning: dependency ID not found in any backlog",
+      "If found but status != done, emit a warning showing the dependency ID and its current status",
+      "Ensure warning format matches other readiness gate messages"
     ],
     "acceptanceCriteria": [
-      "Auto-pick never selects an item whose dependsOn items are not all status: done",
-      "Items with all dependencies satisfied are still selected normally",
-      "Items skipped due to unmet dependencies are not silently lost — they remain in the backlog and will be picked once deps are done"
+      "backlog check <ID> warns when any dependsOn item does not have status: done",
+      "Warning includes the dependency ID and its current status (or 'not found' if missing from all backlogs)",
+      "Items with no dependsOn field or an empty array pass this check without warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T11:22:44-07:00",
+    "startedAt": "2026-03-20T11:27:27-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T11:27:25-07:00"
+    "completedAt": "2026-03-20T11:30:50-07:00"
   },
-  "completedAt": "2026-03-20T11:27:25-07:00",
+  "completedAt": "2026-03-20T11:30:50-07:00",
   "attempts": 1
 }

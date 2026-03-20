@@ -542,19 +542,26 @@ check_readiness_gates() {
     local deps
     deps=$(echo "$item" | jq -r '.dependsOn // [] | .[]' 2>/dev/null)
     if [[ -n "$deps" ]]; then
-        local done_ids
-        done_ids=$(collect_done_ids)
-        local unmet_deps=""
         while IFS= read -r dep_id; do
-            if ! echo "$done_ids" | jq -e --arg d "$dep_id" 'index($d) != null' &>/dev/null; then
-                unmet_deps="${unmet_deps}${dep_id}, "
+            # Try to find the dependency in any backlog file
+            local dep_item=""
+            for bf in "${BACKLOG_FILES[@]}"; do
+                [[ -f "$BACKLOG_DIR/$bf" ]] || continue
+                dep_item=$(jq -e --arg d "$dep_id" '.items[] | select(.id == $d)' "$BACKLOG_DIR/$bf" 2>/dev/null) && break
+                dep_item=""
+            done
+            if [[ -z "$dep_item" ]]; then
+                warnings="${warnings}  - Dependency ${dep_id}: not found in any backlog\n"
+                has_warning=true
+            else
+                local dep_status
+                dep_status=$(echo "$dep_item" | jq -r '.status // "todo"')
+                if [[ "$dep_status" != "done" ]]; then
+                    warnings="${warnings}  - Dependency ${dep_id}: status is '${dep_status}'\n"
+                    has_warning=true
+                fi
             fi
         done <<< "$deps"
-        if [[ -n "$unmet_deps" ]]; then
-            unmet_deps="${unmet_deps%, }"
-            warnings="${warnings}  - Unmet dependencies: ${unmet_deps}\n"
-            has_warning=true
-        fi
     fi
 
     CHECK_GATES_WARNINGS="$warnings"
