@@ -1719,7 +1719,12 @@ Only modify files matching the declared scope globs. Fix the issues."
             else
                 bash -c "$VALIDATE_CMD" >"$validate_tmpfile" 2>&1 || validate_ok=false
             fi
-            validate_output=$(cat "$validate_tmpfile" 2>/dev/null || true)
+            local validate_total_lines
+            validate_total_lines=$(wc -l < "$validate_tmpfile" 2>/dev/null || echo 0)
+            validate_output=$(tail -n "$OUTPUT_TRUNCATE_LINES" "$validate_tmpfile" 2>/dev/null || true)
+            if [[ "$validate_total_lines" -gt "$OUTPUT_TRUNCATE_LINES" ]]; then
+                validate_output="[... output truncated, showing last $OUTPUT_TRUNCATE_LINES of $validate_total_lines lines]"$'\n'"$validate_output"
+            fi
             rm -f "$validate_tmpfile"
             if [[ "$validate_ok" != "true" ]]; then
                 log_error "Validation command failed"
