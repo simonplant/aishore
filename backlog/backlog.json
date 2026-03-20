@@ -74,11 +74,12 @@
         "Warning includes the dependency ID and its current status (or 'not found' if missing from all backlogs)",
         "Items with no dependsOn field or an empty array pass this check without warnings"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Steps and AC added. This is the check-time companion to FEAT-001 (pick-time). Together they cover the full dependency enforcement surface. Low implementation risk — additive check in cmd_backlog_check()."
+      "groomingNotes": "Steps and AC added. This is the check-time companion to FEAT-001 (pick-time). Together they cover the full dependency enforcement surface. Low implementation risk — additive check in cmd_backlog_check().",
+      "completedAt": "2026-03-20T11:30:50-07:00"
     },
     {
       "id": "FEAT-004",
