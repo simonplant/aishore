@@ -115,11 +115,12 @@
         "backlog list shows no indicator for items with no dependsOn, or when all dependencies are done",
         "The indicator includes a count or list of blocking IDs so the user can investigate"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Kept as could. Depends on FEAT-004 being done first — visibility of blocked items only delivers value once users can actually set dependsOn via CLI. Low implementation risk (display-only change), but lower user value until FEAT-004 ships. AC are concrete."
+      "groomingNotes": "Kept as could. Depends on FEAT-004 being done first — visibility of blocked items only delivers value once users can actually set dependsOn via CLI. Low implementation risk (display-only change), but lower user value until FEAT-004 ships. AC are concrete.",
+      "completedAt": "2026-03-20T11:51:37-07:00"
     }
   ]
 }

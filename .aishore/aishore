@@ -3546,18 +3546,26 @@ cmd_backlog_list() {
         jq_filter="$jq_filter | select(.readyForSprint == true)"
     fi
 
+    # Collect done IDs for dependency checking
+    local done_ids
+    done_ids=$(collect_done_ids)
+
     # Header
-    printf "%-10s %-8s %-13s %-6s %s\n" "ID" "PRI" "STATUS" "READY" "TITLE"
-    printf "%-10s %-8s %-13s %-6s %s\n" "──────────" "────────" "─────────────" "──────" "─────────────────────────────"
+    printf "%-10s %-8s %-13s %-6s %-20s %s\n" "ID" "PRI" "STATUS" "READY" "BLOCKED" "TITLE"
+    printf "%-10s %-8s %-13s %-6s %-20s %s\n" "──────────" "────────" "─────────────" "──────" "────────────────────" "─────────────────────────────"
 
     local count=0
     for f in "${files[@]}"; do
         [[ -f "$BACKLOG_DIR/$f" ]] || continue
         local items
-        items=$(jq -r "[$jq_filter] | sort_by(if .priority == \"must\" then 0 elif .priority == \"should\" then 1 elif .priority == \"could\" then 2 else 3 end) | .[] | [.id, .priority // \"-\", .status // \"todo\", (if .readyForSprint then \"yes\" else \"no\" end), .title] | @tsv" "$BACKLOG_DIR/$f" 2>/dev/null) || continue
+        items=$(jq -r --argjson done "$done_ids" "[$jq_filter] | sort_by(if .priority == \"must\" then 0 elif .priority == \"should\" then 1 elif .priority == \"could\" then 2 else 3 end) | .[] | [.id, .priority // \"-\", .status // \"todo\", (if .readyForSprint then \"yes\" else \"no\" end), ((.dependsOn // []) | map(select(. as \$d | \$done | index(\$d) | not)) | if length == 0 then \"-\" else join(\",\") end), .title] | @tsv" "$BACKLOG_DIR/$f" 2>/dev/null) || continue
         if [[ -n "$items" ]]; then
-            while IFS=$'\t' read -r id pri status ready title; do
-                printf "%-10s %-8s %-13s %-6s %s\n" "$id" "$pri" "$status" "$ready" "$title"
+            while IFS=$'\t' read -r id pri status ready blocked title; do
+                local blocked_display=""
+                if [[ "$blocked" != "-" ]]; then
+                    blocked_display="[blocked: $blocked]"
+                fi
+                printf "%-10s %-8s %-13s %-6s %-20s %s\n" "$id" "$pri" "$status" "$ready" "$blocked_display" "$title"
                 ((count++)) || true
             done <<< "$items"
         fi
