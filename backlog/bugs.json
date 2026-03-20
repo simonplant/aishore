@@ -372,11 +372,12 @@
         "Error message matches the format used by other commands: 'Unknown option: <flag>'"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Catch-all in cmd_run interprets --flag-typos as item IDs. Fix is a single guard in the catch-all: check if arg starts with '--' and reject it. Low risk — only changes error behavior, not normal paths."
+      "groomingNotes": "Catch-all in cmd_run interprets --flag-typos as item IDs. Fix is a single guard in the catch-all: check if arg starts with '--' and reject it. Low risk — only changes error behavior, not normal paths.",
+      "completedAt": "2026-03-20T12:37:09-07:00"
     },
     {
       "id": "BUG-016",
