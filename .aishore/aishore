@@ -3650,6 +3650,7 @@ cmd_backlog_add() {
                 pending_ac="$2"
                 shift 2 ;;
             --ac-verify)
+                validate_arg "$1" "${2:-}" || return 1
                 if [[ -z "$pending_ac" ]]; then
                     log_error "--ac-verify must follow --ac"
                     return 1
