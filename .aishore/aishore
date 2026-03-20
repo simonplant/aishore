@@ -590,6 +590,36 @@ list_ready_items() {
     jq -r '.items[] | select(.readyForSprint == true) | "  \(.id): \(.title)"' "$file" 2>/dev/null
 }
 
+# List all auto-pickable item IDs in priority order (same filter as pick_item but returns all)
+# Args: [skip_ids] [priority_filter] — priority_filter is space-separated list (e.g. "must should")
+list_pickable_ids() {
+    local skip_ids="${1:-}"
+    local priority_filter="${2:-}"
+    local skip_json="[]"
+    if [[ -n "$skip_ids" ]]; then
+        skip_json=$(echo "$skip_ids" | tr ',' '\n' | jq -R . | jq -s .)
+    fi
+    local prio_json="[]"
+    if [[ -n "$priority_filter" ]]; then
+        # shellcheck disable=SC2086
+        prio_json=$(printf '%s\n' $priority_filter | jq -R . | jq -s .)
+    fi
+    local done_ids_json
+    done_ids_json=$(collect_done_ids)
+    for backlog in "${BACKLOG_FILES[@]}"; do
+        jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --argjson prios "$prio_json" '
+            [.items[] |
+            select(.readyForSprint == true and (.passes == false or .passes == null) and (.status == "todo" or .status == null)) |
+            select(.intent != null and .intent != "" and (.intent | length) >= 20) |
+            select(.id as $id | $skip | index($id) | not) |
+            select(.dependsOn == null or (.dependsOn | length == 0) or (.id as $self | .dependsOn | all(. != $self) and all(. as $dep | $done_ids | index($dep) != null))) |
+            select(($prios | length) == 0 or (.priority // "should") as $p | $prios | index($p) != null)] |
+            sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end) |
+            .[].id
+        ' "$BACKLOG_DIR/$backlog" 2>/dev/null || true
+    done
+}
+
 collect_done_ids() {
     local done_ids="[]"
     for f in "${BACKLOG_FILES[@]}"; do
@@ -1336,6 +1366,7 @@ print_batch_summary() {
     local -n _items=$3
     local -n _times=$4
     local -n _failed_ids=$5
+    local -n _skipped=$6
 
     local batch_elapsed=$(( $(date +%s) - batch_start ))
     local total=${#_results[@]}
@@ -1371,13 +1402,22 @@ print_batch_summary() {
     printf "  %-8s %-12s %-8s %s\n" "------" "----" "------" "-------"
     local total_mins=$(( batch_elapsed / 60 ))
     local total_secs=$(( batch_elapsed % 60 ))
-    printf "  Passed: %d  Failed: %d  Total: %dm%ds\n" "$total_passed" "$total_failed" "$total_mins" "$total_secs"
+    local skipped_count=${#_skipped[@]}
+    printf "  Passed: %d  Failed: %d  Skipped: %d  Total: %dm%ds\n" "$total_passed" "$total_failed" "$skipped_count" "$total_mins" "$total_secs"
 
     if [[ $total_failed -gt 0 ]]; then
         echo ""
         echo "  Failed items:"
         for fid in "${!_failed_ids[@]}"; do
             echo "    - $fid: ${_failed_ids[$fid]}"
+        done
+    fi
+
+    if [[ $skipped_count -gt 0 ]]; then
+        echo ""
+        echo "  Not attempted (aborted early):"
+        for sid in "${_skipped[@]}"; do
+            echo "    - $sid"
         done
     fi
     echo ""
@@ -1895,6 +1935,8 @@ cmd_run() {
     local consecutive_failures=0
     local groom_exhausted=false
     local -a session_failures=()
+    local -a queued_ids=()
+    local -a skipped_ids=()
 
     _count_total_ready() {
         local _total=0
@@ -1917,6 +1959,13 @@ cmd_run() {
         send_notification "fail" "$ITEM_ID"
         handle_sprint_failure
     }
+
+    # Pre-build ordered list of all items that could be attempted in this batch
+    if [[ -n "$specific_id" ]]; then
+        queued_ids=("$specific_id")
+    else
+        mapfile -t queued_ids < <(list_pickable_ids "" "$auto_priorities")
+    fi
 
     for ((i=1; i<=count; i++)); do
         if [[ "$auto_mode" == "true" && "$consecutive_failures" -ge "$max_consecutive_failures" ]]; then
@@ -2044,7 +2093,21 @@ cmd_run() {
 
         # Success: mark complete, commit, merge/push
         if ! _handle_sprint_success; then
-            break  # merge conflict
+            # Merge conflict — compute items queued but not attempted
+            for _qid in "${queued_ids[@]}"; do
+                local _was_started=false
+                for _sid in "${sprint_items[@]}"; do
+                    [[ "$_qid" == "$_sid" ]] && { _was_started=true; break; }
+                done
+                [[ "$_was_started" == "false" ]] && skipped_ids+=("$_qid")
+            done
+            if [[ ${#skipped_ids[@]} -gt 0 ]]; then
+                log_warning "Items queued but not attempted due to merge conflict:"
+                for _qid in "${skipped_ids[@]}"; do
+                    echo "    - $_qid"
+                done
+            fi
+            break
         fi
 
         [[ "$auto_mode" == "true" ]] && log_info "Progress: $passed passed, $failed failed, $(_count_total_ready) remaining ready"
@@ -2052,7 +2115,7 @@ cmd_run() {
 
     # Print batch summary for auto mode or multi-sprint runs
     if [[ "$auto_mode" == "true" || $count -gt 1 ]]; then
-        print_batch_summary "$batch_start" sprint_results sprint_items sprint_times FAILED_IDS
+        print_batch_summary "$batch_start" sprint_results sprint_items sprint_times FAILED_IDS skipped_ids
     fi
 
     # Restore pre-existing uncommitted changes
