@@ -398,11 +398,12 @@
         "No functional behavior changes — this is display only"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "PO bump to should: flags like --step, --clear-steps, --ac, --ac-verify, --clear-ac were added specifically to enable CLI-first grooming without JSON editing. Hiding 9 of 18 flags in the early usage message undermines the discoverability of that entire investment. Users who type 'backlog edit' to learn the options will think those features don't exist. This is a documentation debt that defeats the purpose of BUG-006, BUG-007, and BUG-009."
+      "groomingNotes": "PO bump to should: flags like --step, --clear-steps, --ac, --ac-verify, --clear-ac were added specifically to enable CLI-first grooming without JSON editing. Hiding 9 of 18 flags in the early usage message undermines the discoverability of that entire investment. Users who type 'backlog edit' to learn the options will think those features don't exist. This is a documentation debt that defeats the purpose of BUG-006, BUG-007, and BUG-009.",
+      "completedAt": "2026-03-20T12:39:01-07:00"
     },
     {
       "id": "BUG-017",
