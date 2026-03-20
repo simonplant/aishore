@@ -135,3 +135,4 @@
 {"date":"2026-03-20","sprintId":"sprint-1774037576","itemId":"BUG-023","status":"complete","attempts":1,"filesChanged":2,"linesAdded":0,"linesRemoved":4,"duration":124,"priority":"should","category":null}
 {"date":"2026-03-20","sprintId":"sprint-1774038394","itemId":"BUG-024","status":"complete","attempts":1,"filesChanged":2,"linesAdded":2,"linesRemoved":1,"duration":118,"priority":"should","category":null}
 {"date":"2026-03-20","sprintId":"sprint-1774038513","itemId":"BUG-025","status":"complete","attempts":1,"filesChanged":2,"linesAdded":2,"linesRemoved":2,"duration":154,"priority":"should","category":null}
+{"date":"2026-03-20","sprintId":"sprint-1774038668","itemId":"BUG-021","status":"complete","attempts":1,"filesChanged":2,"linesAdded":3,"linesRemoved":3,"duration":123,"priority":"could","category":null}

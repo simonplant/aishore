@@ -3554,8 +3554,8 @@ cmd_backlog_list() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --status)  filter_status="$2"; shift 2 ;;
-            --type)    filter_type="$2"; shift 2 ;;
+            --status)  validate_arg "$1" "${2:-}" || return 1; filter_status="$2"; shift 2 ;;
+            --type)    validate_arg "$1" "${2:-}" || return 1; filter_type="$2"; shift 2 ;;
             --ready)   filter_ready=true; shift ;;
             *) log_error "Unknown option: $1"; return 1 ;;
         esac
@@ -4246,6 +4246,7 @@ Commands:
     --retries N     Allow up to N retry attempts on validation failure
     --refine        Refine spec on exhausted retries and try once more
     --quick         Skip maturity protocol (fast iteration)
+    --auto-review   Run architecture review after completion
 
   groom             Groom bugs/tech debt (Tech Lead mode)
     --backlog       Groom features instead (Product Owner mode)

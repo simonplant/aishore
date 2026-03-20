@@ -208,8 +208,10 @@ All agents automatically read your `CLAUDE.md`, `PRODUCT.md`, and `ARCHITECTURE.
 | `--priority must\|should\|could\|future` | Priority level | `should` |
 | `--category "..."` | Category tag | *(none)* |
 | `--ready` | Mark as sprint-ready immediately | `false` |
+| `--step "text"` | Add implementation step *(repeatable, ordered)* | *(none)* |
 | `--ac "text"` | Add acceptance criterion *(repeatable)* | *(none)* |
 | `--ac-verify "cmd"` | Attach verification command to preceding `--ac` | *(none)* |
+| `--depends-on ID` | Add dependency on another item *(repeatable)* | *(none)* |
 
 IDs are auto-generated: `FEAT-001`, `FEAT-002`, ... or `BUG-001`, `BUG-002`, ...
 
@@ -233,10 +235,14 @@ IDs are auto-generated: `FEAT-001`, `FEAT-002`, ... or `BUG-001`, `BUG-002`, ...
 | `--no-ready` | Unmark from sprint-ready |
 | `--groomed-at [YYYY-MM-DD]` | Set groomed date (defaults to today) |
 | `--groomed-notes "..."` | Set grooming notes |
+| `--step "text"` | Append implementation step *(repeatable)* |
+| `--clear-steps` | Reset steps to empty |
 | `--ac "text"` | Add acceptance criterion *(repeatable)* |
 | `--ac-verify "cmd"` | Attach verification command to preceding `--ac` |
+| `--clear-ac` | Reset acceptance criteria to empty |
 | `--scope "glob"` | Add scope glob *(repeatable)* |
 | `--clear-scope` | Reset scope to empty |
+| `--depends-on ID` | Add dependency on another item *(repeatable)* |
 
 Multiple flags can be combined in a single edit command.
 
@@ -263,6 +269,19 @@ Checks: title, commander's intent (≥20 chars, must be a directive), steps, acc
 ```
 
 Reads your product requirements document (`PRODUCT.md`, `PRD.md`, or `README.md`) and uses the Product Owner agent to create backlog items. Checks existing items to avoid duplicates. Fully non-interactive — designed for agent-driven workflows.
+
+### `backlog history`
+
+```bash
+.aishore/aishore backlog history                  # List completed sprint items
+.aishore/aishore backlog history --since 2026-01  # Since date
+.aishore/aishore backlog history --failed         # Only failed items
+```
+
+| Flag | Description |
+|------|-------------|
+| `--since YYYY-MM-DD` | Show items completed on or after date |
+| `--failed` | Show only items where status != complete |
 
 ### `init`
 
@@ -311,6 +330,7 @@ Reads your product requirements document (`PRODUCT.md`, `PRD.md`, or `README.md`
 | `--no-merge` | Keep feature branches for PR review (push instead of merge) | — |
 | `--refine` | Refine spec when retries exhausted, then retry once more | — |
 | `--quick` | Skip maturity protocol (fast iteration) | — |
+| `--auto-review` | Run architecture review automatically after completion | — |
 | `--dry-run` | Preview first item without running | — |
 
 ### `groom`
@@ -442,6 +462,7 @@ Or use environment variables (these take precedence over config.yaml):
 | Scope mode | `scope.mode` | `AISHORE_SCOPE_MODE` | `warn` |
 | Auto-groom threshold | `auto.groom_threshold` | `AISHORE_AUTO_GROOM_THRESHOLD` | `3` |
 | Auto max failures | `auto.max_failures` | `AISHORE_AUTO_MAX_FAILURES` | `5` |
+| Output truncation | `output.truncate_lines` | `AISHORE_OUTPUT_TRUNCATE_LINES` | `50` |
 
 **Precedence:** env vars > config.yaml > built-in defaults.
 
