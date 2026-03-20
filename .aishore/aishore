@@ -3936,6 +3936,10 @@ cmd_backlog_edit() {
                 local gdate
                 if [[ -n "${2:-}" && "${2:-}" != --* ]]; then
                     gdate="$2"
+                    if ! [[ "$gdate" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+                        log_error "Invalid date format: $gdate (expected YYYY-MM-DD)"
+                        return 1
+                    fi
                     shift 2
                 else
                     gdate=$(date +%Y-%m-%d)
