@@ -113,3 +113,4 @@
 {"date":"2026-03-20","sprintId":"sprint-1774031247","itemId":"FEAT-003","status":"complete","attempts":1,"filesChanged":2,"linesAdded":8,"linesRemoved":1,"duration":203,"priority":"should","category":"backlog-tooling"}
 {"date":"2026-03-20","sprintId":"sprint-1774031451","itemId":"FEAT-002","status":"complete","attempts":1,"filesChanged":3,"linesAdded":8,"linesRemoved":4,"duration":428,"priority":"could","category":"autonomous-mode"}
 {"date":"2026-03-20","sprintId":"sprint-1774032277","itemId":"FEAT-004","status":"complete","attempts":1,"filesChanged":2,"linesAdded":2,"linesRemoved":3,"duration":161,"priority":"must","category":null}
+{"date":"2026-03-20","sprintId":"sprint-1774032439","itemId":"FEAT-005","status":"complete","attempts":1,"filesChanged":2,"linesAdded":4,"linesRemoved":6,"duration":258,"priority":"could","category":null}

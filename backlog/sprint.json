@@ -1,24 +1,24 @@
 {
-  "sprintId": "sprint-1774032277",
-  "startedAt": "2026-03-20T11:44:37-07:00",
+  "sprintId": "sprint-1774032439",
+  "startedAt": "2026-03-20T11:47:19-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-004",
-    "title": "Add --depends-on flag to backlog add and backlog edit",
-    "intent": "Users must be able to declare item dependencies via the CLI — enforcing dependsOn at pick time and check time has no value if users can't set it without editing JSON by hand.",
-    "description": "The dependsOn field exists in the item schema and is enforced by the sprint picker (FEAT-001) and backlog check (FEAT-003), but there is no CLI flag to set it. Users who want to declare that FEAT-002 requires FEAT-001 to be done first must hand-edit the backlog JSON, which is error-prone and undiscoverable. Add --depends-on <ID>[,<ID>...] to both backlog add and backlog edit. The flag should accept a comma-separated list of item IDs and write them to the dependsOn array.",
+    "id": "FEAT-005",
+    "title": "backlog list flags items with unmet dependsOn dependencies",
+    "intent": "backlog list must visually surface dependency blockers so users can see at a glance which items cannot be picked yet — invisible blockers cause wasted grooming and sprint failures.",
+    "description": "backlog list currently shows items with status, priority, and readyForSprint but gives no signal that an item has unresolved dependsOn constraints. A user looking at the list cannot tell which items are blocked versus which are truly ready. The fix is to add a visual marker in the list output when an item has one or more dependsOn entries whose items are not status: done. The marker should be minimal (e.g., a [blocked] tag or a ✗ in a deps column) and only appear when blockers exist.",
     "sourceBacklog": "backlog.json",
     "steps": [],
     "acceptanceCriteria": [
-      "backlog add --depends-on FEAT-001 creates an item with dependsOn: [\"FEAT-001\"]",
-      "backlog edit <ID> --depends-on FEAT-001,FEAT-002 sets dependsOn to both IDs, replacing any prior value",
-      "backlog show <ID> displays the dependsOn list when the field is present"
+      "backlog list shows a visual indicator next to items whose dependsOn items are not all status: done",
+      "backlog list shows no indicator for items with no dependsOn, or when all dependencies are done",
+      "The indicator includes a count or list of blocking IDs so the user can investigate"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T11:44:37-07:00",
+    "startedAt": "2026-03-20T11:47:19-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T11:47:18-07:00"
+    "completedAt": "2026-03-20T11:51:37-07:00"
   },
-  "completedAt": "2026-03-20T11:47:18-07:00",
+  "completedAt": "2026-03-20T11:51:37-07:00",
   "attempts": 1
 }
