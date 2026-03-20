@@ -1,32 +1,24 @@
 {
-  "sprintId": "sprint-1774031451",
-  "startedAt": "2026-03-20T11:30:51-07:00",
+  "sprintId": "sprint-1774032277",
+  "startedAt": "2026-03-20T11:44:37-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-002",
-    "title": "Trigger architecture review after auto done drains backlog",
-    "intent": "When auto done finishes, the user must get an architecture review so accumulated changes are evaluated while context is still fresh — not days later.",
-    "description": "When auto done or auto p* fully drains all in-scope items (exit reason: all items complete, not circuit-breaker abort), aishore should offer to run an architecture review. This closes the loop on the autonomous workflow: populate → groom → auto → review. The review should be opt-in (prompt or --auto-review flag), not forced. The Architect agent already exists; this is about wiring the trigger. Also consider: after the review, the architect may add items to the backlog — auto mode should surface this as a next-step hint.",
+    "id": "FEAT-004",
+    "title": "Add --depends-on flag to backlog add and backlog edit",
+    "intent": "Users must be able to declare item dependencies via the CLI — enforcing dependsOn at pick time and check time has no value if users can't set it without editing JSON by hand.",
+    "description": "The dependsOn field exists in the item schema and is enforced by the sprint picker (FEAT-001) and backlog check (FEAT-003), but there is no CLI flag to set it. Users who want to declare that FEAT-002 requires FEAT-001 to be done first must hand-edit the backlog JSON, which is error-prone and undiscoverable. Add --depends-on <ID>[,<ID>...] to both backlog add and backlog edit. The flag should accept a comma-separated list of item IDs and write them to the dependsOn array.",
     "sourceBacklog": "backlog.json",
-    "steps": [
-      "In .aishore/aishore, find cmd_auto() and identify the loop exit paths: all-done vs circuit-breaker abort",
-      "Add a variable to track which exit path was taken (all-done vs abort)",
-      "On all-done exit, check for --auto-review flag; if set, skip prompt and run review directly",
-      "If --auto-review is absent, print a prompt asking the user whether to run architecture review",
-      "Invoke cmd_review (or equivalent) when confirmed",
-      "After review completes, check if new items exist in any backlog file and print a next-step hint if found"
-    ],
+    "steps": [],
     "acceptanceCriteria": [
-      "After auto done completes all items (not circuit-breaker abort), user is prompted to run architecture review",
-      "The --auto-review flag skips the prompt and runs architecture review automatically",
-      "No review prompt is shown when auto exits via circuit-breaker abort",
-      "If new backlog items exist after review completes, a next-step hint is printed"
+      "backlog add --depends-on FEAT-001 creates an item with dependsOn: [\"FEAT-001\"]",
+      "backlog edit <ID> --depends-on FEAT-001,FEAT-002 sets dependsOn to both IDs, replacing any prior value",
+      "backlog show <ID> displays the dependsOn list when the field is present"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T11:30:51-07:00",
+    "startedAt": "2026-03-20T11:44:37-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T11:37:59-07:00"
+    "completedAt": "2026-03-20T11:47:18-07:00"
   },
-  "completedAt": "2026-03-20T11:37:59-07:00",
+  "completedAt": "2026-03-20T11:47:18-07:00",
   "attempts": 1
 }
