@@ -1,29 +1,29 @@
 {
-  "sprintId": "sprint-1774034753",
-  "startedAt": "2026-03-20T12:25:53-07:00",
+  "sprintId": "sprint-1774035182",
+  "startedAt": "2026-03-20T12:33:02-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-010",
-    "title": "remove_items_by_status takes full path while other CRUD helpers take relative filename",
-    "intent": "Backlog CRUD helpers must use a consistent path convention — the current asymmetry is a latent footgun that will cause silent wrong-file operations when new callers are added.",
-    "description": "update_item() and remove_item() accept a relative filename (e.g. 'backlog.json') and prepend BACKLOG_DIR internally. remove_items_by_status() takes a full path directly. Callers today are consistent, but the asymmetry is not documented and will cause bugs when someone adds a new call site with the wrong convention. Fix: change remove_items_by_status to accept a relative filename and prepend BACKLOG_DIR internally, matching the established pattern.",
+    "id": "BUG-014",
+    "title": "cmd_backlog_populate silently ignores unknown options",
+    "intent": "cmd_backlog_populate must reject unknown flags — silently discarding options is inconsistent with the established error-handling pattern and hides user mistakes",
+    "description": "cmd_backlog_populate() (around line 3457) performs no option parsing at all. Any flag passed to 'backlog populate' is silently ignored. Most other commands use a while/case loop with a catch-all that calls log_error and returns 1. Fix: add a proper option parsing loop. populate currently takes no flags, so any argument is an error — the loop body should be just the catch-all that rejects everything.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find remove_items_by_status() around line 703 and update it to accept a relative filename like update_item() and remove_item()",
-      "Change the jq command argument from '$file' to '$BACKLOG_DIR/$file'",
-      "Update cmd_clean() callers (line ~4025-4026) to pass just the filename ('backlog.json', 'bugs.json') instead of the full path variables",
-      "Run .aishore/aishore clean --dry-run and then clean on a test setup to confirm no regression"
+      "In .aishore/aishore, find cmd_backlog_populate() and identify the current argument handling (none)",
+      "Add a while/case loop before the function body that rejects unknown options with log_error 'Unknown option: $1' and returns 1",
+      "Verify that 'backlog populate' with no arguments still works correctly",
+      "Verify that 'backlog populate --typo' now prints an error and exits non-zero"
     ],
     "acceptanceCriteria": [
-      "remove_items_by_status accepts a relative filename consistent with update_item and remove_item",
-      "cmd_clean still correctly removes done items after the refactor",
-      "grep confirms no other callers of remove_items_by_status exist with full paths"
+      "backlog populate --unknown-flag exits with a non-zero status and prints 'Unknown option: --unknown-flag'",
+      "backlog populate with no arguments still works correctly",
+      "Error message matches the format used by other commands"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T12:25:53-07:00",
+    "startedAt": "2026-03-20T12:33:02-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T12:27:27-07:00"
+    "completedAt": "2026-03-20T12:35:08-07:00"
   },
-  "completedAt": "2026-03-20T12:27:27-07:00",
+  "completedAt": "2026-03-20T12:35:08-07:00",
   "attempts": 1
 }

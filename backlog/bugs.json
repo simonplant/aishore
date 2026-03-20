@@ -326,6 +326,133 @@
       "readyForSprint": true,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Both cmd_groom (line 2262) and cmd_metrics (line 2470) use single-check pattern instead of proper while/case loop. Lower severity than BUG-011/012 since these commands have fewer dangerous flags, but still violates CLI consistency. Two functions to fix, same pattern each. Low risk."
+    },
+    {
+      "id": "BUG-014",
+      "title": "cmd_backlog_populate silently ignores unknown options",
+      "intent": "cmd_backlog_populate must reject unknown flags — silently discarding options is inconsistent with the established error-handling pattern and hides user mistakes",
+      "description": "cmd_backlog_populate() (around line 3457) performs no option parsing at all. Any flag passed to 'backlog populate' is silently ignored. Most other commands use a while/case loop with a catch-all that calls log_error and returns 1. Fix: add a proper option parsing loop. populate currently takes no flags, so any argument is an error — the loop body should be just the catch-all that rejects everything.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find cmd_backlog_populate() and identify the current argument handling (none)",
+        "Add a while/case loop before the function body that rejects unknown options with log_error 'Unknown option: $1' and returns 1",
+        "Verify that 'backlog populate' with no arguments still works correctly",
+        "Verify that 'backlog populate --typo' now prints an error and exits non-zero"
+      ],
+      "acceptanceCriteria": [
+        "backlog populate --unknown-flag exits with a non-zero status and prints 'Unknown option: --unknown-flag'",
+        "backlog populate with no arguments still works correctly",
+        "Error message matches the format used by other commands"
+      ],
+      "dependsOn": [],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "No option parsing at all in cmd_backlog_populate. Fix is additive — add a while/case loop with a catch-all that rejects all arguments since populate takes no flags. Low risk, same pattern as BUG-011/012/013.",
+      "completedAt": "2026-03-20T12:35:08-07:00"
+    },
+    {
+      "id": "BUG-015",
+      "title": "cmd_run treats unknown flags as item IDs instead of erroring",
+      "intent": "cmd_run must reject unrecognized flags — silently accepting unknown options as item IDs causes confusing behavior where typos like --dry_run are interpreted as sprint IDs and silently do nothing",
+      "description": "cmd_run() has a catch-all in its option parsing loop (around line 1905) that accepts any non-flag positional argument as either a count or a specific item ID. This means unknown flags like '--dry_run' (intended as --dry-run) or '--retries' (missing value) are silently interpreted as item IDs, producing a 'no item found' error rather than 'unknown option'. The fix is to detect that an argument starts with '--' in the catch-all and reject it as an unknown option before treating it as a positional.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find cmd_run() and locate the catch-all in the option parsing loop (around line 1905-1912)",
+        "In the catch-all branch, before the existing logic, add: if [[ \"$1\" == --* ]]; then log_error \"Unknown option: $1\"; return 1; fi",
+        "Verify that 'run 3', 'run FEAT-001', and 'run' without arguments still work correctly",
+        "Verify that 'run --typo' now prints an error and exits non-zero"
+      ],
+      "acceptanceCriteria": [
+        "aishore run --unknown-flag exits with a non-zero status and prints an error message",
+        "aishore run N (numeric count), aishore run <ID>, and aishore run still work correctly",
+        "Error message matches the format used by other commands: 'Unknown option: <flag>'"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Catch-all in cmd_run interprets --flag-typos as item IDs. Fix is a single guard in the catch-all: check if arg starts with '--' and reject it. Low risk — only changes error behavior, not normal paths."
+    },
+    {
+      "id": "BUG-016",
+      "title": "cmd_backlog_edit usage message omits most supported flags",
+      "intent": "The backlog edit help text must list all supported flags — a usage message that omits 9 of 18 flags is misleading and makes the CLI appear less capable than it is",
+      "description": "cmd_backlog_edit() has two help text locations that list supported flags: the early usage error message (around line 3767) and the catch-all error at the end (around line 3941). The early message lists only: --title, --intent, --priority, --status, --desc, --category, --depends-on, --ready, --no-ready. It omits: --step, --clear-steps, --scope, --clear-scope, --ac, --ac-verify, --clear-ac, --groomed-at, --groomed-notes. The catch-all message at line 3941 is complete. Fix: update the early usage message to match the complete list in the catch-all.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find cmd_backlog_edit() and locate the early usage error message (around line 3767) that is shown when no ID is provided",
+        "Compare it to the complete flag list in the catch-all error message (around line 3941)",
+        "Update the early usage message to include all supported flags: --step, --clear-steps, --scope, --clear-scope, --ac, --ac-verify, --clear-ac, --groomed-at, --groomed-notes",
+        "Verify that 'backlog edit' with no arguments shows the updated usage message"
+      ],
+      "acceptanceCriteria": [
+        "Running 'backlog edit' with no arguments shows a usage message that includes --step, --clear-steps, --ac, --ac-verify, --clear-ac, --scope, --clear-scope, --groomed-at, --groomed-notes",
+        "The complete flag list in the catch-all error message is unchanged",
+        "No functional behavior changes — this is display only"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "PO bump to should: flags like --step, --clear-steps, --ac, --ac-verify, --clear-ac were added specifically to enable CLI-first grooming without JSON editing. Hiding 9 of 18 flags in the early usage message undermines the discoverability of that entire investment. Users who type 'backlog edit' to learn the options will think those features don't exist. This is a documentation debt that defeats the purpose of BUG-006, BUG-007, and BUG-009."
+    },
+    {
+      "id": "BUG-017",
+      "title": "cmd_backlog_add missing validate_arg calls for most flags",
+      "intent": "backlog add must validate that flag arguments are non-empty — silently accepting empty values creates malformed backlog items that fail sprint readiness checks without a clear error message",
+      "description": "cmd_backlog_add() calls validate_arg for --step (line 3617) but not for --type, --title, --intent, --desc, --priority, --category, or --depends-on (lines 3592-3600). This means 'backlog add --title' (with no value) silently sets title to an empty string, producing a malformed item. By contrast, cmd_backlog_edit() consistently calls validate_arg for all value-bearing flags. Fix: add validate_arg calls in cmd_backlog_add() to match the pattern already established in cmd_backlog_edit().",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find cmd_backlog_add() and locate the flag handling block (around lines 3592-3617)",
+        "For each flag that takes a value (--type, --title, --intent, --desc, --priority, --category, --depends-on), add validate_arg \"$1\" \"${2:-}\" || return 1 before the assignment, matching the pattern in cmd_backlog_edit()",
+        "Verify that 'backlog add --title' (no value) now prints an error and exits non-zero",
+        "Verify that 'backlog add --title \"My Item\" --priority must' still creates the item correctly"
+      ],
+      "acceptanceCriteria": [
+        "backlog add --title (with no value) exits with a non-zero status and prints an error",
+        "backlog add --intent (with no value) exits with a non-zero status and prints an error",
+        "backlog add with all required values still creates items correctly",
+        "validate_arg is called for --type, --title, --intent, --desc, --priority, --category, and --depends-on"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "cmd_backlog_edit already validates all flags with validate_arg; cmd_backlog_add inconsistently skips it for most flags. Additive fix — add validate_arg calls. Low risk, small scope."
+    },
+    {
+      "id": "BUG-018",
+      "title": "cmd_backlog_show and cmd_backlog_check silently accept extra positional arguments",
+      "intent": "backlog show and backlog check must reject extra arguments — silently ignoring them makes 'backlog show FEAT-001 FEAT-002' appear to succeed while only processing the first ID, giving users false confidence",
+      "description": "cmd_backlog_show() extracts $1 as the item ID and ignores anything after it. cmd_backlog_check() does the same. Both commands silently accept extra arguments: 'backlog show FEAT-001 FEAT-002' processes only FEAT-001 without any error, which is misleading. The fix for each is to check that exactly one positional argument was given and reject anything extra with log_error.",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find cmd_backlog_show() and after extracting the ID from $1, check if $# -gt 1 and emit log_error 'Unexpected argument: ${2}' and return 1",
+        "In .aishore/aishore, find cmd_backlog_check() and apply the same fix — after extracting the ID, check for extra arguments and error",
+        "Verify that 'backlog show FEAT-001' and 'backlog check FEAT-001' still work correctly",
+        "Verify that 'backlog show FEAT-001 FEAT-002' and 'backlog check FEAT-001 --typo' now print an error and exit non-zero"
+      ],
+      "acceptanceCriteria": [
+        "backlog show <ID> <extra> exits non-zero and prints an error about the unexpected argument",
+        "backlog check <ID> <extra> exits non-zero and prints an error about the unexpected argument",
+        "backlog show <ID> and backlog check <ID> with exactly one argument still work correctly"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Both cmd_backlog_show and cmd_backlog_check silently drop extra positional args. Additive check: if $# > 1 after extracting ID, error out. Low risk, two functions to fix."
     }
   ]
 }
