@@ -127,8 +127,8 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "PO re-review: bumped to must. Silent config failure on first run destroys new-user trust at exactly the moment they're evaluating the tool. If yq isn't installed (common), every override they set is a lie. No other item has this failure mode — the user did everything right and gets wrong behavior with no signal. Must fix before new user onboarding can be considered reliable. NOTE: First sprint attempt was rejected by validator agent (failCount: 1). Implementation must ensure the warning fires unconditionally when config.yaml exists with non-empty content and yq is absent — the grep-detection fallback must NOT gate the warning.",
       "lastFailReason": "Validator agent rejected implementation",
-      "lastFailAt": "2026-03-20T11:54:40-07:00",
-      "failCount": 1
+      "lastFailAt": "2026-03-20T13:11:05-07:00",
+      "failCount": 2
     },
     {
       "id": "BUG-006",
@@ -554,11 +554,12 @@
         "cmd_clean --dry-run is not affected (no file writes in dry-run path)"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Silent success on write failure is the same class as BUG-005 (user does right thing, gets wrong behavior, no signal). The return code is not checked after remove_items_by_status — add || return 1 guard on both calls. Low risk, additive error handling only."
+      "groomingNotes": "Silent success on write failure is the same class as BUG-005 (user does right thing, gets wrong behavior, no signal). The return code is not checked after remove_items_by_status — add || return 1 guard on both calls. Low risk, additive error handling only.",
+      "completedAt": "2026-03-20T13:12:54-07:00"
     },
     {
       "id": "BUG-023",

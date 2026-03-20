@@ -1,31 +1,29 @@
 {
-  "sprintId": "sprint-1774037033",
-  "startedAt": "2026-03-20T13:03:53-07:00",
+  "sprintId": "sprint-1774037465",
+  "startedAt": "2026-03-20T13:11:05-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-006",
-    "title": "backlog history command for querying completed sprint items",
-    "intent": "Users must be able to query what was completed and when without parsing JSONL by hand — sprint history should be as discoverable as the backlog itself.",
-    "description": "The archive/sprints.jsonl file records every completed sprint (itemId, date, status, duration, filesChanged, etc.) but there is no CLI command to query it. Users who want to know 'what did I complete this week?' or 'how many items passed vs failed?' must read raw JSONL. A 'backlog history' subcommand (or 'aishore history') should let users list recent completions, filter by date range or status, and surface per-item summaries. The metrics command gives aggregates; history would give the item-level view.",
-    "sourceBacklog": "backlog.json",
+    "id": "BUG-022",
+    "title": "cmd_clean prints success even when remove_items_by_status fails",
+    "intent": "cmd_clean must not report successful cleanup if the backlog file was not actually updated — silent data loss on I/O error is worse than a visible failure.",
+    "description": "In cmd_clean(), remove_items_by_status() is called but its return code is not checked. If jq fails (malformed JSON, disk full) or the mv that replaces the file fails, the command continues and prints 'Cleaned N features/bugs' as though it succeeded. The user believes the backlog was cleaned when it was not. Fix: check return code of both remove_items_by_status calls and exit non-zero with a clear error if either fails.",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find the archive path (SPRINT_ARCHIVE or sprints.jsonl) to understand the JSONL schema",
-      "Add a 'history' subcommand in the backlog command dispatcher (cmd_backlog or main case statement)",
-      "Implement cmd_backlog_history(): read sprints.jsonl, parse each line with jq, support --since YYYY-MM-DD filter (skip entries with date < arg), support --failed filter (skip entries with status == complete)",
-      "Format output as a table: ID, date, status, duration columns; align columns for readability",
-      "Add --failed flag handling: show only rows where status \\!= complete",
-      "Add 'backlog history' to the help text and usage message"
+      "In .aishore/aishore, find cmd_clean() and locate the two remove_items_by_status calls (around line 4067-4068)",
+      "Capture the return code of each call: 'remove_items_by_status ... || { log_error \"Failed to clean backlog.json\"; return 1; }'",
+      "Ensure the success message is only printed after both calls succeed",
+      "Verify: run clean on a valid setup (success printed), then test with a read-only backlog file (error printed, no success message)"
     ],
     "acceptanceCriteria": [
-      "backlog history (or aishore history) lists completed sprint items with ID, date, and status",
-      "backlog history --since YYYY-MM-DD filters to items completed on or after that date",
-      "backlog history --failed shows only items where status \\!= complete"
+      "cmd_clean exits non-zero and prints an error when remove_items_by_status fails",
+      "cmd_clean success message is only printed when cleanup actually succeeds",
+      "cmd_clean --dry-run is not affected (no file writes in dry-run path)"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T13:03:53-07:00",
+    "startedAt": "2026-03-20T13:11:05-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T13:08:16-07:00"
+    "completedAt": "2026-03-20T13:12:54-07:00"
   },
-  "completedAt": "2026-03-20T13:08:16-07:00",
+  "completedAt": "2026-03-20T13:12:54-07:00",
   "attempts": 1
 }

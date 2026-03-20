@@ -4123,8 +4123,12 @@ cmd_clean() {
     elif [[ "$dry_run" == "true" ]]; then
         echo "Would remove: $feat_count features, $bug_count bugs"
     else
-        [[ "$feat_count" -gt 0 ]] && remove_items_by_status "backlog.json" "done"
-        [[ "$bug_count" -gt 0 ]] && remove_items_by_status "bugs.json" "done"
+        if [[ "$feat_count" -gt 0 ]]; then
+            remove_items_by_status "backlog.json" "done" || { log_error "Failed to clean backlog.json"; return 1; }
+        fi
+        if [[ "$bug_count" -gt 0 ]]; then
+            remove_items_by_status "bugs.json" "done" || { log_error "Failed to clean bugs.json"; return 1; }
+        fi
         echo "Cleaned $feat_count features, $bug_count bugs ($total total removed)"
     fi
 }
