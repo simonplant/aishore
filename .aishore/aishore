@@ -3876,6 +3876,10 @@ cmd_backlog_edit() {
                 ac_entries+=("{\"text\":$(printf '%s' "$pending_ac" | jq -Rs .),\"verify\":$(printf '%s' "$2" | jq -Rs .)}")
                 pending_ac=""
                 shift 2 ;;
+            --clear-ac)
+                jq_updates="$jq_updates | .acceptanceCriteria = []"
+                update_desc="$update_desc ac"
+                shift ;;
             --groomed-notes)
                 validate_arg "$1" "${2:-}" || return 1
                 jq_updates="$jq_updates | .groomingNotes = \$gnotes"
@@ -3939,7 +3943,7 @@ cmd_backlog_edit() {
     fi
 
     if [[ -z "$jq_updates" ]]; then
-        log_error "No updates specified. Use --title, --priority, --status, --desc, --category, --ready, --no-ready, --step, --clear-steps, --scope, --depends-on, --ac, --ac-verify"
+        log_error "No updates specified. Use --title, --priority, --status, --desc, --category, --ready, --no-ready, --step, --clear-steps, --scope, --clear-scope, --depends-on, --ac, --ac-verify, --clear-ac"
         return 1
     fi
 
@@ -4107,7 +4111,7 @@ Commands:
     --groomed-at [date], --groomed-notes "...",
     --step "text"   Append implementation step (repeatable), --clear-steps to reset,
     --scope "glob"  Add scope glob (repeatable), --clear-scope to reset,
-    --ac "text", --ac-verify "cmd"  Append testable acceptance criteria
+    --ac "text", --ac-verify "cmd"  Append testable acceptance criteria, --clear-ac to reset
   backlog check <ID> Check readiness gates (title, intent, steps, AC, step length)
   backlog rm <ID>   Remove an item (with confirmation)
     --force         Skip confirmation

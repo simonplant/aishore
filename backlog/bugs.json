@@ -67,8 +67,9 @@
         "Run .aishore/aishore backlog check on an item with AC entries to confirm no regression"
       ],
       "acceptanceCriteria": [
-        "The if/else in AC JSON construction is removed or the branches have distinct behavior",
-        "backlog edit --ac and --ac-verify still work correctly after the fix"
+        "The if/else branch is removed, only the single common statement remains",
+        "backlog edit --ac and --ac-verify still produce valid JSON items",
+        "backlog check on an item with AC entries shows no regression"
       ],
       "status": "todo",
       "passes": false,
