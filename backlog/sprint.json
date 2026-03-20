@@ -1,24 +1,29 @@
 {
-  "sprintId": "sprint-1774033117",
-  "startedAt": "2026-03-20T11:58:37-07:00",
+  "sprintId": "sprint-1774033581",
+  "startedAt": "2026-03-20T12:06:21-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-007",
-    "title": "backlog show renders AC {text, verify} objects as raw JSON instead of plain text",
-    "intent": "backlog show must display acceptance criteria as readable text — when entries are {text, verify} objects, only the text should be shown, not the JSON structure.",
-    "description": "When backlog edit --ac 'Some check' --ac-verify 'make test' is used, the AC entry is stored as a JSON object {\"text\": \"Some check\", \"verify\": \"make test\"}. In cmd_backlog_show(), the jq display expression at line ~3720 uses (.acceptanceCriteria // [] | .[] | \"  - \\(.)\"), which calls tojson on the entire object, producing output like: '  - {\"text\":\"Some check\",\"verify\":\"make test\"}'. The fix is to check entry type: if it's a string, show it as-is; if it's an object, extract .text (and optionally show the verify command in a shorter form).",
+    "id": "BUG-008",
+    "title": "VALIDATE_CMD output injected untruncated into retry prompts",
+    "intent": "Retry prompts must not contain unbounded validation output — token bloat degrades AI fix quality and can push critical context out of attention.",
+    "description": "In _run_retry_loop(), validate_output is captured with 'cat $validate_tmpfile' (no truncation limit) and injected raw into retry_extra_prompt. run_ac_verification() and the pre-flight check both apply OUTPUT_TRUNCATE_LINES truncation, but the VALIDATE_CMD retry path does not. For verbose test suites (cargo test, pytest, mocha), this produces thousands of lines in the retry prompt, degrading AI quality. The validator-agent retry path at line ~1769 has the same issue.",
     "sourceBacklog": "bugs.json",
-    "steps": [],
+    "steps": [
+      "In .aishore/aishore, find _run_retry_loop() and locate the validate_output capture: validate_output=$(cat \"$validate_tmpfile\" 2>/dev/null || true)",
+      "Replace the cat with the same truncation pattern used in run_ac_verification(): capture wc -l, use tail -n $OUTPUT_TRUNCATE_LINES, prepend '[... output truncated, showing last N of M lines]' if truncated",
+      "Verify the validator-agent retry path also uses the truncated validate_output (line ~1769)",
+      "Confirm pre-flight check already has truncation (it does, around line 1650); no change needed there"
+    ],
     "acceptanceCriteria": [
-      "backlog show <ID> displays plain-string AC entries unchanged",
-      "backlog show <ID> displays {text, verify} AC entries as the .text value only (not raw JSON)",
-      "backlog show <ID> optionally shows verify command on same or next line in a readable format"
+      "VALIDATE_CMD output injected into retry prompts is truncated to OUTPUT_TRUNCATE_LINES lines",
+      "When output is truncated, the retry prompt includes a '[... output truncated, showing last N of M lines]' indicator",
+      "Truncation matches the pattern used in run_ac_verification() for consistency"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T11:58:37-07:00",
+    "startedAt": "2026-03-20T12:06:21-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T12:00:45-07:00"
+    "completedAt": "2026-03-20T12:08:42-07:00"
   },
-  "completedAt": "2026-03-20T12:00:45-07:00",
+  "completedAt": "2026-03-20T12:08:42-07:00",
   "attempts": 1
 }
