@@ -321,11 +321,12 @@
         "aishore groom, aishore groom --backlog, aishore metrics, and aishore metrics --json all continue to work correctly"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Both cmd_groom (line 2262) and cmd_metrics (line 2470) use single-check pattern instead of proper while/case loop. Lower severity than BUG-011/012 since these commands have fewer dangerous flags, but still violates CLI consistency. Two functions to fix, same pattern each. Low risk."
+      "groomingNotes": "Both cmd_groom (line 2262) and cmd_metrics (line 2470) use single-check pattern instead of proper while/case loop. Lower severity than BUG-011/012 since these commands have fewer dangerous flags, but still violates CLI consistency. Two functions to fix, same pattern each. Low risk.",
+      "completedAt": "2026-03-20T12:43:00-07:00"
     },
     {
       "id": "BUG-014",
