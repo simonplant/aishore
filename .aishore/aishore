@@ -88,6 +88,7 @@ SCOPE_MODE="warn"
 MATURITY_ENABLED="true"
 OUTPUT_TRUNCATE_LINES="50"
 MERGE_STRATEGY="merge"
+CREATE_PR="false"
 
 # Default permission sets per agent role
 PERMS_DEVELOPER="Bash,Edit,Write,Read,Glob,Grep"
@@ -284,6 +285,7 @@ load_config() {
             ".maturity.enabled      MATURITY_ENABLED"
             ".output.truncate_lines OUTPUT_TRUNCATE_LINES"
             ".merge.strategy        MERGE_STRATEGY"
+            ".pr.create             CREATE_PR"
             ".permissions.developer CFG_PERMS_DEVELOPER"
             ".permissions.validator CFG_PERMS_VALIDATOR"
             ".permissions.reviewer  CFG_PERMS_REVIEWER"
@@ -325,6 +327,7 @@ _apply_env_overrides() {
         "AISHORE_MATURITY          MATURITY_ENABLED"
         "AISHORE_OUTPUT_TRUNCATE_LINES OUTPUT_TRUNCATE_LINES"
         "AISHORE_MERGE_STRATEGY    MERGE_STRATEGY"
+        "AISHORE_CREATE_PR         CREATE_PR"
     )
     local _env_name _target_var
     for _entry in "${_env_map[@]}"; do
@@ -1488,7 +1491,7 @@ cmd_auto() {
     local scope="${1:-}"
 
     if [[ -z "$scope" ]]; then
-        log_error "Usage: auto {done|p0|p1|p2} [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--auto-review] [--dry-run]"
+        log_error "Usage: auto {done|p0|p1|p2} [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--auto-review] [--dry-run]"
         echo "" >&2
         echo "Scopes:" >&2
         echo "  done  Drain entire backlog to completion" >&2
@@ -1874,6 +1877,21 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
             git push -u origin "$AISHORE_FEATURE_BRANCH" 2>/dev/null || \
                 log_warning "Failed to push $AISHORE_FEATURE_BRANCH — push manually"
         fi
+
+        # Create GitHub PR if requested
+        if [[ "$create_pr" == "true" ]]; then
+            local pr_title pr_body dev_summary
+            pr_title="$ITEM_ID: $(jq -r '.item.title // ""' "$BACKLOG_DIR/sprint.json" 2>/dev/null)"
+            dev_summary=$(jq -r '.summary // ""' "$STATUS_DIR/result.json" 2>/dev/null || echo "")
+            pr_body="## Summary"$'\n\n'"$dev_summary"
+            if gh pr create --base "$base_branch" --head "$AISHORE_FEATURE_BRANCH" \
+                --title "$pr_title" --body "$pr_body" 2>/dev/null; then
+                log_success "GitHub PR created for $ITEM_ID"
+            else
+                log_warning "Failed to create PR — branch pushed for manual review"
+            fi
+        fi
+
         git checkout "$base_branch"
     elif [[ "$MERGE_STRATEGY" == "squash" ]]; then
         log_info "Squash-merging $AISHORE_FEATURE_BRANCH → $base_branch"
@@ -1934,6 +1952,7 @@ cmd_run() {
     local specific_id=""
     local retries=0
     local no_merge=false
+    local create_pr=false
     local refine_on_exhaust=false
     local quick_mode=false
     local auto_mode=false
@@ -1946,6 +1965,7 @@ cmd_run() {
         case "$1" in
             --dry-run) dry_run=true; shift ;;
             --no-merge) no_merge=true; shift ;;
+            --pr) create_pr=true; shift ;;
             --refine) refine_on_exhaust=true; shift ;;
             --quick) quick_mode=true; shift ;;
             --auto-review) auto_review=true; shift ;;
@@ -1995,6 +2015,20 @@ cmd_run() {
 
     # --quick disables maturity protocol for fast iteration
     [[ "$quick_mode" == "true" ]] && MATURITY_ENABLED="false"
+
+    # Config-driven PR creation (--pr flag overrides)
+    if [[ "$create_pr" != "true" && "$CREATE_PR" == "true" ]]; then
+        create_pr=true
+    fi
+    # --pr implies --no-merge
+    if [[ "$create_pr" == "true" ]]; then
+        no_merge=true
+        # Fall back to no-merge if gh is not available
+        if ! command -v gh &>/dev/null; then
+            log_warning "gh CLI not found — falling back to --no-merge (no PR will be created)"
+            create_pr=false
+        fi
+    fi
 
     # Stash pre-existing uncommitted changes so sprints don't destroy them
     local did_stash=false
@@ -4300,8 +4334,8 @@ aishore - AI Sprint Runner (v$AISHORE_VERSION)
 Copyright (C) 2026 Simon Plant. Licensed under AGPL-3.0. See LICENSE.
 
 Usage: .aishore/aishore <command> [options]
-       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--auto-review] [--dry-run]
-       .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--retries N] [--refine] [--quick]
+       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--auto-review] [--dry-run]
+       .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--pr] [--retries N] [--refine] [--quick]
 
 Sprint:
   auto <scope>       Autonomous mode (done, p0, p1, p2)
@@ -4344,8 +4378,8 @@ aishore - AI Sprint Runner (v$AISHORE_VERSION)
 Copyright (C) 2026 Simon Plant. Licensed under AGPL-3.0. See LICENSE.
 
 Usage: .aishore/aishore <command> [options]
-       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--refine] [--quick] [--auto-review] [--dry-run]
-       .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--retries N] [--refine] [--quick]
+       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--auto-review] [--dry-run]
+       .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--pr] [--retries N] [--refine] [--quick]
 
 Commands:
   backlog list      List all items (features + bugs)
@@ -4388,6 +4422,7 @@ Commands:
     --max-failures N  Consecutive failures before stopping (default: 5)
     --retries N     Per-item retry attempts on failure
     --no-merge      Keep feature branches for PR review
+    --pr            Create GitHub PR (implies --no-merge, requires gh CLI)
     --refine        Refine spec on exhausted retries and try once more
     --quick         Skip maturity protocol (fast iteration)
     --auto-review   Run architecture review automatically after completion
@@ -4397,6 +4432,7 @@ Commands:
   run <ID>          Run specific item by ID (e.g., TEST-006)
     --dry-run       Preview what would happen without running agents
     --no-merge      Keep feature branches for PR review (push, don't merge)
+    --pr            Create GitHub PR (implies --no-merge, requires gh CLI)
     --retries N     Allow up to N retry attempts on validation failure
     --refine        Refine spec on exhausted retries and try once more
     --quick         Skip maturity protocol (fast iteration)
@@ -4424,6 +4460,7 @@ Examples:
   .aishore/aishore auto p1 --retries 2  # Complete must + should, with retries
   .aishore/aishore run FEAT-001         # Run specific item
   .aishore/aishore run --no-merge 3     # Keep branches for PR review
+  .aishore/aishore run --pr FEAT-001    # Create GitHub PR for review
   .aishore/aishore groom --backlog      # Groom features
   .aishore/aishore update --dry-run     # Check for updates
 
