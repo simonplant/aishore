@@ -1,30 +1,29 @@
 {
-  "sprintId": "sprint-1774033878",
-  "startedAt": "2026-03-20T12:11:18-07:00",
+  "sprintId": "sprint-1774034498",
+  "startedAt": "2026-03-20T12:21:38-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-003",
-    "title": "Dead if/else branch in AC JSON construction is misleading",
-    "intent": "AC JSON construction code must not have dead branches that confuse maintainers",
-    "description": "In cmd_backlog_edit(), the AC entry builder has an if/else that checks whether an entry starts with '{' (JSON object) vs plain string, but both branches execute the identical statement: ac_json=\"$ac_json$entry\". The distinction is never acted upon. This is dead/misleading code that could hide future bugs if someone adds logic to only one branch.",
+    "id": "BUG-012",
+    "title": "cmd_update silently ignores unknown options",
+    "intent": "cmd_update must reject unknown flags — silently discarding options can make users believe a flag like --force or --dry-run took effect when it did not, potentially causing unintended updates",
+    "description": "cmd_update() parses --dry-run, --check, --force, and --no-verify but its catch-all is '* ) shift ;;' at line 3174, silently discarding unknown flags. This is especially dangerous here: a user who mistypes '--dry-run' (e.g., '--dryrun' or '--dry_run') will get no error and the update will proceed as a live update — exactly the behavior they were trying to avoid. Fix: replace '* ) shift' with '* ) log_error \"Unknown option: $1\"; return 1' to match the established pattern in cmd_clean, cmd_backlog_add, etc.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find the AC JSON construction block in cmd_backlog_edit() (around line 3688)",
-      "Identify the if/else that checks whether an entry starts with \"{\" — both branches do the same thing",
-      "Remove the if/else and keep just the single statement: ac_json=\"$ac_json$entry\"",
-      "Verify that backlog edit --ac and --ac-verify still produce valid JSON items",
-      "Run .aishore/aishore backlog check on an item with AC entries to confirm no regression"
+      "In .aishore/aishore, find cmd_update() and locate the option parsing loop (around line 3169-3176)",
+      "Replace the catch-all '* ) shift ;;' with '* ) log_error \"Unknown option: $1\"; return 1 ;;'",
+      "Verify that valid options --dry-run, --force, --no-verify still work normally",
+      "Verify that 'aishore update --typo' now prints an error and exits non-zero"
     ],
     "acceptanceCriteria": [
-      "The if/else branch is removed, only the single common statement remains",
-      "backlog edit --ac and --ac-verify still produce valid JSON items",
-      "backlog check on an item with AC entries shows no regression"
+      "aishore update --unknown-flag exits with a non-zero status and prints an error message",
+      "aishore update --dry-run, --force, and --no-verify --force all still work correctly",
+      "Error message matches the format used by other commands: 'Unknown option: <flag>'"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T12:11:18-07:00",
+    "startedAt": "2026-03-20T12:21:38-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T12:14:19-07:00"
+    "completedAt": "2026-03-20T12:23:47-07:00"
   },
-  "completedAt": "2026-03-20T12:14:19-07:00",
+  "completedAt": "2026-03-20T12:23:47-07:00",
   "attempts": 1
 }
