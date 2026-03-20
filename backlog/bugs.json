@@ -106,7 +106,7 @@
       "title": "config.yaml silently ignored when yq unavailable and no warning shown",
       "intent": "Users must be clearly warned when their config.yaml changes are being silently ignored due to missing yq",
       "description": "load_config() falls back to grep-based parsing when yq is not installed. This fallback is much less reliable and can silently ignore valid configuration. The warning is only triggered if uncommented settings are detected by grep. A config file that uses valid YAML but is structured in a way grep misses will be silently ignored, leaving the user thinking their overrides are active when they are not.",
-      "priority": "should",
+      "priority": "must",
       "category": null,
       "steps": [
         "In .aishore/aishore, find load_config() where yq availability is checked (around line 267)",
@@ -123,7 +123,7 @@
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "PO review: bumped to should. Silent config failure is a trust-destroying trap — users who set overrides in config.yaml think they're active. A user running aishore without yq will get wrong behavior and no explanation. This erodes confidence in the tool at exactly the moment a new user is getting started."
+      "groomingNotes": "PO re-review: bumped to must. Silent config failure on first run destroys new-user trust at exactly the moment they're evaluating the tool. If yq isn't installed (common), every override they set is a lie. No other item has this failure mode — the user did everything right and gets wrong behavior with no signal. Must fix before new user onboarding can be considered reliable."
     }
   ]
 }
