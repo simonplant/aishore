@@ -1,30 +1,31 @@
 {
-  "sprintId": "sprint-1774045316",
-  "startedAt": "2026-03-20T15:21:56-07:00",
+  "sprintId": "sprint-1774045984",
+  "startedAt": "2026-03-20T15:33:04-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-013",
-    "title": "Item complexity gate — warn on under-specified creative work",
-    "intent": "Creative items must be flagged to guide users toward prescriptive specs.",
+    "id": "BUG-028",
+    "title": "Commit messages are generic — agent summaries discarded",
+    "intent": "Every commit message must describe what changed and why. Generic messages make git log useless.",
     "description": "",
-    "sourceBacklog": "backlog.json",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "Add complexity heuristic to backlog check",
-      "Flag items lacking file paths or with fewer than 3 steps",
-      "Suggest more prescriptive steps",
-      "Log warning before sprint"
+      "Capture developer agent summary from result.json",
+      "Use agent summary as safety-net commit message body",
+      "Use agent summary in merge commit message",
+      "Fall back to generic message if no summary",
+      "Truncate long summaries to 500 chars"
     ],
     "acceptanceCriteria": [
-      "backlog check flags vague items",
-      "Warning is advisory not blocking",
-      "Specific items do not trigger warning",
-      "Warning suggests how to improve spec"
+      "Safety-net commit includes developer summary",
+      "Merge commit includes agent summary",
+      "Falls back to template if no summary",
+      "Follows conventional commit format"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T15:21:56-07:00",
+    "startedAt": "2026-03-20T15:33:04-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T15:28:54-07:00"
+    "completedAt": "2026-03-20T15:35:57-07:00"
   },
-  "completedAt": "2026-03-20T15:28:54-07:00",
+  "completedAt": "2026-03-20T15:35:57-07:00",
   "attempts": 1
 }
