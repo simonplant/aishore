@@ -479,6 +479,12 @@ Or use environment variables (these take precedence over config.yaml):
 | Auto-groom threshold | `auto.groom_threshold` | `AISHORE_AUTO_GROOM_THRESHOLD` | `3` |
 | Auto max failures | `auto.max_failures` | `AISHORE_AUTO_MAX_FAILURES` | `5` |
 | Output truncation | `output.truncate_lines` | `AISHORE_OUTPUT_TRUNCATE_LINES` | `50` |
+| Fix command | `fix_cmd` | `AISHORE_FIX_CMD` | *(none)* |
+| Groom max items | `groom.max_items` | `AISHORE_GROOM_MAX_ITEMS` | `10` |
+| Groom min priority | `groom.min_priority` | `AISHORE_GROOM_MIN_PRIORITY` | `should` |
+| Merge strategy | `merge.strategy` | `AISHORE_MERGE_STRATEGY` | `merge` |
+| Create PR | `create_pr` | `AISHORE_CREATE_PR` | `false` |
+| Isolation mode | `isolation.mode` | `AISHORE_ISOLATION` | `stash` |
 
 **Precedence:** env vars > config.yaml > built-in defaults.
 

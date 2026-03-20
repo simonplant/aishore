@@ -57,6 +57,7 @@ jq empty backlog/*.json
 .aishore/aishore update             # Update from upstream (checksum-verified)
 .aishore/aishore update --dry-run   # Check for updates without applying
 .aishore/aishore update --force     # Update even if already on latest
+.aishore/aishore diagnose            # Show last sprint failure diagnostics
 .aishore/aishore checksums          # Regenerate checksums after editing .aishore/ files
 .aishore/aishore version            # Show version
 .aishore/aishore help               # Show usage
