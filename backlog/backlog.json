@@ -127,7 +127,7 @@
       "title": "backlog history command for querying completed sprint items",
       "intent": "Users must be able to query what was completed and when without parsing JSONL by hand — sprint history should be as discoverable as the backlog itself.",
       "description": "The archive/sprints.jsonl file records every completed sprint (itemId, date, status, duration, filesChanged, etc.) but there is no CLI command to query it. Users who want to know 'what did I complete this week?' or 'how many items passed vs failed?' must read raw JSONL. A 'backlog history' subcommand (or 'aishore history') should let users list recent completions, filter by date range or status, and surface per-item summaries. The metrics command gives aggregates; history would give the item-level view.",
-      "priority": "could",
+      "priority": "should",
       "category": null,
       "steps": [
         "In .aishore/aishore, find the archive path (SPRINT_ARCHIVE or sprints.jsonl) to understand the JSONL schema",
@@ -143,11 +143,12 @@
         "backlog history --failed shows only items where status \\!= complete"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Steps added. Implementation: read archive/sprints.jsonl line by line with jq slurpfile or while-read loop. --since filter: skip lines where .date < arg (string compare works for YYYY-MM-DD). --failed: skip where .status == 'complete'. Output is display-only. Dependency: archive/sprints.jsonl must exist (guard with -f check, print 'no history yet' if absent)."
+      "groomingNotes": "PO bump to should: we now have 20 sprint entries in the archive from today's session. Users who want to answer 'what did I complete today?' or audit a sprint run are blocked until this ships — they must read raw JSONL. The metrics command covers aggregates; history fills the item-level gap. With real data in the archive, this feature has immediate user value rather than speculative future value. Bumped from could.",
+      "completedAt": "2026-03-20T13:08:16-07:00"
     }
   ]
 }
