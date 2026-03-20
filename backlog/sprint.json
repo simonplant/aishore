@@ -1,31 +1,30 @@
 {
-  "sprintId": "sprint-1774044821",
-  "startedAt": "2026-03-20T15:13:41-07:00",
+  "sprintId": "sprint-1774045316",
+  "startedAt": "2026-03-20T15:21:56-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-012",
-    "title": "Backlog sync — detect manually completed items",
-    "intent": "The backlog must reflect reality. Items completed outside aishore should be detectable.",
+    "id": "FEAT-013",
+    "title": "Item complexity gate — warn on under-specified creative work",
+    "intent": "Creative items must be flagged to guide users toward prescriptive specs.",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Add backlog sync subcommand",
-      "Check todo items scope against git history",
-      "Flag items whose changes appear on current branch",
-      "Prompt to mark flagged items done",
-      "Add auto and dry-run flags"
+      "Add complexity heuristic to backlog check",
+      "Flag items lacking file paths or with fewer than 3 steps",
+      "Suggest more prescriptive steps",
+      "Log warning before sprint"
     ],
     "acceptanceCriteria": [
-      "backlog sync lists apparently completed items",
-      "Items flagged based on scope and git history",
-      "dry-run shows candidates only",
-      "auto marks flagged items done"
+      "backlog check flags vague items",
+      "Warning is advisory not blocking",
+      "Specific items do not trigger warning",
+      "Warning suggests how to improve spec"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T15:13:41-07:00",
+    "startedAt": "2026-03-20T15:21:56-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T15:21:55-07:00"
+    "completedAt": "2026-03-20T15:28:54-07:00"
   },
-  "completedAt": "2026-03-20T15:21:55-07:00",
+  "completedAt": "2026-03-20T15:28:54-07:00",
   "attempts": 1
 }

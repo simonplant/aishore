@@ -330,9 +330,10 @@
         "Warning suggests how to improve spec"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-20T15:28:54-07:00"
     }
   ]
 }
