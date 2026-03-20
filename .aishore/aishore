@@ -3599,16 +3599,30 @@ cmd_backlog_add() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --type)      item_type="$2"; shift 2 ;;
-            --title)     title="$2"; shift 2 ;;
-            --intent)    intent="$2"; shift 2 ;;
-            --desc)      desc="$2"; shift 2 ;;
-            --priority)  priority="$2"; shift 2 ;;
-            --category)  category="$2"; shift 2 ;;
+            --type)
+                validate_arg "$1" "${2:-}" || return 1
+                item_type="$2"; shift 2 ;;
+            --title)
+                validate_arg "$1" "${2:-}" || return 1
+                title="$2"; shift 2 ;;
+            --intent)
+                validate_arg "$1" "${2:-}" || return 1
+                intent="$2"; shift 2 ;;
+            --desc)
+                validate_arg "$1" "${2:-}" || return 1
+                desc="$2"; shift 2 ;;
+            --priority)
+                validate_arg "$1" "${2:-}" || return 1
+                priority="$2"; shift 2 ;;
+            --category)
+                validate_arg "$1" "${2:-}" || return 1
+                category="$2"; shift 2 ;;
             --ready)     ready=true; shift ;;
             --depends-on)
+                validate_arg "$1" "${2:-}" || return 1
                 depends_on="$2"; shift 2 ;;
             --ac)
+                validate_arg "$1" "${2:-}" || return 1
                 # Flush any pending AC entry as plain string
                 if [[ -n "$pending_ac" ]]; then
                     ac_entries+=("$(printf '%s' "$pending_ac" | jq -Rs .)")
