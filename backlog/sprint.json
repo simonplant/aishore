@@ -1,29 +1,31 @@
 {
-  "sprintId": "sprint-1774036442",
-  "startedAt": "2026-03-20T12:54:02-07:00",
+  "sprintId": "sprint-1774037033",
+  "startedAt": "2026-03-20T13:03:53-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-018",
-    "title": "cmd_backlog_show and cmd_backlog_check silently accept extra positional arguments",
-    "intent": "backlog show and backlog check must reject extra arguments — silently ignoring them makes 'backlog show FEAT-001 FEAT-002' appear to succeed while only processing the first ID, giving users false confidence",
-    "description": "cmd_backlog_show() extracts $1 as the item ID and ignores anything after it. cmd_backlog_check() does the same. Both commands silently accept extra arguments: 'backlog show FEAT-001 FEAT-002' processes only FEAT-001 without any error, which is misleading. The fix for each is to check that exactly one positional argument was given and reject anything extra with log_error.",
-    "sourceBacklog": "bugs.json",
+    "id": "FEAT-006",
+    "title": "backlog history command for querying completed sprint items",
+    "intent": "Users must be able to query what was completed and when without parsing JSONL by hand — sprint history should be as discoverable as the backlog itself.",
+    "description": "The archive/sprints.jsonl file records every completed sprint (itemId, date, status, duration, filesChanged, etc.) but there is no CLI command to query it. Users who want to know 'what did I complete this week?' or 'how many items passed vs failed?' must read raw JSONL. A 'backlog history' subcommand (or 'aishore history') should let users list recent completions, filter by date range or status, and surface per-item summaries. The metrics command gives aggregates; history would give the item-level view.",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "In .aishore/aishore, find cmd_backlog_show() and after extracting the ID from $1, check if $# -gt 1 and emit log_error 'Unexpected argument: ${2}' and return 1",
-      "In .aishore/aishore, find cmd_backlog_check() and apply the same fix — after extracting the ID, check for extra arguments and error",
-      "Verify that 'backlog show FEAT-001' and 'backlog check FEAT-001' still work correctly",
-      "Verify that 'backlog show FEAT-001 FEAT-002' and 'backlog check FEAT-001 --typo' now print an error and exit non-zero"
+      "In .aishore/aishore, find the archive path (SPRINT_ARCHIVE or sprints.jsonl) to understand the JSONL schema",
+      "Add a 'history' subcommand in the backlog command dispatcher (cmd_backlog or main case statement)",
+      "Implement cmd_backlog_history(): read sprints.jsonl, parse each line with jq, support --since YYYY-MM-DD filter (skip entries with date < arg), support --failed filter (skip entries with status == complete)",
+      "Format output as a table: ID, date, status, duration columns; align columns for readability",
+      "Add --failed flag handling: show only rows where status \\!= complete",
+      "Add 'backlog history' to the help text and usage message"
     ],
     "acceptanceCriteria": [
-      "backlog show <ID> <extra> exits non-zero and prints an error about the unexpected argument",
-      "backlog check <ID> <extra> exits non-zero and prints an error about the unexpected argument",
-      "backlog show <ID> and backlog check <ID> with exactly one argument still work correctly"
+      "backlog history (or aishore history) lists completed sprint items with ID, date, and status",
+      "backlog history --since YYYY-MM-DD filters to items completed on or after that date",
+      "backlog history --failed shows only items where status \\!= complete"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T12:54:02-07:00",
+    "startedAt": "2026-03-20T13:03:53-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T12:55:35-07:00"
+    "completedAt": "2026-03-20T13:08:16-07:00"
   },
-  "completedAt": "2026-03-20T12:55:35-07:00",
+  "completedAt": "2026-03-20T13:08:16-07:00",
   "attempts": 1
 }

@@ -3444,10 +3444,11 @@ cmd_backlog() {
         edit)       cmd_backlog_edit "$@" ;;
         rm|remove)  cmd_backlog_rm "$@" ;;
         check)      cmd_backlog_check "$@" ;;
+        history)    cmd_backlog_history "$@" ;;
         populate)   cmd_backlog_populate "$@" ;;
         *)
             log_error "Unknown backlog command: $subcmd"
-            echo "Usage: backlog {list|add|show|edit|check|rm|populate}" >&2
+            echo "Usage: backlog {list|add|show|edit|check|rm|history|populate}" >&2
             return 1
             ;;
     esac
@@ -4004,6 +4005,64 @@ validate_arg() {
     fi
 }
 
+cmd_backlog_history() {
+    local since="" failed_only=false
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --since)
+                [[ -z "${2:-}" ]] && { log_error "Usage: backlog history [--since YYYY-MM-DD] [--failed]"; return 1; }
+                since="$2"
+                if ! [[ "$since" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+                    log_error "Invalid date format: $since (expected YYYY-MM-DD)"
+                    return 1
+                fi
+                shift 2
+                ;;
+            --failed)
+                failed_only=true
+                shift
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                echo "Usage: backlog history [--since YYYY-MM-DD] [--failed]" >&2
+                return 1
+                ;;
+        esac
+    done
+
+    local sprints_file="$ARCHIVE_DIR/sprints.jsonl"
+    if [[ ! -f "$sprints_file" || ! -s "$sprints_file" ]]; then
+        echo "No sprint history found"
+        return 0
+    fi
+
+    local jq_filter='.'
+    if [[ -n "$since" ]]; then
+        jq_filter="select(.date >= \"$since\")"
+    fi
+    if [[ "$failed_only" == "true" ]]; then
+        jq_filter="$jq_filter | select(.status != \"complete\")"
+    fi
+
+    local results
+    results=$(jq -c "$jq_filter" "$sprints_file" 2>/dev/null) || true
+
+    if [[ -z "$results" ]]; then
+        echo "No matching sprint history entries"
+        return 0
+    fi
+
+    # Print table header
+    printf "%-12s %-12s %-10s %s\n" "ID" "DATE" "STATUS" "DURATION"
+    printf "%-12s %-12s %-10s %s\n" "──────────" "──────────" "────────" "────────"
+
+    echo "$results" | jq -r '[.itemId // "-", .date // "-", .status // "-", (if .duration then "\(.duration)s" else "-" end)] | @tsv' | \
+        while IFS=$'\t' read -r id date status duration; do
+            printf "%-12s %-12s %-10s %s\n" "$id" "$date" "$status" "$duration"
+        done
+}
+
 cmd_backlog_rm() {
     local id="${1:-}" force=false
     [[ -z "$id" ]] && { log_error "Usage: backlog rm <ID> [--force]"; return 1; }
@@ -4092,6 +4151,7 @@ Backlog:
   backlog edit <ID>  Update an item
   backlog check <ID> Check readiness gates
   backlog rm <ID>    Remove an item
+  backlog history    List completed sprint items
   backlog populate   Populate backlog from PRODUCT.md
 
 Info:
@@ -4148,6 +4208,9 @@ Commands:
   backlog check <ID> Check readiness gates (title, intent, steps, AC, step length)
   backlog rm <ID>   Remove an item (with confirmation)
     --force         Skip confirmation
+  backlog history   List completed sprint items from archive
+    --since <date>  Show items completed on or after YYYY-MM-DD
+    --failed        Show only items where status != complete
   backlog populate  Use AI to populate backlog from PRODUCT.md (non-interactive)
 
   auto <scope>      Autonomous mode — drive backlog to completion
