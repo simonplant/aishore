@@ -2263,7 +2263,12 @@ cmd_groom() {
     require_tool jq
 
     local mode="bugs"
-    [[ "${1:-}" == "--backlog" ]] && mode="backlog"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --backlog) mode="backlog"; shift ;;
+            *) log_error "Unknown option: $1"; return 1 ;;
+        esac
+    done
 
     acquire_lock
     load_config
@@ -2471,7 +2476,12 @@ cmd_metrics() {
     require_tool jq
 
     local json_output=false
-    [[ "${1:-}" == "--json" ]] && json_output=true
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --json) json_output=true; shift ;;
+            *) log_error "Unknown option: $1"; return 1 ;;
+        esac
+    done
 
     load_config
 
