@@ -1,29 +1,29 @@
 {
-  "sprintId": "sprint-1774034629",
-  "startedAt": "2026-03-20T12:23:49-07:00",
+  "sprintId": "sprint-1774034753",
+  "startedAt": "2026-03-20T12:25:53-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-011",
-    "title": "cmd_review silently ignores unknown options",
-    "intent": "cmd_review must reject unknown flags immediately — silently discarding options lets typos pass undetected and erodes user trust in the CLI",
-    "description": "cmd_review() parses --update-docs and --since but its catch-all branch is '* ) shift ;;' at line 2414, silently discarding any unrecognized flag. Most other commands (cmd_clean, cmd_backlog_add, etc.) reject unknown options with log_error and return 1. A user who mistypes '--update_docs' or '--since-commit' will get no error — the command runs silently in the wrong mode. Fix: replace the silent '* ) shift' with '* ) log_error \"Unknown option: $1\"; return 1' to match the established pattern.",
+    "id": "BUG-010",
+    "title": "remove_items_by_status takes full path while other CRUD helpers take relative filename",
+    "intent": "Backlog CRUD helpers must use a consistent path convention — the current asymmetry is a latent footgun that will cause silent wrong-file operations when new callers are added.",
+    "description": "update_item() and remove_item() accept a relative filename (e.g. 'backlog.json') and prepend BACKLOG_DIR internally. remove_items_by_status() takes a full path directly. Callers today are consistent, but the asymmetry is not documented and will cause bugs when someone adds a new call site with the wrong convention. Fix: change remove_items_by_status to accept a relative filename and prepend BACKLOG_DIR internally, matching the established pattern.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_review() and locate the option parsing loop (around line 2410-2416)",
-      "Replace the catch-all '* ) shift ;;' with '* ) log_error \"Unknown option: $1\"; return 1 ;;'",
-      "Verify that valid options --update-docs and --since still work normally",
-      "Verify that 'aishore review --typo' now prints an error and exits non-zero"
+      "In .aishore/aishore, find remove_items_by_status() around line 703 and update it to accept a relative filename like update_item() and remove_item()",
+      "Change the jq command argument from '$file' to '$BACKLOG_DIR/$file'",
+      "Update cmd_clean() callers (line ~4025-4026) to pass just the filename ('backlog.json', 'bugs.json') instead of the full path variables",
+      "Run .aishore/aishore clean --dry-run and then clean on a test setup to confirm no regression"
     ],
     "acceptanceCriteria": [
-      "aishore review --unknown-flag exits with a non-zero status and prints an error message",
-      "aishore review --update-docs and aishore review --since <commit> still work correctly",
-      "Error message matches the format used by other commands: 'Unknown option: <flag>'"
+      "remove_items_by_status accepts a relative filename consistent with update_item and remove_item",
+      "cmd_clean still correctly removes done items after the refactor",
+      "grep confirms no other callers of remove_items_by_status exist with full paths"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T12:23:49-07:00",
+    "startedAt": "2026-03-20T12:25:53-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T12:25:52-07:00"
+    "completedAt": "2026-03-20T12:27:27-07:00"
   },
-  "completedAt": "2026-03-20T12:25:52-07:00",
+  "completedAt": "2026-03-20T12:27:27-07:00",
   "attempts": 1
 }

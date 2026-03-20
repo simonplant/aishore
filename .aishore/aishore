@@ -704,11 +704,11 @@ remove_items_by_status() {
     local file="$1" status="$2"
     local tmp
     tmp="$(ensure_tmpdir)/remove_by_status.json"
-    jq --arg s "$status" '.items |= map(select((.status // "todo") != $s))' "$file" > "$tmp" || {
+    jq --arg s "$status" '.items |= map(select((.status // "todo") != $s))' "$BACKLOG_DIR/$file" > "$tmp" || {
         rm -f "$tmp"
         return 1
     }
-    mv "$tmp" "$file"
+    mv "$tmp" "$BACKLOG_DIR/$file"
 }
 
 # ============================================================================
@@ -4026,8 +4026,8 @@ cmd_clean() {
     elif [[ "$dry_run" == "true" ]]; then
         echo "Would remove: $feat_count features, $bug_count bugs"
     else
-        [[ "$feat_count" -gt 0 ]] && remove_items_by_status "$backlog_file" "done"
-        [[ "$bug_count" -gt 0 ]] && remove_items_by_status "$bugs_file" "done"
+        [[ "$feat_count" -gt 0 ]] && remove_items_by_status "backlog.json" "done"
+        [[ "$bug_count" -gt 0 ]] && remove_items_by_status "bugs.json" "done"
         echo "Cleaned $feat_count features, $bug_count bugs ($total total removed)"
     fi
 }
