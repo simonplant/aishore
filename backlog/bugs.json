@@ -127,8 +127,8 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "PO re-review (failCount: 2): Two sprint attempts rejected. The validator has confirmed: the warning must fire unconditionally when config.yaml exists with non-empty content and yq is absent. The grep-detection fallback MUST NOT gate the warning — this was the failure mode in both attempts. Implementation checklist: (1) check if yq is absent, (2) check if config.yaml exists and is non-empty, (3) if both true, print warning immediately before any grep fallback logic runs. Do not mix the warning into the grep-detection branch. The warning is unconditional; grep-based fallback is optional and may still run after warning. Must fix before new-user onboarding can be considered reliable.",
       "lastFailReason": "Validator agent rejected implementation",
-      "lastFailAt": "2026-03-20T13:11:05-07:00",
-      "failCount": 2
+      "lastFailAt": "2026-03-20T13:56:15-07:00",
+      "failCount": 3
     },
     {
       "id": "BUG-006",
@@ -661,11 +661,12 @@
         "Error message includes expected format: YYYY-MM-DD"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Pattern inconsistency: cmd_backlog_history validates --since date format with ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ at lines 4022-4024; cmd_backlog_edit --groomed-at does no format check. Add the same regex validation in the shift-2 (user-provided value) path only — the default-to-today path is already correct. Low risk, additive. Note: --groomed-at accepts optional value so the validate_arg pattern doesn't apply — must validate after reading."
+      "groomingNotes": "Pattern inconsistency: cmd_backlog_history validates --since date format with ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ at lines 4022-4024; cmd_backlog_edit --groomed-at does no format check. Add the same regex validation in the shift-2 (user-provided value) path only — the default-to-today path is already correct. Low risk, additive. Note: --groomed-at accepts optional value so the validate_arg pattern doesn't apply — must validate after reading.",
+      "completedAt": "2026-03-20T13:58:39-07:00"
     }
   ]
 }
