@@ -1,29 +1,30 @@
 {
-  "sprintId": "sprint-1774037465",
-  "startedAt": "2026-03-20T13:11:05-07:00",
+  "sprintId": "sprint-1774037576",
+  "startedAt": "2026-03-20T13:12:56-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-022",
-    "title": "cmd_clean prints success even when remove_items_by_status fails",
-    "intent": "cmd_clean must not report successful cleanup if the backlog file was not actually updated — silent data loss on I/O error is worse than a visible failure.",
-    "description": "In cmd_clean(), remove_items_by_status() is called but its return code is not checked. If jq fails (malformed JSON, disk full) or the mv that replaces the file fails, the command continues and prints 'Cleaned N features/bugs' as though it succeeded. The user believes the backlog was cleaned when it was not. Fix: check return code of both remove_items_by_status calls and exit non-zero with a clear error if either fails.",
+    "id": "BUG-023",
+    "title": "mark_item_failed silently swallows update errors with || true",
+    "intent": "Sprint failure context must be recorded reliably — if mark_item_failed silently does nothing, subsequent retries and auto mode have no failure history to work from.",
+    "description": "In mark_item_failed(), the call to update_item() is followed by '2>/dev/null || true', which suppresses all errors and always succeeds. If the backlog file write fails (bad JSON, permissions, missing file), the item is never marked failed and no error is surfaced. Auto mode and retry logic read failCount and lastFailReason from the item — if mark_item_failed silently no-ops, those fields are never set, degrading sprint recovery. Fix: remove || true, keep stderr suppression only when source_file is empty (item lookup already failed), and log a warning if update_item returns non-zero.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_clean() and locate the two remove_items_by_status calls (around line 4067-4068)",
-      "Capture the return code of each call: 'remove_items_by_status ... || { log_error \"Failed to clean backlog.json\"; return 1; }'",
-      "Ensure the success message is only printed after both calls succeed",
-      "Verify: run clean on a valid setup (success printed), then test with a read-only backlog file (error printed, no success message)"
+      "In .aishore/aishore, find mark_item_failed() (around line 1355)",
+      "Locate the update_item call with '2>/dev/null || true'",
+      "Split the logic: if source_file is empty (item not found), it is expected to fail — log_warn and return 0",
+      "Otherwise, call update_item without || true; on failure, emit log_warn 'Failed to record sprint failure for $item_id' but still return 0 (best-effort — do not abort the sprint just because the metadata write failed)",
+      "Verify: mark_item_failed on a known item updates failCount; mark_item_failed on an unknown ID logs a warning"
     ],
     "acceptanceCriteria": [
-      "cmd_clean exits non-zero and prints an error when remove_items_by_status fails",
-      "cmd_clean success message is only printed when cleanup actually succeeds",
-      "cmd_clean --dry-run is not affected (no file writes in dry-run path)"
+      "mark_item_failed logs a warning when update_item fails instead of silently succeeding",
+      "mark_item_failed on a known item correctly sets failCount and lastFailReason",
+      "Sprint execution continues even if mark_item_failed cannot write (best-effort semantics preserved)"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T13:11:05-07:00",
+    "startedAt": "2026-03-20T13:12:56-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T13:12:54-07:00"
+    "completedAt": "2026-03-20T13:15:00-07:00"
   },
-  "completedAt": "2026-03-20T13:12:54-07:00",
+  "completedAt": "2026-03-20T13:15:00-07:00",
   "attempts": 1
 }
