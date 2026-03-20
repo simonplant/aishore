@@ -1,4 +1,127 @@
 {
   "description": "Bugs and tech debt",
-  "items": []
+  "items": [
+    {
+      "id": "BUG-001",
+      "title": "AC verify report uses literal \\n instead of newlines",
+      "intent": "AC verify report must render with real newlines so validator receives properly formatted output",
+      "description": "run_ac_verification() builds the report string using '\\n' in bash double-quoted strings (e.g. report=\"${report}  PASS: $ac_text\\n\"). In bash, '\\n' inside double quotes is a literal backslash-n, not a newline. The garbled report is injected into validator prompts and retry context, degrading AI quality.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find run_ac_verification() (around line 1218)",
+        "Locate all lines building the report variable with string concatenation using \\\\n",
+        "Replace \\\\\"\\\\n\\\\\" inside double-quoted strings with $\\x27\\\\n\\x27 (ANSI-C quoting) or use printf to append newlines",
+        "Verify the fix does not affect other uses of the report variable",
+        "Run a sprint with AC verify commands and confirm report output contains real newlines"
+      ],
+      "acceptanceCriteria": [
+        "AC verify report passed to validator contains actual newlines (not literal \\\\n)",
+        "Retry prompt with AC failure context displays properly formatted multi-line output"
+      ],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Confirmed: bash '\\n' in double-quoted strings does not produce newlines. Fix is straightforward — change to $'\\n' or printf. Low risk, small scope.",
+      "completedAt": "2026-03-20T11:07:18-07:00"
+    },
+    {
+      "id": "BUG-002",
+      "title": "Merge conflict breaks multi-sprint loop without logging skipped items",
+      "intent": "When a merge conflict aborts a multi-sprint run, the output must clearly list which items were not attempted",
+      "description": "In cmd_run(), when _handle_sprint_success() returns non-zero (merge conflict), the loop breaks immediately. Items queued but not yet attempted are silently abandoned. The batch summary only covers items that were started. This makes it hard to know what needs to be re-run after resolving the conflict.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find the main sprint loop in cmd_run() that calls _handle_sprint_success()",
+        "Before the loop, build an ordered list of all items that will be attempted in this batch",
+        "On break (merge conflict), compute the set difference: all queued items minus started items",
+        "Log each not-attempted item ID with a clear message before breaking",
+        "Ensure print_batch_summary or a post-loop block surfaces the skipped items count and IDs",
+        "Test with two queued items where the first causes a merge conflict"
+      ],
+      "acceptanceCriteria": [
+        "After a merge conflict aborts a multi-sprint run, output lists item IDs that were queued but not started",
+        "Batch summary accurately reflects items not attempted due to early abort"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Real UX gap: users lose track of which items were skipped after a merge conflict abort. Needs pre-loop item list and post-abort diff reporting."
+    },
+    {
+      "id": "BUG-003",
+      "title": "Dead if/else branch in AC JSON construction is misleading",
+      "intent": "AC JSON construction code must not have dead branches that confuse maintainers",
+      "description": "In cmd_backlog_edit(), the AC entry builder has an if/else that checks whether an entry starts with '{' (JSON object) vs plain string, but both branches execute the identical statement: ac_json=\"$ac_json$entry\". The distinction is never acted upon. This is dead/misleading code that could hide future bugs if someone adds logic to only one branch.",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find the AC JSON construction block in cmd_backlog_edit() (around line 3688)",
+        "Identify the if/else that checks whether an entry starts with \"{\" — both branches do the same thing",
+        "Remove the if/else and keep just the single statement: ac_json=\"$ac_json$entry\"",
+        "Verify that backlog edit --ac and --ac-verify still produce valid JSON items",
+        "Run .aishore/aishore backlog check on an item with AC entries to confirm no regression"
+      ],
+      "acceptanceCriteria": [
+        "The if/else in AC JSON construction is removed or the branches have distinct behavior",
+        "backlog edit --ac and --ac-verify still work correctly after the fix"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Tech debt: dead if/else branches mislead future developers. Trivial fix — remove the conditional."
+    },
+    {
+      "id": "BUG-004",
+      "title": "AC verify command output truncated at 1000 bytes, may cut mid-character",
+      "intent": "AC verification failure output must be complete enough to diagnose the problem",
+      "description": "run_ac_verification() uses 'head -c 1000' to cap output from AC verify commands. This can cut multi-byte UTF-8 characters in half, producing garbled text. Even for ASCII, 1000 bytes is often too small for test output. The truncated output is injected into prompts, where incomplete stack traces or error messages reduce the AI's ability to fix issues.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find run_ac_verification() where it uses head -c 1000 to cap output",
+        "Replace byte-based truncation (head -c 1000) with line-based truncation (e.g. tail -n 50 or head -n 50)",
+        "Or use a higher byte limit (e.g. 5000) that is unlikely to split useful error output",
+        "Consider adding a truncation indicator (e.g. \"[... output truncated]\") so the AI knows output was cut",
+        "Verify AC verify failure output is readable in retry prompts after the change"
+      ],
+      "acceptanceCriteria": [
+        "AC verify output is not split mid-character (use line-based truncation instead of byte truncation)",
+        "Truncation limit is configurable or set to a value adequate for typical test output (e.g., 3000 chars)"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "PO review: bumped to should. Truncated error output directly hurts sprint recovery — the AI has less signal to fix failures. More failures = less value delivered. 1000 byte limit is too small for real test output and the byte-split-char bug is a correctness issue."
+    },
+    {
+      "id": "BUG-005",
+      "title": "config.yaml silently ignored when yq unavailable and no warning shown",
+      "intent": "Users must be clearly warned when their config.yaml changes are being silently ignored due to missing yq",
+      "description": "load_config() falls back to grep-based parsing when yq is not installed. This fallback is much less reliable and can silently ignore valid configuration. The warning is only triggered if uncommented settings are detected by grep. A config file that uses valid YAML but is structured in a way grep misses will be silently ignored, leaving the user thinking their overrides are active when they are not.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find load_config() where yq availability is checked (around line 267)",
+        "Add an early check: if config.yaml exists and has non-empty content, and yq is not available, always emit a warning",
+        "Warning should name the config file, explain what is being ignored, and give install instructions for yq",
+        "Ensure the warning is shown regardless of whether grep finds any settings",
+        "Test by creating a config.yaml with a setting and running aishore without yq installed"
+      ],
+      "acceptanceCriteria": [
+        "When yq is absent and config.yaml exists with content, a clear warning is always shown regardless of grep detection",
+        "Warning text explains what yq is and how to install it"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "PO review: bumped to should. Silent config failure is a trust-destroying trap — users who set overrides in config.yaml think they're active. A user running aishore without yq will get wrong behavior and no explanation. This erodes confidence in the tool at exactly the moment a new user is getting started."
+    }
+  ]
 }
