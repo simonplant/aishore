@@ -85,6 +85,7 @@ AUTO_GROOM_THRESHOLD="3"
 AUTO_MAX_FAILURES="5"
 SCOPE_MODE="warn"
 MATURITY_ENABLED="true"
+OUTPUT_TRUNCATE_LINES="50"
 
 # Default permission sets per agent role
 PERMS_DEVELOPER="Bash,Edit,Write,Read,Glob,Grep"
@@ -278,6 +279,7 @@ load_config() {
             ".auto.max_failures     AUTO_MAX_FAILURES"
             ".scope.mode            SCOPE_MODE"
             ".maturity.enabled      MATURITY_ENABLED"
+            ".output.truncate_lines OUTPUT_TRUNCATE_LINES"
             ".permissions.developer CFG_PERMS_DEVELOPER"
             ".permissions.validator CFG_PERMS_VALIDATOR"
             ".permissions.reviewer  CFG_PERMS_REVIEWER"
@@ -316,6 +318,7 @@ _apply_env_overrides() {
         "AISHORE_AUTO_MAX_FAILURES  AUTO_MAX_FAILURES"
         "AISHORE_SCOPE_MODE        SCOPE_MODE"
         "AISHORE_MATURITY          MATURITY_ENABLED"
+        "AISHORE_OUTPUT_TRUNCATE_LINES OUTPUT_TRUNCATE_LINES"
     )
     local _env_name _target_var
     for _entry in "${_env_map[@]}"; do
@@ -1282,7 +1285,12 @@ run_ac_verification() {
             bash -c "$ac_cmd" >"$ac_tmpfile" 2>&1 || ac_ok=false
         fi
         local ac_output
-        ac_output=$(head -c 1000 "$ac_tmpfile" 2>/dev/null || true)
+        local total_lines
+        total_lines=$(wc -l < "$ac_tmpfile" 2>/dev/null || echo 0)
+        ac_output=$(tail -n "$OUTPUT_TRUNCATE_LINES" "$ac_tmpfile" 2>/dev/null || true)
+        if [[ "$total_lines" -gt "$OUTPUT_TRUNCATE_LINES" ]]; then
+            ac_output="[... output truncated, showing last $OUTPUT_TRUNCATE_LINES of $total_lines lines]"$'\n'"$ac_output"
+        fi
         rm -f "$ac_tmpfile"
 
         if [[ "$ac_ok" == "true" ]]; then
@@ -1611,7 +1619,12 @@ _run_retry_loop() {
         fi
         if [[ "$preflight_ok" != "true" ]]; then
             local preflight_output
-            preflight_output=$(head -c 2000 "$preflight_tmpfile" 2>/dev/null || true)
+            local preflight_total_lines
+            preflight_total_lines=$(wc -l < "$preflight_tmpfile" 2>/dev/null || echo 0)
+            preflight_output=$(tail -n "$OUTPUT_TRUNCATE_LINES" "$preflight_tmpfile" 2>/dev/null || true)
+            if [[ "$preflight_total_lines" -gt "$OUTPUT_TRUNCATE_LINES" ]]; then
+                preflight_output="[... output truncated, showing last $OUTPUT_TRUNCATE_LINES of $preflight_total_lines lines]"$'\n'"$preflight_output"
+            fi
             rm -f "$preflight_tmpfile"
             log_error "Pre-flight validation failed — baseline is broken"
             log_error "Output (truncated): $preflight_output"
