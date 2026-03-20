@@ -15,6 +15,7 @@
 #   metrics         Show sprint metrics
 #   update          Update aishore from upstream (with checksum verification)
 #   checksums       Regenerate checksums.sha256
+#   diagnose        Show extended diagnostics from last sprint failure
 #   init            Setup wizard (prerequisites, config, backlog)
 #   help            Show this help
 
@@ -25,6 +26,7 @@ AISHORE_DID_STASH=""
 AISHORE_BASE_BRANCH=""
 AISHORE_FEATURE_BRANCH=""
 AISHORE_WORKTREE_DIR=""
+LAST_AGENT_LOG=""
 cleanup_exit() {
     # Clean up worktree on unexpected exit
     if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
@@ -974,6 +976,11 @@ run_agent_process() {
     local start_time
     start_time=$(date +%s)
 
+    # Always capture agent output to a per-run log file for diagnostics
+    local agent_log
+    agent_log="$LOGS_DIR/${agent_label}-$(date +%Y%m%dT%H%M%S).log"
+    LAST_AGENT_LOG="$agent_log"
+
     local has_setsid=false
     if command -v setsid &>/dev/null; then
         has_setsid=true
@@ -1001,11 +1008,11 @@ run_agent_process() {
         if [[ "$has_setsid" == true ]]; then
             setsid env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
                 claude "${claude_args[@]}" \
-                -p "$prompt" &
+                -p "$prompt" > "$agent_log" 2>&1 &
         else
             env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
                 claude "${claude_args[@]}" \
-                -p "$prompt" &
+                -p "$prompt" > "$agent_log" 2>&1 &
         fi
     fi
 
@@ -1058,6 +1065,11 @@ run_agent_process() {
     fi
 
     wait "$agent_pid" 2>/dev/null || true
+
+    # Copy AGENT_OUTPUT_FILE to agent log if used (so LAST_AGENT_LOG is always valid)
+    if [[ -n "${AGENT_OUTPUT_FILE:-}" && -f "$AGENT_OUTPUT_FILE" ]]; then
+        cp "$AGENT_OUTPUT_FILE" "$agent_log" 2>/dev/null || true
+    fi
 
     local duration
     duration=$(($(date +%s) - start_time))
@@ -1260,9 +1272,24 @@ $prompt"
     fi
 }
 
+show_failure_log_tail() {
+    if [[ -n "$LAST_AGENT_LOG" && -f "$LAST_AGENT_LOG" ]]; then
+        local line_count
+        line_count=$(wc -l < "$LAST_AGENT_LOG" 2>/dev/null || echo 0)
+        if [[ "$line_count" -gt 0 ]]; then
+            echo ""
+            echo -e "${RED}── Last 20 lines of agent log ──${NC}"
+            tail -n 20 "$LAST_AGENT_LOG" 2>/dev/null || true
+            echo -e "${RED}── End of log tail ──${NC}"
+        fi
+        log_info "Full agent log: $LAST_AGENT_LOG"
+    fi
+}
+
 check_result() {
     if [[ ! -f "$STATUS_DIR/result.json" ]]; then
-        log_error "No result file - agent may have crashed. Check .aishore/data/logs/ for details"
+        log_error "No result file - agent may have crashed"
+        show_failure_log_tail
         return 1
     fi
 
@@ -1288,6 +1315,7 @@ check_result() {
         else
             log_error "$reason"
         fi
+        show_failure_log_tail
         return 1
     fi
 }
@@ -1464,6 +1492,29 @@ _cleanup_worktree() {
         BACKLOG_DIR="$PROJECT_ROOT/backlog"
         ARCHIVE_DIR="$BACKLOG_DIR/archive"
     fi
+}
+
+_store_failure_context() {
+    local item_id="$1" reason="$2" detail="$3"
+    local failure_file="$STATUS_DIR/last-failure.json"
+    local result_content="{}"
+    [[ -f "$STATUS_DIR/result.json" ]] && result_content=$(cat "$STATUS_DIR/result.json" 2>/dev/null || echo "{}")
+    local agent_log_path="${LAST_AGENT_LOG:-}"
+    local agent_stderr=""
+    if [[ -n "$agent_log_path" && -f "$agent_log_path" ]]; then
+        # Capture last 50 lines for stored context (more than the 20 shown inline)
+        agent_stderr=$(tail -n 50 "$agent_log_path" 2>/dev/null || true)
+    fi
+    jq -n \
+        --arg item_id "$item_id" \
+        --arg reason "$reason" \
+        --arg detail "$detail" \
+        --arg timestamp "$(date -Iseconds)" \
+        --arg agent_log "$agent_log_path" \
+        --argjson result "$result_content" \
+        --arg log_tail "$agent_stderr" \
+        '{itemId: $item_id, reason: $reason, detail: $detail, timestamp: $timestamp, agentLog: $agent_log, result: $result, logTail: $log_tail}' \
+        > "$failure_file" 2>/dev/null || true
 }
 
 handle_sprint_failure() {
@@ -2234,6 +2285,10 @@ cmd_run() {
         sprint_results+=("fail")
         sprint_items+=("$ITEM_ID")
         sprint_times+=("$(( $(date +%s) - sprint_start ))")
+
+        # Store failure context for later diagnosis
+        _store_failure_context "$ITEM_ID" "$reason" "$detail"
+
         send_notification "fail" "$ITEM_ID"
         handle_sprint_failure
     }
@@ -4778,6 +4833,7 @@ Maintenance:
   init               Setup wizard (-y to accept defaults)
   update             Update from upstream
   clean              Remove done items
+  diagnose           Show last sprint failure diagnostics
   checksums          Regenerate checksums
 
 Examples:
@@ -4787,6 +4843,56 @@ Examples:
 
 Run '.aishore/aishore help' for full command reference.
 EOF
+}
+
+cmd_diagnose() {
+    local failure_file="$STATUS_DIR/last-failure.json"
+    if [[ ! -f "$failure_file" ]]; then
+        log_info "No failure context found — no recent sprint failures recorded"
+        return 0
+    fi
+
+    local item_id reason detail timestamp agent_log log_tail
+    item_id=$(jq -r '.itemId // "unknown"' "$failure_file")
+    reason=$(jq -r '.reason // "unknown"' "$failure_file")
+    detail=$(jq -r '.detail // "unknown"' "$failure_file")
+    timestamp=$(jq -r '.timestamp // "unknown"' "$failure_file")
+    agent_log=$(jq -r '.agentLog // ""' "$failure_file")
+
+    echo -e "${RED}═══ Sprint Failure Diagnostics ═══${NC}"
+    echo ""
+    echo -e "${CYAN}Item:${NC}      $item_id"
+    echo -e "${CYAN}Reason:${NC}    $reason"
+    echo -e "${CYAN}Detail:${NC}    $detail"
+    echo -e "${CYAN}Timestamp:${NC} $timestamp"
+    echo ""
+
+    # Show result.json content
+    echo -e "${YELLOW}── Agent Result ──${NC}"
+    jq -r '.result' "$failure_file" 2>/dev/null | jq . 2>/dev/null || echo "(no result data)"
+    echo ""
+
+    # Show stored log tail (50 lines from failure context)
+    echo -e "${YELLOW}── Agent Log Tail (last 50 lines at failure time) ──${NC}"
+    log_tail=$(jq -r '.logTail // ""' "$failure_file")
+    if [[ -n "$log_tail" ]]; then
+        echo "$log_tail"
+    else
+        echo "(no log output captured)"
+    fi
+    echo ""
+
+    # If full log file still exists, offer path
+    if [[ -n "$agent_log" && -f "$agent_log" ]]; then
+        local total_lines
+        total_lines=$(wc -l < "$agent_log" 2>/dev/null || echo 0)
+        echo -e "${CYAN}Full agent log:${NC} $agent_log ($total_lines lines)"
+    elif [[ -n "$agent_log" ]]; then
+        echo -e "${YELLOW}Agent log file no longer exists:${NC} $agent_log"
+    fi
+
+    echo ""
+    echo -e "${RED}═══ End Diagnostics ═══${NC}"
 }
 
 cmd_help() {
@@ -4869,6 +4975,7 @@ Commands:
   status            Show backlog overview and sprint readiness
   update            Update from upstream (--dry-run to check, --force to override)
   clean             Remove done items (--dry-run to preview)
+  diagnose          Show extended diagnostics from last sprint failure
   checksums         Regenerate checksums.sha256 for update verification
   init              Setup wizard — checks prerequisites, configures project
     -y, --yes       Accept all detected defaults (non-interactive)
@@ -4915,6 +5022,8 @@ main() {
         update)  cmd_update "$@" ;;
         checksums) cmd_checksums ;;
         clean)   cmd_clean "$@" ;;
+        diagnose) cmd_diagnose ;;
+
         init)    cmd_init "$@" ;;
         version|-v|--version) cmd_version ;;
         help|-h|--help) cmd_help ;;

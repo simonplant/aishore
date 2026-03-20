@@ -1,30 +1,30 @@
 {
-  "sprintId": "sprint-1774046158",
-  "startedAt": "2026-03-20T15:35:58-07:00",
+  "sprintId": "sprint-1774047044",
+  "startedAt": "2026-03-20T15:50:44-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-027",
-    "title": "Stash pop fails silently on conflicts after sprint failure",
-    "intent": "Users must always know the state of their uncommitted changes. Silent data loss is unacceptable.",
+    "id": "FEAT-010",
+    "title": "Failed sprint diagnostics — better crash output",
+    "intent": "When a sprint fails, the user must see enough context to diagnose why immediately.",
     "description": "",
-    "sourceBacklog": "bugs.json",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "Stop suppressing stderr from git stash pop",
-      "On pop failure, run git stash show and display output",
-      "Use log_warning with actionable guidance",
-      "In EXIT trap, apply same visible-failure treatment"
+      "On agent failure, tail last 20 lines of agent log",
+      "Include agent stderr if captured",
+      "Add diagnose flag for extended diagnostics",
+      "Store last failure context in .aishore/data/status/"
     ],
     "acceptanceCriteria": [
-      "When stash pop fails, stderr is visible",
-      "log_warning shows stashed files",
-      "Warning includes actionable guidance",
-      "Normal stash pop still works silently"
+      "Agent crash shows last 20 lines of log",
+      "diagnose flag shows extended diagnostics",
+      "Agent log path always printed on failure",
+      "Successful sprints unaffected"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T15:35:58-07:00",
+    "startedAt": "2026-03-20T15:50:44-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T15:49:26-07:00"
+    "completedAt": "2026-03-20T16:02:47-07:00"
   },
-  "completedAt": "2026-03-20T15:49:26-07:00",
+  "completedAt": "2026-03-20T16:02:47-07:00",
   "attempts": 1
 }
