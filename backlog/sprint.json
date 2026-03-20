@@ -1,29 +1,30 @@
 {
-  "sprintId": "sprint-1774030496",
-  "startedAt": "2026-03-20T11:14:56-07:00",
+  "sprintId": "sprint-1774030964",
+  "startedAt": "2026-03-20T11:22:44-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-004",
-    "title": "AC verify command output truncated at 1000 bytes, may cut mid-character",
-    "intent": "AC verification failure output must be complete enough to diagnose the problem",
-    "description": "run_ac_verification() uses 'head -c 1000' to cap output from AC verify commands. This can cut multi-byte UTF-8 characters in half, producing garbled text. Even for ASCII, 1000 bytes is often too small for test output. The truncated output is injected into prompts, where incomplete stack traces or error messages reduce the AI's ability to fix issues.",
-    "sourceBacklog": "bugs.json",
+    "id": "FEAT-001",
+    "title": "Enforce dependsOn ordering in sprint picker",
+    "intent": "Items with unmet dependencies must never be picked before their prerequisites are done — build order must be correct or autonomous mode is unsafe.",
+    "description": "The item schema has a dependsOn array (list of prerequisite IDs), but the sprint picker does not enforce it. In auto mode, if FEAT-002 depends on FEAT-001 but FEAT-001 isn't done yet, FEAT-002 can still be picked first, producing incorrect or incomplete implementations. The picker (find_next_item / auto-pick path) must skip any item whose dependsOn items are not all marked done before picking it. backlog check should also flag unmet dependencies as a readiness gate.",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "In .aishore/aishore, find run_ac_verification() where it uses head -c 1000 to cap output",
-      "Replace byte-based truncation (head -c 1000) with line-based truncation (e.g. tail -n 50 or head -n 50)",
-      "Or use a higher byte limit (e.g. 5000) that is unlikely to split useful error output",
-      "Consider adding a truncation indicator (e.g. \"[... output truncated]\") so the AI knows output was cut",
-      "Verify AC verify failure output is readable in retry prompts after the change"
+      "In .aishore/aishore, find find_next_item() and locate where candidate items are filtered by priority scope",
+      "For each candidate item, read its dependsOn array (default empty if missing)",
+      "For each dependency ID in dependsOn, search all backlog JSON files and verify that item has status=done",
+      "Skip the candidate if any dependency is not done; move to the next candidate",
+      "Verify that items with all dependencies met are still picked normally"
     ],
     "acceptanceCriteria": [
-      "AC verify output is not split mid-character (use line-based truncation instead of byte truncation)",
-      "Truncation limit is configurable or set to a value adequate for typical test output (e.g., 3000 chars)"
+      "Auto-pick never selects an item whose dependsOn items are not all status: done",
+      "Items with all dependencies satisfied are still selected normally",
+      "Items skipped due to unmet dependencies are not silently lost — they remain in the backlog and will be picked once deps are done"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T11:14:56-07:00",
+    "startedAt": "2026-03-20T11:22:44-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T11:17:40-07:00"
+    "completedAt": "2026-03-20T11:27:25-07:00"
   },
-  "completedAt": "2026-03-20T11:17:40-07:00",
+  "completedAt": "2026-03-20T11:27:25-07:00",
   "attempts": 1
 }

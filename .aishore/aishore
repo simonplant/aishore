@@ -538,6 +538,25 @@ check_readiness_gates() {
         has_warning=true
     fi
 
+    # Check for unmet dependencies
+    local deps
+    deps=$(echo "$item" | jq -r '.dependsOn // [] | .[]' 2>/dev/null)
+    if [[ -n "$deps" ]]; then
+        local done_ids
+        done_ids=$(collect_done_ids)
+        local unmet_deps=""
+        while IFS= read -r dep_id; do
+            if ! echo "$done_ids" | jq -e --arg d "$dep_id" 'index($d) != null' &>/dev/null; then
+                unmet_deps="${unmet_deps}${dep_id}, "
+            fi
+        done <<< "$deps"
+        if [[ -n "$unmet_deps" ]]; then
+            unmet_deps="${unmet_deps%, }"
+            warnings="${warnings}  - Unmet dependencies: ${unmet_deps}\n"
+            has_warning=true
+        fi
+    fi
+
     CHECK_GATES_WARNINGS="$warnings"
     if [[ "$has_warning" == "true" ]]; then
         return 1
