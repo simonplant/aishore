@@ -305,9 +305,10 @@
         "auto marks flagged items done"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-20T15:21:55-07:00"
     },
     {
       "id": "FEAT-013",

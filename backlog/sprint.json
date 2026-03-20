@@ -1,32 +1,31 @@
 {
-  "sprintId": "sprint-1774044152",
-  "startedAt": "2026-03-20T15:02:32-07:00",
+  "sprintId": "sprint-1774044821",
+  "startedAt": "2026-03-20T15:13:41-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-011",
-    "title": "Git worktree isolation mode for sprints",
-    "intent": "Sprint execution must never risk losing uncommitted work.",
+    "id": "FEAT-012",
+    "title": "Backlog sync — detect manually completed items",
+    "intent": "The backlog must reflect reality. Items completed outside aishore should be detectable.",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Add isolation config default stash, option worktree",
-      "When worktree, create git worktree for sprint branch",
-      "Run developer agent in worktree directory",
-      "Merge worktree branch on success",
-      "Clean up worktree on success or failure"
+      "Add backlog sync subcommand",
+      "Check todo items scope against git history",
+      "Flag items whose changes appear on current branch",
+      "Prompt to mark flagged items done",
+      "Add auto and dry-run flags"
     ],
     "acceptanceCriteria": [
-      "isolation worktree causes sprints in git worktree",
-      "AISHORE_ISOLATION=worktree env var works",
-      "Uncommitted changes untouched",
-      "Worktree cleaned up",
-      "Default stash behavior unchanged"
+      "backlog sync lists apparently completed items",
+      "Items flagged based on scope and git history",
+      "dry-run shows candidates only",
+      "auto marks flagged items done"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T15:02:32-07:00",
+    "startedAt": "2026-03-20T15:13:41-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T15:13:40-07:00"
+    "completedAt": "2026-03-20T15:21:55-07:00"
   },
-  "completedAt": "2026-03-20T15:13:40-07:00",
+  "completedAt": "2026-03-20T15:21:55-07:00",
   "attempts": 1
 }
