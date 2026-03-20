@@ -1,30 +1,29 @@
 {
-  "sprintId": "sprint-1769650727",
-  "startedAt": "2026-01-28T18:38:47-07:00",
+  "sprintId": "sprint-1774029924",
+  "startedAt": "2026-03-20T11:05:24-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-008",
-    "title": "Notification on sprint completion",
-    "sourceBacklog": "backlog.json",
+    "id": "BUG-001",
+    "title": "AC verify report uses literal \\n instead of newlines",
+    "intent": "AC verify report must render with real newlines so validator receives properly formatted output",
+    "description": "run_ac_verification() builds the report string using '\\n' in bash double-quoted strings (e.g. report=\"${report}  PASS: $ac_text\\n\"). In bash, '\\n' inside double quotes is a literal backslash-n, not a newline. The garbled report is injected into validator prompts and retry context, degrading AI quality.",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "Step 1: Add NOTIFY_CMD='' default near the config defaults (line ~56-60). In load_config(), add loading from config.yaml: notifications.on_complete via yq (or grep fallback). Follow existing config loading pattern from VALIDATE_CMD.",
-      "Step 2: Add AISHORE_NOTIFY_CMD env var override in _apply_env_overrides(). Follow the existing pattern: [[ -n \"${AISHORE_NOTIFY_CMD:-}\" ]] && NOTIFY_CMD=\"$AISHORE_NOTIFY_CMD\".",
-      "Step 3: Create a send_notification() helper function that takes status ($1) and item_id ($2). Run: bash -c \"$NOTIFY_CMD\" -- \"$status\" \"$item_id\" with stderr redirected. Wrap in if/fi to catch failures and log_warning without affecting sprint outcome.",
-      "Step 4: Call send_notification at the end of each sprint iteration in cmd_run(): after mark_complete success (line ~728) call send_notification 'pass' \"$ITEM_ID\", and after each failure path (lines ~686, ~707, ~719) call send_notification 'fail' \"$ITEM_ID\". Only call if NOTIFY_CMD is non-empty.",
-      "Step 5: Update cmd_help() to document AISHORE_NOTIFY_CMD env var and notifications.on_complete config option. Add examples in comments: notify-send (Linux), osascript (macOS), curl webhook.",
-      "Step 6: Update the config.yaml template in cmd_init() to include a commented-out notifications section with examples."
+      "In .aishore/aishore, find run_ac_verification() (around line 1218)",
+      "Locate all lines building the report variable with string concatenation using \\\\n",
+      "Replace \\\\\"\\\\n\\\\\" inside double-quoted strings with $\\x27\\\\n\\x27 (ANSI-C quoting) or use printf to append newlines",
+      "Verify the fix does not affect other uses of the report variable",
+      "Run a sprint with AC verify commands and confirm report output contains real newlines"
     ],
     "acceptanceCriteria": [
-      "Users can set a notification command in config.yaml or env var",
-      "The command receives sprint status (pass/fail) and item ID as arguments ($1 and $2)",
-      "Notification failures don't affect sprint outcome (log_warning only)",
-      "Works with any executable command (not tied to a specific notification system)",
-      "AISHORE_NOTIFY_CMD env var overrides config.yaml setting",
-      "shellcheck passes with no new warnings"
+      "AC verify report passed to validator contains actual newlines (not literal \\\\n)",
+      "Retry prompt with AC failure context displays properly formatted multi-line output"
     ],
-    "startedAt": "2026-01-28T18:38:47-07:00",
+    "scope": [],
+    "startedAt": "2026-03-20T11:05:24-07:00",
     "status": "passed",
-    "completedAt": "2026-01-28T18:43:18-07:00"
+    "completedAt": "2026-03-20T11:07:18-07:00"
   },
-  "completedAt": "2026-01-28T18:43:18-07:00"
+  "completedAt": "2026-03-20T11:07:18-07:00",
+  "attempts": 1
 }

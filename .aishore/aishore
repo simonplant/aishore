@@ -1256,10 +1256,10 @@ run_ac_verification() {
         rm -f "$ac_tmpfile"
 
         if [[ "$ac_ok" == "true" ]]; then
-            report="${report}  PASS: $ac_text\n"
+            report="${report}  PASS: ${ac_text}"$'\n'
             log_success "AC: $ac_text"
         else
-            report="${report}  FAIL: $ac_text (cmd: $ac_cmd)\n    Output: $ac_output\n"
+            report="${report}  FAIL: ${ac_text} (cmd: ${ac_cmd})"$'\n'"    Output: ${ac_output}"$'\n'
             log_error "AC: $ac_text"
             all_passed=false
         fi
