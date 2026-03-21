@@ -1753,12 +1753,18 @@ run_ac_verification() {
     [[ ! -f "$sprint_file" ]] && return 0
 
     local ac_json
-    ac_json=$(jq -r '.item.acceptanceCriteria // []' "$sprint_file" 2>/dev/null)
+    if ! ac_json=$(jq -r '.item.acceptanceCriteria // []' "$sprint_file" 2>&1); then
+        log_error "Failed to parse acceptanceCriteria from sprint.json: $ac_json"
+        return 1
+    fi
     [[ -z "$ac_json" || "$ac_json" == "null" || "$ac_json" == "[]" ]] && return 0
 
     # Filter to objects with .verify field and get count in one pass
     local verifiable verify_count
-    verifiable=$(printf '%s\n' "$ac_json" | jq '[.[] | select(type == "object" and .verify != null)]' 2>/dev/null)
+    if ! verifiable=$(printf '%s\n' "$ac_json" | jq '[.[] | select(type == "object" and .verify != null)]' 2>&1); then
+        log_error "Failed to parse AC verify fields: $verifiable"
+        return 1
+    fi
     verify_count=$(jq 'length' <<< "$verifiable" 2>/dev/null || echo 0)
     [[ "$verify_count" -eq 0 ]] && return 0
 
