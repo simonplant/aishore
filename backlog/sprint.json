@@ -1,29 +1,27 @@
 {
-  "sprintId": "sprint-1774063064",
-  "startedAt": "2026-03-20T20:17:44-07:00",
+  "sprintId": "sprint-1774063634",
+  "startedAt": "2026-03-20T20:27:14-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-048",
-    "title": "Extract shared backlog iteration helper — for-loop-over-BACKLOG_FILES pattern repeated 10+ times",
-    "intent": "Replace the 10+ copies of the for f in BACKLOG_FILES / jq operation pattern with reusable helpers like map_backlog_files() and sum_backlog_field()",
+    "id": "BUG-056",
+    "title": "Update CHANGELOG.md with v0.3.3 release notes",
+    "intent": "Document all changes since v0.3.2 in CHANGELOG.md so the version file and changelog are in sync",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Identify all instances of the for f in BACKLOG_FILES iteration pattern",
-      "Categorize by usage: summing counts, finding items, transforming items",
-      "Extract sum_backlog_field() for count aggregation across files",
-      "Extract find_in_backlogs() for item lookup across files",
-      "Replace all call sites with the appropriate helper"
+      "Review git log from v0.3.2 tag to HEAD to identify all changes",
+      "Write a v0.3.3 section in CHANGELOG.md following the existing format",
+      "Verify VERSION file matches the new CHANGELOG entry"
     ],
     "acceptanceCriteria": [
-      "The raw for f in BACKLOG_FILES pattern appears in at most 2 places (the helpers themselves)",
-      "shellcheck passes"
+      "CHANGELOG.md has a v0.3.3 section",
+      "All commits since v0.3.2 are represented in the changelog"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T20:17:44-07:00",
+    "startedAt": "2026-03-20T20:27:14-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T20:27:13-07:00"
+    "completedAt": "2026-03-20T20:31:10-07:00"
   },
-  "completedAt": "2026-03-20T20:27:13-07:00",
+  "completedAt": "2026-03-20T20:31:10-07:00",
   "attempts": 1
 }
