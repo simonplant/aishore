@@ -32,6 +32,7 @@ jq empty backlog/*.json
 .aishore/aishore auto p2             # Autonomous: complete all must + should + could items
 .aishore/aishore auto done --retries 2        # With per-item retries
 .aishore/aishore auto p1 --max-failures 3     # Custom circuit breaker
+.aishore/aishore auto done --limit 3           # Cap session at 3 items
 .aishore/aishore auto done --no-merge         # Keep feature branches for PR review
 .aishore/aishore auto p1 --refine            # Refine spec on failure and retry
 .aishore/aishore auto done --quick            # Skip maturity protocol

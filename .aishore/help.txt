@@ -2,8 +2,8 @@ aishore - AI Sprint Runner (v__VERSION__)
 Copyright (C) 2026 Simon Plant. Licensed under AGPL-3.0. See LICENSE.
 
 Usage: .aishore/aishore <command> [options]
-       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--category <name>] [--auto-review] [--dry-run]
-       .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--pr] [--retries N] [--refine] [--quick] [--category <name>]
+       .aishore/aishore auto <scope> [--limit N] [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--category <name>] [--auto-review] [--dry-run]
+       .aishore/aishore run [<count>|<ID>] [--limit N] [--dry-run] [--no-merge] [--pr] [--retries N] [--refine] [--quick] [--category <name>]
 
 Commands:
   backlog list      List all items (features + bugs)
@@ -45,6 +45,7 @@ Commands:
     p0              Complete all P0 (must) items
     p1              Complete all P0+P1 (must + should) items
     p2              Complete all P0-P2 (must + should + could) items
+    --limit N       Cap session at N successful items then exit cleanly
     --max-failures N  Consecutive failures before stopping (default: 5)
     --retries N     Per-item retry attempts on failure
     --no-merge      Keep feature branches for PR review
