@@ -4161,6 +4161,11 @@ cmd_checksums() {
         [[ -f "$f" ]] && "${hash_cmd[@]}" "$f" >> "$tmp"
     done
 
+    if [[ ! -s "$tmp" ]]; then
+        log_error "No checksums generated — aborting to protect $checksum_file"
+        return 1
+    fi
+
     mv "$tmp" "$checksum_file"
     log_success "Updated checksums.sha256 (${#files[@]} files)"
     cat "$checksum_file"
