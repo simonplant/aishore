@@ -1,29 +1,29 @@
 {
-  "sprintId": "sprint-1774055278",
-  "startedAt": "2026-03-20T18:07:58-07:00",
+  "sprintId": "sprint-1774055413",
+  "startedAt": "2026-03-20T18:10:13-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-032",
-    "title": "backlog history output omits duration column when duration is 0",
-    "intent": "backlog history must display duration consistently — missing duration for items completed outside normal sprint flow is confusing and breaks column alignment",
-    "description": "cmd_backlog_history() formats the output table with ID, date, status, and duration columns. The duration field in sprints.jsonl is stored as an integer (seconds). When an item is archived without a valid startedAt timestamp (e.g. manually marked done, or archive written before sprint started), duration is 0. The display logic should show '0s' or '-' for zero-duration entries rather than silently omitting the column or showing raw '0', which breaks column alignment for scripting.",
+    "id": "BUG-034",
+    "title": "next_id scans sprints.jsonl with per-line jq — slow on large archives",
+    "intent": "ID generation must remain fast as the sprint archive grows — per-line jq invocations in a shell loop are O(n) and will become noticeable at hundreds of entries.",
+    "description": "In next_id(), the archive max-ID computation uses 'jq -r ... archive_file | sort -rn | head -1'. This invokes jq once on the whole JSONL file, which is correct. However the BACKLOG_FILES loop calls jq once per file, and the archive jq reads all lines just to get the max numeric suffix. For large archives (hundreds of sprint entries), this is still fast, but the JSONL slurp approach (jq -r '[...] | max') is more robust than relying on sort -rn with potentially non-numeric values. The real risk is that if a non-numeric suffix appears in itemId (e.g. 'FEAT-new'), jq tonumber throws an error that is silently swallowed by 2>/dev/null, hiding ID conflicts. Fix: add error handling and filter to numeric-only suffixes before max.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_backlog_history() (around line 4550)",
-      "Locate the jq format expression that renders the duration column",
-      "Change the duration display: if duration is 0 or null, show '-'; otherwise format as minutes and seconds (e.g. '2m 34s' for 154)",
-      "Verify: 'backlog history' shows '-' for items with duration 0 and formatted time for items with duration > 0"
+      "In .aishore/aishore, find next_id() (around line 652)",
+      "In the archive scan, change the jq pipeline to filter to numeric IDs only: jq -r --arg pfx \"$prefix-\" '[.itemId | select(startswith($pfx)) | ltrimstr($pfx) | select(test(\"^[0-9]+$\")) | tonumber] | max // 0'",
+      "Apply the same numeric-only filter in the BACKLOG_FILES loop: add | select(test(\"^[0-9]+$\")) before tonumber",
+      "Verify: next_id FEAT still returns FEAT-023 (or correct next ID) with numeric items; non-numeric IDs in archive are silently skipped"
     ],
     "acceptanceCriteria": [
-      "backlog history shows '-' for items where duration is 0 or null",
-      "backlog history formats non-zero duration as human-readable time (e.g. '2m 34s')",
-      "Column alignment is consistent across all rows"
+      "next_id correctly skips non-numeric ID suffixes without crashing",
+      "next_id still returns the correct next sequential ID for FEAT and BUG prefixes",
+      "No regression in ID generation for existing items"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T18:07:58-07:00",
+    "startedAt": "2026-03-20T18:10:13-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T18:10:11-07:00"
+    "completedAt": "2026-03-20T18:13:09-07:00"
   },
-  "completedAt": "2026-03-20T18:10:11-07:00",
+  "completedAt": "2026-03-20T18:13:09-07:00",
   "attempts": 1
 }
