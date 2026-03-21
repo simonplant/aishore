@@ -3546,7 +3546,7 @@ cmd_status() {
         if [[ -f "$sprint_file" ]]; then
             sprint_status=$(jq -r '.status // "idle"' "$sprint_file" 2>/dev/null || echo "idle")
         fi
-        if [[ "$sprint_status" == "idle" ]]; then
+        if [[ "$sprint_status" == "idle" || "$sprint_status" == "completed" ]]; then
             echo ""
             log_info "Sprint complete"
             return 0

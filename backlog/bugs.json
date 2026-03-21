@@ -2627,32 +2627,6 @@
       "groomedNotes": null
     },
     {
-      "id": "BUG-080",
-      "title": "Consolidate 6 separate jq calls in cmd_diagnose into one",
-      "intent": "cmd_diagnose makes 6 separate jq -r calls on the same JSON file to extract individual fields. Combine into a single jq invocation to reduce forks and lines.",
-      "description": "",
-      "priority": "could",
-      "category": null,
-      "steps": [
-        "Replace the 6 individual jq -r calls in cmd_diagnose with a single jq call that extracts all fields at once",
-        "Verify diagnose output is unchanged"
-      ],
-      "acceptanceCriteria": [
-        "cmd_diagnose has at most 1 jq call to extract fields from the diagnostics file",
-        "Output format is unchanged",
-        "shellcheck passes"
-      ],
-      "scope": [
-        ".aishore/**"
-      ],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
-      "groomedAt": "2026-03-21",
-      "groomedNotes": null
-    },
-    {
       "id": "BUG-093",
       "title": "setup_sprint_environment calls undefined release_lock function",
       "intent": "When --category yields no items, aishore exits cleanly with code 1 and a clear message — no 'command not found' crash, no fd leak.",
@@ -2678,7 +2652,8 @@
       "readyForSprint": false,
       "groomingNotes": "Crash path: release_lock undefined triggers exit 127 on --category filter with no matches. Users see cryptic 'command not found' instead of clean exit. Elevated to must — this breaks a documented CLI option.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T10:52:24-07:00"
+      "completedAt": "2026-03-21T10:52:24-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-094",
@@ -2705,7 +2680,8 @@
       "readyForSprint": false,
       "groomingNotes": "Silent correctness hole: malformed AC JSON causes all verify commands to be skipped, allowing broken sprints to pass validation. Elevated to must — validation layer integrity is non-negotiable.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T10:55:04-07:00"
+      "completedAt": "2026-03-21T10:55:04-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-095",
@@ -2734,7 +2710,165 @@
       "readyForSprint": false,
       "groomingNotes": "BUG-082 was marked done manually but VERSION is still 0.3.4 and no 0.3.5 CHANGELOG section exists. 20+ items completed since v0.3.4.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T10:57:09-07:00"
+      "completedAt": "2026-03-21T10:57:09-07:00",
+      "groomedNotes": null
+    },
+    {
+      "id": "BUG-096",
+      "title": "cmd_status --watch loops forever after successful sprint — status is 'completed' not 'idle'",
+      "intent": "After a sprint succeeds, cmd_status --watch must exit cleanly without user intervention.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Locate the terminal-state check in cmd_status watch loop (~line 3549)",
+        "Add 'completed' as a terminal state alongside 'idle': [[ $sprint_status == 'idle' || $sprint_status == 'completed' ]]",
+        "Run shellcheck and verify no new warnings"
+      ],
+      "acceptanceCriteria": [
+        "Running cmd_status --watch exits automatically after a sprint completes with status 'completed' in sprint.json",
+        "Running cmd_status --watch still exits when sprint.json is absent or has status 'idle'",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomingNotes": "One-line fix confirmed: watch loop exit condition missing 'completed' state. High user value — without this fix, users must ctrl+C after every sprint when using --watch. Priority should is correct.",
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T11:15:51-07:00"
+    },
+    {
+      "id": "BUG-097",
+      "title": "protect_items_from_groom uses wrong field name 'groomedNotes' — groomed notes silently discarded",
+      "intent": "Groomed notes written by groom agents must survive the protect_items_from_groom pass.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Locate the jq merge in protect_items_from_groom (~line 3149): 'groomedNotes: (.groomedNotes // $orig[.id].groomedNotes)'",
+        "Confirm actual field name: backlog edit --groomed-notes writes '.groomingNotes', backlog show reads '.groomingNotes'",
+        "Change the field reference in protect_items_from_groom from 'groomedNotes' to 'groomingNotes' (both sides of the //)",
+        "Run shellcheck and verify no new warnings"
+      ],
+      "acceptanceCriteria": [
+        "After a groom session writes --groomed-notes, the notes appear in backlog show output after protect_items_from_groom runs",
+        "No spurious 'groomedNotes: null' field is added to items during protect run",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Simple field name typo causing silent data loss. Groomed notes are written by groom agents and are the only place we capture why an item was prioritized a certain way. Losing them silently undermines the grooming workflow. Priority should is correct.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-098",
+      "title": "Worktree mode: sprint archive entries lost after worktree cleanup",
+      "intent": "Every completed sprint in worktree mode must appear in the main repo's sprints.jsonl exactly as in stash mode.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In _handle_sprint_success, locate the worktree cleanup block (~line 2514)",
+        "Before calling _cleanup_worktree, capture the last line appended to the worktree's sprints.jsonl (the just-written archive entry)",
+        "After _cleanup_worktree restores ARCHIVE_DIR to the main repo path, append the captured entry to the main repo's sprints.jsonl",
+        "Create ARCHIVE_DIR if it doesn't exist (mkdir -p)",
+        "Run shellcheck and verify no new warnings"
+      ],
+      "acceptanceCriteria": [
+        "After a sprint completes in worktree mode, the entry appears in backlog/archive/sprints.jsonl in the main repo",
+        "aishore metrics and aishore backlog history show the sprint in worktree mode",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Data integrity bug in worktree mode — completed sprints vanish from history. Any user using worktree isolation would lose all metrics and history. The fix (capture archive entry before cleanup) is well-specified. Priority should is correct; could argue must since it's silent data loss.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-099",
+      "title": "auto --no-merge re-picks already-completed items — base branch backlog not updated",
+      "intent": "Each item in an auto --no-merge session must be attempted exactly once, never re-picked in the same run.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Understand why re-picking occurs: mark_complete updates the feature branch backlog but git checkout base_branch reverts it; base branch still shows item as readyForSprint: true",
+        "In run_sprint_loop, after a successful sprint, add the ITEM_ID to a 'completed_in_session' set (similar to FAILED_IDS)",
+        "In pick_item's skip list, include completed_in_session IDs alongside FAILED_IDS",
+        "Only needed when no_merge=true; stash/merge mode automatically prevents re-pick since item is marked done on the branch that becomes base",
+        "Run shellcheck and verify no new warnings"
+      ],
+      "acceptanceCriteria": [
+        "Running auto --no-merge with multiple ready items never attempts the same item twice in one session",
+        "Completed items are still picked correctly when starting a new session",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Behavioral correctness bug: auto --no-merge sessions waste cycles and could cause conflicts by re-attempting already-completed items. Directly impacts users running autonomous sessions without merge. The session-scoped skip-list approach (paralleling FAILED_IDS) is the right fix. Priority should is correct.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-100",
+      "title": "auto silently skips items with missing or too-short intent — no feedback to user",
+      "intent": "When auto-pick bypasses items due to missing or insufficient intent, a warning must be logged identifying each skipped item by ID and stating the reason, so users can fix their backlog.",
+      "description": "pick_item silently skips items where intent is absent or under 20 characters. In an auto session with multiple unready items, the user sees no items processed and no explanation. This makes the intent gate invisible: users don't know why their backlog isn't draining. A targeted log_warn call when each item is bypassed for intent reasons closes the feedback loop.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In pick_item, when an item is rejected due to missing or too-short intent, emit: log_warn \"Skipping $id: intent missing or too short (9 chars, need >=20)\"",
+        "Verify the same path is covered in list_pickable_ids if that function also filters by intent",
+        "Run shellcheck and verify no new warnings"
+      ],
+      "acceptanceCriteria": [
+        "Running auto with items whose intent is absent or under 20 chars produces a warning line per skipped item identifying the ID and reason",
+        "Items with valid intent are still processed normally — no regression",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Core UX gap: the intent gate is a hard requirement but invisible when it fires. Users running auto sessions and seeing nothing processed have no way to diagnose why without reading source code. A single log_warn per bypassed item costs nothing and closes the feedback loop completely. Priority should is correct.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-080",
+      "title": "Consolidate 6 separate jq calls in cmd_diagnose into one",
+      "intent": "cmd_diagnose makes 6 separate jq -r calls on the same JSON file to extract individual fields. Combine into a single jq invocation to reduce forks and lines.",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Replace the 6 individual jq -r calls in cmd_diagnose with a single jq call that extracts all fields at once",
+        "Verify diagnose output is unchanged"
+      ],
+      "acceptanceCriteria": [
+        "cmd_diagnose has at most 1 jq call to extract fields from the diagnostics file",
+        "Output format is unchanged",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-21",
+      "groomedNotes": null
     }
   ]
 }
