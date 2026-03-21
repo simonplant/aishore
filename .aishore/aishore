@@ -833,6 +833,32 @@ update_item() {
     mv "$tmp" "$BACKLOG_DIR/$file"
 }
 
+_build_ac_json() {
+    # Convert ac_entries array (passed as args) to a JSON array string.
+    # Each entry is already a JSON value (quoted string or {text,verify} object).
+    local ac_json="["
+    local first=true
+    local entry
+    for entry in "$@"; do
+        [[ "$first" == "true" ]] && first=false || ac_json="$ac_json,"
+        ac_json="$ac_json$entry"
+    done
+    ac_json="$ac_json]"
+    printf '%s' "$ac_json"
+}
+
+_append_array_field() {
+    # Append values from a bash array to a jq array field.
+    # Usage: _append_array_field <field> <jq_var> <val1> [val2...]
+    # Populates: jq_updates string and updates array (both must be declared in caller).
+    local field="$1" jqvar="$2"
+    shift 2
+    local arr_json
+    arr_json=$(printf '%s\n' "$@" | jq -R . | jq -s .)
+    jq_updates="$jq_updates | .$field = ((.$field // []) + \$$jqvar)"
+    updates+=("--argjson" "$jqvar" "$arr_json")
+}
+
 add_item() {
     local file="$1"
     shift
@@ -4134,7 +4160,6 @@ cmd_backlog_add() {
     local item_type="feat" title="" intent="" desc="" priority="should" category="" ready=false
     local depends_on=""
     local -a ac_entries=()
-    local pending_ac=""
     local -a step_entries=()
     local -a scope_entries=()
 
@@ -4164,20 +4189,17 @@ cmd_backlog_add() {
                 depends_on="$2"; shift 2 ;;
             --ac)
                 validate_arg "$1" "${2:-}" || return 1
-                # Flush any pending AC entry as plain string
-                if [[ -n "$pending_ac" ]]; then
-                    ac_entries+=("$(printf '%s' "$pending_ac" | jq -Rs .)")
-                fi
-                pending_ac="$2"
+                ac_entries+=("$(printf '%s' "$2" | jq -Rs .)")
                 shift 2 ;;
             --ac-verify)
                 validate_arg "$1" "${2:-}" || return 1
-                if [[ -z "$pending_ac" ]]; then
+                if [[ ${#ac_entries[@]} -eq 0 ]]; then
                     log_error "--ac-verify must follow --ac"
                     return 1
                 fi
-                ac_entries+=("{\"text\":$(printf '%s' "$pending_ac" | jq -Rs .),\"verify\":$(printf '%s' "$2" | jq -Rs .)}")
-                pending_ac=""
+                # Replace last plain-string entry with {text, verify} object
+                local last_text="${ac_entries[-1]}"
+                ac_entries[-1]="{\"text\":$last_text,\"verify\":$(printf '%s' "$2" | jq -Rs .)}"
                 shift 2 ;;
             --step)
                 validate_arg "$1" "${2:-}" || return 1
@@ -4190,11 +4212,6 @@ cmd_backlog_add() {
             *) log_error "Unknown option: $1"; return 1 ;;
         esac
     done
-
-    # Flush last pending AC
-    if [[ -n "$pending_ac" ]]; then
-        ac_entries+=("$(printf '%s' "$pending_ac" | jq -Rs .)")
-    fi
 
     # Title is required
     if [[ -z "$title" ]]; then
@@ -4228,13 +4245,7 @@ cmd_backlog_add() {
     # Build AC array
     local ac_json="[]"
     if [[ ${#ac_entries[@]} -gt 0 ]]; then
-        ac_json="["
-        local first=true
-        for entry in "${ac_entries[@]}"; do
-            [[ "$first" == "true" ]] && first=false || ac_json="$ac_json,"
-            ac_json="$ac_json$entry"
-        done
-        ac_json="$ac_json]"
+        ac_json=$(_build_ac_json "${ac_entries[@]}")
     fi
 
     # Build steps array
@@ -4335,11 +4346,10 @@ cmd_backlog_edit() {
     file=$(resolve_backlog_file "$id") || return 1
 
     # Parse update flags
-    local updates=() update_desc=""
+    local updates=()
     local jq_updates=""
     local setting_ready=false
     local -a ac_entries=()
-    local pending_ac=""
     local -a scope_vals=()
     local -a step_vals=()
     local -a deps_vals=()
@@ -4350,66 +4360,54 @@ cmd_backlog_edit() {
                 validate_arg "$1" "${2:-}" || return 1
                 jq_updates="$jq_updates | .title = \$title"
                 updates+=("--arg" "title" "$2")
-                update_desc="$update_desc title"
                 shift 2 ;;
             --intent)
                 validate_arg "$1" "${2:-}" || return 1
                 jq_updates="$jq_updates | .intent = \$intent"
                 updates+=("--arg" "intent" "$2")
-                update_desc="$update_desc intent"
                 shift 2 ;;
             --desc)
                 validate_arg "$1" "${2:-}" || return 1
                 jq_updates="$jq_updates | .description = \$desc"
                 updates+=("--arg" "desc" "$2")
-                update_desc="$update_desc description"
                 shift 2 ;;
             --priority)
                 validate_arg "$1" "${2:-}" || return 1
                 validate_priority "$2" || return 1
                 jq_updates="$jq_updates | .priority = \$priority"
                 updates+=("--arg" "priority" "$2")
-                update_desc="$update_desc priority"
                 shift 2 ;;
             --status)
                 validate_arg "$1" "${2:-}" || return 1
                 validate_status "$2" || return 1
                 jq_updates="$jq_updates | .status = \$status"
                 updates+=("--arg" "status" "$2")
-                update_desc="$update_desc status"
                 shift 2 ;;
             --category)
                 validate_arg "$1" "${2:-}" || return 1
                 jq_updates="$jq_updates | .category = \$category"
                 updates+=("--arg" "category" "$2")
-                update_desc="$update_desc category"
                 shift 2 ;;
             --ready)
                 jq_updates="$jq_updates | .readyForSprint = true"
-                update_desc="$update_desc ready"
                 setting_ready=true
                 shift ;;
             --no-ready)
                 jq_updates="$jq_updates | .readyForSprint = false"
-                update_desc="$update_desc ready"
                 shift ;;
             --scope)
                 validate_arg "$1" "${2:-}" || return 1
                 scope_vals+=("$2")
-                update_desc="$update_desc scope"
                 shift 2 ;;
             --clear-scope)
                 jq_updates="$jq_updates | .scope = []"
-                update_desc="$update_desc scope"
                 shift ;;
             --step)
                 validate_arg "$1" "${2:-}" || return 1
                 step_vals+=("$2")
-                update_desc="$update_desc steps"
                 shift 2 ;;
             --clear-steps)
                 jq_updates="$jq_updates | .steps = []"
-                update_desc="$update_desc steps"
                 shift ;;
             --depends-on)
                 validate_arg "$1" "${2:-}" || return 1
@@ -4417,40 +4415,31 @@ cmd_backlog_edit() {
                 while IFS= read -r dep; do
                     [[ -n "$dep" ]] && deps_vals+=("$dep")
                 done < <(printf '%s\n' "$2" | tr ',' '\n')
-                update_desc="$update_desc dependsOn"
                 shift 2 ;;
             --clear-depends-on)
                 jq_updates="$jq_updates | .dependsOn = []"
-                update_desc="$update_desc dependsOn"
                 shift ;;
             --ac)
                 validate_arg "$1" "${2:-}" || return 1
-                # Flush any pending AC entry
-                if [[ -n "$pending_ac" ]]; then
-                    ac_entries+=("$(printf '%s' "$pending_ac" | jq -Rs .)")
-                fi
-                pending_ac="$2"
-                update_desc="$update_desc ac"
+                ac_entries+=("$(printf '%s' "$2" | jq -Rs .)")
                 shift 2 ;;
             --ac-verify)
                 validate_arg "$1" "${2:-}" || return 1
-                if [[ -z "$pending_ac" ]]; then
+                if [[ ${#ac_entries[@]} -eq 0 ]]; then
                     log_error "--ac-verify must follow --ac"
                     return 1
                 fi
-                # Convert pending AC to object with verify
-                ac_entries+=("{\"text\":$(printf '%s' "$pending_ac" | jq -Rs .),\"verify\":$(printf '%s' "$2" | jq -Rs .)}")
-                pending_ac=""
+                # Replace last plain-string entry with {text, verify} object
+                local last_text="${ac_entries[-1]}"
+                ac_entries[-1]="{\"text\":$last_text,\"verify\":$(printf '%s' "$2" | jq -Rs .)}"
                 shift 2 ;;
             --clear-ac)
                 jq_updates="$jq_updates | .acceptanceCriteria = []"
-                update_desc="$update_desc ac"
                 shift ;;
             --groomed-notes)
                 validate_arg "$1" "${2:-}" || return 1
                 jq_updates="$jq_updates | .groomingNotes = \$gnotes"
                 updates+=("--arg" "gnotes" "$2")
-                update_desc="$update_desc groomingNotes"
                 shift 2 ;;
             --groomed-at)
                 local gdate
@@ -4467,50 +4456,23 @@ cmd_backlog_edit() {
                 fi
                 jq_updates="$jq_updates | .groomedAt = \$gdate"
                 updates+=("--arg" "gdate" "$gdate")
-                update_desc="$update_desc groomedAt"
                 ;;
             *) log_error "Unknown option: $1"; return 1 ;;
         esac
     done
 
-    # Flush last pending AC entry (plain string)
-    if [[ -n "$pending_ac" ]]; then
-        ac_entries+=("$(printf '%s' "$pending_ac" | jq -Rs .)")
-    fi
-
-    # Build scope jq update if any --scope flags were used
-    if [[ ${#scope_vals[@]} -gt 0 ]]; then
-        local scope_json
-        scope_json=$(printf '%s\n' "${scope_vals[@]}" | jq -R . | jq -s .)
-        jq_updates="$jq_updates | .scope = ((.scope // []) + \$newscope)"
-        updates+=("--argjson" "newscope" "$scope_json")
-    fi
-
-    # Build steps jq update if any --step flags were used
-    if [[ ${#step_vals[@]} -gt 0 ]]; then
-        local steps_json
-        steps_json=$(printf '%s\n' "${step_vals[@]}" | jq -R . | jq -s .)
-        jq_updates="$jq_updates | .steps = ((.steps // []) + \$newsteps)"
-        updates+=("--argjson" "newsteps" "$steps_json")
-    fi
-
-    # Build dependsOn jq update if any --depends-on flags were used
+    # Build array field updates using shared helper
+    [[ ${#scope_vals[@]} -gt 0 ]] && _append_array_field "scope" "newscope" "${scope_vals[@]}"
+    [[ ${#step_vals[@]} -gt 0 ]] && _append_array_field "steps" "newsteps" "${step_vals[@]}"
     if [[ ${#deps_vals[@]} -gt 0 ]]; then
-        local deps_json
-        deps_json=$(printf '%s\n' "${deps_vals[@]}" | jq -R . | jq -s .)
-        jq_updates="$jq_updates | .dependsOn = ((.dependsOn // []) + \$newdeps) | .dependsOn |= unique"
-        updates+=("--argjson" "newdeps" "$deps_json")
+        _append_array_field "dependsOn" "newdeps" "${deps_vals[@]}"
+        jq_updates="$jq_updates | .dependsOn |= unique"
     fi
 
     # Build AC jq update if any --ac flags were used
     if [[ ${#ac_entries[@]} -gt 0 ]]; then
-        local ac_json="["
-        local first=true
-        for entry in "${ac_entries[@]}"; do
-            [[ "$first" == "true" ]] && first=false || ac_json="$ac_json,"
-            ac_json="$ac_json$entry"
-        done
-        ac_json="$ac_json]"
+        local ac_json
+        ac_json=$(_build_ac_json "${ac_entries[@]}")
         jq_updates="$jq_updates | .acceptanceCriteria = ((.acceptanceCriteria // []) + \$newac)"
         updates+=("--argjson" "newac" "$ac_json")
     fi
@@ -4525,7 +4487,7 @@ cmd_backlog_edit() {
         return 1
     fi
 
-    log_success "Updated $id:$update_desc"
+    log_success "Updated $id"
 
     # Run readiness gates when setting --ready (warn but don't block)
     if [[ "$setting_ready" == "true" ]]; then
