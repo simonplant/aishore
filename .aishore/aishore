@@ -1480,7 +1480,7 @@ run_agent() {
     local agent_name="$1"
     local mode="$2"
     local model="${3:-$MODEL_PRIMARY}"
-    local context_args="${4:-}"
+    local _ra_ctx_name="${4:-}"
     local output_file="${5:-}"
     local extra_prompt="${6:-}"
 
@@ -1490,8 +1490,9 @@ run_agent() {
     rm -f "$STATUS_DIR/result.json"
 
     local context_files
-    if [[ -n "$context_args" ]]; then
-        context_files=$(AGENT_CONTEXT_ROLE="$agent_name" build_context $context_args)
+    if [[ -n "$_ra_ctx_name" ]]; then
+        local -n _ra_ctx_ref="$_ra_ctx_name"
+        context_files=$(AGENT_CONTEXT_ROLE="$agent_name" build_context "${_ra_ctx_ref[@]}")
     else
         context_files=$(AGENT_CONTEXT_ROLE="$agent_name" build_context "@$BACKLOG_DIR/sprint.json")
     fi
@@ -2551,16 +2552,16 @@ run_sprint_loop() {
             total_ready=$(_count_total_ready)
             if [[ "$total_ready" -lt "$AUTO_GROOM_THRESHOLD" ]]; then
                 log_info "Auto: ready buffer low ($total_ready < $AUTO_GROOM_THRESHOLD) — grooming"
-                local groom_context="@$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
+                local -a groom_context=("@$BACKLOG_DIR/backlog.json" "@$BACKLOG_DIR/bugs.json")
                 local recent_sprints; recent_sprints=$(recent_sprints_file 20)
-                [[ -n "$recent_sprints" ]] && groom_context="$groom_context $recent_sprints"
+                [[ -n "$recent_sprints" ]] && groom_context+=("$recent_sprints")
                 # Snapshot for groom limit enforcement
                 local auto_groom_snap
                 auto_groom_snap=$(mktemp -d)
                 snapshot_backlog_files "$auto_groom_snap"
-                run_agent "tech-lead" "groom" "$MODEL_FAST" "$groom_context" || true
+                run_agent "tech-lead" "groom" "$MODEL_FAST" groom_context || true
                 check_result || log_warning "Tech-lead groom did not pass — continuing"
-                run_agent "product-owner" "groom" "$MODEL_FAST" "$groom_context" || true
+                run_agent "product-owner" "groom" "$MODEL_FAST" groom_context || true
                 check_result || log_warning "Product-owner groom did not pass — continuing"
                 # Protect existing items from groomer rewrites, then enforce limits
                 protect_items_from_groom "$auto_groom_snap"
@@ -2830,11 +2831,11 @@ cmd_groom() {
 
     print_groom_summary
 
-    local context_args="@$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
+    local -a context_args=("@$BACKLOG_DIR/backlog.json" "@$BACKLOG_DIR/bugs.json")
     local recent_sprints; recent_sprints=$(recent_sprints_file 20)
-    [[ -n "$recent_sprints" ]] && context_args="$context_args $recent_sprints"
+    [[ -n "$recent_sprints" ]] && context_args+=("$recent_sprints")
 
-    run_groom_flow "$agent" "groom" "$context_args"
+    run_groom_flow "$agent" "groom" context_args
 }
 
 print_groom_summary() {
@@ -2967,9 +2968,9 @@ print_groom_diff() {
 }
 
 # Shared groom/populate pipeline: snapshot → agent → protect → enforce → diff → check
-# Args: $1=agent $2=mode $3=context_args
+# Args: $1=agent $2=mode $3=context_args_array_name
 run_groom_flow() {
-    local agent="$1" mode="$2" context_args="$3"
+    local agent="$1" mode="$2" _gf_ctx_name="$3"
 
     local snap_before
     snap_before=$(snapshot_backlogs)
@@ -2981,7 +2982,7 @@ run_groom_flow() {
     log_info "Running $agent agent..."
     echo ""
 
-    GROOM_MONITOR=true run_agent "$agent" "$mode" "$MODEL_FAST" "$context_args"
+    GROOM_MONITOR=true run_agent "$agent" "$mode" "$MODEL_FAST" "$_gf_ctx_name"
 
     protect_items_from_groom "$snap_dir"
 
@@ -3012,9 +3013,9 @@ cmd_review() {
     echo "Mode: $([[ "$update_docs" == "true" ]] && echo "Update docs" || echo "Read-only")"
     echo ""
 
-    local context_args="@$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
+    local -a context_args=("@$BACKLOG_DIR/backlog.json" "@$BACKLOG_DIR/bugs.json")
     local recent_sprints; recent_sprints=$(recent_sprints_file 20)
-    [[ -n "$recent_sprints" ]] && context_args="$context_args $recent_sprints"
+    [[ -n "$recent_sprints" ]] && context_args+=("$recent_sprints")
 
     local extra_prompt
     extra_prompt="## Additional Context
@@ -3026,7 +3027,7 @@ $([[ "$update_docs" == "true" ]] && echo "You may update documentation and add b
 
     log_info "Running architect agent..."
 
-    run_agent "architect" "review" "$MODEL_PRIMARY" "$context_args" "$output_file" "$extra_prompt"
+    run_agent "architect" "review" "$MODEL_PRIMARY" context_args "$output_file" "$extra_prompt"
 
     # Save and print review output
     if [[ -s "$output_file" ]]; then
@@ -3939,10 +3940,10 @@ cmd_backlog_populate() {
 
     log_info "Using requirements from: $prd_file"
 
-    local context_args="@$prd_file @$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
-    [[ -f "$BACKLOG_DIR/DEFINITIONS.md" ]] && context_args="$context_args @$BACKLOG_DIR/DEFINITIONS.md"
+    local -a context_args=("@$prd_file" "@$BACKLOG_DIR/backlog.json" "@$BACKLOG_DIR/bugs.json")
+    [[ -f "$BACKLOG_DIR/DEFINITIONS.md" ]] && context_args+=("@$BACKLOG_DIR/DEFINITIONS.md")
 
-    run_groom_flow "product-owner" "populate" "$context_args"
+    run_groom_flow "product-owner" "populate" context_args
 }
 
 cmd_backlog_list() {
