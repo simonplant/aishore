@@ -671,11 +671,13 @@
       "dependsOn": [
         "FEAT-021"
       ],
-      "status": "todo",
-      "readyForSprint": true,
+      "status": "done",
+      "readyForSprint": false,
       "groomedAt": "2026-03-21",
       "groomingNotes": "Portfolio/meta tooling — machine-readable doc standard for cross-repo enforcement. Low direct user value for aishore users; value is in the broader ecosystem. 'could' priority is correct. Depends on FEAT-021 (all docs must exist first). No changes needed to spec.",
-      "groomedNotes": null
+      "groomedNotes": null,
+      "passes": true,
+      "completedAt": "2026-03-21T13:57:31-07:00"
     },
     {
       "id": "FEAT-023",

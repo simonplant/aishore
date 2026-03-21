@@ -1,0 +1,32 @@
+schema_version: "1.0"
+
+project:
+  name: aishore
+  tagline: "Autonomous sprint orchestration for Claude Code"
+  category: tool
+
+required_files:
+  - README.md
+  - docs/ARCHITECTURE.md
+  - docs/QUICKSTART.md
+  - docs/CONFIGURATION.md
+  - docs/PROBLEMS.md
+  - docs/ROADMAP.md
+  - docs/CONTRIBUTING.md
+  - docs/CHANGELOG.md
+
+portfolio:
+  - name: ClawHQ
+    relationship: complementary
+    url: https://github.com/simonplant/ClawHQ
+  - name: Easy-Markdown
+    relationship: related
+    url: https://github.com/simonplant/Easy-Markdown
+  - name: GigOS
+    relationship: related
+    url: https://github.com/simonplant/GigOS
+
+author:
+  name: Simon Plant
+  location: "Santa Barbara, CA"
+  status: "Building AI infrastructure tools. Open to roles."
