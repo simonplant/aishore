@@ -54,6 +54,7 @@ jq empty backlog/*.json
 .aishore/aishore clean              # Remove done items from backlogs
 .aishore/aishore clean --dry-run    # Show what would be removed
 .aishore/aishore status             # Show backlog overview and sprint readiness
+.aishore/aishore status --watch    # Live refresh until sprint completes
 .aishore/aishore update             # Update from upstream (checksum-verified)
 .aishore/aishore update --dry-run   # Check for updates without applying
 .aishore/aishore update --force     # Update even if already on latest

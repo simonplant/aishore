@@ -170,6 +170,7 @@ After sprints complete, the Architect agent can review the accumulated changes:
 
 ```bash
 .aishore/aishore status          # Backlog overview and sprint readiness
+.aishore/aishore status --watch  # Live refresh until sprint completes
 .aishore/aishore metrics         # Sprint velocity, pass rates, trends
 .aishore/aishore metrics --json  # Machine-readable metrics
 ```
@@ -212,6 +213,7 @@ All agents automatically read your `CLAUDE.md`, `PRODUCT.md`, and `ARCHITECTURE.
 
 ```bash
 .aishore/aishore backlog add                         # Interactive mode
+.aishore/aishore backlog add --interactive           # Force interactive mode
 .aishore/aishore backlog add --title "..." [flags]   # Non-interactive
 ```
 
@@ -228,6 +230,7 @@ All agents automatically read your `CLAUDE.md`, `PRODUCT.md`, and `ARCHITECTURE.
 | `--ac "text"` | Add acceptance criterion *(repeatable)* | *(none)* |
 | `--ac-verify "cmd"` | Attach verification command to preceding `--ac` | *(none)* |
 | `--depends-on ID` | Add dependency on another item *(repeatable)* | *(none)* |
+| `--interactive` | Force interactive mode (prompted for all fields) | `false` |
 
 IDs are auto-generated: `FEAT-001`, `FEAT-002`, ... or `BUG-001`, `BUG-002`, ...
 
@@ -259,6 +262,7 @@ IDs are auto-generated: `FEAT-001`, `FEAT-002`, ... or `BUG-001`, `BUG-002`, ...
 | `--scope "glob"` | Add scope glob *(repeatable)* |
 | `--clear-scope` | Reset scope to empty |
 | `--depends-on ID` | Add dependency on another item *(repeatable)* |
+| `--clear-depends-on` | Reset dependencies to empty |
 
 Multiple flags can be combined in a single edit command.
 
@@ -292,12 +296,14 @@ Reads your product requirements document (`PRODUCT.md`, `PRD.md`, or `README.md`
 .aishore/aishore backlog history                  # List completed sprint items
 .aishore/aishore backlog history --since 2026-01  # Since date
 .aishore/aishore backlog history --failed         # Only failed items
+.aishore/aishore backlog history --limit 10       # Show only last 10 entries
 ```
 
 | Flag | Description |
 |------|-------------|
 | `--since YYYY-MM-DD` | Show items completed on or after date |
 | `--failed` | Show only items where status != complete |
+| `--limit N` | Show only the last N entries |
 
 ### `init`
 
@@ -367,6 +373,8 @@ Reads your product requirements document (`PRODUCT.md`, `PRD.md`, or `README.md`
 | Command | Description |
 |---------|-------------|
 | `status` | Backlog overview and sprint readiness |
+| `status --watch` | Live refresh until sprint completes or Ctrl-C |
+| `status --watch --interval N` | Set refresh interval in seconds (default: 30) |
 | `metrics` | Sprint velocity, pass rates, trends |
 | `metrics --json` | Machine-readable metrics |
 | `clean` | Remove done items from backlogs |
