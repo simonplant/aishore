@@ -1,29 +1,30 @@
 {
-  "sprintId": "sprint-1774059241",
-  "startedAt": "2026-03-20T19:14:01-07:00",
+  "sprintId": "sprint-1774059421",
+  "startedAt": "2026-03-20T19:17:01-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-040",
-    "title": "Extract run_validated_command() helper — validation execution duplicated 3 times",
-    "intent": "Eliminate the 3 copies of timeout-aware validation command execution (pre-flight, main validation, AC verification) by extracting a single run_validated_command() helper function",
+    "id": "BUG-043",
+    "title": "Decompose _run_retry_loop() into focused sub-functions",
+    "intent": "Break the 167-line _run_retry_loop() into 3-4 focused functions (run_preflight, run_developer_cycle, run_validation_cycle) so each does one thing and is independently testable",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Find all 3 instances of the timeout/bash -c VALIDATE_CMD pattern (pre-flight, main validation, AC verification)",
-      "Extract a run_validated_command() function that takes a label and output file, handles timeout vs gtimeout detection, and runs the command",
-      "Replace all 3 call sites with calls to the new helper",
-      "Run shellcheck and verify no regressions"
+      "Extract run_preflight_validation() — baseline validation before developer runs",
+      "Extract run_developer_cycle() — developer agent invocation with fix command",
+      "Extract run_validation_cycle() — scope check, validation cmd, AC verify, validator agent",
+      "Refactor _run_retry_loop to orchestrate the extracted functions",
+      "Verify sprint execution still works end-to-end"
     ],
     "acceptanceCriteria": [
-      "Only one function contains the timeout-aware bash -c VALIDATE_CMD pattern",
-      "All 3 original call sites use the new helper",
+      "_run_retry_loop is under 60 lines",
+      "Each extracted function has a single clear responsibility",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T19:14:01-07:00",
+    "startedAt": "2026-03-20T19:17:01-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T19:17:00-07:00"
+    "completedAt": "2026-03-20T19:20:20-07:00"
   },
-  "completedAt": "2026-03-20T19:17:00-07:00",
+  "completedAt": "2026-03-20T19:20:20-07:00",
   "attempts": 1
 }
