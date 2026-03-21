@@ -1,32 +1,30 @@
 {
-  "sprintId": "sprint-1774106051",
-  "startedAt": "2026-03-21T08:14:11-07:00",
+  "sprintId": "sprint-1774107267",
+  "startedAt": "2026-03-21T08:34:27-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-067",
-    "title": "Trim groom presentation functions to bare essentials",
-    "intent": "Groom summary and diff output is concise status lines, not rich formatted sections. print_groom_summary and print_groom_diff together shrink from 95 to ~25 lines.",
-    "description": "print_groom_summary (58 lines) renders a multi-section status with priority breakdowns, highlight lists, and conditional messaging. print_groom_diff (37 lines) shows before/after with multiple computed deltas. Replace both with terse one-liner status output: counts before, counts after, delta.",
+    "id": "BUG-081",
+    "title": "backlog history title column always shows '-' — title not stored in archive",
+    "intent": "backlog history shows real item titles. mark_complete archives the title field so history output is human-readable.",
+    "description": "cmd_backlog_history displays a TITLE column and reads .title from sprints.jsonl, but mark_complete never writes a title field to the archive. Every row shows '-'. BUG-037 added the title column to the history output but missed adding title to the archive write in mark_complete.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Replace print_groom_summary with 2-3 log_info lines showing item counts and ready counts",
-      "Replace print_groom_diff with a single line showing ready before/after and items added/skipped",
-      "Remove the has_highlights loop and must_should_total computation from summary",
-      "Verify: groom command still shows meaningful before/after context"
+      "In mark_complete(), fetch the item title from the source backlog file alongside priority and category (extend the single jq call at line 1180 to also extract .title)",
+      "Pass title as --arg to the jq -cn archive write block and include title in the output JSON object",
+      "Verify: run a sprint, then run backlog history and confirm the title column shows the item title"
     ],
     "acceptanceCriteria": [
-      "print_groom_summary is under 15 lines",
-      "print_groom_diff is under 12 lines",
-      "Groom command output includes item counts and ready counts before and after",
+      "mark_complete writes a title field to sprints.jsonl",
+      "backlog history title column shows item titles instead of '-'",
       "shellcheck passes"
     ],
     "scope": [
-      ".aishore/**"
+      ".aishore/aishore"
     ],
-    "startedAt": "2026-03-21T08:14:11-07:00",
+    "startedAt": "2026-03-21T08:34:27-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T08:17:03-07:00"
+    "completedAt": "2026-03-21T08:37:09-07:00"
   },
-  "completedAt": "2026-03-21T08:17:03-07:00",
+  "completedAt": "2026-03-21T08:37:09-07:00",
   "attempts": 1
 }

@@ -1173,14 +1173,15 @@ mark_complete() {
         [[ "$start_epoch" -gt 0 ]] && duration=$(( $(date +%s) - start_epoch ))
     fi
 
-    # Priority and category from source backlog item (single jq call)
-    local item_priority="" item_category=""
+    # Priority, category, and title from source backlog item (single jq call)
+    local item_priority="" item_category="" item_title=""
     if [[ -n "$source" && -f "$BACKLOG_DIR/$source" ]]; then
         local pc_json
-        pc_json=$(jq -r --arg id "$item_id" '.items[] | select(.id == $id) | [(.priority // ""), (.category // "")] | @tsv' "$BACKLOG_DIR/$source" 2>/dev/null || true)
+        pc_json=$(jq -r --arg id "$item_id" '.items[] | select(.id == $id) | [(.priority // ""), (.category // ""), (.title // "")] | @tsv' "$BACKLOG_DIR/$source" 2>/dev/null || true)
         if [[ -n "$pc_json" ]]; then
             item_priority=$(printf '%s' "$pc_json" | cut -f1)
             item_category=$(printf '%s' "$pc_json" | cut -f2)
+            item_title=$(printf '%s' "$pc_json" | cut -f3)
         fi
     fi
 
@@ -1195,7 +1196,8 @@ mark_complete() {
         --argjson duration "$duration" \
         --arg priority "$item_priority" \
         --arg category "$item_category" \
-        '{date: $date, sprintId: $sid, itemId: $iid, status: "complete", attempts: $attempts, filesChanged: $filesChanged, linesAdded: $linesAdded, linesRemoved: $linesRemoved, duration: $duration, priority: (if $priority == "" then null else $priority end), category: (if $category == "" then null else $category end)}' \
+        --arg title "$item_title" \
+        '{date: $date, sprintId: $sid, itemId: $iid, status: "complete", attempts: $attempts, filesChanged: $filesChanged, linesAdded: $linesAdded, linesRemoved: $linesRemoved, duration: $duration, priority: (if $priority == "" then null else $priority end), category: (if $category == "" then null else $category end), title: (if $title == "" then null else $title end)}' \
         >> "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null; then
         log_warning "Failed to append to archive — sprint data is still consistent"
     fi
