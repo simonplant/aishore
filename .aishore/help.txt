@@ -10,7 +10,7 @@ Commands:
     --status <s>    Filter by status (todo, in-progress, done)
     --type <t>      Filter by type (feat, bug)
     --ready         Show only sprint-ready items
-  backlog add       Add a new item (interactive or with flags)
+  backlog add       Add a new item with flags
     --type <t>      Type: feat (default) or bug
     --title "..."   Item title (required)
     --intent "..."  Commander's intent — the non-negotiable directive
@@ -23,7 +23,6 @@ Commands:
     --step "text"   Add implementation step (repeatable, ordered)
     --scope "glob"  Add scope glob (repeatable)
     --depends-on ID Add dependency on another item (repeatable)
-    --interactive   Force interactive mode (prompted for all fields)
   backlog show <ID> Show full detail of one item
   backlog edit <ID> Update fields on an item
     --title, --intent, --desc, --priority, --status, --category, --ready, --no-ready,
