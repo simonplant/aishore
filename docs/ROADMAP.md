@@ -22,7 +22,7 @@ Active work in the current sprint cycle:
 
 - Unified architecture document (`docs/ARCHITECTURE.md`)
 - This roadmap (`docs/ROADMAP.md`)
-- Docs consolidation — move CONTRIBUTING.md and CHANGELOG.md into `docs/`
+- Docs consolidation — move CONTRIBUTING.md into `docs/` (CHANGELOG.md done)
 - Slim README.md to storefront format (problem, solution, quickstart, links)
 
 ## Next
