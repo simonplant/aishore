@@ -3535,7 +3535,7 @@ _status_output() {
     echo ""
     log_subheader "Recent sprints"
     if [[ -f "$sprints_file" ]] && [[ -s "$sprints_file" ]]; then
-        jq -r '"\(.date) \(.itemId) \(.status)"' "$sprints_file" 2>/dev/null | tail -5 | while IFS= read -r line; do
+        jq -r '"\(.date) \(.itemId) \(.status) \((.title // "-") | if length > 40 then .[:40] + "…" else . end)"' "$sprints_file" 2>/dev/null | tail -5 | while IFS= read -r line; do
             echo "  $line"
         done
     else
