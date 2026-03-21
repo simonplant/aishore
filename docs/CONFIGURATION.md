@@ -405,6 +405,7 @@ All `AISHORE_*` environment variables and what they map to:
 
 | Flag | Argument | Description |
 |------|----------|-------------|
+| `--limit` | `N` | Cap session at N successful items then exit cleanly |
 | `--retries` | `N` | Per-item retries on failure (default: `0`) |
 | `--max-failures` | `N` | Circuit breaker: stop after N consecutive failures (default: `5`) |
 | `--no-merge` | — | Keep feature branches; push instead of merging |

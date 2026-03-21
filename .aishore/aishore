@@ -1968,7 +1968,7 @@ cmd_auto() {
     local scope="${1:-}"
 
     if [[ -z "$scope" ]]; then
-        log_error "Usage: auto {done|p0|p1|p2} [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--category <name>] [--auto-review] [--dry-run]"
+        log_error "Usage: auto {done|p0|p1|p2} [--limit N] [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--category <name>] [--auto-review] [--dry-run]"
         echo "" >&2
         echo "Scopes:" >&2
         echo "  done  Drain entire backlog to completion" >&2
@@ -2573,7 +2573,7 @@ cmd_run_parse_args() {
     parse_opts --positional \
         "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:create_pr:--pr" \
         "bool:refine_on_exhaust:--refine" "bool:quick_mode:--quick" "bool:auto_review:--auto-review" \
-        "val:auto_scope:--_auto" "val:category_filter:--category" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" \
+        "val:auto_scope:--_auto" "val:category_filter:--category" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" \
         -- "$@" || return 1
     [[ -n "$auto_scope" ]] && auto_mode=true
     local _arg
@@ -2637,6 +2637,14 @@ setup_sprint_environment() {
     # Resolve max_consecutive_failures: flag > config > default
     [[ -z "$max_consecutive_failures" ]] && max_consecutive_failures="$AUTO_MAX_FAILURES"
 
+    # Validate --limit: must be a positive integer
+    if [[ -n "$session_limit" ]]; then
+        if [[ "$session_limit" -le 0 ]] 2>/dev/null; then
+            log_error "limit must be a positive integer (got: $session_limit)"
+            return 1
+        fi
+    fi
+
     # Auto mode setup
     scope_label=""
     if [[ "$auto_mode" == "true" ]]; then
@@ -2660,6 +2668,7 @@ setup_sprint_environment() {
     else
         echo "Sprints: $count"
     fi
+    [[ -n "$session_limit" ]] && echo "Session limit: $session_limit items"
     [[ -n "$category_filter" ]] && echo "Category: $category_filter"
     [[ "$ISOLATION_MODE" != "stash" ]] && echo "Isolation: $ISOLATION_MODE"
     [[ "$no_merge" == "true" ]] && echo "Merge: disabled (branches kept for review)"
@@ -2910,6 +2919,12 @@ run_sprint_loop() {
         fi
 
         [[ "$auto_mode" == "true" ]] && log_info "Progress: $passed passed, $failed failed, $(_count_total_ready) remaining ready"
+
+        # Session limit: exit cleanly after N successful items
+        if [[ -n "$session_limit" && "$passed" -ge "$session_limit" ]]; then
+            log_success "Session limit reached: $passed items completed"
+            break
+        fi
     done
 }
 
@@ -2986,7 +3001,7 @@ cmd_run() {
     local refine_on_exhaust=false quick_mode=false
     local auto_mode=false auto_scope="" auto_priorities=""
     local auto_review=false max_consecutive_failures=""
-    local category_filter=""
+    local category_filter="" session_limit=""
 
     cmd_run_parse_args "$@" || return $?
 
