@@ -228,3 +228,4 @@
 {"date":"2026-03-21","sprintId":"sprint-1774114120","itemId":"FEAT-031","status":"complete","attempts":1,"filesChanged":5,"linesAdded":5,"linesRemoved":7,"duration":342,"priority":"should","category":null}
 {"date":"2026-03-21","sprintId":"sprint-1774114839","itemId":"FEAT-033","status":"complete","attempts":1,"filesChanged":2,"linesAdded":1,"linesRemoved":1,"duration":154,"priority":"should","category":null}
 {"date":"2026-03-21","sprintId":"sprint-1774114994","itemId":"FEAT-034","status":"complete","attempts":1,"filesChanged":4,"linesAdded":2,"linesRemoved":8,"duration":425,"priority":"should","category":null}
+{"date":"2026-03-21","sprintId":"sprint-1774115420","itemId":"BUG-093","status":"complete","attempts":1,"filesChanged":2,"linesAdded":1,"linesRemoved":2,"duration":124,"priority":"must","category":null}

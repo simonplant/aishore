@@ -2717,7 +2717,6 @@ setup_sprint_environment() {
         if [[ "$did_stash" == "true" ]]; then
             git stash pop >/dev/null 2>&1 || true
         fi
-        release_lock
         return 1
     fi
 }
