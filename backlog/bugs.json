@@ -3514,11 +3514,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Straightforward maintenance item. VERSION change triggers checksums regeneration. Changelog entries follow the established format in [0.3.6].",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T13:34:19-07:00"
     }
   ]
 }
