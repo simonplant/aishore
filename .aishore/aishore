@@ -57,6 +57,14 @@ ensure_tmpdir() {
     printf '%s\n' "$AISHORE_TMPDIR"
 }
 
+reverse_lines() {
+    if command -v tac &>/dev/null; then
+        tac
+    else
+        awk '{lines[NR]=$0} END{for(i=NR;i>=1;i--) print lines[i]}'
+    fi
+}
+
 # ============================================================================
 # PATHS
 # ============================================================================
@@ -4687,12 +4695,14 @@ cmd_backlog_history() {
 
     if [[ "$all" == "true" ]]; then
         jq -r '[.itemId // "-", .date // "-", .status // "-", (if (.duration // 0) > 0 then (if .duration >= 60 then "\(.duration / 60 | floor)m \(.duration % 60)s" else "\(.duration)s" end) else "-" end), .title // "-"] | @tsv' "$sprints_file" | \
+            reverse_lines | \
             while IFS=$'\t' read -r id date status duration title; do
                 printf "%-12s %-12s %-10s %-10s %s\n" "$id" "$date" "$status" "$duration" "$title"
             done
     else
         jq -r '[.itemId // "-", .date // "-", .status // "-", (if (.duration // 0) > 0 then (if .duration >= 60 then "\(.duration / 60 | floor)m \(.duration % 60)s" else "\(.duration)s" end) else "-" end), .title // "-"] | @tsv' "$sprints_file" | \
             tail -n "$limit" | \
+            reverse_lines | \
             while IFS=$'\t' read -r id date status duration title; do
                 printf "%-12s %-12s %-10s %-10s %s\n" "$id" "$date" "$status" "$duration" "$title"
             done
