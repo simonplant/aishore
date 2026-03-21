@@ -1,36 +1,27 @@
 {
-  "sprintId": "sprint-1774058761",
-  "startedAt": "2026-03-20T19:06:01-07:00",
+  "sprintId": "sprint-1774058933",
+  "startedAt": "2026-03-20T19:08:53-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-019",
-    "title": "Move CONTRIBUTING.md to docs/CONTRIBUTING.md and update references",
-    "intent": "All documentation must live in docs/ for consistency — a contributor looking in docs/ must find contribution guidelines there, not hunt at the repo root.",
-    "description": "CONTRIBUTING.md exists at repo root with complete content: Development Setup, Requirements, Code Style (bash conventions + naming table), Linting and Testing (shellcheck, syntax check, smoke test, JSON validation, checksums), Pull Request Process, Commit Convention table, Architecture section, and CLA. The move is straightforward: relocate the file, replace the inline Architecture section with a link to docs/ARCHITECTURE.md (FEAT-014), and add a section on agent prompt authoring (how to modify files in .aishore/agents/ and test prompt changes). Update any references to CONTRIBUTING.md in README.md and other files to point to the new location. GitHub will still find CONTRIBUTING.md via the docs/ path for its contributing prompt.",
+    "id": "FEAT-026",
+    "title": "Add intent semantics to base developer and validator agent prompts",
+    "intent": "Add a one-sentence explanation of intent as the north-star tie-breaker directly in developer.md and validator.md so agent prompts are self-contained even without orchestrator injection",
+    "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Move CONTRIBUTING.md to docs/CONTRIBUTING.md",
-      "In docs/CONTRIBUTING.md, replace the inline Architecture section with a link: 'See [ARCHITECTURE.md](ARCHITECTURE.md) for system architecture and design decisions'",
-      "Add a new section 'Agent Prompt Authoring' explaining how to modify .aishore/agents/*.md files, what each agent file controls, and how to test prompt changes",
-      "Search all files for references to CONTRIBUTING.md and update paths to docs/CONTRIBUTING.md",
-      "Verify README.md Contributing section links to docs/CONTRIBUTING.md"
+      "Add to developer.md: when implementation and AC conflict, intent wins",
+      "Add to validator.md: verify intent fulfillment, not just mechanical AC pass",
+      "Keep additions minimal — one sentence each, not duplicating the orchestrator injection"
     ],
     "acceptanceCriteria": [
-      "docs/CONTRIBUTING.md exists with all original content preserved",
-      "CONTRIBUTING.md no longer exists at repo root",
-      "The inline Architecture section is replaced with a link to docs/ARCHITECTURE.md",
-      "An Agent Prompt Authoring section exists explaining how to modify agent files",
-      "All references to CONTRIBUTING.md across the repo point to docs/CONTRIBUTING.md"
+      "developer.md contains guidance about intent being the north star",
+      "validator.md contains guidance about verifying intent beyond AC"
     ],
-    "scope": [
-      "CONTRIBUTING.md",
-      "docs/CONTRIBUTING.md",
-      "README.md"
-    ],
-    "startedAt": "2026-03-20T19:06:01-07:00",
+    "scope": [],
+    "startedAt": "2026-03-20T19:08:53-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T19:08:52-07:00"
+    "completedAt": "2026-03-20T19:11:10-07:00"
   },
-  "completedAt": "2026-03-20T19:08:52-07:00",
+  "completedAt": "2026-03-20T19:11:10-07:00",
   "attempts": 1
 }
