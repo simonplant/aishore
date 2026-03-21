@@ -918,10 +918,6 @@ remove_items_by_status() {
 create_sprint() {
     local item_json="$1"
     local source="$2"
-    local item_id
-    item_id=$(echo "$item_json" | jq -r '.id')
-    local title
-    title=$(echo "$item_json" | jq -r '.title // .description')
     local now
     now=$(date -Iseconds)
 
@@ -930,34 +926,28 @@ create_sprint() {
     jq -n \
         --arg sprintId "sprint-$(date +%s)" \
         --arg startedAt "$now" \
-        --arg itemId "$item_id" \
-        --arg title "$title" \
         --arg source "$source" \
-        --argjson intent "$(echo "$item_json" | jq '.intent // null')" \
-        --argjson desc "$(echo "$item_json" | jq '.description // null')" \
-        --argjson steps "$(echo "$item_json" | jq '.steps // []')" \
-        --argjson ac "$(echo "$item_json" | jq '.acceptanceCriteria // []')" \
-        --argjson scope "$(echo "$item_json" | jq '.scope // []')" \
+        --argjson item "$item_json" \
         '{
             sprintId: $sprintId,
             startedAt: $startedAt,
             status: "in_progress",
             item: {
-                id: $itemId,
-                title: $title,
-                intent: $intent,
-                description: $desc,
+                id: $item.id,
+                title: ($item.title // $item.description),
+                intent: ($item.intent // null),
+                description: ($item.description // null),
                 sourceBacklog: $source,
-                steps: $steps,
-                acceptanceCriteria: $ac,
-                scope: $scope,
+                steps: ($item.steps // []),
+                acceptanceCriteria: ($item.acceptanceCriteria // []),
+                scope: ($item.scope // []),
                 startedAt: $startedAt
             }
         }' > "$tmp_sprint"
     mv "$tmp_sprint" "$BACKLOG_DIR/sprint.json"
 
-    ITEM_ID="$item_id"
-    log_info "Sprint created: $item_id - $title"
+    ITEM_ID=$(jq -r '.item.id' "$BACKLOG_DIR/sprint.json")
+    log_info "Sprint created: $ITEM_ID - $(jq -r '.item.title' "$BACKLOG_DIR/sprint.json")"
 }
 
 mark_complete() {
@@ -1015,11 +1005,15 @@ mark_complete() {
         [[ "$start_epoch" -gt 0 ]] && duration=$(( $(date +%s) - start_epoch ))
     fi
 
-    # Priority and category from source backlog item
+    # Priority and category from source backlog item (single jq call)
     local item_priority="" item_category=""
     if [[ -n "$source" && -f "$BACKLOG_DIR/$source" ]]; then
-        item_priority=$(jq -r --arg id "$item_id" '.items[] | select(.id == $id) | .priority // ""' "$BACKLOG_DIR/$source" 2>/dev/null || true)
-        item_category=$(jq -r --arg id "$item_id" '.items[] | select(.id == $id) | .category // ""' "$BACKLOG_DIR/$source" 2>/dev/null || true)
+        local pc_json
+        pc_json=$(jq -r --arg id "$item_id" '.items[] | select(.id == $id) | [(.priority // ""), (.category // "")] | @tsv' "$BACKLOG_DIR/$source" 2>/dev/null || true)
+        if [[ -n "$pc_json" ]]; then
+            item_priority=$(printf '%s' "$pc_json" | cut -f1)
+            item_category=$(printf '%s' "$pc_json" | cut -f2)
+        fi
     fi
 
     if ! jq -cn \
