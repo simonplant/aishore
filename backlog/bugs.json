@@ -998,11 +998,12 @@
         ".aishore/aishore"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Real portability bug: md5sum is GNU-only. macOS users get silent failure in the groom progress monitor. The fix is the same portability pattern already used in verify_checksum(). Priority should — macOS is a primary development platform for Claude Code users."
+      "groomingNotes": "Real portability bug: md5sum is GNU-only. macOS users get silent failure in the groom progress monitor. The fix is the same portability pattern already used in verify_checksum(). Priority should — macOS is a primary development platform for Claude Code users.",
+      "completedAt": "2026-03-20T18:29:45-07:00"
     },
     {
       "id": "BUG-039",
