@@ -1,31 +1,29 @@
 {
-  "sprintId": "sprint-1774119097",
-  "startedAt": "2026-03-21T11:51:37-07:00",
+  "sprintId": "sprint-1774119225",
+  "startedAt": "2026-03-21T11:53:45-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-103",
-    "title": "protect_items_from_groom and enforce_groom_limits write directly to live backlog — no atomic swap",
-    "intent": "All backlog file writes in groom protection and limit enforcement must be atomic; direct truncating writes must be replaced with temp-file-then-mv",
+    "id": "BUG-101",
+    "title": "GROOM_MONITOR=true run_agent sets global shell var — bleeds into developer agents",
+    "intent": "GROOM_MONITOR must not persist beyond groom agents; developer and validator must run with GROOM_MONITOR unset",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Locate direct write in protect_items_from_groom: sed '$d' <<< \"$output\" > \"$live_file\" (line ~3172)",
-      "Locate direct write in enforce_groom_limits: printf '%s\\n' \"$tmp\" > \"$live_file\" (line ~3238)",
-      "Compare with update_item which correctly uses: jq ... > tmpfile && mv tmpfile live_file",
-      "Fix protect_items_from_groom: write to a temp file via ensure_tmpdir, then mv atomically to live_file; ensure sed failure leaves live_file intact",
-      "Fix enforce_groom_limits: same pattern — write jq output to temp file, mv to live_file; ensure jq failure leaves live_file intact",
-      "Run shellcheck — confirm zero new warnings"
+      "Understand that VAR=val shell_function sets VAR globally in current bash shell (unlike external commands)",
+      "Confirm: after auto-groom in run_sprint_loop (lines 2804/2806), GROOM_MONITOR=true persists into subsequent run_agent calls for developer and validator",
+      "Fix by adding an explicit reset after each groom run_agent call: add GROOM_MONITOR= on the line immediately after each GROOM_MONITOR=true run_agent invocation (lines 2804, 2806, 3271)",
+      "Confirm run_groom_flow (line 3271) has the same issue and apply the same fix there",
+      "Run shellcheck on .aishore/aishore — confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "If jq or sed returns non-zero in either function, the live backlog file is unchanged (not truncated or partially written)",
-      "Normal groom flow still completes successfully: items are protected and limits enforced correctly",
+      "After auto-groom runs in a multi-sprint session, developer and validator agent log output contains no backlog monitoring progress messages (no 'updated — N items' lines from _check_groom_progress)",
       "shellcheck reports no new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T11:51:37-07:00",
+    "startedAt": "2026-03-21T11:53:45-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T11:53:43-07:00"
+    "completedAt": "2026-03-21T11:55:48-07:00"
   },
-  "completedAt": "2026-03-21T11:53:43-07:00",
+  "completedAt": "2026-03-21T11:55:48-07:00",
   "attempts": 1
 }
