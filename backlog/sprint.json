@@ -1,38 +1,32 @@
 {
-  "sprintId": "sprint-1774105867",
-  "startedAt": "2026-03-21T08:11:07-07:00",
+  "sprintId": "sprint-1774106051",
+  "startedAt": "2026-03-21T08:14:11-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-021",
-    "title": "Slim README.md to storefront format — problem, solution, quickstart, links",
-    "intent": "The README must sell the project in 60 seconds — everything else belongs in docs/. A 500-line README is a wall, not a welcome mat.",
-    "description": "The current README.md is approximately 500 lines and contains content that belongs in 4 different docs/ files. After FEAT-014 through FEAT-020 create the destination files, the README must be cut to storefront format: badges, one-sentence pitch, one-paragraph description, The Problem (2-3 sentences from 'Why aishore?'), Quick Start (install + first sprint — 3 steps max, link to docs/QUICKSTART.md), How It Works (1 paragraph + pipeline diagram, link to docs/ARCHITECTURE.md), Status (honest alpha/beta/stable + what works/doesn't), Links section (all docs/ files with one-line descriptions), Author section (name, what you're building, open to roles). Remove entirely: How It Works detail, The Workflow, Autonomous Mode, Agent Roles table, Complete Flag Reference, Item Schema, Project Structure, Configuration section, Requirements, Keeping Updated. All of this content will already exist in docs/ files.",
-    "sourceBacklog": "backlog.json",
+    "id": "BUG-067",
+    "title": "Trim groom presentation functions to bare essentials",
+    "intent": "Groom summary and diff output is concise status lines, not rich formatted sections. print_groom_summary and print_groom_diff together shrink from 95 to ~25 lines.",
+    "description": "print_groom_summary (58 lines) renders a multi-section status with priority breakdowns, highlight lists, and conditional messaging. print_groom_diff (37 lines) shows before/after with multiple computed deltas. Replace both with terse one-liner status output: counts before, counts after, delta.",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "Verify that docs/ARCHITECTURE.md, docs/QUICKSTART.md, docs/CONFIGURATION.md, docs/PROBLEMS.md, docs/CONTRIBUTING.md, and docs/CHANGELOG.md all exist (dependencies must be complete)",
-      "Keep in README.md: badges, opening tagline and paragraph, the flow diagram (You: define intent → aishore develops → You: review), 'Why aishore?' condensed to 2-3 sentences",
-      "Keep in README.md: Quick Start section but trim to just: install one-liner, init command, first sprint 3-step block, then 'See [full quickstart](docs/QUICKSTART.md)' link",
-      "Keep in README.md: How It Works but trim to 1 paragraph + the pipeline ASCII diagram + link to docs/ARCHITECTURE.md",
-      "Add a Status section: current version, stability level, what works well, what's rough",
-      "Add a Links section listing every docs/ file with a one-line description",
-      "Add an Author section: Simon Plant, building AI infrastructure tools, open to roles, GitHub/Twitter links",
-      "Remove entirely: The Workflow (4 subsections), Autonomous Mode, Agent Roles table, Complete Flag Reference (all subcommand flag tables), Item Schema, Project Structure, Configuration (config.yaml + env var table), Requirements, Keeping Updated",
-      "Verify all removed content has a home in a docs/ file — nothing should be lost, only relocated"
+      "Replace print_groom_summary with 2-3 log_info lines showing item counts and ready counts",
+      "Replace print_groom_diff with a single line showing ready before/after and items added/skipped",
+      "Remove the has_highlights loop and must_should_total computation from summary",
+      "Verify: groom command still shows meaningful before/after context"
     ],
     "acceptanceCriteria": [
-      "README.md is under 120 lines (currently ~500)",
-      "README.md contains only: badges, pitch, problem statement, quick start (abbreviated), how it works (abbreviated), status, links to docs/, author section",
-      "Every section removed from README.md has a corresponding docs/ file that contains the content",
-      "No content is lost — everything is either in README.md or linked from it via docs/",
-      "README.md links section includes: Architecture, Quickstart, Configuration, Problems, Roadmap, Contributing, Changelog"
+      "print_groom_summary is under 15 lines",
+      "print_groom_diff is under 12 lines",
+      "Groom command output includes item counts and ready counts before and after",
+      "shellcheck passes"
     ],
     "scope": [
-      "README.md"
+      ".aishore/**"
     ],
-    "startedAt": "2026-03-21T08:11:07-07:00",
+    "startedAt": "2026-03-21T08:14:11-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T08:14:09-07:00"
+    "completedAt": "2026-03-21T08:17:03-07:00"
   },
-  "completedAt": "2026-03-21T08:14:09-07:00",
+  "completedAt": "2026-03-21T08:17:03-07:00",
   "attempts": 1
 }
