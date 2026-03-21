@@ -1,31 +1,31 @@
 {
-  "sprintId": "sprint-1774126781",
-  "startedAt": "2026-03-21T13:59:41-07:00",
+  "sprintId": "sprint-1774126940",
+  "startedAt": "2026-03-21T14:02:20-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-124",
-    "title": "backlog add --ready silently skips readiness gate warnings that backlog edit --ready runs",
-    "intent": "When creating an item with --ready, readiness gate warnings must be shown exactly as they are when using 'backlog edit <ID> --ready', so users get immediate feedback instead of a silent gotcha.",
-    "description": "cmd_backlog_edit runs check_readiness_gates after setting readyForSprint=true via --ready, printing warnings if gates fail (while still allowing the operation). cmd_backlog_add has no equivalent check. A user who adds an item with --ready and no steps, no AC, or no intent sees 'Created BUG-XXX' with no indication that the item will fail 'backlog check'. This is inconsistent with 'backlog edit' and BUG-100 behavior — once auto warns on skipped items, users need to know at add-time too.",
+    "id": "BUG-125",
+    "title": "auto progress denominator goes stale after auto-groom adds new items mid-session",
+    "intent": "The progress counter denominator must reflect the actual number of items available for the session at the time of display, not a snapshot taken at session start that becomes wrong after auto-groom fires.",
+    "description": "setup_sprint_environment() builds queued_ids once before the sprint loop via list_pickable_ids(). The progress line 'X/${#queued_ids[@]} complete' uses this pre-session count as denominator. When auto-groom fires mid-session (ready < AUTO_GROOM_THRESHOLD), it can add new items to the backlog. These new items are picked by pick_item() in subsequent loops (since pick_item queries the live backlog), but they were never added to queued_ids. The denominator stays fixed, so passed can exceed it (e.g. '6/5 complete') or the denominator is just misleading. The fix is to recompute display_total from list_pickable_ids(skip_list) after groom completes, so the denominator always reflects current reality.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "After log_success 'Created $new_id' in cmd_backlog_add, check if ready==true",
-      "If ready is true, call check_readiness_gates \"$new_id\" and capture warnings",
-      "If gates fail, print the same warning format as cmd_backlog_edit: 'log_warning \"Readiness warnings for $new_id:\"; printf '%b\\n' \"$gates_warnings\"'",
-      "Do not block item creation — warnings are advisory, matching edit behavior",
+      "After auto-groom runs in the sprint loop (the block around line 2870-2883), call list_pickable_ids with the current skip_list and priority filter to get updated_ids",
+      "Append any IDs in updated_ids that are not already in queued_ids (or not in skipped_ids/completed) to queued_ids",
+      "Recompute display_total from the updated queued_ids length (already capped by session_limit)",
+      "Verify: a session that auto-grooms shows accurate denominator after groom adds new items",
       "Run shellcheck — zero new warnings"
     ],
     "acceptanceCriteria": [
-      "Running 'backlog add --title X --ready' with no steps or AC prints readiness warnings after the Created success message",
-      "Running 'backlog add --title X --ready' with valid steps, AC, and intent prints no readiness warnings",
-      "Item is still created in both cases — warnings do not block creation",
+      "When auto-groom fires and adds 3 new items during a session, the progress denominator increases to include them",
+      "passed never exceeds display_total during a normal session",
+      "session_limit cap is still respected: display_total does not exceed session_limit when one is set",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T13:59:41-07:00",
+    "startedAt": "2026-03-21T14:02:20-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T14:02:19-07:00"
+    "completedAt": "2026-03-21T14:07:54-07:00"
   },
-  "completedAt": "2026-03-21T14:02:19-07:00",
+  "completedAt": "2026-03-21T14:07:54-07:00",
   "attempts": 1
 }

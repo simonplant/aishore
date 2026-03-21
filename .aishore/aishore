@@ -2889,6 +2889,28 @@ run_sprint_loop() {
                     log_warning "Groom did not produce new ready items — pausing auto-groom"
                     groom_exhausted=true
                 fi
+                # Refresh queued_ids so progress denominator reflects newly groomed items
+                local -a _skip_for_refresh=()
+                for _k in "${!FAILED_IDS[@]}"; do _skip_for_refresh+=("$_k"); done
+                for _k in "${!COMPLETED_IDS[@]}"; do _skip_for_refresh+=("$_k"); done
+                local _refresh_skip
+                _refresh_skip=$(IFS=,; printf '%s' "${_skip_for_refresh[*]}")
+                local -a _updated_ids
+                mapfile -t _updated_ids < <(list_pickable_ids "$_refresh_skip" "$auto_priorities" "$category_filter")
+                local _uid
+                for _uid in "${_updated_ids[@]}"; do
+                    local _already_queued=false
+                    local _qid
+                    for _qid in "${queued_ids[@]}"; do
+                        if [[ "$_qid" == "$_uid" ]]; then
+                            _already_queued=true
+                            break
+                        fi
+                    done
+                    if [[ "$_already_queued" == "false" ]]; then
+                        queued_ids+=("$_uid")
+                    fi
+                done
             fi
         fi
 
