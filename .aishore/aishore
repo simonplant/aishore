@@ -118,6 +118,13 @@ CFG_PERMS_REVIEWER=""
 # Shared constants
 BACKLOG_FILES=("backlog.json" "bugs.json")
 ITEM_PROJECTION='{id, title, intent, description, steps, acceptanceCriteria, priority, scope, status: (.status // "todo"), passes: (.passes // false)}'
+# Shared jq filter for pickable items — used by pick_item() and list_pickable_ids()
+# Expects $skip (JSON array of IDs to skip) and $done_ids (JSON array of completed IDs)
+PICKABLE_ITEMS_FILTER='[.items[] |
+            select(.readyForSprint == true and (.passes == false or .passes == null) and (.status == "todo" or .status == null)) |
+            select(.intent != null and .intent != "" and (.intent | length) >= 20) |
+            select(.id as $id | $skip | index($id) | not) |
+            select(.dependsOn == null or (.dependsOn | length == 0) or (.id as $self | .dependsOn | all(. != $self) and all(. as $dep | $done_ids | index($dep) != null)))]'
 
 # ============================================================================
 # COLORS & LOGGING (inlined from common.sh)
@@ -500,13 +507,8 @@ pick_item() {
     # Auto-pick: highest priority ready item (excluding failed items and unmet dependencies)
     for backlog in "${BACKLOG_FILES[@]}"; do
         item_json=$(jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" '
-            [.items[] |
-            select(.readyForSprint == true and (.passes == false or .passes == null) and (.status == "todo" or .status == null)) |
-            select(.intent != null and .intent != "" and (.intent | length) >= 20) |
-            select(.id as $id | $skip | index($id) | not) |
-            select(.dependsOn == null or (.dependsOn | length == 0) or (.id as $self | .dependsOn | all(. != $self) and all(. as $dep | $done_ids | index($dep) != null))) |
-            . + {_priorityOrder: (if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end)}] |
-            sort_by(._priorityOrder) |
+            '"$PICKABLE_ITEMS_FILTER"' |
+            sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end) |
             first |
             if . then '"$ITEM_PROJECTION"' else empty end
         ' "$BACKLOG_DIR/$backlog" 2>/dev/null)
@@ -738,12 +740,8 @@ list_pickable_ids() {
     done_ids_json=$(collect_done_ids)
     for backlog in "${BACKLOG_FILES[@]}"; do
         jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --argjson prios "$prio_json" '
-            [.items[] |
-            select(.readyForSprint == true and (.passes == false or .passes == null) and (.status == "todo" or .status == null)) |
-            select(.intent != null and .intent != "" and (.intent | length) >= 20) |
-            select(.id as $id | $skip | index($id) | not) |
-            select(.dependsOn == null or (.dependsOn | length == 0) or (.id as $self | .dependsOn | all(. != $self) and all(. as $dep | $done_ids | index($dep) != null))) |
-            select(($prios | length) == 0 or (.priority // "should") as $p | $prios | index($p) != null)] |
+            '"$PICKABLE_ITEMS_FILTER"' |
+            [.[] | select(($prios | length) == 0 or (.priority // "should") as $p | $prios | index($p) != null)] |
             sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end) |
             .[].id
         ' "$BACKLOG_DIR/$backlog" 2>/dev/null || true
