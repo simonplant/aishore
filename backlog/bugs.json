@@ -1624,28 +1624,35 @@
         ".aishore/**"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-20T19:52:23-07:00"
     },
     {
       "id": "BUG-064",
       "title": "Simplify AC and step accumulation in backlog add and edit",
-      "intent": "Array-building logic for AC, steps, scope, and depends-on is simplified. The pending_ac flush pattern is eliminated. Both add and edit lose ~30 lines of accumulation boilerplate.",
-      "description": "Both cmd_backlog_add and cmd_backlog_edit use a complex pending_ac/flush pattern to pair --ac with optional --ac-verify. This adds ~30 lines of state management. Simplify: always push immediately on --ac, and on --ac-verify modify the last entry. Same external behavior, less code.",
+      "intent": "All array-building in backlog add and edit uses shared helpers. The pending_ac flush pattern, manual AC JSON string-cat, and triplicated scope/steps/deps append blocks are eliminated. Saves ~50 lines combined.",
+      "description": "Three patterns need fixing: (1) pending_ac/flush state machine for --ac/--ac-verify pairing — simplify to push-immediately-on-ac, modify-last-on-ac-verify. (2) AC JSON array built by manual string concatenation (10 identical lines in both add and edit) — extract _build_ac_json helper. (3) Three identical scope/steps/deps append blocks in edit (23 lines) each doing the same if-gt-0/printf/jq-R/jq-s/jq_updates pattern — extract _append_array_field helper. Also remove update_desc tracking from edit (14 lines of string concatenation for a cosmetic log message).",
       "priority": "should",
       "category": null,
       "steps": [
-        "Refactor --ac handling to push immediately to ac_entries array",
-        "Refactor --ac-verify to modify the last entry in ac_entries instead of using pending_ac",
-        "Remove all pending_ac variables and flush logic from both add and edit",
-        "Verify: add and edit with --ac and --ac-verify flags produce identical JSON"
+        "Extract _build_ac_json helper that converts ac_entries array to JSON array string",
+        "Replace manual AC string-cat in cmd_backlog_add with _build_ac_json call",
+        "Replace manual AC string-cat in cmd_backlog_edit with _build_ac_json call",
+        "Extract _append_array_field helper: takes field name, bash array, and jq update expression",
+        "Replace the 3 scope/steps/deps append blocks in cmd_backlog_edit with _append_array_field calls",
+        "Refactor --ac to push immediately; --ac-verify modifies last entry; remove pending_ac",
+        "Remove update_desc tracking from cmd_backlog_edit; simplify success message to Updated ID",
+        "Verify: add and edit with all flag combinations produce identical JSON output"
       ],
       "acceptanceCriteria": [
         "No pending_ac variable exists in the script",
-        "backlog add with --ac text --ac-verify cmd produces {text, verify} object",
-        "backlog add with --ac text alone produces plain string",
-        "backlog edit --ac and --ac-verify work identically to before",
+        "No manual AC JSON string concatenation (first=true loop pattern) exists in the script",
+        "A shared _build_ac_json helper is used by both add and edit",
+        "A shared _append_array_field helper replaces the 3 identical blocks in edit",
+        "backlog add with --ac and --ac-verify produces correct JSON",
+        "backlog edit with --ac, --step, --scope, --depends-on produces correct JSON",
         "shellcheck passes"
       ],
       "scope": [
@@ -1798,18 +1805,21 @@
       "id": "BUG-070",
       "title": "Consolidate three merge strategies into parameterized flow",
       "intent": "The merge/squash/no-merge paths in _handle_sprint_success share one code flow with a branch only on the merge command itself. Saves ~40 lines of duplicated checkout/push/pull logic.",
-      "description": "_handle_sprint_success has three near-identical code blocks for merge, squash, and no-merge strategies. All three: checkout base, run a merge variant, delete branch, push, pull. The only difference is the git merge command and commit message. Parameterize into: (1) no-merge early return with push, (2) single merge path that picks --no-ff or --squash based on MERGE_STRATEGY.",
+      "description": "_handle_sprint_success has three near-identical code blocks for merge, squash, and no-merge. The remote sync block (push + pull + warning) is duplicated verbatim between squash (lines 2132-2138) and no-ff (lines 2162-2168). The merge_msg if/else (lines 2146-2150) is collapsible to one expression. Safety-commit message pattern is also repeated. Parameterize into: (1) no-merge early return with push and optional PR, (2) single merge path that branches only on the git merge command, (3) shared _sync_remote helper for push+pull.",
       "priority": "should",
       "category": null,
       "steps": [
-        "Extract common post-merge logic (push, pull, branch cleanup) into shared code",
-        "Branch only on the merge command: git merge --no-ff vs git merge --squash",
-        "Handle squash commit message separately (squash needs explicit commit)",
-        "Keep no-merge as an early return with push and optional PR creation",
+        "Extract _sync_remote helper: git push + git pull with warnings — used by both merge paths",
+        "Collapse merge_msg if/else to: merge_msg=merge: ITEM_ID dollar{merge_summary:-sprint branch}",
+        "Parameterize merge: single path that runs git merge --no-ff or git merge --squash based on MERGE_STRATEGY",
+        "Handle squash-specific explicit commit after merge --squash",
+        "Keep no-merge as early return with push and optional PR creation",
         "Verify: all three strategies produce identical git history as before"
       ],
       "acceptanceCriteria": [
+        "A _sync_remote helper exists and is called by both merge paths",
         "No duplicated push/pull/cleanup code between merge strategies",
+        "merge_msg construction is a single expression, not an if/else block",
         "MERGE_STRATEGY=merge produces --no-ff merge commit",
         "MERGE_STRATEGY=squash produces squash commit",
         "no-merge flag pushes branch and skips merge",

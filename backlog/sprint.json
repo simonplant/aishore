@@ -1,35 +1,34 @@
 {
-  "sprintId": "sprint-1774060945",
-  "startedAt": "2026-03-20T19:42:25-07:00",
+  "sprintId": "sprint-1774061365",
+  "startedAt": "2026-03-20T19:49:25-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-062",
-    "title": "Move populate-mode docs and claudemd snippet to files",
-    "intent": "Static documentation blocks are read from files, not constructed as bash string literals. build_agent_prompt loses ~90 lines of inline text.",
-    "description": "build_agent_prompt has ~74 lines of populate-mode documentation inlined as a bash string. get_claudemd_snippet has 15 lines. Move populate docs to the end of agents/product-owner.md (gated by a section header the orchestrator includes only in populate mode). Move claudemd snippet to templates/claude-section.md. Both become cat calls.",
+    "id": "BUG-063",
+    "title": "Remove interactive mode from backlog add",
+    "intent": "cmd_backlog_add only accepts flags, no interactive TUI. The function loses ~105 lines. All existing flag-based usage is unchanged.",
+    "description": "cmd_backlog_add has ~105 lines of interactive echo/read prompts and a confirmation dialog. This tool is used primarily by AI agents via flags. Remove the interactive code path entirely. When --title is missing, print a usage error with an example command instead of launching a TUI.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Append populate-mode documentation to .aishore/agents/product-owner.md under a clear section header",
-      "Update build_agent_prompt to conditionally include the populate section from the prompt file instead of injecting it",
-      "Extract get_claudemd_snippet heredoc to .aishore/templates/claude-section.md",
-      "Replace get_claudemd_snippet body with cat of the template file",
-      "Update checksums.sha256",
-      "Verify: run a dry-run with populate mode and confirm prompt content is identical"
+      "Remove the interactive mode block (lines checking for missing title and -t 0, through the confirmation dialog)",
+      "When title is missing, print a concise usage error with one example and exit 1",
+      "Remove the interactive flag from arg parsing",
+      "Update cmd_help to remove interactive from backlog add docs",
+      "Verify: .aishore/aishore backlog add with title and type flags still works"
     ],
     "acceptanceCriteria": [
-      "Zero lines of populate documentation exist as bash string literals in aishore",
-      "product-owner.md contains the populate-mode guidance",
-      "templates/claude-section.md exists and get_claudemd_snippet reads it",
-      "Dry-run developer prompt output is unchanged",
-      "shellcheck .aishore/aishore passes"
+      "cmd_backlog_add contains zero interactive read calls",
+      "The interactive flag is not accepted",
+      "Missing title prints a usage error with example, not a prompt",
+      "All flag-based add commands work identically to before",
+      "shellcheck passes"
     ],
     "scope": [
       ".aishore/**"
     ],
-    "startedAt": "2026-03-20T19:42:25-07:00",
+    "startedAt": "2026-03-20T19:49:25-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T19:49:23-07:00"
+    "completedAt": "2026-03-20T19:52:23-07:00"
   },
-  "completedAt": "2026-03-20T19:49:23-07:00",
+  "completedAt": "2026-03-20T19:52:23-07:00",
   "attempts": 1
 }
