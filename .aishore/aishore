@@ -4623,6 +4623,15 @@ cmd_backlog_add() {
     fi
 
     log_success "Created $new_id: $title"
+
+    # Run readiness gates when setting --ready (warn but don't block)
+    if [[ "$ready" == "true" ]]; then
+        local gates_warnings
+        if ! gates_warnings=$(check_readiness_gates "$new_id"); then
+            log_warning "Readiness warnings for $new_id:"
+            printf '%b\n' "$gates_warnings"
+        fi
+    fi
 }
 
 cmd_backlog_show() {
