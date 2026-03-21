@@ -1,31 +1,29 @@
 {
-  "sprintId": "sprint-1774059622",
-  "startedAt": "2026-03-20T19:20:22-07:00",
+  "sprintId": "sprint-1774060041",
+  "startedAt": "2026-03-20T19:27:21-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-044",
-    "title": "Decompose cmd_run() into focused sub-functions",
-    "intent": "Break the 477-line cmd_run() into 5-6 focused functions separating arg parsing, git operations, sprint loop, auto-groom logic, and summary reporting",
+    "id": "BUG-045",
+    "title": "Consolidate duplicate item filtering logic between pick_item() and list_pickable_ids()",
+    "intent": "Eliminate the 95% overlapping jq filters in pick_item() and list_pickable_ids() by extracting a shared pickable-items jq filter or helper function",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Extract cmd_run_parse_args() for option parsing",
-      "Extract setup_sprint_environment() for lock, stash, worktree, config loading",
-      "Extract run_sprint_loop() for the core pick-implement-validate-merge cycle",
-      "Extract print_sprint_summary() for end-of-run reporting",
-      "Refactor cmd_run to orchestrate the extracted functions",
-      "Verify sprint execution still works end-to-end"
+      "Compare the jq filters in pick_item() and list_pickable_ids() to identify exact overlap",
+      "Extract a shared jq filter variable or helper function for pickable item selection",
+      "Refactor both functions to use the shared filter",
+      "Verify item picking still works correctly with dependencies and priority ordering"
     ],
     "acceptanceCriteria": [
-      "cmd_run is under 80 lines",
-      "Each extracted function has a single clear responsibility",
+      "The core filtering logic (ready, intent, dependencies, skip list) exists in exactly one place",
+      "Both pick_item and list_pickable_ids produce identical results to before",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T19:20:22-07:00",
+    "startedAt": "2026-03-20T19:27:21-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T19:27:20-07:00"
+    "completedAt": "2026-03-20T19:31:13-07:00"
   },
-  "completedAt": "2026-03-20T19:27:20-07:00",
+  "completedAt": "2026-03-20T19:31:13-07:00",
   "attempts": 1
 }
