@@ -2673,11 +2673,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Crash path: release_lock undefined triggers exit 127 on --category filter with no matches. Users see cryptic 'command not found' instead of clean exit. Elevated to must — this breaks a documented CLI option.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T10:52:24-07:00"
     },
     {
       "id": "BUG-094",
