@@ -1,29 +1,39 @@
 {
-  "sprintId": "sprint-1774060041",
-  "startedAt": "2026-03-20T19:27:21-07:00",
+  "sprintId": "sprint-1774060274",
+  "startedAt": "2026-03-20T19:31:14-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-045",
-    "title": "Consolidate duplicate item filtering logic between pick_item() and list_pickable_ids()",
-    "intent": "Eliminate the 95% overlapping jq filters in pick_item() and list_pickable_ids() by extracting a shared pickable-items jq filter or helper function",
-    "description": "",
+    "id": "BUG-060",
+    "title": "Extract init scaffold heredocs to template files",
+    "intent": "Init templates live in .aishore/templates/ as real files, not heredocs embedded in bash. The aishore script loses ~160 lines and templates become editable without touching code.",
+    "description": "Move all heredoc templates from _init_scaffold_files into .aishore/templates/: DEFINITIONS.md, PRODUCT.md.tmpl, ARCHITECTURE.md.tmpl, config.yaml.tmpl, backlog.json, bugs.json. Replace heredocs with cp or sed-based substitution (project_name, validate_cmd). Template files must be added to checksums.sha256 so they are included in updates.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Compare the jq filters in pick_item() and list_pickable_ids() to identify exact overlap",
-      "Extract a shared jq filter variable or helper function for pickable item selection",
-      "Refactor both functions to use the shared filter",
-      "Verify item picking still works correctly with dependencies and priority ordering"
+      "Create .aishore/templates/ directory",
+      "Extract DEFINITIONS.md heredoc (76 lines) to templates/DEFINITIONS.md",
+      "Extract config.yaml heredoc (29 lines) to templates/config.yaml.tmpl with $PROJECT_NAME and $VALIDATE_CMD placeholders",
+      "Extract PRODUCT.md heredoc (25 lines) to templates/PRODUCT.md.tmpl with $PROJECT_NAME placeholder",
+      "Extract ARCHITECTURE.md heredoc (21 lines) to templates/ARCHITECTURE.md.tmpl with $PROJECT_NAME placeholder",
+      "Extract backlog.json heredoc (7 lines) to templates/backlog.json",
+      "Extract bugs.json heredoc (6 lines) to templates/bugs.json",
+      "Replace heredocs in _init_scaffold_files with cp/sed commands",
+      "Add all template files to checksums.sha256",
+      "Run .aishore/aishore init -y in a temp dir to verify identical output"
     ],
     "acceptanceCriteria": [
-      "The core filtering logic (ready, intent, dependencies, skip list) exists in exactly one place",
-      "Both pick_item and list_pickable_ids produce identical results to before",
-      "shellcheck passes"
+      "All 6 template files exist in .aishore/templates/",
+      "_init_scaffold_files uses cp/sed to install templates, contains zero heredocs",
+      ".aishore/aishore init -y produces identical directory structure and file contents as before",
+      "checksums.sha256 includes all template files",
+      "shellcheck .aishore/aishore passes"
     ],
-    "scope": [],
-    "startedAt": "2026-03-20T19:27:21-07:00",
+    "scope": [
+      ".aishore/**"
+    ],
+    "startedAt": "2026-03-20T19:31:14-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T19:31:13-07:00"
+    "completedAt": "2026-03-20T19:37:39-07:00"
   },
-  "completedAt": "2026-03-20T19:31:13-07:00",
+  "completedAt": "2026-03-20T19:37:39-07:00",
   "attempts": 1
 }

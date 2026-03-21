@@ -1533,9 +1533,10 @@
         ".aishore/**"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-20T19:37:39-07:00"
     },
     {
       "id": "BUG-061",
@@ -1587,6 +1588,286 @@
         "templates/claude-section.md exists and get_claudemd_snippet reads it",
         "Dry-run developer prompt output is unchanged",
         "shellcheck .aishore/aishore passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-063",
+      "title": "Remove interactive mode from backlog add",
+      "intent": "cmd_backlog_add only accepts flags, no interactive TUI. The function loses ~105 lines. All existing flag-based usage is unchanged.",
+      "description": "cmd_backlog_add has ~105 lines of interactive echo/read prompts and a confirmation dialog. This tool is used primarily by AI agents via flags. Remove the interactive code path entirely. When --title is missing, print a usage error with an example command instead of launching a TUI.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "Remove the interactive mode block (lines checking for missing title and -t 0, through the confirmation dialog)",
+        "When title is missing, print a concise usage error with one example and exit 1",
+        "Remove the interactive flag from arg parsing",
+        "Update cmd_help to remove interactive from backlog add docs",
+        "Verify: .aishore/aishore backlog add with title and type flags still works"
+      ],
+      "acceptanceCriteria": [
+        "cmd_backlog_add contains zero interactive read calls",
+        "The interactive flag is not accepted",
+        "Missing title prints a usage error with example, not a prompt",
+        "All flag-based add commands work identically to before",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-064",
+      "title": "Simplify AC and step accumulation in backlog add and edit",
+      "intent": "Array-building logic for AC, steps, scope, and depends-on is simplified. The pending_ac flush pattern is eliminated. Both add and edit lose ~30 lines of accumulation boilerplate.",
+      "description": "Both cmd_backlog_add and cmd_backlog_edit use a complex pending_ac/flush pattern to pair --ac with optional --ac-verify. This adds ~30 lines of state management. Simplify: always push immediately on --ac, and on --ac-verify modify the last entry. Same external behavior, less code.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Refactor --ac handling to push immediately to ac_entries array",
+        "Refactor --ac-verify to modify the last entry in ac_entries instead of using pending_ac",
+        "Remove all pending_ac variables and flush logic from both add and edit",
+        "Verify: add and edit with --ac and --ac-verify flags produce identical JSON"
+      ],
+      "acceptanceCriteria": [
+        "No pending_ac variable exists in the script",
+        "backlog add with --ac text --ac-verify cmd produces {text, verify} object",
+        "backlog add with --ac text alone produces plain string",
+        "backlog edit --ac and --ac-verify work identically to before",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-065",
+      "title": "Remove backlog sync command",
+      "intent": "The backlog sync command is removed entirely. It is a 152-line niche feature that detects manually-completed items by matching scope globs against git history. Nobody uses it and it adds significant weight.",
+      "description": "cmd_backlog_sync (152 lines) cross-references item scope globs against git diff to guess which items were completed outside aishore. This is speculative, rarely accurate, and never used in practice. Remove the function, its router entry in cmd_backlog, and its help text entries.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "Delete cmd_backlog_sync function",
+        "Remove sync entry from cmd_backlog router",
+        "Remove sync from help text and usage docs",
+        "Verify: all other backlog subcommands still work"
+      ],
+      "acceptanceCriteria": [
+        "cmd_backlog_sync function does not exist in the script",
+        "Running .aishore/aishore backlog sync prints unknown command error",
+        "All other backlog subcommands work: list, add, show, edit, check, rm, history, populate",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-066",
+      "title": "Simplify backlog history to basic listing",
+      "intent": "backlog history is a simple dump of the archive, not a query engine. The --since, --failed, and --limit filter flags are removed. The function shrinks from 84 to ~20 lines.",
+      "description": "cmd_backlog_history is 84 lines with --since, --failed, --limit flags and a title lookup map. This is overengineered for viewing an append-only JSONL file. Replace with a simple jq format and tail. Users who need filtering can pipe through jq directly.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Replace cmd_backlog_history with simple: read sprints.jsonl, format with jq, print last 20",
+        "Remove --since, --failed, --limit flag parsing",
+        "Keep the formatted table output (ID, date, status, duration, title)",
+        "Update help text to remove filter flags"
+      ],
+      "acceptanceCriteria": [
+        "backlog history shows formatted table of recent sprint history",
+        "No --since, --failed, or --limit flags are accepted",
+        "Output format (columns) is unchanged",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-067",
+      "title": "Trim groom presentation functions to bare essentials",
+      "intent": "Groom summary and diff output is concise status lines, not rich formatted sections. print_groom_summary and print_groom_diff together shrink from 95 to ~25 lines.",
+      "description": "print_groom_summary (58 lines) renders a multi-section status with priority breakdowns, highlight lists, and conditional messaging. print_groom_diff (37 lines) shows before/after with multiple computed deltas. Replace both with terse one-liner status output: counts before, counts after, delta.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Replace print_groom_summary with 2-3 log_info lines showing item counts and ready counts",
+        "Replace print_groom_diff with a single line showing ready before/after and items added/skipped",
+        "Remove the has_highlights loop and must_should_total computation from summary",
+        "Verify: groom command still shows meaningful before/after context"
+      ],
+      "acceptanceCriteria": [
+        "print_groom_summary is under 15 lines",
+        "print_groom_diff is under 12 lines",
+        "Groom command output includes item counts and ready counts before and after",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-068",
+      "title": "Tighten enforce_groom_limits and protect_items_from_groom",
+      "intent": "Groom protection and limit enforcement logic is tighter and less verbose. Combined size drops from 149 to ~100 lines while preserving all safety guarantees.",
+      "description": "enforce_groom_limits (76 lines) and protect_items_from_groom (73 lines) are correct but verbose. The protection function does per-field comparison with a 6-field jq check then a separate merge — this can be a single jq expression. The limits function iterates items one-by-one in bash when a single jq filter would suffice.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Rewrite protect_items_from_groom to use a single jq pass: for each pre-existing ID, replace the live item with the original but carry over safe fields",
+        "Rewrite enforce_groom_limits to use jq to filter new items by priority rank and cap count, then remove excess in one pass",
+        "Remove per-item bash loops where jq can do the work",
+        "Keep all log_warning output for transparency",
+        "Verify: groom with a snapshot produces identical protection behavior"
+      ],
+      "acceptanceCriteria": [
+        "protect_items_from_groom is under 50 lines",
+        "enforce_groom_limits is under 50 lines",
+        "Pre-existing items are never modified by groomer (title, intent, desc, steps, AC preserved)",
+        "New items exceeding max count or below min priority are removed",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-069",
+      "title": "Deduplicate backlog populate with cmd_groom flow",
+      "intent": "backlog populate reuses the groom infrastructure instead of duplicating it. The cmd_backlog_populate function shrinks from 83 to ~40 lines by calling shared helpers.",
+      "description": "cmd_backlog_populate (83 lines) duplicates the pattern from cmd_groom: acquire lock, load config, find context files, snapshot backlogs, run agent, protect items, enforce limits, print diff. Extract the shared groom/populate flow into a helper that both call with different agent name and context.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Extract the common flow (lock, config, snapshot, run agent, protect, enforce limits, diff) into a shared helper function",
+        "cmd_groom calls the helper with agent=tech-lead or product-owner and standard context",
+        "cmd_backlog_populate calls the helper with agent=product-owner and PRODUCT.md context",
+        "Keep populate-specific logic: PRD file discovery, empty template guard",
+        "Verify: both groom and populate produce identical behavior"
+      ],
+      "acceptanceCriteria": [
+        "No duplicated snapshot/protect/enforce/diff code between groom and populate",
+        "cmd_groom works identically to before",
+        "cmd_backlog_populate works identically to before",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-070",
+      "title": "Consolidate three merge strategies into parameterized flow",
+      "intent": "The merge/squash/no-merge paths in _handle_sprint_success share one code flow with a branch only on the merge command itself. Saves ~40 lines of duplicated checkout/push/pull logic.",
+      "description": "_handle_sprint_success has three near-identical code blocks for merge, squash, and no-merge strategies. All three: checkout base, run a merge variant, delete branch, push, pull. The only difference is the git merge command and commit message. Parameterize into: (1) no-merge early return with push, (2) single merge path that picks --no-ff or --squash based on MERGE_STRATEGY.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Extract common post-merge logic (push, pull, branch cleanup) into shared code",
+        "Branch only on the merge command: git merge --no-ff vs git merge --squash",
+        "Handle squash commit message separately (squash needs explicit commit)",
+        "Keep no-merge as an early return with push and optional PR creation",
+        "Verify: all three strategies produce identical git history as before"
+      ],
+      "acceptanceCriteria": [
+        "No duplicated push/pull/cleanup code between merge strategies",
+        "MERGE_STRATEGY=merge produces --no-ff merge commit",
+        "MERGE_STRATEGY=squash produces squash commit",
+        "no-merge flag pushes branch and skips merge",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-071",
+      "title": "Clean up cmd_run: extract auto-review and trim verbosity",
+      "intent": "cmd_run is leaner and reads top-to-bottom without embedded ceremony blocks. The inline auto-review block and verbose conditional logging are extracted or trimmed. Saves ~50 lines.",
+      "description": "cmd_run (478 lines) has a 68-line auto-review block at the end that duplicates most of cmd_review. It also has verbose conditional echo statements for every config option. Extract auto-review to call cmd_review directly. Trim the startup banner to essential info only.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Replace the 68-line inline auto-review block with a direct call to cmd_review",
+        "Trim the startup banner: remove conditional echo lines that repeat config values the user already set",
+        "Move nested function _count_total_ready to file scope (its used elsewhere conceptually)",
+        "Verify: auto done --auto-review still triggers review on completion"
+      ],
+      "acceptanceCriteria": [
+        "No inline review agent invocation in cmd_run — it calls cmd_review",
+        "auto done --auto-review still runs architecture review after completion",
+        "Startup banner shows project, scope, and key flags but not every config value",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-072",
+      "title": "Trim verbose defensive coding across all functions",
+      "intent": "Error handling is terse and consistent. Redundant null guards, verbose suggestion messages, and unnecessary fallbacks are removed. Saves ~200 lines spread across the entire script.",
+      "description": "Across 82 functions, the script has accumulated verbose defensive patterns: (1) every jq call has 2>/dev/null || true even when the caller already guarantees valid input, (2) error messages include full command examples and suggestions that belong in help text not inline, (3) existence checks on files that were just created or passed by the caller, (4) multi-line error blocks where a single log_error suffices. Systematically trim these while keeping genuine error handling.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Audit all jq calls: remove 2>/dev/null where input is guaranteed valid (e.g. just-created JSON)",
+        "Shorten error messages: remove inline command examples and suggestions, keep the error itself",
+        "Remove redundant file existence checks where the caller already validated",
+        "Collapse multi-line error handling blocks into single log_error calls where appropriate",
+        "Keep all genuine error handling: user input validation, external file reads, git operations",
+        "Run full test: init, backlog add, backlog list, groom, run --dry-run to verify no regressions"
+      ],
+      "acceptanceCriteria": [
+        "No jq call has 2>/dev/null where the input JSON was constructed in the same function",
+        "No error message contains a full command example longer than 60 characters",
+        "All commands still produce correct error output on bad input",
+        "shellcheck passes"
       ],
       "scope": [
         ".aishore/**"
