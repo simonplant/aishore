@@ -2990,11 +2990,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Groomed by tech-lead agent: confirmed real bug via direct code inspection; steps and AC are precise and implementable",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T12:01:07-07:00"
     },
     {
       "id": "BUG-105",
