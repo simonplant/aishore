@@ -2477,7 +2477,7 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
+      "readyForSprint": true,
       "groomedAt": "2026-03-21",
       "groomedNotes": null
     },
@@ -2506,7 +2506,8 @@
       "readyForSprint": false,
       "groomingNotes": "Confirmed: _run_retry_loop line 2319 resets retry_extra_prompt to empty, which overwrites the refinement hint set at line 2782. Developer on refinement pass gets no context. Fix: separate initial context from retry history clearing.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T09:45:50-07:00"
+      "completedAt": "2026-03-21T09:45:50-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-088",
@@ -2533,7 +2534,8 @@
       "readyForSprint": false,
       "groomingNotes": "Promoting to must: head -n -1 is GNU-only and protect_items_from_groom is silently broken for all macOS users. macOS is a primary development platform \u2014 this blocks grooming entirely on Mac. Must fix before v0.3.5.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T09:41:38-07:00"
+      "completedAt": "2026-03-21T09:41:38-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-089",
@@ -2560,7 +2562,8 @@
       "readyForSprint": false,
       "groomingNotes": "Confirmed: when mark_complete fails at line 1179, _handle_sprint_success returns 0 early without switching back to base_branch. Next sprint branches off the failed feature branch. Edge case but correctness-critical.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T09:47:50-07:00"
+      "completedAt": "2026-03-21T09:47:50-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-090",
@@ -2587,7 +2590,63 @@
       "readyForSprint": false,
       "groomingNotes": "Confirmed: second _run_retry_loop call at line 2784 sets total_attempts = attempt+1 = 1, then line 2788 adds 1 = 2. First loop's attempts (e.g., 3 with --retries 2) are lost. Archive metrics show 2 instead of 4.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T09:50:24-07:00"
+      "completedAt": "2026-03-21T09:50:24-07:00",
+      "groomedNotes": null
+    },
+    {
+      "id": "BUG-091",
+      "title": "pick_item emits spurious error log when auto-mode backlog is drained",
+      "intent": "In auto mode, backlog exhaustion is normal and expected — pick_item must not log an error when the sprint loop will immediately handle the empty result as success.",
+      "description": "When auto done drains the backlog completely, pick_item() at line 734 logs log_error 'No eligible item found in backlog' before returning 1. The sprint loop (line 2704) then correctly prints log_success 'No more ready items — backlog drained'. The spurious red error appears in terminal output right before the green success message, confusing users into thinking something went wrong when the session completed cleanly.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In pick_item(), replace the unconditional log_error on the 'no item found' exit path with a return 1 only — remove the log_error call",
+        "Callers already provide their own context-appropriate messages (sprint loop handles auto vs non-auto vs specific-id cases)",
+        "Verify: run auto done to exhaust backlog — terminal shows only the success message, no error",
+        "Verify: run backlog list on empty-ready backlog — caller still shows warning (cmd_run sprint loop handles this)",
+        "shellcheck passes"
+      ],
+      "acceptanceCriteria": [
+        "auto done completes with no red error log when all items are done",
+        "Non-auto mode still shows the 'No ready items' warning from the sprint loop caller",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Clear single-function bug: pick_item logs error on normal empty-backlog exit, sprint loop then prints success. Confusing UX. Fix: remove the log_error from pick_item — callers provide context messages. Scope: .aishore/aishore only. Tiny change, high UX value in auto mode.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-092",
+      "title": "Auto-groom in sprint loop missing GROOM_MONITOR=true — no live progress output",
+      "intent": "Auto-groom sessions during auto done must show the same real-time backlog change updates as manual groom sessions — silent grooming during a long auto run leaves users wondering if the agent is working.",
+      "description": "In run_sprint_loop(), the auto-groom block calls run_agent 'tech-lead' 'groom' and run_agent 'product-owner' 'groom' without GROOM_MONITOR=true. The run_agent_process poll loop has logic to check backlog file hashes and log progress updates every 10 seconds when GROOM_MONITOR=true (used by run_groom_flow). Without it, auto-groom sessions show only generic 'Waiting for agent...' messages, not the 'backlog.json updated — 5 items (3 ready)' updates that make manual groom sessions informative.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In run_sprint_loop(), change the two run_agent calls in the auto-groom block to prefix GROOM_MONITOR=true",
+        "Verify: auto done with low ready items triggers auto-groom and shows backlog update messages during groom",
+        "shellcheck passes"
+      ],
+      "acceptanceCriteria": [
+        "Auto-groom during auto done shows live backlog change updates matching run_groom_flow behavior",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Bumping from could to should: silent auto-groom during a long auto session is actively confusing — user has no signal that grooming is happening. Two-line fix, high UX value.",
+      "groomedAt": "2026-03-21"
     }
   ]
 }

@@ -874,6 +874,94 @@
       ],
       "scope": [],
       "dependsOn": [],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomedAt": "2026-03-21",
+      "groomedNotes": null,
+      "completedAt": "2026-03-21T10:09:43-07:00"
+    },
+    {
+      "id": "FEAT-030",
+      "title": "Completion notification when auto session ends or circuit-breaker fires",
+      "intent": "When auto done finishes — whether by draining the backlog, hitting the circuit breaker, or reaching --limit — the user gets an immediate terminal bell and optional system notification so they know the session is over without watching the terminal.",
+      "description": "Users run auto done on large backlogs that take 30-60+ minutes. Currently the session ends silently: green text appears but the user only sees it if they happen to be watching. A terminal bell (tput bel) is zero-config and works in any terminal. A richer system notification (osascript on macOS, notify-send on Linux) is opt-in via config. Both fire on clean completion and on circuit-breaker failure, with different messages.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "On session end (drained, circuit-breaker, or --limit reached), call tput bel to send a terminal bell — no config required, works everywhere",
+        "Add notifications.system config key (default: false); when true, detect platform and call osascript (macOS) or notify-send (Linux) with summary message (N items completed, M failed)",
+        "Add AISHORE_NOTIFY env var override (true/false) consistent with other env overrides",
+        "Bell and system notification fire on both clean exit and circuit-breaker failure, with distinct messages ('Sprint session complete' vs 'Sprint session stopped: N consecutive failures')",
+        "Update docs/CONFIGURATION.md with notifications.system key and AISHORE_NOTIFY env var",
+        "shellcheck passes; no new warnings"
+      ],
+      "acceptanceCriteria": [
+        "After auto done drains the backlog, a terminal bell sounds regardless of config",
+        "With notifications.system: true, a system notification appears on macOS (osascript) and Linux (notify-send) at session end",
+        "Circuit-breaker exit also triggers bell and system notification (if enabled) with a failure message",
+        "AISHORE_NOTIFY=false suppresses system notification even when config enables it",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-031",
+      "title": "auto --limit N flag to cap items processed per session",
+      "intent": "Users must be able to cap an auto session at N items — auto done --limit 3 processes exactly 3 items then stops cleanly, regardless of how many ready items remain. Clean exit, not a circuit-breaker failure.",
+      "description": "Users running auto done on a large backlog sometimes want to run a bounded session: test a new config on 2 items, manage API budget, or batch work into controlled chunks. The current auto command runs until the backlog drains or circuit-breaker fires. A --limit N flag adds an explicit session cap that exits cleanly (not as a failure) after N items complete. Distinct from --max-failures (circuit breaker) and priority scope (p0/p1/p2) — this is a pure count cap.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Add --limit <N> flag to cmd_auto option parsing with validate_arg for non-empty positive integer",
+        "Pass limit through to run_sprint_loop; track items_completed counter incremented on each sprint success",
+        "When items_completed reaches limit, exit sprint loop cleanly with log_success 'Session limit reached: N items completed'",
+        "Limit exit is not counted as a failure — circuit breaker consecutive_failures counter is not incremented",
+        "Update help text for auto command to document --limit flag",
+        "shellcheck passes"
+      ],
+      "acceptanceCriteria": [
+        "auto done --limit 2 processes exactly 2 items then exits with a clean success message",
+        "The remaining backlog items are untouched after a --limit exit",
+        "auto done --limit 0 exits immediately with a clear 'limit must be a positive integer' error",
+        "Circuit-breaker consecutive_failures counter is not affected by a limit exit",
+        "help text shows --limit flag under auto command",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-032",
+      "title": "Stream developer agent output to terminal in real-time",
+      "intent": "During a sprint, the developer agent's output streams to the terminal live — users can see what the agent is writing rather than watching a spinner for 5-10 minutes with no feedback.",
+      "description": "The current polling loop shows 'Waiting for agent...' with no visibility into what the developer agent is doing. For a 5-10 minute sprint, users are completely blind. run_agent_process() writes agent output to a temp log; reading that log live (via tail -f or a poll loop printing new lines) gives real-time feedback with zero changes to agent behavior. This is the 'agent output streaming' item from the roadmap Next section.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In run_agent_process(), capture claude output to a temp log file (already done for result.json detection); read and print new lines from that log in the poll loop alongside the 'waiting' status",
+        "Rate-limit output printing to avoid overwhelming the terminal — print at most N new lines per poll interval (e.g., every 2 seconds)",
+        "Add streaming.enabled config key (default: true) and AISHORE_STREAMING env var override",
+        "When streaming.enabled is false, fall back to current 'Waiting for agent...' behavior",
+        "Streaming must not interfere with result.json detection or timeout behavior",
+        "shellcheck passes"
+      ],
+      "acceptanceCriteria": [
+        "During a sprint, developer agent output lines appear in the terminal as the agent writes them",
+        "Sprint orchestration (validation, commit, merge) still works correctly with streaming enabled",
+        "AISHORE_STREAMING=false disables streaming and reverts to spinner behavior",
+        "Timeout still fires correctly when streaming is enabled",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
       "status": "todo",
       "passes": false,
       "readyForSprint": false
