@@ -5,6 +5,69 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2026-03-21
+
+### Fixed
+
+- **BUG-035**: `collect_done_ids` now scans archive entries for dependency resolution — archived/cleaned items no longer cause false "unmet dependency" blocks
+- **BUG-036**: `refine_item_spec` JSON extraction handles indented or wrapped agent output correctly
+- **BUG-037**: `backlog history` title column now populated from archive (was always showing `-`)
+- **BUG-038**: Replaced `md5sum` with portable `_file_hash` in groom progress tracking (fixes macOS/BSD compatibility)
+- **BUG-039**: `backlog edit --depends-on` now appends to the `dependsOn` array instead of replacing it
+- **BUG-041**: Timeout command detection cached at startup instead of repeated per-sprint runtime checks
+- **BUG-057**: `resolve_backlog_file` no longer redundantly re-checks expected file in the fallback loop
+- **BUG-058**: Date portability — BSD fallback added to all `date` calls that were Linux-only
+- **BUG-059**: Removed TODO placeholder links from `docs/PROBLEMS.md`
+- **BUG-064**: Simplified AC and step accumulation logic in `backlog add` and `backlog edit`
+- **BUG-066**: `backlog history` output simplified to essential listing; extraneous fields removed
+- **BUG-079**: Removed `update_desc` tracking from `cmd_backlog_edit` (dead state, never read)
+- **BUG-081**: `backlog history` title column now stored in archive at sprint completion — was always `-`
+- **BUG-083**: `context_args` passed as array instead of word-split string — prevents argument splitting bugs
+- **BUG-084**: `_status_output` consolidated 6 separate `count_by_status` jq calls into one pass per file
+- **BUG-085**: Review architect agent now correctly gets read-only permissions unless `--update` flag is set
+- **BUG-086**: `mark_complete` sprint diff stats use full commit range instead of `HEAD~1..HEAD` (fixes multi-commit sprints)
+- **BUG-087**: Refinement context (`retry_extra_prompt`) preserved across `_run_retry_loop` invocations — was being cleared on each call
+- **BUG-088**: Replaced `head -n -1` with portable equivalent in `protect_items_from_groom` (BSD `head` compatibility)
+- **BUG-089**: `_handle_sprint_success` now returns to main branch if `mark_complete` fails — no longer strands git on feature branch
+- **BUG-090**: `total_attempts` correctly accumulates across `--refine` path; second `_run_retry_loop` no longer resets count to zero
+
+### Changed
+
+- **BUG-040**: Extracted `run_validated_command()` helper — eliminates 3 duplicated timeout-aware command execution blocks
+- **BUG-042**: Extracted `require_numeric_arg()` helper — numeric argument validation no longer duplicated across multiple commands
+- **BUG-043**: Decomposed `_run_retry_loop()` into `_run_preflight`, `_run_developer_cycle`, `_run_validation_cycle`
+- **BUG-044**: Decomposed `cmd_run()` into `cmd_run_parse_args`, `setup_sprint_environment`, `run_sprint_loop`, `print_sprint_summary` (~30 lines, down from ~200)
+- **BUG-045**: Extracted `PICKABLE_ITEMS_FILTER` constant — single source of truth for item filtering in `pick_item()` and `list_pickable_ids()`
+- **BUG-046**: Replaced five global side-effect variables with explicit function returns via stdout capture
+- **BUG-047**: Standardized error handling — functions use `log_error` + `return 1`; only `main`, `acquire_lock`, and `require_tool` may `exit`
+- **BUG-048**: Extracted shared backlog iteration helpers: `map_backlog_files`, `find_first_backlog`, `snapshot_backlog_files`, `restore_backlog_files`, `sum_backlog_count`
+- **BUG-049**: Extracted shared option parser to reduce duplication across `cmd_*` functions
+- **BUG-050**: Replaced JSON array string concatenation with `jq -s` in `backlog add`
+- **BUG-051**: Reduced double jq parsing — all needed fields extracted in one pass
+- **BUG-052**: Removed unused and redundant variable declarations throughout
+- **BUG-053**: Replaced `echo` with `printf` for variable output throughout the script
+- **BUG-054**: Hardcoded safe fields in `protect_items_from_groom()` extracted to a declared constant
+- **BUG-055**: Duplicate CLI commands section in groom agent prompts factored out to shared preamble
+- **BUG-060**: Init scaffold heredocs extracted to template files in `.aishore/templates/`; `_init_scaffold_files` uses `cp`/`sed` exclusively
+- **BUG-061**: Help text extracted to `.aishore/help.txt`; `cmd_help` reads via `sed`; `cmd_usage` is now an alias
+- **BUG-062**: Populate-mode docs and `CLAUDE.md` snippet moved from bash string literals to files
+- **BUG-067**: Groom presentation functions trimmed to bare essentials; `cmd_groom` output slimmed
+- **BUG-068**: `enforce_groom_limits` and `protect_items_from_groom` tightened — redundant checks removed
+- **BUG-069**: Backlog `populate` deduplicated with `cmd_groom` flow — shared grooming path
+- **BUG-070**: Three merge strategies consolidated into parameterized merge flow
+- **BUG-071**: `cmd_run` auto-review and verbosity trimmed; `--auto-review` flag now cleaner
+- **BUG-073**: Extracted `_find_prd` helper; product/arch detection unified in init flow
+- **BUG-074**: `cmd_metrics` refactored to compute once, render twice — eliminates redundant jq passes
+- **BUG-075**: Sub-shell jq extractions in `create_sprint` and `mark_complete` collapsed into single calls
+- **BUG-076**: npm detection block in `_init_detect_project` collapsed to single conditional
+- **BUG-077**: Single-use nested helpers in `cmd_update` inlined — reduces call indirection
+- **BUG-078**: Advisory complexity hints moved out of `check_readiness_gates` into a dedicated advisory function
+
+### Removed
+
+- **BUG-063**: Interactive mode (`--interactive` flag) removed from `backlog add` — use flags exclusively
+- **BUG-065**: `backlog sync` command removed (152 lines of dead code)
+
 ## [0.3.4] - 2026-03-20
 
 ### Added
