@@ -1293,9 +1293,10 @@ mark_complete() {
 }
 
 reset_sprint() {
-    cat > "$BACKLOG_DIR/sprint.json" <<'EOF'
-{"sprintId": null, "status": "idle", "item": null}
-EOF
+    local tmp
+    tmp="$(ensure_tmpdir)/sprint_reset.json"
+    printf '%s\n' '{"sprintId": null, "status": "idle", "item": null}' > "$tmp"
+    mv "$tmp" "$BACKLOG_DIR/sprint.json"
 }
 
 # ============================================================================

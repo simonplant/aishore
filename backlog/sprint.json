@@ -1,29 +1,27 @@
 {
-  "sprintId": "sprint-1774122410",
-  "startedAt": "2026-03-21T12:46:50-07:00",
+  "sprintId": "sprint-1774122729",
+  "startedAt": "2026-03-21T12:52:09-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-114",
-    "title": "Update CHANGELOG.md and bump version to v0.3.6",
-    "intent": "CHANGELOG.md must document every change since v0.3.5 and VERSION must read 0.3.6 so operators can track what shipped.",
-    "description": "v0.3.5 was the last tagged version. Since then ~20 items completed: FEAT-031 (auto --limit), FEAT-033 (live progress counter), FEAT-034 (end-of-session summary), BUG-093 through BUG-109 — including worktree archive fix, --no-merge repick, --ready filter, scope display, history limit, --priority filter, status titles, and checksums safety. CHANGELOG.md needs a v0.3.6 section and VERSION must be updated.",
+    "id": "BUG-110",
+    "title": "reset_sprint uses non-atomic write — sprint.json can be partially read mid-write",
+    "intent": "reset_sprint must write sprint.json atomically via a temp file and mv so readers never see a partial or empty file.",
+    "description": "reset_sprint() uses 'cat > \"$BACKLOG_DIR/sprint.json\" <<EOF' which writes directly in-place. BUG-103 fixed the same pattern in protect_items_from_groom and enforce_groom_limits, but reset_sprint was missed. Any concurrent reader (e.g. status --watch) that reads sprint.json during the write will see a truncated or empty file, causing a jq parse error.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Run backlog history --all to list completed items since v0.3.5",
-      "Add a v0.3.6 section to CHANGELOG.md covering all completed items",
-      "Update .aishore/VERSION to 0.3.6",
-      "Run shellcheck and confirm zero new warnings"
+      "Replace the cat heredoc in reset_sprint() with the atomic pattern: write to a temp file then mv",
+      "Use ensure_tmpdir to create the temp path, same as other write functions in the script",
+      "Run shellcheck — confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "CHANGELOG.md contains a v0.3.6 section with entries for FEAT-031, FEAT-033, FEAT-034, BUG-093 through BUG-109",
-      "VERSION file reads 0.3.6",
+      "reset_sprint writes sprint.json atomically (temp file + mv, same pattern as other write functions)",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T12:46:50-07:00",
+    "startedAt": "2026-03-21T12:52:09-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T12:52:08-07:00"
+    "completedAt": "2026-03-21T12:53:59-07:00"
   },
-  "completedAt": "2026-03-21T12:52:08-07:00",
+  "completedAt": "2026-03-21T12:53:59-07:00",
   "attempts": 1
 }
