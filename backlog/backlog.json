@@ -363,13 +363,15 @@
         "docs/ARCHITECTURE.md"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "readyForSprint": true,
+      "status": "done",
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "All ACs are clear and testable. Source files (README.md, CLAUDE.md, CONTRIBUTING.md, agent files, DEFINITIONS.md) are well-defined. No blockers. Priority must — this is a prerequisite for FEAT-019 and unblocks FEAT-021.",
       "lastFailReason": "Validator agent rejected implementation",
       "lastFailAt": "2026-03-20T17:26:57-07:00",
-      "failCount": 1
+      "failCount": 1,
+      "passes": true,
+      "completedAt": "2026-03-20T19:05:59-07:00"
     },
     {
       "id": "FEAT-015",
