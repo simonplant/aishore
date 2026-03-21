@@ -4535,7 +4535,7 @@ cmd_backlog_show() {
 
 cmd_backlog_edit() {
     local id="${1:-}"
-    [[ -z "$id" ]] && { log_error "Usage: backlog edit <ID> [--title ...] [--intent ...] [--priority ...] [--status ...] [--desc ...] [--category ...] [--depends-on ...] [--ready] [--no-ready] [--step ...] [--clear-steps] [--scope ...] [--clear-scope] [--ac ...] [--ac-verify ...] [--clear-ac] [--groomed-at ...] [--groomed-notes ...]"; return 1; }
+    [[ -z "$id" ]] && { log_error "Usage: backlog edit <ID> [--title ...] [--intent ...] [--priority ...] [--status ...] [--desc ...] [--category ...] [--depends-on ...] [--clear-depends-on] [--ready] [--no-ready] [--step ...] [--clear-steps] [--scope ...] [--clear-scope] [--ac ...] [--ac-verify ...] [--clear-ac] [--groomed-at ...] [--groomed-notes ...]"; return 1; }
     shift
 
     # Verify item exists
@@ -4552,6 +4552,7 @@ cmd_backlog_edit() {
     local pending_ac=""
     local -a scope_vals=()
     local -a step_vals=()
+    local -a deps_vals=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -4622,12 +4623,16 @@ cmd_backlog_edit() {
                 shift ;;
             --depends-on)
                 validate_arg "$1" "${2:-}" || return 1
-                local deps_json
-                deps_json=$(printf '%s' "$2" | tr ',' '\n' | jq -R . | jq -s .)
-                jq_updates="$jq_updates | .dependsOn = \$deps"
-                updates+=("--argjson" "deps" "$deps_json")
+                # Split comma-separated values and accumulate
+                while IFS= read -r dep; do
+                    [[ -n "$dep" ]] && deps_vals+=("$dep")
+                done < <(printf '%s\n' "$2" | tr ',' '\n')
                 update_desc="$update_desc dependsOn"
                 shift 2 ;;
+            --clear-depends-on)
+                jq_updates="$jq_updates | .dependsOn = []"
+                update_desc="$update_desc dependsOn"
+                shift ;;
             --ac)
                 validate_arg "$1" "${2:-}" || return 1
                 # Flush any pending AC entry
@@ -4699,6 +4704,14 @@ cmd_backlog_edit() {
         updates+=("--argjson" "newsteps" "$steps_json")
     fi
 
+    # Build dependsOn jq update if any --depends-on flags were used
+    if [[ ${#deps_vals[@]} -gt 0 ]]; then
+        local deps_json
+        deps_json=$(printf '%s\n' "${deps_vals[@]}" | jq -R . | jq -s .)
+        jq_updates="$jq_updates | .dependsOn = ((.dependsOn // []) + \$newdeps) | .dependsOn |= unique"
+        updates+=("--argjson" "newdeps" "$deps_json")
+    fi
+
     # Build AC jq update if any --ac flags were used
     if [[ ${#ac_entries[@]} -gt 0 ]]; then
         local ac_json="["
@@ -4713,7 +4726,7 @@ cmd_backlog_edit() {
     fi
 
     if [[ -z "$jq_updates" ]]; then
-        log_error "No updates specified. Use --title, --intent, --priority, --status, --desc, --category, --depends-on, --ready, --no-ready, --step, --clear-steps, --scope, --clear-scope, --ac, --ac-verify, --clear-ac, --groomed-at, --groomed-notes"
+        log_error "No updates specified. Use --title, --intent, --priority, --status, --desc, --category, --depends-on, --clear-depends-on, --ready, --no-ready, --step, --clear-steps, --scope, --clear-scope, --ac, --ac-verify, --clear-ac, --groomed-at, --groomed-notes"
         return 1
     fi
 
@@ -5180,7 +5193,7 @@ Commands:
     --step "text"   Append implementation step (repeatable), --clear-steps to reset,
     --scope "glob"  Add scope glob (repeatable), --clear-scope to reset,
     --ac "text", --ac-verify "cmd"  Append testable acceptance criteria, --clear-ac to reset,
-    --depends-on ID  Add dependency (repeatable)
+    --depends-on ID  Add dependency (repeatable), --clear-depends-on to reset
   backlog check <ID> Check readiness gates (title, intent, steps, AC, step length)
   backlog rm <ID>   Remove an item (with confirmation)
     --force         Skip confirmation

@@ -1,33 +1,33 @@
 {
-  "sprintId": "sprint-1774056446",
-  "startedAt": "2026-03-20T18:27:26-07:00",
+  "sprintId": "sprint-1774056587",
+  "startedAt": "2026-03-20T18:29:47-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-038",
-    "title": "_check_groom_progress uses md5sum which fails on macOS without coreutils",
-    "intent": "Ensure groom progress monitoring works on macOS by using a portable hashing command, so backlog change detection during grooming is not broken for macOS users.",
-    "description": "In _check_groom_progress(), backlog file changes are detected using md5sum (lines 958 and 969 in the current codebase). md5sum is a GNU coreutils command that is not available on macOS by default. macOS provides 'md5' (different interface) or 'shasum'/'sha256sum' (different output format). When md5sum is missing, the command silently fails (cur_hash will be empty) and no changes are ever detected, so the progress monitor never reports backlog updates during groom sessions. The fix should use the same portability pattern as verify_checksum() — try sha256sum first, then shasum, then fall back to a simple wc-c checksum if neither is available.",
+    "id": "BUG-039",
+    "title": "backlog edit --depends-on replaces entire dependsOn array instead of appending like --step and --ac",
+    "intent": "Ensure --depends-on on backlog edit is consistent with --step and --ac: multiple calls should append dependencies, not replace the entire list each time.",
+    "description": "In cmd_backlog_edit(), the --depends-on flag builds a deps_json array from the provided value and uses '.dependsOn = $deps' which replaces the entire dependsOn array. By contrast, --step uses '.steps = ((.steps // []) + $newsteps)' and --ac uses '.acceptanceCriteria = ((.acceptanceCriteria // []) + $newac)' — both append. This inconsistency means that if you add a dependency incrementally (e.g., two separate calls to add two dependencies), the second call wipes out the first. A user who wants to add one dependency at a time must always specify the full list. The fix should make --depends-on append to the existing dependsOn array, matching the behavior of --step and --ac. A separate --clear-depends-on flag should be added to allow full replacement when needed.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Locate _check_groom_progress() in .aishore/aishore and find the two md5sum calls that compute cur_hash",
-      "Replace both md5sum calls with a portable hash helper that tries sha256sum, then shasum -a 256, then cksum as a last resort",
-      "Define a local _file_hash function or inline the portable hash command using the same approach as verify_checksum(): if command -v sha256sum, elif command -v shasum, else cksum",
-      "Verify the replacement produces a stable hash for the same file content (cksum is acceptable as a fallback since we only need change detection, not cryptographic security)",
-      "Test on macOS: run 'aishore groom' and confirm that backlog update messages are printed during the session"
+      "In cmd_backlog_edit(), find the --depends-on case that builds deps_json and sets .dependsOn = $deps",
+      "Change the jq expression from '.dependsOn = $deps' to '.dependsOn = ((.dependsOn // []) + $deps) | unique'",
+      "Add a --clear-depends-on flag that sets '.dependsOn = []', consistent with --clear-steps and --clear-scope",
+      "Update the usage/help string in cmd_backlog_edit to mention --clear-depends-on",
+      "Test: run backlog edit ID --depends-on A, then backlog edit ID --depends-on B, and verify both A and B appear in dependsOn"
     ],
     "acceptanceCriteria": [
-      "_check_groom_progress correctly detects backlog file changes on macOS when only md5 or shasum is available (not md5sum)",
-      "_check_groom_progress correctly detects backlog file changes on Linux where sha256sum or md5sum are available",
-      "No regression: progress messages are still printed when backlog files change during groom sessions",
-      "The portable hash approach does not generate errors or warnings when md5sum is absent"
+      "Running 'backlog edit ID --depends-on A' followed by 'backlog edit ID --depends-on B' results in dependsOn=[A, B]",
+      "Running 'backlog edit ID --depends-on A,B' in a single call also works correctly",
+      "Running 'backlog edit ID --clear-depends-on' clears the dependsOn array to []",
+      "No regression: existing --depends-on behavior for first-time setting still works"
     ],
     "scope": [
       ".aishore/aishore"
     ],
-    "startedAt": "2026-03-20T18:27:26-07:00",
+    "startedAt": "2026-03-20T18:29:47-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T18:29:45-07:00"
+    "completedAt": "2026-03-20T18:34:11-07:00"
   },
-  "completedAt": "2026-03-20T18:29:45-07:00",
+  "completedAt": "2026-03-20T18:34:11-07:00",
   "attempts": 1
 }
