@@ -1,33 +1,32 @@
 {
-  "sprintId": "sprint-1774109515",
-  "startedAt": "2026-03-21T09:11:55-07:00",
+  "sprintId": "sprint-1774109895",
+  "startedAt": "2026-03-21T09:18:15-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-028",
-    "title": "Retry intelligence — carry prior failure context into retry developer cycles",
-    "intent": "On retry, the developer agent receives a structured summary of the prior failure — what was done and why it failed — and must acknowledge it before proceeding.",
-    "description": "When a sprint item fails validation and retries, the developer agent currently gets the same prompt as the first attempt with no memory of what was tried. If the first attempt made a mistake (wrong approach, missed edge case), the retry is likely to repeat it. Retry intelligence captures the validation failure output and a brief summary of what was changed in the failed attempt, then injects this as 'prior failure context' into the retry developer prompt. This reduces repeat mistakes and helps the agent course-correct.",
-    "sourceBacklog": "backlog.json",
+    "id": "BUG-085",
+    "title": "review architect agent always gets Edit/Write permissions regardless of --update-docs flag",
+    "intent": "cmd_review without --update-docs gives architect Read,Glob,Grep only; --update-docs gives Read,Glob,Grep,Edit,Write.",
+    "description": "In run_agent(), the architect case checks if output_file is non-empty to decide permissions. Since cmd_review always sets output_file (for output capture), the architect always gets PERMS_REVIEWER_DOCS (Edit,Write), even when --update-docs is not specified. The fix: resolve permissions in cmd_review based on the update_docs flag rather than relying on output_file as a proxy. Without --update-docs the review should be truly read-only.",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "After each failed validation, capture: (a) the validation output, (b) a git diff summary of what the developer changed",
-      "Accumulate failure context across retries into a structured block (attempt N: summary + failure reason)",
-      "Inject the accumulated failure context into the developer agent prompt on retry, before the item spec",
-      "The developer prompt must instruct the agent to read the failure context section and address each failure before coding",
-      "Cap injected failure context at 2000 chars to avoid prompt bloat (truncate oldest first)",
-      "Verify: run --retries 2 on an item that will fail the first validation; confirm retry prompt contains prior failure context"
+      "In cmd_review, after parsing --update-docs, set a local variable for the required permissions: PERMS_REVIEWER if read-only, PERMS_REVIEWER_DOCS if update-docs",
+      "Pass the resolved permissions to run_agent, or temporarily override CFG_PERMS_REVIEWER before the run_agent call",
+      "In run_agent architect case, remove the output_file-based permission check — it was the wrong proxy",
+      "Verify: run .aishore/aishore review and confirm --allowedTools does not include Edit or Write",
+      "Verify: run .aishore/aishore review --update-docs and confirm --allowedTools includes Edit,Write",
+      "shellcheck passes with no errors"
     ],
     "acceptanceCriteria": [
-      "On retry, developer prompt contains a 'Prior failure context' section with attempt number, git diff summary, and validation failure output",
-      "Failure context is capped at 2000 chars and truncated gracefully",
-      "First-attempt prompt is unchanged (no failure context section)",
-      "auto mode with --retries passes failure context across all retry cycles",
+      "cmd_review without --update-docs invokes architect with Read,Glob,Grep permissions only (no Edit or Write)",
+      "cmd_review --update-docs invokes architect with Read,Glob,Grep,Edit,Write permissions",
+      "Existing behavior for other agent roles (developer, validator, tech-lead, product-owner) is unchanged",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T09:11:55-07:00",
+    "startedAt": "2026-03-21T09:18:15-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T09:18:14-07:00"
+    "completedAt": "2026-03-21T09:21:21-07:00"
   },
-  "completedAt": "2026-03-21T09:18:14-07:00",
+  "completedAt": "2026-03-21T09:21:21-07:00",
   "attempts": 1
 }

@@ -2419,11 +2419,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Clear bug: output_file is always non-empty in cmd_review, so architect always gets Edit/Write. Steps include fixing in run_agent or cmd_review. Confirmed by code inspection at run_agent line 1507-1512.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T09:21:21-07:00"
     },
     {
       "id": "BUG-086",
