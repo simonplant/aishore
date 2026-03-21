@@ -1594,9 +1594,10 @@
         ".aishore/**"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-20T19:49:23-07:00"
     },
     {
       "id": "BUG-063",
