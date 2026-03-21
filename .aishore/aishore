@@ -3169,7 +3169,14 @@ protect_items_from_groom() {
         # Last line is "del mod" counts; everything before is the protected JSON
         local counts
         counts=$(tail -n1 <<< "$output" | tr -d '"')
-        sed '$d' <<< "$output" > "$live_file"
+        local _tmp_protect
+        _tmp_protect="$(ensure_tmpdir)/protect_groom_$(basename "$f").json"
+        if ! sed '$d' <<< "$output" > "$_tmp_protect"; then
+            log_error "Failed to write protected backlog for $f"
+            rm -f "$_tmp_protect"
+            return 1
+        fi
+        mv "$_tmp_protect" "$live_file"
         local d m; read -r d m <<< "$counts"
         deleted_restored=$((deleted_restored + d)); restored=$((restored + m))
     }
@@ -3232,10 +3239,15 @@ enforce_groom_limits() {
         if [[ ${#removed_ids[@]} -gt 0 ]]; then
             local ids_json
             ids_json=$(printf '%s\n' "${removed_ids[@]}" | jq -R . | jq -s .)
-            local tmp
-            tmp=$(jq --argjson rm "$ids_json" \
-                '.items = [.items[] | select(.id as $id | $rm | index($id) | not)]' "$live_file")
-            printf '%s\n' "$tmp" > "$live_file"
+            local _tmp_enforce
+            _tmp_enforce="$(ensure_tmpdir)/enforce_limits_$(basename "$f").json"
+            if ! jq --argjson rm "$ids_json" \
+                '.items = [.items[] | select(.id as $id | $rm | index($id) | not)]' "$live_file" > "$_tmp_enforce"; then
+                log_error "Failed to enforce groom limits for $f"
+                rm -f "$_tmp_enforce"
+                return 1
+            fi
+            mv "$_tmp_enforce" "$live_file"
         fi
     }
     map_backlog_files _enforce_limits_one
