@@ -1728,7 +1728,7 @@ check_scope_violations() {
             fi
         done
         if [[ "$in_scope" != "true" ]]; then
-            violations="${violations}  - $file\n"
+            violations+="  - $file"$'\n'
             violation_count=$((violation_count + 1))
         fi
     done <<< "$changed_files"
