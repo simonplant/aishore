@@ -1,38 +1,39 @@
 {
-  "sprintId": "sprint-1774065486",
-  "startedAt": "2026-03-20T20:58:06-07:00",
+  "sprintId": "sprint-1774066706",
+  "startedAt": "2026-03-20T21:18:26-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-071",
-    "title": "Clean up cmd_run: extract auto-review and trim verbosity",
-    "intent": "cmd_run is leaner and reads top-to-bottom. The inline auto-review block, verbose bash idioms in the sprint loop, and nested helper definitions are cleaned up. Saves ~65 lines.",
-    "description": "cmd_run (478 lines) has: (1) a 68-line auto-review block at the end duplicating cmd_review — replace with direct call. (2) A 4-line skip-list builder loop replaceable with IFS=,; echo. (3) A 13-line priority scope check loop replaceable with a single [[ string match ]]. (4) Verbose startup banner echoing every config value. (5) Nested _count_total_ready and _record_sprint_failure function defs that should be at file scope. (6) Duplicate [[ -s review_output ]] check in post-summary.",
+    "id": "BUG-073",
+    "title": "Extract _find_prd and unify product/arch detection in init flow",
+    "intent": "The PRD candidate list exists in one place. Product and architecture doc paths are detected once, not three times with three variable names. Init flow loses ~35 lines of copy-paste.",
+    "description": "The same 10-element PRD candidate list (PRODUCT.md, product.md, PRD.md, prd.md, docs/ variants, WEBSITE_BRIEF.md, README.md) is copy-pasted verbatim in _init_detect_project, _init_scaffold_files, and cmd_backlog_populate. Product/arch existence is checked 3 times across the init flow with 3 different variable names (prd_found, product_found, found_product). Extract _find_prd function returning the path, use it everywhere. Detect product/arch docs once and pass paths through. Remove docs/WEBSITE_BRIEF.md from generic candidate list (project-specific leak).",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Replace 68-line inline auto-review block with a direct call to cmd_review",
-      "Replace skip-list builder loop with: local skip_list; skip_list=dollar{!FAILED_IDS[*]}",
-      "Replace priority scope check loop with: [[ -z auto_priorities || ' auto_priorities ' == *' item_priority '* ]]",
-      "Move nested _count_total_ready to file scope",
-      "Move nested _record_sprint_failure to file scope",
-      "Merge duplicate [[ -s review_output ]] checks into one block",
-      "Trim startup banner to essential info only",
-      "Verify: auto done --auto-review, auto p1, run --dry-run all work correctly"
+      "Create _find_prd function that returns the first matching PRD file path from the candidate list",
+      "Replace the candidate loop in _init_detect_project with _find_prd call",
+      "Replace the candidate loop in _init_scaffold_files with _find_prd call",
+      "Replace the candidate loop in cmd_backlog_populate with _find_prd call",
+      "Remove docs/WEBSITE_BRIEF.md from the candidate list",
+      "Unify product/arch detection: detect once in _init_detect_project, pass paths to scaffold and summary",
+      "Remove the re-detection loops in _init_scaffold_files and cmd_init summary",
+      "Verify: init -y and backlog populate both find the same docs as before"
     ],
     "acceptanceCriteria": [
-      "No inline review agent invocation in cmd_run — it calls cmd_review",
-      "No skip-list builder loop — uses IFS one-liner",
-      "No priority scope for-loop — uses string match",
-      "No nested function definitions inside cmd_run",
-      "auto done --auto-review still runs architecture review after completion",
+      "_find_prd function exists and is called from all 3 locations",
+      "No duplicate PRD candidate list exists in the script",
+      "docs/WEBSITE_BRIEF.md is not in the candidate list",
+      "Product/arch paths are detected once during init, not re-scanned",
+      "init -y produces identical output",
+      "backlog populate finds the same PRD file as before",
       "shellcheck passes"
     ],
     "scope": [
       ".aishore/**"
     ],
-    "startedAt": "2026-03-20T20:58:06-07:00",
+    "startedAt": "2026-03-20T21:18:26-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T21:04:03-07:00"
+    "completedAt": "2026-03-20T21:26:39-07:00"
   },
-  "completedAt": "2026-03-20T21:04:03-07:00",
+  "completedAt": "2026-03-20T21:26:39-07:00",
   "attempts": 1
 }
