@@ -870,11 +870,12 @@
         "No regression in ID generation for existing items"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Correctness issue: non-numeric ID suffixes cause tonumber to throw in jq, silently swallowed by 2>/dev/null, potentially causing ID conflicts. Fix is additive: add select(test(\"^[0-9]+$\")) before tonumber in both the BACKLOG_FILES loop and archive scan. Low risk, small scope."
+      "groomingNotes": "Correctness issue: non-numeric ID suffixes cause tonumber to throw in jq, silently swallowed by 2>/dev/null, potentially causing ID conflicts. Fix is additive: add select(test(\"^[0-9]+$\")) before tonumber in both the BACKLOG_FILES loop and archive scan. Low risk, small scope.",
+      "completedAt": "2026-03-20T18:13:09-07:00"
     }
   ]
 }
