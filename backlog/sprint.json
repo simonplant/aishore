@@ -1,34 +1,34 @@
 {
-  "sprintId": "sprint-1774056095",
-  "startedAt": "2026-03-20T18:21:35-07:00",
+  "sprintId": "sprint-1774056263",
+  "startedAt": "2026-03-20T18:24:23-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-036",
-    "title": "refine_item_spec JSON extraction fails when agent output has indented or wrapped JSON",
-    "intent": "Ensure spec refinement reliably extracts the JSON from the agent's output regardless of indentation or formatting, so retries with spec refinement don't silently fail.",
-    "description": "In refine_item_spec(), the JSON extraction from the agent's raw output uses: sed -n '/^\\{/,/^\\}/p'. This only matches a { that starts at column 0, so any indented JSON (e.g. the agent wraps it in a code block with indented content, or the JSON is inside markdown with indentation) will fail to extract. The fallback tries markdown fences but the primary extraction is unreliable. The fix should robustly extract a JSON object that contains both .steps and .acceptanceCriteria keys, using jq itself to validate and extract rather than relying on sed line patterns.",
+    "id": "BUG-037",
+    "title": "backlog history output missing title column — makes history hard to read",
+    "intent": "Ensure backlog history output includes the item title so users can read the history without cross-referencing backlog list.",
+    "description": "cmd_backlog_history outputs a table with columns: ID, DATE, STATUS, DURATION. It does not include the item title. The archive (sprints.jsonl) does not store the title — it only stores itemId, date, status, duration, filesChanged, linesAdded, linesRemoved, priority, category. To show a title, the command would need to look it up in the active backlog. However, since items may have been cleaned out, the title may not always be available. The fix should: (1) attempt to look up the title from active backlogs, and (2) fall back to showing the itemId if the item has been cleaned. This makes history scannable without requiring a separate backlog list lookup.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Locate refine_item_spec() in .aishore/aishore, specifically the JSON extraction block that uses sed -n '/^\\{/,/^\\}/p'",
-      "Replace the fragile sed-based extraction with a jq-based approach: strip markdown fences first, then use jq to find a valid JSON object containing .steps and .acceptanceCriteria",
-      "Use: json_output=$(echo \"$raw_output\" | sed '/^```/d' | jq -s 'first(.[] | objects | select(.steps and .acceptanceCriteria))' 2>/dev/null) as the primary extraction",
-      "Keep the existing validation check: if ! echo \"$json_output\" | jq -e '.steps and .acceptanceCriteria' — but only if json_output is non-empty",
-      "Log a clear error if extraction still fails after the improved approach",
-      "Test: verify refinement works when agent wraps JSON in a markdown code block (common output format)"
+      "In cmd_backlog_history(), after collecting the jq results, join each itemId against the active backlogs to retrieve the title",
+      "Build a lookup map of id->title from both backlog.json and bugs.json using jq before printing the table",
+      "Add a TITLE column to the printf format string in the table header and the formatted output",
+      "When a title is not found in active backlogs (item was cleaned), fall back to displaying the itemId itself or '-' in the title column",
+      "Adjust column widths: ID 12, DATE 12, STATUS 10, DURATION 10, TITLE remainder",
+      "Test: run backlog history on a repo with both active and cleaned items to verify titles are shown correctly"
     ],
     "acceptanceCriteria": [
-      "refine_item_spec succeeds when the agent returns JSON indented inside a markdown code block",
-      "refine_item_spec succeeds when the agent returns JSON at top-level with no indentation",
-      "refine_item_spec logs 'Refinement produced no valid JSON' and returns 1 when the agent returns no JSON object",
-      "No regression in the existing fallback path for markdown-fenced JSON"
+      "backlog history output includes a TITLE column showing the item's title from the active backlog",
+      "When an item has been cleaned from the backlog, history shows '-' or the itemId in the title column rather than failing",
+      "Column headers are aligned: ID, DATE, STATUS, DURATION, TITLE",
+      "Existing --since, --failed, --limit flags still work correctly with the updated output"
     ],
     "scope": [
       ".aishore/aishore"
     ],
-    "startedAt": "2026-03-20T18:21:35-07:00",
+    "startedAt": "2026-03-20T18:24:23-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T18:24:22-07:00"
+    "completedAt": "2026-03-20T18:27:25-07:00"
   },
-  "completedAt": "2026-03-20T18:24:22-07:00",
+  "completedAt": "2026-03-20T18:27:25-07:00",
   "attempts": 1
 }

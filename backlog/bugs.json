@@ -967,11 +967,12 @@
         ".aishore/aishore"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "UX bug: backlog history is barely readable without titles. The archive doesn't store titles so we need to look them up from active backlogs, with fallback for cleaned items. Title lookup is a join on two small JSON files — cheap. Priority should."
+      "groomingNotes": "UX bug: backlog history is barely readable without titles. The archive doesn't store titles so we need to look them up from active backlogs, with fallback for cleaned items. Title lookup is a join on two small JSON files — cheap. Priority should.",
+      "completedAt": "2026-03-20T18:27:25-07:00"
     },
     {
       "id": "BUG-038",
