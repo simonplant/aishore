@@ -1201,7 +1201,11 @@ mark_complete() {
     # Git diff stats
     local files_changed=0 lines_added=0 lines_removed=0
     local diffstat
-    diffstat=$(git diff --shortstat HEAD~1 HEAD 2>/dev/null || true)
+    local diff_base="${AISHORE_BASE_BRANCH:-}"
+    if [[ -z "$diff_base" ]]; then
+        diff_base="HEAD~1"
+    fi
+    diffstat=$(git diff --shortstat "$diff_base" HEAD 2>/dev/null || true)
     if [[ -n "$diffstat" ]]; then
         files_changed=$(printf '%s\n' "$diffstat" | sed -n 's/.*\([0-9][0-9]*\) file.*/\1/p')
         lines_added=$(printf '%s\n' "$diffstat" | sed -n 's/.*\([0-9][0-9]*\) insertion.*/\1/p')
