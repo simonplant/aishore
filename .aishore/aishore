@@ -106,6 +106,7 @@ OUTPUT_TRUNCATE_LINES="50"
 MERGE_STRATEGY="merge"
 CREATE_PR="false"
 ISOLATION_MODE="stash"
+NOTIFY_SYSTEM="false"
 
 # Detect timeout command once at startup (macOS uses gtimeout from coreutils)
 if command -v timeout &>/dev/null; then
@@ -514,6 +515,7 @@ load_config() {
             ".merge.strategy        MERGE_STRATEGY"
             ".pr.create             CREATE_PR"
             ".isolation.mode        ISOLATION_MODE"
+            ".notifications.system NOTIFY_SYSTEM"
             ".permissions.developer CFG_PERMS_DEVELOPER"
             ".permissions.validator CFG_PERMS_VALIDATOR"
             ".permissions.reviewer  CFG_PERMS_REVIEWER"
@@ -578,6 +580,7 @@ _apply_env_overrides() {
         "AISHORE_MERGE_STRATEGY    MERGE_STRATEGY"
         "AISHORE_CREATE_PR         CREATE_PR"
         "AISHORE_ISOLATION         ISOLATION_MODE"
+        "AISHORE_NOTIFY            NOTIFY_SYSTEM"
     )
     local _env_name _target_var
     for _entry in "${_env_map[@]}"; do
@@ -620,6 +623,26 @@ send_notification() {
     if [[ -n "$NOTIFY_CMD" ]]; then
         if ! bash -c "$NOTIFY_CMD" -- "$status" "$item_id" 2>/dev/null; then
             log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
+        fi
+    fi
+}
+
+send_session_notification() {
+    local message="$1"
+    local is_failure="${2:-false}"
+
+    # Terminal bell — always fires, no config needed
+    tput bel 2>/dev/null || printf '\a'
+
+    # System notification — opt-in via notifications.system / AISHORE_NOTIFY
+    if [[ "$NOTIFY_SYSTEM" == "true" ]]; then
+        local title="aishore"
+        if [[ "$(uname -s)" == "Darwin" ]]; then
+            osascript -e "display notification \"${message//\"/\\\"}\" with title \"$title\"" 2>/dev/null || true
+        elif command -v notify-send &>/dev/null; then
+            local urgency="normal"
+            [[ "$is_failure" == "true" ]] && urgency="critical"
+            notify-send -u "$urgency" "$title" "$message" 2>/dev/null || true
         fi
     fi
 }
@@ -2936,10 +2959,13 @@ print_sprint_summary() {
     if [[ "$auto_mode" == "true" ]]; then
         if [[ $failed -eq 0 && $passed -gt 0 ]]; then
             log_header "Mission complete: $passed items done"
+            send_session_notification "Sprint session complete: $passed items done" "false"
         elif [[ "$consecutive_failures" -ge "$max_consecutive_failures" ]]; then
             log_header "Mission aborted: circuit breaker ($passed passed, $failed failed)"
+            send_session_notification "Sprint session stopped: $consecutive_failures consecutive failures ($passed passed, $failed failed)" "true"
         else
             log_header "Mission ended: $passed passed, $failed failed"
+            send_session_notification "Sprint session ended: $passed passed, $failed failed" "$( [[ $failed -gt 0 ]] && echo true || echo false )"
         fi
     else
         log_header "Results: $passed passed, $failed failed"
