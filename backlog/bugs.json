@@ -3484,11 +3484,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Minor but confusing UX. When a user explicitly sets --limit 3 they are telling the system to stop after 3 items. Showing /20 implies 17 more items will run, which is wrong.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T13:32:28-07:00"
     },
     {
       "id": "BUG-122",

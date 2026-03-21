@@ -2841,7 +2841,11 @@ run_sprint_loop() {
             elapsed_secs=$(( $(date +%s) - batch_start ))
             elapsed_min=$(( elapsed_secs / 60 ))
             if [[ ${#queued_ids[@]} -gt 0 ]]; then
-                progress_count="$passed/${#queued_ids[@]} complete"
+                local display_total="${#queued_ids[@]}"
+                if [[ -n "$session_limit" && "$session_limit" -lt "$display_total" ]]; then
+                    display_total="$session_limit"
+                fi
+                progress_count="$passed/$display_total complete"
             else
                 progress_count="$passed complete"
             fi
