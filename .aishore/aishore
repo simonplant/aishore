@@ -1968,7 +1968,7 @@ cmd_auto() {
     local scope="${1:-}"
 
     if [[ -z "$scope" ]]; then
-        log_error "Usage: auto {done|p0|p1|p2} [--limit N] [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--category <name>] [--auto-review] [--dry-run]"
+        log_error "Usage: auto {done|p0|p1|p2} [--limit N] [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--category <name>] [--auto-review] [--no-summary] [--dry-run]"
         echo "" >&2
         echo "Scopes:" >&2
         echo "  done  Drain entire backlog to completion" >&2
@@ -2445,7 +2445,7 @@ _sync_remote() {
 # Handle post-sprint success: mark complete, safety commit, merge/push.
 # Uses outer-scope locals: ITEM_ID, item_source, total_attempts, sprint_start,
 #   passed, failed, consecutive_failures, groom_exhausted, no_merge, base_branch,
-#   sprint_results, sprint_items, sprint_times, FAILED_IDS
+#   sprint_results, sprint_items, sprint_times, FAILED_IDS, session_lines_added, session_lines_removed
 # Returns 1 on merge conflict (caller should break).
 _handle_sprint_success() {
     if mark_complete "$ITEM_ID" "$item_source" "$total_attempts"; then
@@ -2456,6 +2456,18 @@ _handle_sprint_success() {
         sprint_results+=("pass")
         sprint_items+=("$ITEM_ID")
         sprint_times+=("$(( $(date +%s) - sprint_start ))")
+
+        # Accumulate line stats from the archive entry just written
+        local _archive_lines
+        _archive_lines=$(tail -1 "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null || true)
+        if [[ -n "$_archive_lines" ]]; then
+            local _la _lr
+            _la=$(printf '%s' "$_archive_lines" | jq -r '.linesAdded // 0' 2>/dev/null || echo 0)
+            _lr=$(printf '%s' "$_archive_lines" | jq -r '.linesRemoved // 0' 2>/dev/null || echo 0)
+            session_lines_added=$((session_lines_added + _la))
+            session_lines_removed=$((session_lines_removed + _lr))
+        fi
+
         send_notification "pass" "$ITEM_ID"
     else
         log_error "Failed to mark $ITEM_ID complete"
@@ -2572,7 +2584,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
 cmd_run_parse_args() {
     parse_opts --positional \
         "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:create_pr:--pr" \
-        "bool:refine_on_exhaust:--refine" "bool:quick_mode:--quick" "bool:auto_review:--auto-review" \
+        "bool:refine_on_exhaust:--refine" "bool:quick_mode:--quick" "bool:auto_review:--auto-review" "bool:no_summary:--no-summary" \
         "val:auto_scope:--_auto" "val:category_filter:--category" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" \
         -- "$@" || return 1
     [[ -n "$auto_scope" ]] && auto_mode=true
@@ -2689,6 +2701,8 @@ setup_sprint_environment() {
     session_failures=()
     queued_ids=()
     skipped_ids=()
+    session_lines_added=0
+    session_lines_removed=0
 
     # Pre-build ordered list of all items that could be attempted in this batch
     if [[ -n "$specific_id" ]]; then
@@ -2938,12 +2952,39 @@ run_sprint_loop() {
     done
 }
 
+# Print end-of-session summary table with counts, duration, and lines changed.
+# Uses outer-scope locals from cmd_run and setup_sprint_environment.
+print_session_summary_table() {
+    local batch_elapsed=$(( $(date +%s) - batch_start ))
+    local total_mins=$(( batch_elapsed / 60 ))
+    local total_secs=$(( batch_elapsed % 60 ))
+    local attempted=$((passed + failed))
+
+    echo ""
+    echo -e "${CYAN}╔══════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║         Session Summary              ║${NC}"
+    echo -e "${CYAN}╠══════════════════════════════════════╣${NC}"
+    echo -e "${CYAN}║${NC}  Items attempted   $(printf '%14s' "$attempted")  ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}  Items passed      $(printf '%14s' "$passed")  ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}  Items failed      $(printf '%14s' "$failed")  ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}  Total duration    $(printf '%14s' "${total_mins}m ${total_secs}s")  ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}  Lines added       $(printf '%14s' "+${session_lines_added}")  ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}  Lines removed     $(printf '%14s' "-${session_lines_removed}")  ${CYAN}║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════╝${NC}"
+    echo ""
+}
+
 # Print batch summary, restore stash, offer architecture review, and print final status.
 # Uses outer-scope locals from cmd_run and setup_sprint_environment.
 print_sprint_summary() {
     # Print batch summary for auto mode or multi-sprint runs
     if [[ "$auto_mode" == "true" || $count -gt 1 ]]; then
         print_batch_summary "$batch_start" sprint_results sprint_items sprint_times FAILED_IDS skipped_ids
+    fi
+
+    # Print end-of-session summary table (unless suppressed)
+    if [[ "$no_summary" != "true" && $((passed + failed)) -gt 0 ]]; then
+        print_session_summary_table
     fi
 
     # Restore pre-existing uncommitted changes
@@ -3011,7 +3052,7 @@ cmd_run() {
     local refine_on_exhaust=false quick_mode=false
     local auto_mode=false auto_scope="" auto_priorities=""
     local auto_review=false max_consecutive_failures=""
-    local category_filter="" session_limit=""
+    local category_filter="" session_limit="" no_summary=false
 
     cmd_run_parse_args "$@" || return $?
 
@@ -3021,6 +3062,7 @@ cmd_run() {
     fi
 
     local did_stash=false scope_label="" base_branch
+    local session_lines_added=0 session_lines_removed=0
     local passed=0 failed=0
     declare -A FAILED_IDS
     local batch_start sprint_results=() sprint_items=() sprint_times=()
