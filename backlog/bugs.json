@@ -2729,11 +2729,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "BUG-082 was marked done manually but VERSION is still 0.3.4 and no 0.3.5 CHANGELOG section exists. 20+ items completed since v0.3.4.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T10:57:09-07:00"
     }
   ]
 }
