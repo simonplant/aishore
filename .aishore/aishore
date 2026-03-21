@@ -2395,6 +2395,11 @@ _handle_sprint_success() {
         sprint_items+=("$ITEM_ID")
         sprint_times+=("$(( $(date +%s) - sprint_start ))")
         send_notification "fail" "$ITEM_ID"
+        # Return to base branch so subsequent sprints branch correctly
+        log_warning "Abandoning feature branch $AISHORE_FEATURE_BRANCH due to archival failure"
+        git checkout "$base_branch" >/dev/null 2>&1 || true
+        git branch -D "$AISHORE_FEATURE_BRANCH" >/dev/null 2>&1 || true
+        AISHORE_FEATURE_BRANCH=""
         return 0
     fi
 
