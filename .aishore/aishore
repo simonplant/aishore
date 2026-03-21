@@ -3146,7 +3146,7 @@ protect_items_from_groom() {
                 if $orig[.id] then $orig[.id] + {
                     readyForSprint: (.readyForSprint // $orig[.id].readyForSprint),
                     groomedAt:      (.groomedAt      // $orig[.id].groomedAt),
-                    groomedNotes:   (.groomedNotes   // $orig[.id].groomedNotes),
+                    groomingNotes:  (.groomingNotes  // $orig[.id].groomingNotes),
                     priority:       (.priority       // $orig[.id].priority)
                 } else . end
             ] + [$orig | to_entries[] | select(.key as $id | $live_ids | index($id) | not) | .value]) |
