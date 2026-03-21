@@ -738,7 +738,6 @@ pick_item() {
     fi
 
     # Callers provide context-appropriate messages (auto-mode: drained; manual: no ready items)
-    log_error "No eligible item found in backlog"
     return 1
 }
 

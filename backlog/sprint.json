@@ -1,32 +1,32 @@
 {
-  "sprintId": "sprint-1774112539",
-  "startedAt": "2026-03-21T10:02:19-07:00",
+  "sprintId": "sprint-1774112984",
+  "startedAt": "2026-03-21T10:09:44-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-029",
-    "title": "auto and run commands support --category filter to scope item selection",
-    "intent": "Users running auto or run on a mixed backlog can target a single category (e.g., auto done --category documentation) so a sprint session stays focused. Only items matching the given category are eligible — unmatched items are skipped as if they don't exist in that run.",
-    "description": "Users with large, categorized backlogs have no way to run a focused sprint on one area. Without a category filter, auto done picks any ready item regardless of category — mixing documentation bugs with feature work in the same session. A --category flag scopes item selection to only items tagged with that category, enabling focused sprint sessions by area (documentation, performance, testing, etc.).",
-    "sourceBacklog": "backlog.json",
+    "id": "BUG-091",
+    "title": "pick_item emits spurious error log when auto-mode backlog is drained",
+    "intent": "In auto mode, backlog exhaustion is normal and expected — pick_item must not log an error when the sprint loop will immediately handle the empty result as success.",
+    "description": "When auto done drains the backlog completely, pick_item() at line 734 logs log_error 'No eligible item found in backlog' before returning 1. The sprint loop (line 2704) then correctly prints log_success 'No more ready items — backlog drained'. The spurious red error appears in terminal output right before the green success message, confusing users into thinking something went wrong when the session completed cleanly.",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "Add --category <name> flag to cmd_run and cmd_auto option parsing",
-      "When --category is set, filter eligible items in pick_next_item to only those where item.category == category_filter",
-      "Pass category filter through the auto loop so each iteration respects the scope",
-      "If no items match the category filter, print a clear message and exit (not a circuit-breaker failure)",
-      "Update help text for run and auto commands to document --category"
+      "In pick_item(), replace the unconditional log_error on the 'no item found' exit path with a return 1 only — remove the log_error call",
+      "Callers already provide their own context-appropriate messages (sprint loop handles auto vs non-auto vs specific-id cases)",
+      "Verify: run auto done to exhaust backlog — terminal shows only the success message, no error",
+      "Verify: run backlog list on empty-ready backlog — caller still shows warning (cmd_run sprint loop handles this)",
+      "shellcheck passes"
     ],
     "acceptanceCriteria": [
-      "auto done --category documentation runs only documentation-tagged items; other items are not touched",
-      "auto done --category nonexistent exits with a clear 'no items found' message, not an error",
-      "run --category <name> with a specific ID rejects the item if it does not match the category",
-      "help text for run and auto shows the --category flag",
-      "shellcheck reports no new issues"
+      "auto done completes with no red error log when all items are done",
+      "Non-auto mode still shows the 'No ready items' warning from the sprint loop caller",
+      "shellcheck passes"
     ],
-    "scope": [],
-    "startedAt": "2026-03-21T10:02:19-07:00",
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "startedAt": "2026-03-21T10:09:44-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T10:09:43-07:00"
+    "completedAt": "2026-03-21T10:11:53-07:00"
   },
-  "completedAt": "2026-03-21T10:09:43-07:00",
+  "completedAt": "2026-03-21T10:11:53-07:00",
   "attempts": 1
 }
