@@ -486,7 +486,8 @@ pick_item() {
     done_ids_json=$(collect_done_ids)
 
     # Warn about self-referencing dependencies
-    for bf in "${BACKLOG_FILES[@]}"; do
+    _warn_self_refs() {
+        local bf="$1"
         local self_refs
         self_refs=$(jq -r '.items[] | select(.dependsOn != null) | select(.id as $self | .dependsOn | index($self) != null) | .id' "$BACKLOG_DIR/$bf" 2>/dev/null || true)
         if [[ -n "$self_refs" ]]; then
@@ -494,10 +495,12 @@ pick_item() {
                 log_warning "Item $sid has self-referencing dependency — skipping in auto-pick"
             done <<< "$self_refs"
         fi
-    done
+    }
+    map_backlog_files _warn_self_refs
 
     # Auto-pick: highest priority ready item (excluding failed items and unmet dependencies)
-    for backlog in "${BACKLOG_FILES[@]}"; do
+    _try_pick() {
+        local backlog="$1"
         item_json=$(jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" '
             '"$PICKABLE_ITEMS_FILTER"' |
             sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end) |
@@ -510,7 +513,11 @@ pick_item() {
             echo "$item_json"
             return 0
         fi
-    done
+        return 1
+    }
+    if find_first_backlog _try_pick; then
+        return 0
+    fi
 
     # Callers provide context-appropriate messages (auto-mode: drained; manual: no ready items)
     log_error "No eligible item found in backlog"
@@ -526,6 +533,55 @@ get_item_source() {
 # BACKLOG HELPERS
 # ============================================================================
 
+# Core iterator: call callback(filename, ...) for each backlog file.
+# Callback receives the short filename (e.g. "backlog.json"), not the full path.
+map_backlog_files() {
+    local _mbf_cb="$1"; shift
+    local _mbf_f
+    for _mbf_f in "${BACKLOG_FILES[@]}"; do
+        "$_mbf_cb" "$_mbf_f" "$@"
+    done
+}
+
+# Search iterator: call callback(filename, ...) for each backlog file,
+# stop and return 0 on the first callback that succeeds (returns 0).
+# Returns 1 if no callback succeeds.
+find_first_backlog() {
+    local _ffb_cb="$1"; shift
+    local _ffb_f
+    for _ffb_f in "${BACKLOG_FILES[@]}"; do
+        if "$_ffb_cb" "$_ffb_f" "$@"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Copy each backlog file into dest_dir (for snapshot/backup).
+snapshot_backlog_files() {
+    local dest="$1"
+    _sbf_copy() { [[ -f "$BACKLOG_DIR/$1" ]] && cp "$BACKLOG_DIR/$1" "$dest/$1" || true; }
+    map_backlog_files _sbf_copy
+}
+
+# Restore backlog files from a snapshot directory.
+restore_backlog_files() {
+    local src="$1"
+    _rbf_copy() { [[ -f "$src/$1" ]] && cp "$src/$1" "$BACKLOG_DIR/$1" || true; }
+    map_backlog_files _rbf_copy
+}
+
+# Sum a per-file count function across all backlog files.
+# Usage: sum_backlog_count count_func  (count_func receives full path)
+sum_backlog_count() {
+    local _sbc_func="$1" _sbc_total=0
+    _sbc_add() {
+        [[ -f "$BACKLOG_DIR/$1" ]] && _sbc_total=$((_sbc_total + $("$_sbc_func" "$BACKLOG_DIR/$1")))
+    }
+    map_backlog_files _sbc_add
+    echo "$_sbc_total"
+}
+
 resolve_backlog_file() {
     local id="$1"
     local expected=""
@@ -539,12 +595,17 @@ resolve_backlog_file() {
         return 0
     fi
     # Fall through: search all files
-    for f in "${BACKLOG_FILES[@]}"; do
+    _try_resolve() {
+        local f="$1" id="$2"
         if [[ -f "$BACKLOG_DIR/$f" ]] && jq -e --arg id "$id" '.items[] | select(.id == $id)' "$BACKLOG_DIR/$f" &>/dev/null; then
             echo "$f"
             return 0
         fi
-    done
+        return 1
+    }
+    if find_first_backlog _try_resolve "$id"; then
+        return 0
+    fi
     log_error "Item not found in any backlog: $id"
     return 1
 }
@@ -618,11 +679,7 @@ check_readiness_gates() {
         while IFS= read -r dep_id; do
             # Try to find the dependency in any backlog file
             local dep_item=""
-            for bf in "${BACKLOG_FILES[@]}"; do
-                [[ -f "$BACKLOG_DIR/$bf" ]] || continue
-                dep_item=$(jq -e --arg d "$dep_id" '.items[] | select(.id == $d)' "$BACKLOG_DIR/$bf" 2>/dev/null) && break
-                dep_item=""
-            done
+            dep_item=$(find_item "$dep_id" 2>/dev/null) || true
             if [[ -z "$dep_item" ]]; then
                 warnings="${warnings}  - Dependency ${dep_id}: not found in any backlog\n"
                 has_warning=true
@@ -664,12 +721,14 @@ next_id() {
     local prefix="$1"
     local max=0
     # Check active backlog files
-    for f in "${BACKLOG_FILES[@]}"; do
-        [[ -f "$BACKLOG_DIR/$f" ]] || continue
+    _next_id_max() {
+        local f="$1"
+        [[ -f "$BACKLOG_DIR/$f" ]] || return 0
         local file_max
         file_max=$(jq -r --arg pfx "$prefix-" '[.items[].id | select(startswith($pfx)) | ltrimstr($pfx) | select(test("^[0-9]+$")) | tonumber] | max // 0' "$BACKLOG_DIR/$f" 2>/dev/null || echo 0)
         [[ "$file_max" -gt "$max" ]] && max="$file_max"
-    done
+    }
+    map_backlog_files _next_id_max
     # Check archive to prevent ID reuse after items are completed/removed
     local archive_file="$BACKLOG_DIR/archive/sprints.jsonl"
     if [[ -f "$archive_file" ]]; then
@@ -732,24 +791,28 @@ list_pickable_ids() {
     fi
     local done_ids_json
     done_ids_json=$(collect_done_ids)
-    for backlog in "${BACKLOG_FILES[@]}"; do
+    _list_pickable_one() {
+        local backlog="$1"
         jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --argjson prios "$prio_json" '
             '"$PICKABLE_ITEMS_FILTER"' |
             [.[] | select(($prios | length) == 0 or (.priority // "should") as $p | $prios | index($p) != null)] |
             sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end) |
             .[].id
         ' "$BACKLOG_DIR/$backlog" 2>/dev/null || true
-    done
+    }
+    map_backlog_files _list_pickable_one
 }
 
 collect_done_ids() {
     local done_ids="[]"
-    for f in "${BACKLOG_FILES[@]}"; do
-        [[ -f "$BACKLOG_DIR/$f" ]] || continue
+    _collect_done_one() {
+        local f="$1"
+        [[ -f "$BACKLOG_DIR/$f" ]] || return 0
         local ids
         ids=$(jq '[.items[] | select(.status == "done") | .id]' "$BACKLOG_DIR/$f" 2>/dev/null || echo "[]")
         done_ids=$(echo "$done_ids" "$ids" | jq -s 'add | unique')
-    done
+    }
+    map_backlog_files _collect_done_one
     echo "$done_ids"
 }
 
@@ -1407,16 +1470,12 @@ run_ac_verification() {
 save_backlog_snapshot() {
     local snapshot_dir="$STATUS_DIR/backlog-snapshot"
     mkdir -p "$snapshot_dir"
-    for f in "${BACKLOG_FILES[@]}"; do
-        [[ -f "$BACKLOG_DIR/$f" ]] && cp "$BACKLOG_DIR/$f" "$snapshot_dir/$f" || true
-    done
+    snapshot_backlog_files "$snapshot_dir"
 }
 
 restore_backlog_snapshot() {
     local snapshot_dir="$STATUS_DIR/backlog-snapshot"
-    for f in "${BACKLOG_FILES[@]}"; do
-        [[ -f "$snapshot_dir/$f" ]] && cp "$snapshot_dir/$f" "$BACKLOG_DIR/$f" || true
-    done
+    restore_backlog_files "$snapshot_dir"
 }
 
 mark_item_failed() {
@@ -2264,11 +2323,7 @@ setup_sprint_environment() {
 # Uses and modifies outer-scope locals from cmd_run and setup_sprint_environment.
 run_sprint_loop() {
     _count_total_ready() {
-        local _total=0
-        for _bf in "${BACKLOG_FILES[@]}"; do
-            [[ -f "$BACKLOG_DIR/$_bf" ]] && _total=$((_total + $(count_ready_items "$BACKLOG_DIR/$_bf")))
-        done
-        echo "$_total"
+        sum_backlog_count count_ready_items
     }
 
     _record_sprint_failure() {
@@ -2315,9 +2370,7 @@ run_sprint_loop() {
                 # Snapshot for groom limit enforcement
                 local auto_groom_snap
                 auto_groom_snap=$(mktemp -d)
-                for _agf in "${BACKLOG_FILES[@]}"; do
-                    [[ -f "$BACKLOG_DIR/$_agf" ]] && cp "$BACKLOG_DIR/$_agf" "$auto_groom_snap/$_agf"
-                done
+                snapshot_backlog_files "$auto_groom_snap"
                 run_agent "tech-lead" "groom" "$MODEL_FAST" "$groom_context" || true
                 check_result || log_warning "Tech-lead groom did not pass — continuing"
                 run_agent "product-owner" "groom" "$MODEL_FAST" "$groom_context" || true
@@ -2514,10 +2567,8 @@ print_sprint_summary() {
 
         if [[ "$run_review" == "true" ]]; then
             # Count items before review
-            local _items_before=0
-            for _bf in "${BACKLOG_FILES[@]}"; do
-                [[ -f "$BACKLOG_DIR/$_bf" ]] && _items_before=$((_items_before + $(count_items "$BACKLOG_DIR/$_bf")))
-            done
+            local _items_before
+            _items_before=$(sum_backlog_count count_items)
 
             log_header "Architecture Review"
             echo "Mode: Read-only"
@@ -2555,10 +2606,8 @@ Read-only review. Do not modify files."
 
             if check_result; then
                 # Check if new backlog items were added during review
-                local _items_after=0
-                for _bf in "${BACKLOG_FILES[@]}"; do
-                    [[ -f "$BACKLOG_DIR/$_bf" ]] && _items_after=$((_items_after + $(count_items "$BACKLOG_DIR/$_bf")))
-                done
+                local _items_after
+                _items_after=$(sum_backlog_count count_items)
                 if [[ "$_items_after" -gt "$_items_before" ]]; then
                     local _new_count=$((_items_after - _items_before))
                     echo ""
@@ -2657,9 +2706,7 @@ cmd_groom() {
     # Snapshot existing items so we can protect them from groomer overwrites
     local groom_snap_dir
     groom_snap_dir=$(mktemp -d)
-    for f in "${BACKLOG_FILES[@]}"; do
-        [[ -f "$BACKLOG_DIR/$f" ]] && cp "$BACKLOG_DIR/$f" "$groom_snap_dir/$f"
-    done
+    snapshot_backlog_files "$groom_snap_dir"
 
     log_info "Running $agent agent..."
     echo ""
@@ -2752,16 +2799,17 @@ protect_items_from_groom() {
     local snap_dir="$1"
     local restored=0 deleted_restored=0
 
-    for f in "${BACKLOG_FILES[@]}"; do
+    _protect_one_file() {
+        local f="$1"
         local snap_file="$snap_dir/$f"
         local live_file="$BACKLOG_DIR/$f"
-        [[ -f "$snap_file" ]] || continue
-        [[ -f "$live_file" ]] || continue
+        [[ -f "$snap_file" ]] || return 0
+        [[ -f "$live_file" ]] || return 0
 
         # Get list of IDs that existed before grooming
         local old_ids
         old_ids=$(jq -r '.items[].id' "$snap_file" 2>/dev/null)
-        [[ -z "$old_ids" ]] && continue
+        [[ -z "$old_ids" ]] && return 0
 
         # For each pre-existing ID, check if it was modified or deleted
         local id
@@ -2814,7 +2862,8 @@ protect_items_from_groom() {
                 fi
             fi
         done <<< "$old_ids"
-    done
+    }
+    map_backlog_files _protect_one_file
 
     local total=$((restored + deleted_restored))
     if [[ "$total" -gt 0 ]]; then
@@ -2848,11 +2897,12 @@ enforce_groom_limits() {
     # Global kept counter — max_items applies across all files
     local global_kept=0
 
-    for f in "${BACKLOG_FILES[@]}"; do
+    _enforce_limits_one() {
+        local f="$1"
         local snap_file="$snap_dir/$f"
         local live_file="$BACKLOG_DIR/$f"
-        [[ -f "$snap_file" ]] || continue
-        [[ -f "$live_file" ]] || continue
+        [[ -f "$snap_file" ]] || return 0
+        [[ -f "$live_file" ]] || return 0
 
         # Get IDs that existed before grooming
         local old_ids
@@ -2871,7 +2921,7 @@ enforce_groom_limits() {
 
         local new_count
         new_count=$(printf '%s' "$new_items_json" | jq 'length' 2>/dev/null || echo 0)
-        [[ "$new_count" -eq 0 ]] && continue
+        [[ "$new_count" -eq 0 ]] && return 0
 
         # Filter out items below min priority
         local removed_ids=()
@@ -2906,7 +2956,8 @@ enforce_groom_limits() {
                 '.items = [.items[] | select(.id as $id | $rm | index($id) | not)]' "$live_file")
             printf '%s\n' "$tmp" > "$live_file"
         fi
-    done
+    }
+    map_backlog_files _enforce_limits_one
 
     echo "$global_kept $_groom_items_skipped"
 }
@@ -3996,9 +4047,7 @@ cmd_backlog_populate() {
     # Snapshot existing items to protect from agent overwrites
     local populate_snap_dir
     populate_snap_dir=$(mktemp -d)
-    for f in "${BACKLOG_FILES[@]}"; do
-        [[ -f "$BACKLOG_DIR/$f" ]] && cp "$BACKLOG_DIR/$f" "$populate_snap_dir/$f"
-    done
+    snapshot_backlog_files "$populate_snap_dir"
 
     log_info "Running product-owner agent to populate backlog..."
     echo ""
@@ -4555,13 +4604,14 @@ cmd_backlog_history() {
 
     # Build title lookup map from active backlogs
     declare -A title_map
-    local bf
-    for bf in "${BACKLOG_FILES[@]}"; do
-        [[ -f "$BACKLOG_DIR/$bf" ]] || continue
+    _load_titles() {
+        local bf="$1"
+        [[ -f "$BACKLOG_DIR/$bf" ]] || return 0
         while IFS=$'\t' read -r _id _title; do
             title_map["$_id"]="$_title"
         done < <(jq -r '.items[] | [.id, .title] | @tsv' "$BACKLOG_DIR/$bf" 2>/dev/null || true)
-    done
+    }
+    map_backlog_files _load_titles
 
     # Print table header
     printf "%-12s %-12s %-10s %-10s %s\n" "ID" "DATE" "STATUS" "DURATION" "TITLE"
