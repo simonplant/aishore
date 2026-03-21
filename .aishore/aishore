@@ -584,9 +584,14 @@ pick_item() {
         # Project to sprint fields
         item_json=$(echo "$full_item" | jq "$ITEM_PROJECTION")
 
+        # Extract all needed scalar fields from full_item in one jq pass
+        local item_intent item_status deps_json
+        IFS=$'\t' read -r item_intent item_status deps_json < <(
+            echo "$full_item" | jq -r '[(.intent // ""), (.status // "todo"), (.dependsOn // null | tojson)] | @tsv'
+        )
+        [[ "$deps_json" == "null" ]] && deps_json=""
+
         # Enforce commander's intent — no intent, no sprint
-        local item_intent
-        item_intent=$(echo "$full_item" | jq -r '.intent // ""')
         if [[ -z "$item_intent" ]]; then
             log_error "Item $specific_id has no intent — set one with: .aishore/aishore backlog edit $specific_id --intent \"...\""
             log_error "Commander's intent defines what must be true when done. No intent, no sprint."
@@ -597,15 +602,10 @@ pick_item() {
             return 1
         fi
 
-        local item_status
-        item_status=$(echo "$item_json" | jq -r '.status')
         if [[ "$item_status" == "done" ]]; then
             log_warning "Item $specific_id is already completed — re-running"
         fi
-
         # Check for unmet dependencies
-        local deps_json
-        deps_json=$(echo "$full_item" | jq -r '.dependsOn // empty' 2>/dev/null)
         if [[ -n "$deps_json" && "$deps_json" != "null" ]]; then
             local all_done_ids
             all_done_ids=$(collect_done_ids)
@@ -774,17 +774,27 @@ check_readiness_gates() {
     local warnings=""
     local has_warning=false
 
+    # Extract all gate-check fields from item in one jq pass
+    local title item_intent step_count ac_count short_steps has_scope deps
+    IFS=$'\t' read -r title item_intent step_count ac_count short_steps has_scope < <(
+        echo "$item" | jq -r '[
+            (.title // ""),
+            (.intent // ""),
+            ([.steps // [] | .[]] | length | tostring),
+            ([.acceptanceCriteria // [] | .[]] | length | tostring),
+            ([.steps // [] | .[] | select(length <= 10)] | length | tostring),
+            ([.scope // [] | .[]] | length | tostring)
+        ] | @tsv'
+    )
+    deps=$(echo "$item" | jq -r '.dependsOn // [] | .[]' 2>/dev/null)
+
     # Check title non-empty
-    local title
-    title=$(echo "$item" | jq -r '.title // ""')
     if [[ -z "$title" ]]; then
         warnings="${warnings}  - Title is empty\n"
         has_warning=true
     fi
 
     # Check intent is present and substantive
-    local item_intent
-    item_intent=$(echo "$item" | jq -r '.intent // ""')
     if [[ -z "$item_intent" ]]; then
         warnings="${warnings}  - No intent defined (the commander's intent — what must be true when this is done)\n"
         has_warning=true
@@ -794,32 +804,24 @@ check_readiness_gates() {
     fi
 
     # Check at least 1 step
-    local step_count
-    step_count=$(echo "$item" | jq '[.steps // [] | .[]] | length')
     if [[ "$step_count" -lt 1 ]]; then
         warnings="${warnings}  - No implementation steps defined\n"
         has_warning=true
     fi
 
     # Check at least 1 acceptance criterion
-    local ac_count
-    ac_count=$(echo "$item" | jq '[.acceptanceCriteria // [] | .[]] | length')
     if [[ "$ac_count" -lt 1 ]]; then
         warnings="${warnings}  - No acceptance criteria defined\n"
         has_warning=true
     fi
 
     # Check no steps <= 10 chars
-    local short_steps
-    short_steps=$(echo "$item" | jq -r '[.steps // [] | .[] | select(length <= 10)] | length')
     if [[ "$short_steps" -gt 0 ]]; then
         warnings="${warnings}  - $short_steps step(s) are too short (<=10 chars)\n"
         has_warning=true
     fi
 
     # Check for unmet dependencies
-    local deps
-    deps=$(echo "$item" | jq -r '.dependsOn // [] | .[]' 2>/dev/null)
     if [[ -n "$deps" ]]; then
         while IFS= read -r dep_id; do
             # Try to find the dependency in any backlog file
@@ -844,8 +846,6 @@ check_readiness_gates() {
     if [[ "$step_count" -lt 3 && "$step_count" -gt 0 ]]; then
         complexity_hints="${complexity_hints}    • Only $step_count step(s) — consider breaking the work into 3+ concrete steps\n"
     fi
-    local has_scope
-    has_scope=$(echo "$item" | jq '[.scope // [] | .[]] | length')
     if [[ "$has_scope" -eq 0 ]]; then
         complexity_hints="${complexity_hints}    • No scope defined — add file path globs to constrain where changes land\n"
     fi
@@ -1520,9 +1520,12 @@ check_scope_violations() {
     scope_json=$(jq -r '.item.scope // empty' "$sprint_file" 2>/dev/null)
     [[ -z "$scope_json" || "$scope_json" == "null" || "$scope_json" == "[]" ]] && return 0
 
-    local scope_count
-    scope_count=$(echo "$scope_json" | jq 'length' 2>/dev/null || echo 0)
-    [[ "$scope_count" -eq 0 ]] && return 0
+    # Read scope globs into array in one pass (also handles empty check)
+    local -a globs=()
+    while IFS= read -r glob; do
+        globs+=("$glob")
+    done < <(jq -r '.[]' <<< "$scope_json" 2>/dev/null)
+    [[ ${#globs[@]} -eq 0 ]] && return 0
 
     # Get changed files against base branch (developer may have multiple commits)
     local base_branch="$AISHORE_BASE_BRANCH"
@@ -1531,12 +1534,6 @@ check_scope_violations() {
     local changed_files
     changed_files=$(git diff --name-only "$base_branch"...HEAD 2>/dev/null || true)
     [[ -z "$changed_files" ]] && return 0
-
-    # Read scope globs into array
-    local -a globs=()
-    while IFS= read -r glob; do
-        globs+=("$glob")
-    done < <(echo "$scope_json" | jq -r '.[]' 2>/dev/null)
 
     local violations=""
     local violation_count=0
@@ -1580,11 +1577,10 @@ run_ac_verification() {
     ac_json=$(jq -r '.item.acceptanceCriteria // []' "$sprint_file" 2>/dev/null)
     [[ -z "$ac_json" || "$ac_json" == "null" || "$ac_json" == "[]" ]] && return 0
 
-    # Filter to objects with .verify field
-    local verifiable
+    # Filter to objects with .verify field and get count in one pass
+    local verifiable verify_count
     verifiable=$(echo "$ac_json" | jq '[.[] | select(type == "object" and .verify != null)]' 2>/dev/null)
-    local verify_count
-    verify_count=$(echo "$verifiable" | jq 'length' 2>/dev/null || echo 0)
+    verify_count=$(jq 'length' <<< "$verifiable" 2>/dev/null || echo 0)
     [[ "$verify_count" -eq 0 ]] && return 0
 
     log_info "Running $verify_count AC verification command(s)" >&2
@@ -1592,10 +1588,7 @@ run_ac_verification() {
     local report=""
     local idx=0
 
-    while IFS= read -r entry; do
-        local ac_text ac_cmd
-        ac_text=$(echo "$entry" | jq -r '.text // "unnamed"')
-        ac_cmd=$(echo "$entry" | jq -r '.verify')
+    while IFS=$'\t' read -r ac_text ac_cmd; do
         idx=$((idx + 1))
 
         local ac_ok=true
@@ -1614,7 +1607,7 @@ run_ac_verification() {
             log_error "AC: $ac_text"
             all_passed=false
         fi
-    done < <(echo "$verifiable" | jq -c '.[]')
+    done < <(jq -r '.[] | [(.text // "unnamed"), .verify] | @tsv' <<< "$verifiable")
 
     [[ -n "$report" ]] && echo "$report"
     [[ "$all_passed" == "true" ]] && return 0 || return 1
@@ -1847,8 +1840,7 @@ _run_dry_run() {
     fi
 
     local item_id item_title
-    item_id=$(echo "$item_json" | jq -r '.id')
-    item_title=$(echo "$item_json" | jq -r '.title // .description')
+    IFS=$'\t' read -r item_id item_title < <(echo "$item_json" | jq -r '[.id, (.title // .description)] | @tsv')
 
     log_subheader "Selected Item"
     echo "$item_json" | jq .
@@ -2539,7 +2531,7 @@ run_sprint_loop() {
         # Auto mode: check if picked item is within priority scope
         if [[ "$auto_mode" == "true" && -n "$auto_priorities" ]]; then
             local item_priority
-            item_priority=$(echo "$item_json" | jq -r '.priority // "should"')
+            item_priority=$(jq -r '.priority // "should"' <<< "$item_json")
             if [[ " $auto_priorities " != *" $item_priority "* ]]; then
                 log_success "All $auto_scope items complete — remaining items are lower priority"
                 break
@@ -3135,47 +3127,47 @@ cmd_metrics() {
     else
         log_header "aishore Metrics"
         echo ""
-        echo "Completed Sprints: $(echo "$metrics_json" | jq -r '.sprints.completed')"
+        # Extract basic metrics in one jq pass
+        local sprints_completed backlog_total backlog_ready bugs_total bugs_ready trends_empty
+        IFS=$'\t' read -r sprints_completed backlog_total backlog_ready bugs_total bugs_ready trends_empty < <(
+            jq -r '[
+                (.sprints.completed | tostring),
+                (.backlog.total | tostring),
+                (.backlog.ready | tostring),
+                (.bugs.total | tostring),
+                (.bugs.ready | tostring),
+                ((.trends == {}) | tostring)
+            ] | @tsv' <<< "$metrics_json"
+        )
+
+        echo "Completed Sprints: $sprints_completed"
         echo ""
         echo "Backlog:"
-        echo "  Total items: $(echo "$metrics_json" | jq -r '.backlog.total')"
-        echo "  Ready for sprint: $(echo "$metrics_json" | jq -r '.backlog.ready')"
+        echo "  Total items: $backlog_total"
+        echo "  Ready for sprint: $backlog_ready"
         echo ""
         echo "Bugs/Tech Debt:"
-        echo "  Total items: $(echo "$metrics_json" | jq -r '.bugs.total')"
-        echo "  Ready for sprint: $(echo "$metrics_json" | jq -r '.bugs.ready')"
+        echo "  Total items: $bugs_total"
+        echo "  Ready for sprint: $bugs_ready"
 
-        # Trends section
-        local trends_empty
-        trends_empty=$(echo "$metrics_json" | jq -r '.trends == {}')
+        # Trends section — extract all trend fields in one jq pass
         if [[ "$trends_empty" != "true" ]]; then
             echo ""
             log_subheader "Trends"
-            echo "  Avg attempts/item: $(echo "$metrics_json" | jq -r '.trends.avgAttempts')"
-            echo "  Items/day: $(echo "$metrics_json" | jq -r '.trends.itemsPerDay')"
-
-            local by_priority
-            by_priority=$(echo "$metrics_json" | jq -r '.trends.byPriority | to_entries | map("\(.key): \(.value)") | join(", ")')
-            [[ -n "$by_priority" ]] && echo "  By priority: $by_priority"
-
-            local by_category
-            by_category=$(echo "$metrics_json" | jq -r '.trends.byCategory | to_entries | map("\(.key): \(.value)") | join(", ")')
-            [[ -n "$by_category" ]] && echo "  By category: $by_category"
-
-            # Recent trend (last 10 vs overall)
-            local has_recent
-            has_recent=$(echo "$metrics_json" | jq -r '.trends | has("recentAvgAttempts")')
-            if [[ "$has_recent" == "true" ]]; then
-                local recent_avg_attempts overall_avg_attempts
-                recent_avg_attempts=$(echo "$metrics_json" | jq -r '.trends.recentAvgAttempts')
-                overall_avg_attempts=$(echo "$metrics_json" | jq -r '.trends.avgAttempts')
-                echo "  Recent trend (last 10): avg attempts $recent_avg_attempts (overall: $overall_avg_attempts)"
-
-                local recent_avg_duration overall_avg_duration
-                recent_avg_duration=$(echo "$metrics_json" | jq -r '.trends.recentAvgDuration | round')
-                overall_avg_duration=$(echo "$metrics_json" | jq -r '.trends.overallAvgDuration | round')
-                echo "  Recent trend (last 10): avg duration ${recent_avg_duration}s (overall: ${overall_avg_duration}s)"
-            fi
+            jq -r '
+                "  Avg attempts/item: \(.trends.avgAttempts)",
+                "  Items/day: \(.trends.itemsPerDay)",
+                (if (.trends.byPriority | length) > 0 then
+                    "  By priority: \(.trends.byPriority | to_entries | map("\(.key): \(.value)") | join(", "))"
+                else empty end),
+                (if (.trends.byCategory | length) > 0 then
+                    "  By category: \(.trends.byCategory | to_entries | map("\(.key): \(.value)") | join(", "))"
+                else empty end),
+                (if .trends | has("recentAvgAttempts") then
+                    "  Recent trend (last 10): avg attempts \(.trends.recentAvgAttempts) (overall: \(.trends.avgAttempts))",
+                    "  Recent trend (last 10): avg duration \(.trends.recentAvgDuration | round)s (overall: \(.trends.overallAvgDuration | round)s)"
+                else empty end)
+            ' <<< "$metrics_json"
         fi
     fi
 }
@@ -4351,10 +4343,8 @@ cmd_backlog_rm() {
 
     parse_opts "bool:force:--force|-f" -- "$@" || return 1
 
-    local item
-    item=$(find_item "$id") || return 1
     local title
-    title=$(echo "$item" | jq -r '.title')
+    title=$(find_item "$id" | jq -r '.title') || return 1
 
     local file
     file=$(resolve_backlog_file "$id") || return 1
