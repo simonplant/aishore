@@ -1,33 +1,30 @@
 {
-  "sprintId": "sprint-1774108147",
-  "startedAt": "2026-03-21T08:49:07-07:00",
+  "sprintId": "sprint-1774108263",
+  "startedAt": "2026-03-21T08:51:03-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-084",
-    "title": "_status_output calls count_by_status 6 times — consolidate to one jq pass per file",
-    "intent": "_status_output extracts all item counts from each backlog file in a single jq call per file; no redundant file parses.",
-    "description": "_status_output (called by cmd_status and cmd_status --watch loop) calls count_by_status three times per backlog file — once each for 'todo', 'in-progress', and 'done' — yielding 6 jq subprocess forks total. All three counts can be extracted in a single jq call per file using group_by or select, then stored in local variables. This saves 4 subprocess forks per status refresh and is especially noticeable in --watch mode.",
+    "id": "BUG-079",
+    "title": "Remove update_desc tracking from cmd_backlog_edit",
+    "intent": "Cut 14 lines of string concatenation that builds a cosmetic Updated FEAT-001 title priority ready log message — marginal UX value for the code weight.",
+    "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Replace the three count_by_status calls for backlog_file with a single jq invocation that extracts todo/in-progress/done counts in one pass",
-      "Replace the three count_by_status calls for bugs_file with a single jq invocation in the same manner",
-      "Store counts in local variables and format the output string from those variables",
-      "Verify: aishore status shows correct counts for each status",
-      "Verify: shellcheck passes with no new findings"
+      "Remove the update_desc variable declaration and all lines that append to it in cmd_backlog_edit",
+      "Remove the final log_info line that prints update_desc",
+      "Verify backlog edit still works correctly without the summary message"
     ],
     "acceptanceCriteria": [
-      "backlog_file counts are extracted in a single jq call (not three)",
-      "bugs_file counts are extracted in a single jq call (not three)",
-      "aishore status output format is unchanged",
+      "No update_desc variable exists in cmd_backlog_edit",
+      "backlog edit still updates items correctly",
       "shellcheck passes"
     ],
     "scope": [
-      ".aishore/aishore"
+      ".aishore/**"
     ],
-    "startedAt": "2026-03-21T08:49:07-07:00",
+    "startedAt": "2026-03-21T08:51:03-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T08:51:01-07:00"
+    "completedAt": "2026-03-21T08:52:37-07:00"
   },
-  "completedAt": "2026-03-21T08:51:01-07:00",
+  "completedAt": "2026-03-21T08:52:37-07:00",
   "attempts": 1
 }
