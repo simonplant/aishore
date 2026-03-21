@@ -1,34 +1,32 @@
 {
-  "sprintId": "sprint-1774061365",
-  "startedAt": "2026-03-20T19:49:25-07:00",
+  "sprintId": "sprint-1774061544",
+  "startedAt": "2026-03-20T19:52:24-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-063",
-    "title": "Remove interactive mode from backlog add",
-    "intent": "cmd_backlog_add only accepts flags, no interactive TUI. The function loses ~105 lines. All existing flag-based usage is unchanged.",
-    "description": "cmd_backlog_add has ~105 lines of interactive echo/read prompts and a confirmation dialog. This tool is used primarily by AI agents via flags. Remove the interactive code path entirely. When --title is missing, print a usage error with an example command instead of launching a TUI.",
+    "id": "BUG-065",
+    "title": "Remove backlog sync command",
+    "intent": "The backlog sync command is removed entirely. It is a 152-line niche feature that detects manually-completed items by matching scope globs against git history. Nobody uses it and it adds significant weight.",
+    "description": "cmd_backlog_sync (152 lines) cross-references item scope globs against git diff to guess which items were completed outside aishore. This is speculative, rarely accurate, and never used in practice. Remove the function, its router entry in cmd_backlog, and its help text entries.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Remove the interactive mode block (lines checking for missing title and -t 0, through the confirmation dialog)",
-      "When title is missing, print a concise usage error with one example and exit 1",
-      "Remove the interactive flag from arg parsing",
-      "Update cmd_help to remove interactive from backlog add docs",
-      "Verify: .aishore/aishore backlog add with title and type flags still works"
+      "Delete cmd_backlog_sync function",
+      "Remove sync entry from cmd_backlog router",
+      "Remove sync from help text and usage docs",
+      "Verify: all other backlog subcommands still work"
     ],
     "acceptanceCriteria": [
-      "cmd_backlog_add contains zero interactive read calls",
-      "The interactive flag is not accepted",
-      "Missing title prints a usage error with example, not a prompt",
-      "All flag-based add commands work identically to before",
+      "cmd_backlog_sync function does not exist in the script",
+      "Running .aishore/aishore backlog sync prints unknown command error",
+      "All other backlog subcommands work: list, add, show, edit, check, rm, history, populate",
       "shellcheck passes"
     ],
     "scope": [
       ".aishore/**"
     ],
-    "startedAt": "2026-03-20T19:49:25-07:00",
+    "startedAt": "2026-03-20T19:52:24-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T19:52:23-07:00"
+    "completedAt": "2026-03-20T19:55:45-07:00"
   },
-  "completedAt": "2026-03-20T19:52:23-07:00",
+  "completedAt": "2026-03-20T19:55:45-07:00",
   "attempts": 1
 }
