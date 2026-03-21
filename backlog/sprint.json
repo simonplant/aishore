@@ -1,37 +1,38 @@
 {
-  "sprintId": "sprint-1774065300",
-  "startedAt": "2026-03-20T20:55:00-07:00",
+  "sprintId": "sprint-1774065486",
+  "startedAt": "2026-03-20T20:58:06-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-070",
-    "title": "Consolidate three merge strategies into parameterized flow",
-    "intent": "The merge/squash/no-merge paths in _handle_sprint_success share one code flow with a branch only on the merge command itself. Saves ~40 lines of duplicated checkout/push/pull logic.",
-    "description": "_handle_sprint_success has three near-identical code blocks for merge, squash, and no-merge. The remote sync block (push + pull + warning) is duplicated verbatim between squash (lines 2132-2138) and no-ff (lines 2162-2168). The merge_msg if/else (lines 2146-2150) is collapsible to one expression. Safety-commit message pattern is also repeated. Parameterize into: (1) no-merge early return with push and optional PR, (2) single merge path that branches only on the git merge command, (3) shared _sync_remote helper for push+pull.",
+    "id": "BUG-071",
+    "title": "Clean up cmd_run: extract auto-review and trim verbosity",
+    "intent": "cmd_run is leaner and reads top-to-bottom. The inline auto-review block, verbose bash idioms in the sprint loop, and nested helper definitions are cleaned up. Saves ~65 lines.",
+    "description": "cmd_run (478 lines) has: (1) a 68-line auto-review block at the end duplicating cmd_review — replace with direct call. (2) A 4-line skip-list builder loop replaceable with IFS=,; echo. (3) A 13-line priority scope check loop replaceable with a single [[ string match ]]. (4) Verbose startup banner echoing every config value. (5) Nested _count_total_ready and _record_sprint_failure function defs that should be at file scope. (6) Duplicate [[ -s review_output ]] check in post-summary.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Extract _sync_remote helper: git push + git pull with warnings — used by both merge paths",
-      "Collapse merge_msg if/else to: merge_msg=merge: ITEM_ID dollar{merge_summary:-sprint branch}",
-      "Parameterize merge: single path that runs git merge --no-ff or git merge --squash based on MERGE_STRATEGY",
-      "Handle squash-specific explicit commit after merge --squash",
-      "Keep no-merge as early return with push and optional PR creation",
-      "Verify: all three strategies produce identical git history as before"
+      "Replace 68-line inline auto-review block with a direct call to cmd_review",
+      "Replace skip-list builder loop with: local skip_list; skip_list=dollar{!FAILED_IDS[*]}",
+      "Replace priority scope check loop with: [[ -z auto_priorities || ' auto_priorities ' == *' item_priority '* ]]",
+      "Move nested _count_total_ready to file scope",
+      "Move nested _record_sprint_failure to file scope",
+      "Merge duplicate [[ -s review_output ]] checks into one block",
+      "Trim startup banner to essential info only",
+      "Verify: auto done --auto-review, auto p1, run --dry-run all work correctly"
     ],
     "acceptanceCriteria": [
-      "A _sync_remote helper exists and is called by both merge paths",
-      "No duplicated push/pull/cleanup code between merge strategies",
-      "merge_msg construction is a single expression, not an if/else block",
-      "MERGE_STRATEGY=merge produces --no-ff merge commit",
-      "MERGE_STRATEGY=squash produces squash commit",
-      "no-merge flag pushes branch and skips merge",
+      "No inline review agent invocation in cmd_run — it calls cmd_review",
+      "No skip-list builder loop — uses IFS one-liner",
+      "No priority scope for-loop — uses string match",
+      "No nested function definitions inside cmd_run",
+      "auto done --auto-review still runs architecture review after completion",
       "shellcheck passes"
     ],
     "scope": [
       ".aishore/**"
     ],
-    "startedAt": "2026-03-20T20:55:00-07:00",
+    "startedAt": "2026-03-20T20:58:06-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T20:58:05-07:00"
+    "completedAt": "2026-03-20T21:04:03-07:00"
   },
-  "completedAt": "2026-03-20T20:58:05-07:00",
+  "completedAt": "2026-03-20T21:04:03-07:00",
   "attempts": 1
 }
