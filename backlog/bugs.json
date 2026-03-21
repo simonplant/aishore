@@ -1180,9 +1180,10 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-20T19:31:13-07:00"
     },
     {
       "id": "BUG-046",
@@ -1497,6 +1498,99 @@
         "No TODO placeholders remain in PROBLEMS.md"
       ],
       "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-060",
+      "title": "Extract init scaffold heredocs to template files",
+      "intent": "Init templates live in .aishore/templates/ as real files, not heredocs embedded in bash. The aishore script loses ~160 lines and templates become editable without touching code.",
+      "description": "Move all heredoc templates from _init_scaffold_files into .aishore/templates/: DEFINITIONS.md, PRODUCT.md.tmpl, ARCHITECTURE.md.tmpl, config.yaml.tmpl, backlog.json, bugs.json. Replace heredocs with cp or sed-based substitution (project_name, validate_cmd). Template files must be added to checksums.sha256 so they are included in updates.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "Create .aishore/templates/ directory",
+        "Extract DEFINITIONS.md heredoc (76 lines) to templates/DEFINITIONS.md",
+        "Extract config.yaml heredoc (29 lines) to templates/config.yaml.tmpl with $PROJECT_NAME and $VALIDATE_CMD placeholders",
+        "Extract PRODUCT.md heredoc (25 lines) to templates/PRODUCT.md.tmpl with $PROJECT_NAME placeholder",
+        "Extract ARCHITECTURE.md heredoc (21 lines) to templates/ARCHITECTURE.md.tmpl with $PROJECT_NAME placeholder",
+        "Extract backlog.json heredoc (7 lines) to templates/backlog.json",
+        "Extract bugs.json heredoc (6 lines) to templates/bugs.json",
+        "Replace heredocs in _init_scaffold_files with cp/sed commands",
+        "Add all template files to checksums.sha256",
+        "Run .aishore/aishore init -y in a temp dir to verify identical output"
+      ],
+      "acceptanceCriteria": [
+        "All 6 template files exist in .aishore/templates/",
+        "_init_scaffold_files uses cp/sed to install templates, contains zero heredocs",
+        ".aishore/aishore init -y produces identical directory structure and file contents as before",
+        "checksums.sha256 includes all template files",
+        "shellcheck .aishore/aishore passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-061",
+      "title": "Extract help text to file and kill cmd_usage duplicate",
+      "intent": "Help text lives in a file, not inline bash. The duplicate cmd_usage is eliminated. All help entry points produce the same output.",
+      "description": "cmd_help (110 lines) and cmd_usage (45 lines) are near-duplicates. Extract cmd_help body to .aishore/help.txt, make cmd_help just cat it with version substitution, and point cmd_usage at cmd_help. Net savings ~150 lines.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "Extract cmd_help body to .aishore/help.txt with a VERSION placeholder",
+        "Replace cmd_help body with: sed to substitute version, then cat",
+        "Delete cmd_usage function body, replace with call to cmd_help",
+        "Add help.txt to checksums.sha256",
+        "Verify all entry points work: help, --help, -h, usage, no-args"
+      ],
+      "acceptanceCriteria": [
+        "help.txt exists in .aishore/ and contains the full help text",
+        "cmd_usage function is removed or is a one-line alias to cmd_help",
+        ".aishore/aishore help output is identical to before",
+        ".aishore/aishore with no args shows help",
+        "shellcheck .aishore/aishore passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-062",
+      "title": "Move populate-mode docs and claudemd snippet to files",
+      "intent": "Static documentation blocks are read from files, not constructed as bash string literals. build_agent_prompt loses ~90 lines of inline text.",
+      "description": "build_agent_prompt has ~74 lines of populate-mode documentation inlined as a bash string. get_claudemd_snippet has 15 lines. Move populate docs to the end of agents/product-owner.md (gated by a section header the orchestrator includes only in populate mode). Move claudemd snippet to templates/claude-section.md. Both become cat calls.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "Append populate-mode documentation to .aishore/agents/product-owner.md under a clear section header",
+        "Update build_agent_prompt to conditionally include the populate section from the prompt file instead of injecting it",
+        "Extract get_claudemd_snippet heredoc to .aishore/templates/claude-section.md",
+        "Replace get_claudemd_snippet body with cat of the template file",
+        "Update checksums.sha256",
+        "Verify: run a dry-run with populate mode and confirm prompt content is identical"
+      ],
+      "acceptanceCriteria": [
+        "Zero lines of populate documentation exist as bash string literals in aishore",
+        "product-owner.md contains the populate-mode guidance",
+        "templates/claude-section.md exists and get_claudemd_snippet reads it",
+        "Dry-run developer prompt output is unchanged",
+        "shellcheck .aishore/aishore passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
       "dependsOn": [],
       "status": "todo",
       "passes": false,
