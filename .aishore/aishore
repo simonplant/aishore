@@ -104,6 +104,15 @@ MERGE_STRATEGY="merge"
 CREATE_PR="false"
 ISOLATION_MODE="stash"
 
+# Detect timeout command once at startup (macOS uses gtimeout from coreutils)
+if command -v timeout &>/dev/null; then
+    TIMEOUT_CMD="timeout"
+elif command -v gtimeout &>/dev/null; then
+    TIMEOUT_CMD="gtimeout"
+else
+    TIMEOUT_CMD=""
+fi
+
 # Default permission sets per agent role
 PERMS_DEVELOPER="Bash,Edit,Write,Read,Glob,Grep"
 PERMS_VALIDATOR="Bash,Read,Write,Glob,Grep"
@@ -171,8 +180,8 @@ truncate_output() {
 run_validated_command() {
     local cmd="$1"
     local outfile="$2"
-    if command -v timeout &>/dev/null; then
-        timeout "$VALIDATE_TIMEOUT" bash -c "$cmd" >"$outfile" 2>&1
+    if [[ -n "$TIMEOUT_CMD" ]]; then
+        "$TIMEOUT_CMD" "$VALIDATE_TIMEOUT" bash -c "$cmd" >"$outfile" 2>&1
     else
         bash -c "$cmd" >"$outfile" 2>&1
     fi
@@ -1805,11 +1814,13 @@ Output ONLY the JSON object, no markdown fences, no explanation."
     )
 
     local refine_timeout="${AGENT_TIMEOUT:-3600}"
-    local timeout_cmd="timeout"
-    command -v gtimeout &>/dev/null && timeout_cmd="gtimeout"
+    local timeout_prefix=()
+    if [[ -n "$TIMEOUT_CMD" ]]; then
+        timeout_prefix=("$TIMEOUT_CMD" "$refine_timeout")
+    fi
 
     if [[ "$has_setsid" == true ]]; then
-        setsid "$timeout_cmd" "$refine_timeout" env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+        setsid "${timeout_prefix[@]}" env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
             claude "${claude_args[@]}" \
             -p "$refinement_prompt" > "$refine_output_file" 2>&1 || {
             local exit_code=$?
@@ -1819,7 +1830,7 @@ Output ONLY the JSON object, no markdown fences, no explanation."
             fi
         }
     else
-        "$timeout_cmd" "$refine_timeout" env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+        "${timeout_prefix[@]}" env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
             claude "${claude_args[@]}" \
             -p "$refinement_prompt" > "$refine_output_file" 2>&1 || {
             local exit_code=$?
