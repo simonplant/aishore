@@ -907,8 +907,8 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "Real bug found during code review. collect_done_ids only reads active backlogs, but clean removes done items from there. sprints.jsonl is the authoritative record. Fix is surgical and low-risk. AC are testable. Priority should is correct.",
       "lastFailReason": "Validator agent rejected implementation",
-      "lastFailAt": "2026-03-20T18:21:35-07:00",
-      "failCount": 1
+      "lastFailAt": "2026-03-20T19:14:01-07:00",
+      "failCount": 2
     },
     {
       "id": "BUG-036",
@@ -1056,9 +1056,10 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-20T19:17:00-07:00"
     },
     {
       "id": "BUG-041",
