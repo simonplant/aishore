@@ -1,35 +1,35 @@
 {
-  "sprintId": "sprint-1774052817",
-  "startedAt": "2026-03-20T17:26:57-07:00",
+  "sprintId": "sprint-1774052987",
+  "startedAt": "2026-03-20T17:29:47-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-015",
-    "title": "Create docs/QUICKSTART.md — zero to first completed sprint",
-    "intent": "A new user must go from git clone to a completed sprint in under 10 minutes using a single document — if they have to jump between files they will abandon the tool.",
-    "description": "The quickstart content exists but is split between README.md (Quick Start: install + first sprint commands) and .aishore/README.md (Setup, The Intent-Driven Model, Create Backlog Items, What Makes an Item Sprint-Ready, Groom, Run Sprints, Troubleshooting). The .aishore/README.md is essentially already a quickstart guide but is hidden inside a dotfolder where no one will find it. The unified quickstart must walk through: prerequisites check, installation (curl or manual), init wizard, writing your first intent and backlog item, grooming, running a sprint, and what success looks like at each step. Include expected terminal output so users know they're on the right track. Source from .aishore/README.md as primary content, README.md Quick Start for the install path.",
+    "id": "FEAT-016",
+    "title": "Create docs/CONFIGURATION.md — every knob, what it does, safe defaults",
+    "intent": "Users must be able to find and understand every configuration option in one place — undocumented config options are invisible features.",
+    "description": "Configuration content is split between README.md (Configuration section: config.yaml example with 6 settings + environment variable table with 11 AISHORE_* vars + Complete Flag Reference for every CLI command) and CLAUDE.md (configuration precedence: env vars > config.yaml > defaults, scope checking modes, maturity protocol settings, agent permission descriptions). The unified document must cover: config.yaml with every option annotated, all environment variables with precedence rules, CLI flag reference grouped by command, and agent permissions. The current README Configuration section is a good foundation but only shows a subset of config.yaml options. The Complete Flag Reference section (~100 lines) should move here entirely.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Read .aishore/README.md sections: Setup (init commands, config.yaml validation), The Intent-Driven Model (how to write intent — good/bad examples), Create Backlog Items (add command, flags, testable AC examples), What Makes an Item Sprint-Ready (5 readiness gates), Groom (what grooming does), Run Sprints (what happens during a sprint), Troubleshooting (common failures and fixes)",
-      "Read README.md Quick Start section (install via curl, manual install, first sprint 3-step block)",
-      "Read backlog/DEFINITIONS.md Commander's Intent section for good/bad intent examples",
-      "Compose docs/QUICKSTART.md with these sections: Prerequisites (bash 4.4+, Claude Code CLI, jq, git), Install (curl one-liner + manual option), Initialize (init wizard walkthrough with expected output), Write Your First Intent (from .aishore/README.md intent model + DEFINITIONS.md examples), Add a Backlog Item (from .aishore/README.md create items), Groom (what it does, expected output), Run Your First Sprint (command + what to expect at each pipeline stage), Verify Success (how to confirm the sprint completed correctly), Troubleshooting (from .aishore/README.md troubleshooting section)",
-      "Add expected terminal output blocks after each command so users can verify they are on track",
-      "Verify the end-to-end flow works: a user following only this document should reach a completed sprint"
+      "Read README.md Configuration section (config.yaml example, environment variable table)",
+      "Read README.md Complete Flag Reference section (all flags for backlog add/edit/list/check/populate/history, init, run, auto, groom, review, and other commands)",
+      "Read CLAUDE.md for: configuration precedence note, scope checking modes, maturity protocol settings, agent permission descriptions",
+      "Read .aishore/config.yaml for the actual config file schema with all available options",
+      "Compose docs/CONFIGURATION.md with these sections: Configuration File (annotated config.yaml with every option, its type, default value, and what it controls), Environment Variables (full table with precedence rules), CLI Flag Reference (moved from README Complete Flag Reference, grouped by command), Agent Permissions (what each permission enables, security implications), Configuration Precedence (env > config.yaml > defaults, with examples)",
+      "For each config option, document: name, type, default value, what it controls, when to change it"
     ],
     "acceptanceCriteria": [
-      "docs/QUICKSTART.md exists and covers: prerequisites, install, init, first intent, first backlog item, groom, run sprint, verify success, troubleshooting",
-      "Each step includes the exact command to run and expected terminal output",
-      "A user following only this document (without reading any other file) can go from zero to a completed sprint",
-      "Content is sourced from .aishore/README.md and README.md — not invented",
-      "The document does not exceed 300 lines — it is a quickstart, not a manual"
+      "docs/CONFIGURATION.md exists and documents every config.yaml option, every AISHORE_* environment variable, and every CLI flag",
+      "Each option includes: name, type, default, description, and when to change it",
+      "Configuration precedence (env > config.yaml > defaults) is clearly explained",
+      "The Complete Flag Reference from README.md is fully represented here",
+      "No undocumented options remain — every setting in config.yaml and every AISHORE_* env var has an entry"
     ],
     "scope": [
-      "docs/QUICKSTART.md"
+      "docs/CONFIGURATION.md"
     ],
-    "startedAt": "2026-03-20T17:26:57-07:00",
+    "startedAt": "2026-03-20T17:29:47-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T17:29:46-07:00"
+    "completedAt": "2026-03-20T17:35:07-07:00"
   },
-  "completedAt": "2026-03-20T17:29:46-07:00",
+  "completedAt": "2026-03-20T17:35:07-07:00",
   "attempts": 1
 }
