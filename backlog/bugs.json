@@ -2361,7 +2361,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-21T08:49:06-07:00"
+      "completedAt": "2026-03-21T08:49:06-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-084",
@@ -2390,7 +2392,64 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-21T08:51:01-07:00"
+      "completedAt": "2026-03-21T08:51:01-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
+    },
+    {
+      "id": "BUG-085",
+      "title": "review architect agent always gets Edit/Write permissions regardless of --update-docs flag",
+      "intent": "cmd_review without --update-docs gives architect Read,Glob,Grep only; --update-docs gives Read,Glob,Grep,Edit,Write.",
+      "description": "In run_agent(), the architect case checks if output_file is non-empty to decide permissions. Since cmd_review always sets output_file (for output capture), the architect always gets PERMS_REVIEWER_DOCS (Edit,Write), even when --update-docs is not specified. The fix: resolve permissions in cmd_review based on the update_docs flag rather than relying on output_file as a proxy. Without --update-docs the review should be truly read-only.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In cmd_review, after parsing --update-docs, set a local variable for the required permissions: PERMS_REVIEWER if read-only, PERMS_REVIEWER_DOCS if update-docs",
+        "Pass the resolved permissions to run_agent, or temporarily override CFG_PERMS_REVIEWER before the run_agent call",
+        "In run_agent architect case, remove the output_file-based permission check — it was the wrong proxy",
+        "Verify: run .aishore/aishore review and confirm --allowedTools does not include Edit or Write",
+        "Verify: run .aishore/aishore review --update-docs and confirm --allowedTools includes Edit,Write",
+        "shellcheck passes with no errors"
+      ],
+      "acceptanceCriteria": [
+        "cmd_review without --update-docs invokes architect with Read,Glob,Grep permissions only (no Edit or Write)",
+        "cmd_review --update-docs invokes architect with Read,Glob,Grep,Edit,Write permissions",
+        "Existing behavior for other agent roles (developer, validator, tech-lead, product-owner) is unchanged",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Clear bug: output_file is always non-empty in cmd_review, so architect always gets Edit/Write. Steps include fixing in run_agent or cmd_review. Confirmed by code inspection at run_agent line 1507-1512.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-086",
+      "title": "mark_complete sprint diff stats use HEAD~1..HEAD, missing changes from multi-commit sprints",
+      "intent": "Sprint archive stats (filesChanged, linesAdded, linesRemoved) accurately reflect all changes made during the sprint, not just the final commit.",
+      "description": "In mark_complete(), git diff --shortstat HEAD~1 HEAD is used to compute sprint stats. This only captures the last commit's diff. If a developer makes multiple commits during a sprint (common with maturity protocol), the earlier commits' changes are excluded. The archive record then shows inaccurate metrics. Fix: use git diff --shortstat $AISHORE_BASE_BRANCH HEAD to capture all sprint changes since branching.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In mark_complete(), replace 'git diff --shortstat HEAD~1 HEAD' with 'git diff --shortstat \"$AISHORE_BASE_BRANCH\" HEAD'",
+        "Guard against empty AISHORE_BASE_BRANCH: fall back to HEAD~1 HEAD if it is unset",
+        "Verify with a sprint that produces multiple developer commits: all file changes appear in the archive record",
+        "shellcheck passes"
+      ],
+      "acceptanceCriteria": [
+        "Archive record filesChanged/linesAdded/linesRemoved reflects total diff between base branch and feature branch HEAD, not just the last commit",
+        "Falls back gracefully (stats = 0) if AISHORE_BASE_BRANCH is unset or git diff fails",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Mark_complete at line 1156 uses HEAD~1 HEAD; AISHORE_BASE_BRANCH is available as global. Single-line fix with fallback guard.",
+      "groomedAt": "2026-03-21"
     },
     {
       "id": "BUG-080",

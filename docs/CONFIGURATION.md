@@ -25,6 +25,12 @@ All settings live in `.aishore/config.yaml`. The file is optional — aishore wo
 project:
   name: "your-project"
 
+# Backlog files to read from (relative to backlog/ directory)
+# backlog_files:
+#   - backlog.json
+#   - bugs.json
+#   - infra.json
+
 # Validation command for your stack (e.g., "npm test && npm run lint")
 validation:
   command: ""
@@ -99,6 +105,16 @@ validation:
 | **Env var** | — |
 | **What it controls** | Project name used in logs and agent context. |
 | **When to change** | When the directory name doesn't match the project name. |
+
+#### `backlog_files`
+
+| | |
+|---|---|
+| **Type** | list of strings (file paths relative to `backlog/`) |
+| **Default** | `["backlog.json", "bugs.json"]` |
+| **Env var** | `AISHORE_BACKLOG_FILES` (comma-separated) |
+| **What it controls** | Which backlog files aishore reads from. Items are picked by priority across all declared files. |
+| **When to change** | When you split work across component-specific backlogs (e.g., `infra.json`, `api.json`). Omitting this key preserves the default two-file behavior. Missing files produce a warning, not an abort. |
 
 #### `validation.command`
 
@@ -308,6 +324,7 @@ All `AISHORE_*` environment variables and what they map to:
 
 | Environment Variable | Config Path | Default | Description |
 |---|---|---|---|
+| `AISHORE_BACKLOG_FILES` | `backlog_files` | `backlog.json,bugs.json` | Comma-separated backlog file list |
 | `AISHORE_VALIDATE_CMD` | `validation.command` | `""` | Validation command (tests, lint) |
 | `AISHORE_VALIDATE_TIMEOUT` | `validation.timeout` | `120` | Validation timeout (seconds) |
 | `AISHORE_FIX_CMD` | `fix.command` | `""` | Auto-fix command (formatters) |
