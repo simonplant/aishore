@@ -2759,11 +2759,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Simple field name typo causing silent data loss. Groomed notes are written by groom agents and are the only place we capture why an item was prioritized a certain way. Losing them silently undermines the grooming workflow. Priority should is correct.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T11:17:33-07:00"
     },
     {
       "id": "BUG-098",
