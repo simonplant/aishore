@@ -658,14 +658,14 @@ next_id() {
     for f in "${BACKLOG_FILES[@]}"; do
         [[ -f "$BACKLOG_DIR/$f" ]] || continue
         local file_max
-        file_max=$(jq -r --arg pfx "$prefix-" '[.items[].id | select(startswith($pfx)) | ltrimstr($pfx) | tonumber] | max // 0' "$BACKLOG_DIR/$f" 2>/dev/null || echo 0)
+        file_max=$(jq -r --arg pfx "$prefix-" '[.items[].id | select(startswith($pfx)) | ltrimstr($pfx) | select(test("^[0-9]+$")) | tonumber] | max // 0' "$BACKLOG_DIR/$f" 2>/dev/null || echo 0)
         [[ "$file_max" -gt "$max" ]] && max="$file_max"
     done
     # Check archive to prevent ID reuse after items are completed/removed
     local archive_file="$BACKLOG_DIR/archive/sprints.jsonl"
     if [[ -f "$archive_file" ]]; then
         local archive_max
-        archive_max=$(jq -r --arg pfx "$prefix-" '.itemId | select(startswith($pfx)) | ltrimstr($pfx) | tonumber' "$archive_file" 2>/dev/null | sort -rn | head -1)
+        archive_max=$(jq -n -r --arg pfx "$prefix-" '[inputs | .itemId | select(startswith($pfx)) | ltrimstr($pfx) | select(test("^[0-9]+$")) | tonumber] | max // empty' "$archive_file" 2>/dev/null)
         [[ -n "$archive_max" && "$archive_max" -gt "$max" ]] && max="$archive_max"
     fi
     printf "%s-%03d" "$prefix" "$((max + 1))"
