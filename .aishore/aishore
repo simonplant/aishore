@@ -1387,7 +1387,28 @@ Run \`$VALIDATE_CMD\` after implementing. Fix failures before writing result.jso
 ## Commander's Intent
 The \`intent\` field in sprint.json is a non-negotiable directive. Verify the implementation fulfills it — AC can pass mechanically while intent is missed."
     elif [[ "$agent_name" == "tech-lead" || "$agent_name" == "product-owner" ]]; then
+        # CLI commands: shared preamble + role-specific examples
+        local cli_role_lines
+        if [[ "$agent_name" == "product-owner" ]]; then
+            cli_role_lines=".aishore/aishore backlog add --type feat --title \"...\" --desc \"...\" --priority should
+.aishore/aishore backlog edit <ID> --priority must --groomed-at --groomed-notes \"...\""
+        else
+            cli_role_lines=".aishore/aishore backlog add --type bug --title \"...\" --desc \"...\" --priority should
+.aishore/aishore backlog edit <ID> --ready --groomed-at --groomed-notes \"...\"
+.aishore/aishore backlog edit <ID> --priority must"
+        fi
         validate_hint="
+## CLI Commands
+
+Use CLI commands to manage items — do NOT edit JSON directly:
+
+\`\`\`bash
+.aishore/aishore backlog list
+.aishore/aishore backlog show <ID>
+${cli_role_lines}
+.aishore/aishore backlog rm <ID> --force
+\`\`\`
+
 ## Commander's Intent
 Every item should have an \`intent\` field — a non-negotiable directive stating what must be true when done. Use \`--intent \"...\"\` when adding/editing items. Write it like an order, not a description.
 

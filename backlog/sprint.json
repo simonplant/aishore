@@ -1,27 +1,27 @@
 {
-  "sprintId": "sprint-1774070925",
-  "startedAt": "2026-03-20T22:28:45-07:00",
+  "sprintId": "sprint-1774071050",
+  "startedAt": "2026-03-20T22:30:50-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-054",
-    "title": "Hardcoded safe fields in protect_items_from_groom() should be a declared constant",
-    "intent": "Extract the hardcoded safe fields list in protect_items_from_groom() into a named constant array so the merge logic is transparent and maintainable",
+    "id": "BUG-055",
+    "title": "Duplicate CLI commands section in groom agent prompts — factor out shared preamble",
+    "intent": "Eliminate the ~8 lines of duplicated CLI command reference between product-owner.md and tech-lead.md by extracting a shared section or having the orchestrator inject it",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Find the hardcoded safe fields comparison in protect_items_from_groom()",
-      "Extract to a GROOM_SAFE_FIELDS constant array declared with other constants",
-      "Update the jq filter to reference the constant"
+      "Compare the CLI commands sections in product-owner.md and tech-lead.md",
+      "Extract shared content to a common block injected by build_agent_prompt() in the orchestrator",
+      "Keep role-specific differences (--type feat vs --type bug) in the individual prompts"
     ],
     "acceptanceCriteria": [
-      "Safe fields are declared as a named constant, not inline in the jq filter",
-      "shellcheck passes"
+      "No duplicated CLI command text exists across agent prompt files",
+      "Both groom agents still receive full CLI command guidance"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T22:28:45-07:00",
+    "startedAt": "2026-03-20T22:30:50-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T22:30:49-07:00"
+    "completedAt": "2026-03-20T22:33:29-07:00"
   },
-  "completedAt": "2026-03-20T22:30:49-07:00",
+  "completedAt": "2026-03-20T22:33:29-07:00",
   "attempts": 1
 }
