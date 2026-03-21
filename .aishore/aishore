@@ -794,15 +794,14 @@ check_readiness_gates() {
     local has_warning=false
 
     # Extract all gate-check fields from item in one jq pass
-    local title item_intent step_count ac_count short_steps has_scope deps
-    IFS=$'\t' read -r title item_intent step_count ac_count short_steps has_scope < <(
+    local title item_intent step_count ac_count short_steps deps
+    IFS=$'\t' read -r title item_intent step_count ac_count short_steps < <(
         printf '%s\n' "$item" | jq -r '[
             (.title // ""),
             (.intent // ""),
             ([.steps // [] | .[]] | length | tostring),
             ([.acceptanceCriteria // [] | .[]] | length | tostring),
-            ([.steps // [] | .[] | select(length <= 10)] | length | tostring),
-            ([.scope // [] | .[]] | length | tostring)
+            ([.steps // [] | .[] | select(length <= 10)] | length | tostring)
         ] | @tsv'
     )
     deps=$(printf '%s\n' "$item" | jq -r '.dependsOn // [] | .[]' 2>/dev/null)
@@ -860,22 +859,35 @@ check_readiness_gates() {
         done <<< "$deps"
     fi
 
-    # Complexity heuristic: flag under-specified items that may need more prescriptive specs
-    local complexity_hints=""
-    if [[ "$step_count" -lt 3 && "$step_count" -gt 0 ]]; then
-        complexity_hints="${complexity_hints}    • Only $step_count step(s) — consider breaking the work into 3+ concrete steps\n"
-    fi
-    if [[ "$has_scope" -eq 0 ]]; then
-        complexity_hints="${complexity_hints}    • No scope defined — add file path globs to constrain where changes land\n"
-    fi
-    if [[ -n "$complexity_hints" ]]; then
-        warnings="${warnings}  - Item may be under-specified (advisory):\n${complexity_hints}"
-        has_warning=true
-    fi
-
     [[ -n "$warnings" ]] && printf '%s\n' "$warnings"
     if [[ "$has_warning" == "true" ]]; then
         log_error "Readiness gate check failed for $item_id"
+        return 1
+    fi
+    return 0
+}
+
+# Advisory complexity hints — not a gate, just informational warnings
+check_complexity_hints() {
+    local item_id="$1"
+    local item
+    item=$(find_item "$item_id") || return 0
+    local step_count has_scope
+    IFS=$'\t' read -r step_count has_scope < <(
+        printf '%s\n' "$item" | jq -r '[
+            ([.steps // [] | .[]] | length | tostring),
+            ([.scope // [] | .[]] | length | tostring)
+        ] | @tsv'
+    )
+    local hints=""
+    if [[ "$step_count" -lt 3 && "$step_count" -gt 0 ]]; then
+        hints="${hints}    • Only $step_count step(s) — consider breaking the work into 3+ concrete steps\n"
+    fi
+    if [[ "$has_scope" -eq 0 ]]; then
+        hints="${hints}    • No scope defined — add file path globs to constrain where changes land\n"
+    fi
+    if [[ -n "$hints" ]]; then
+        printf '  - Item may be under-specified (advisory):\n%b\n' "$hints"
         return 1
     fi
     return 0
@@ -1886,14 +1898,12 @@ _run_dry_run() {
     printf '%s\n' "$item_json" | jq .
     echo ""
 
-    # Advisory complexity warning in dry-run
-    local gates_warnings
-    if ! gates_warnings=$(check_readiness_gates "$item_id" 2>/dev/null); then
-        if printf '%b\n' "$gates_warnings" | grep -q "under-specified"; then
-            log_warning "$item_id may be under-specified — consider adding more steps or scope"
-            printf '%b\n' "$gates_warnings" | grep -A 50 "under-specified"
-            echo ""
-        fi
+    # Advisory complexity hints in dry-run
+    local hints
+    if ! hints=$(check_complexity_hints "$item_id"); then
+        log_warning "$item_id may be under-specified — consider adding more steps or scope"
+        printf '%b\n' "$hints"
+        echo ""
     fi
 
     log_subheader "Developer Prompt"
@@ -2585,13 +2595,11 @@ run_sprint_loop() {
         create_sprint "$item_json" "$item_source"
         save_backlog_snapshot
 
-        # Advisory complexity warning (does not block sprint)
-        local gates_warnings
-        if ! gates_warnings=$(check_readiness_gates "$ITEM_ID" 2>/dev/null); then
-            if printf '%b\n' "$gates_warnings" | grep -q "under-specified"; then
-                log_warning "$ITEM_ID may be under-specified — consider adding more steps or scope"
-                printf '%b\n' "$gates_warnings" | grep -A 50 "under-specified"
-            fi
+        # Advisory complexity hints (does not block sprint)
+        local hints
+        if ! hints=$(check_complexity_hints "$ITEM_ID"); then
+            log_warning "$ITEM_ID may be under-specified — consider adding more steps or scope"
+            printf '%b\n' "$hints"
         fi
 
         # Create feature branch
@@ -3943,13 +3951,23 @@ cmd_backlog_check() {
     find_item "$id" >/dev/null || return 1
 
     local gates_warnings
+    local exit_code=0
     if gates_warnings=$(check_readiness_gates "$id"); then
         log_success "$id passes all readiness gates"
     else
         log_warning "$id has readiness warnings:"
         printf '%b\n' "$gates_warnings"
-        return 1
+        exit_code=1
     fi
+
+    # Advisory complexity hints (shown alongside gate results, never block)
+    local hints
+    if ! hints=$(check_complexity_hints "$id"); then
+        log_warning "$id advisory hints:"
+        printf '%b\n' "$hints"
+    fi
+
+    return "$exit_code"
 }
 
 cmd_backlog_populate() {
