@@ -1,30 +1,29 @@
 {
-  "sprintId": "sprint-1774115420",
-  "startedAt": "2026-03-21T10:50:20-07:00",
+  "sprintId": "sprint-1774115545",
+  "startedAt": "2026-03-21T10:52:25-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-093",
-    "title": "setup_sprint_environment calls undefined release_lock function",
-    "intent": "When --category yields no items, aishore exits cleanly with code 1 and a clear message — no 'command not found' crash, no fd leak.",
-    "description": "When --category filter yields no ready items, setup_sprint_environment() at line 2706 calls release_lock which is never defined anywhere in the script. With set -euo pipefail this triggers exit code 127 ('command not found') rather than a clean return 1. The user sees a confusing crash instead of the log_warning message that precedes it. The lock fd (9) is released on process exit anyway, so the fix is simply removing the undefined call.",
+    "id": "BUG-094",
+    "title": "run_ac_verification silently skips all AC checks when jq fails to parse AC JSON",
+    "intent": "If AC JSON is malformed or jq fails, the sprint fails visibly with a clear error — it never silently passes with AC verification skipped.",
+    "description": "In run_ac_verification(), line 1761 computes verifiable with 2>/dev/null suppressing jq errors. If jq fails, verifiable is empty. Line 1762 falls back to verify_count=0 via || echo 0. Line 1763 returns 0 (success) when count is 0. Result: malformed AC JSON causes all AC verify commands to be silently skipped and the sprint proceeds as if verification passed. This is a correctness hole in the validation layer.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Confirm release_lock is not defined anywhere in .aishore/aishore",
-      "At line 2706, remove the release_lock call — the flock on fd 9 is released on process exit and no explicit release is needed here",
-      "Verify the early-exit path at lines 2701-2708 returns 1 cleanly after the log_warning",
-      "Run: .aishore/aishore run --category nonexistent and confirm exit code is 1 with no 'command not found' in output",
+      "In run_ac_verification(), after line 1761, check if verifiable is empty — if so, log_error and return 1",
+      "Remove 2>/dev/null from the jq call at line 1761 or capture its exit code explicitly so errors surface",
+      "Confirm existing behavior unchanged: valid AC with no verify fields still returns 0",
       "shellcheck passes with no new warnings"
     ],
     "acceptanceCriteria": [
-      "Running .aishore/aishore run --category nonexistent returns exit 1 with the category warning, not a command-not-found error",
-      "A subsequent .aishore/aishore run succeeds in acquiring the lock normally",
+      "When acceptanceCriteria contains invalid JSON, run_ac_verification returns 1 and logs an error",
+      "When acceptanceCriteria is valid but has no verify fields, function returns 0 (unchanged behavior)",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T10:50:20-07:00",
+    "startedAt": "2026-03-21T10:52:25-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T10:52:24-07:00"
+    "completedAt": "2026-03-21T10:55:04-07:00"
   },
-  "completedAt": "2026-03-21T10:52:24-07:00",
+  "completedAt": "2026-03-21T10:55:04-07:00",
   "attempts": 1
 }
