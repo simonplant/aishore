@@ -1,30 +1,32 @@
 {
-  "sprintId": "sprint-1774054199",
-  "startedAt": "2026-03-20T17:49:59-07:00",
+  "sprintId": "sprint-1774054379",
+  "startedAt": "2026-03-20T17:52:59-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-023",
-    "title": "backlog history row limit flag to cap output",
-    "intent": "Users must be able to see just the most recent N sprint completions without piping through head — a limit flag makes history browsable at any archive size.",
-    "description": "cmd_backlog_history() reads the full sprints.jsonl and prints all matching rows. For projects with many sprints, the output can be hundreds of rows. The command has no way to cap the output to N most recent entries. Adding a --limit N flag would print only the last N entries (after applying any --since or --failed filters). This is analogous to git log -n.",
+    "id": "FEAT-025",
+    "title": "backlog add interactive mode — guided item creation via prompts",
+    "intent": "Users must be able to create a complete, sprint-ready backlog item interactively without knowing all the flags — interactive mode closes the discovery gap for new users.",
+    "description": "backlog add currently requires all fields to be passed as flags (--title, --intent, --priority, etc.) or creates a minimal item with empty fields. New users often don't know what fields are needed for sprint readiness. An interactive mode (triggered when no flags are passed, or with --interactive) should prompt for: type (feat/bug), title, intent, priority, steps (repeatable until empty), and acceptance criteria (repeatable until empty). Each prompt should show the field's purpose and an example. At the end, show the item and ask to confirm before writing.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "In .aishore/aishore, find cmd_backlog_history() and add --limit to the flag parsing loop; add local limit=0 before the loop",
-      "In the --limit case: validate_arg then set limit=$2; shift 2; validate that the value is a positive integer",
-      "After filtering and collecting results, if limit > 0, pipe through tail -n $limit to keep only the last N entries",
-      "Add --limit to the usage message in cmd_backlog_history and cmd_help",
-      "Verify: 'backlog history' with limit 5 prints at most 5 rows; without limit flag prints all rows"
+      "In .aishore/aishore, find cmd_backlog_add() and detect when no flags were passed (or --interactive was given)",
+      "Enter interactive mode: prompt for type with valid options shown; prompt for title; prompt for intent with hint about directive format; prompt for priority (must/should/could/future);",
+      "Prompt for steps in a loop: 'Step N (empty to finish):' — accumulate non-empty responses into steps array",
+      "Prompt for AC in a loop: 'AC N (empty to finish):' — accumulate non-empty responses into AC array",
+      "Display a summary of the item to be created and ask 'Create this item? (Y/n)' — if confirmed, create the item; if declined, exit without writing",
+      "Ensure interactive mode is skipped when stdin is not a terminal (piped usage) — check with [[ -t 0 ]]"
     ],
     "acceptanceCriteria": [
-      "backlog history with a limit flag prints only the N most recent matching entries",
-      "backlog history with both --since and a limit flag applies date filter first then limits rows",
-      "backlog history with no limit flag still prints all entries unchanged"
+      "backlog add with no flags prompts interactively for title, intent, priority, steps, and AC",
+      "User can press Enter on a step or AC prompt to stop adding entries (empty input ends the loop)",
+      "Interactive mode is skipped when stdin is not a tty (piped usage falls through to flag-based path)",
+      "The created item passes backlog check (all required fields populated)"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T17:49:59-07:00",
+    "startedAt": "2026-03-20T17:52:59-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T17:52:58-07:00"
+    "completedAt": "2026-03-20T17:57:24-07:00"
   },
-  "completedAt": "2026-03-20T17:52:58-07:00",
+  "completedAt": "2026-03-20T17:57:24-07:00",
   "attempts": 1
 }
