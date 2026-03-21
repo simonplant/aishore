@@ -689,11 +689,12 @@
         "aishore status without --watch flag works identically to current behavior"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Practical QoL: users currently poll 'aishore status' manually during long sprints. --watch eliminates the loop. Implementation is self-contained in cmd_status(): add flag, add sleep loop with terminal clear, exit condition checks sprint.json. Low risk, no deps. Kept as could because watch(1) is an alternative, but in-tool is more discoverable."
+      "groomingNotes": "Practical QoL: users currently poll 'aishore status' manually during long sprints. --watch eliminates the loop. Implementation is self-contained in cmd_status(): add flag, add sleep loop with terminal clear, exit condition checks sprint.json. Low risk, no deps. Kept as could because watch(1) is an alternative, but in-tool is more discoverable.",
+      "completedAt": "2026-03-20T18:00:32-07:00"
     },
     {
       "id": "FEAT-025",

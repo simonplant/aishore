@@ -1,32 +1,30 @@
 {
-  "sprintId": "sprint-1774054379",
-  "startedAt": "2026-03-20T17:52:59-07:00",
+  "sprintId": "sprint-1774054645",
+  "startedAt": "2026-03-20T17:57:25-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-025",
-    "title": "backlog add interactive mode — guided item creation via prompts",
-    "intent": "Users must be able to create a complete, sprint-ready backlog item interactively without knowing all the flags — interactive mode closes the discovery gap for new users.",
-    "description": "backlog add currently requires all fields to be passed as flags (--title, --intent, --priority, etc.) or creates a minimal item with empty fields. New users often don't know what fields are needed for sprint readiness. An interactive mode (triggered when no flags are passed, or with --interactive) should prompt for: type (feat/bug), title, intent, priority, steps (repeatable until empty), and acceptance criteria (repeatable until empty). Each prompt should show the field's purpose and an example. At the end, show the item and ask to confirm before writing.",
+    "id": "FEAT-024",
+    "title": "aishore status --watch mode for live sprint progress monitoring",
+    "intent": "Users must be able to monitor a running sprint without manually re-running status every few seconds — a watch mode eliminates the polling loop.",
+    "description": "cmd_status() is a snapshot command. Users running long sprints (1+ hour agent sessions) have no way to monitor progress without repeatedly running 'aishore status'. A --watch flag would run status on a configurable interval (default 30s) until the sprint completes (sprint.json status returns to idle) or Ctrl-C is pressed. The output should clear the terminal between refreshes (like watch(1)) and show a countdown to next refresh.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "In .aishore/aishore, find cmd_backlog_add() and detect when no flags were passed (or --interactive was given)",
-      "Enter interactive mode: prompt for type with valid options shown; prompt for title; prompt for intent with hint about directive format; prompt for priority (must/should/could/future);",
-      "Prompt for steps in a loop: 'Step N (empty to finish):' — accumulate non-empty responses into steps array",
-      "Prompt for AC in a loop: 'AC N (empty to finish):' — accumulate non-empty responses into AC array",
-      "Display a summary of the item to be created and ask 'Create this item? (Y/n)' — if confirmed, create the item; if declined, exit without writing",
-      "Ensure interactive mode is skipped when stdin is not a terminal (piped usage) — check with [[ -t 0 ]]"
+      "In .aishore/aishore, find cmd_status() and add --watch and --interval flags to the option parsing loop",
+      "Add local watch=false interval=30 before the loop; --watch sets watch=true; --interval sets interval=N",
+      "After existing status output logic, if watch is true: enter a loop that sleeps interval seconds, clears terminal (printf '\\033[2J\\033[H'), re-runs status output, prints 'Refreshing in Ns... (Ctrl-C to stop)'",
+      "In each loop iteration, check sprint.json status: if status is idle, print 'Sprint complete' and exit the loop",
+      "Verify: 'aishore status --watch' refreshes every 30s and exits when sprint completes; 'aishore status' without --watch works as before"
     ],
     "acceptanceCriteria": [
-      "backlog add with no flags prompts interactively for title, intent, priority, steps, and AC",
-      "User can press Enter on a step or AC prompt to stop adding entries (empty input ends the loop)",
-      "Interactive mode is skipped when stdin is not a tty (piped usage falls through to flag-based path)",
-      "The created item passes backlog check (all required fields populated)"
+      "aishore status --watch refreshes output every 30 seconds by default",
+      "aishore status --watch exits automatically when sprint.json status returns to idle",
+      "aishore status without --watch flag works identically to current behavior"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T17:52:59-07:00",
+    "startedAt": "2026-03-20T17:57:25-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T17:57:24-07:00"
+    "completedAt": "2026-03-20T18:00:32-07:00"
   },
-  "completedAt": "2026-03-20T17:57:24-07:00",
+  "completedAt": "2026-03-20T18:00:32-07:00",
   "attempts": 1
 }
