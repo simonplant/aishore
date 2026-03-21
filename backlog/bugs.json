@@ -1749,7 +1749,10 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true
+      "readyForSprint": true,
+      "lastFailReason": "Validator agent rejected implementation",
+      "lastFailAt": "2026-03-20T20:43:30-07:00",
+      "failCount": 1
     },
     {
       "id": "BUG-068",
@@ -1776,9 +1779,10 @@
         ".aishore/**"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-20T20:50:34-07:00"
     },
     {
       "id": "BUG-069",
@@ -2085,6 +2089,55 @@
       "status": "todo",
       "passes": false,
       "readyForSprint": true
+    },
+    {
+      "id": "BUG-079",
+      "title": "Remove update_desc tracking from cmd_backlog_edit",
+      "intent": "Cut 14 lines of string concatenation that builds a cosmetic Updated FEAT-001 title priority ready log message — marginal UX value for the code weight.",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Remove the update_desc variable declaration and all lines that append to it in cmd_backlog_edit",
+        "Remove the final log_info line that prints update_desc",
+        "Verify backlog edit still works correctly without the summary message"
+      ],
+      "acceptanceCriteria": [
+        "No update_desc variable exists in cmd_backlog_edit",
+        "backlog edit still updates items correctly",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "BUG-080",
+      "title": "Consolidate 6 separate jq calls in cmd_diagnose into one",
+      "intent": "cmd_diagnose makes 6 separate jq -r calls on the same JSON file to extract individual fields. Combine into a single jq invocation to reduce forks and lines.",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Replace the 6 individual jq -r calls in cmd_diagnose with a single jq call that extracts all fields at once",
+        "Verify diagnose output is unchanged"
+      ],
+      "acceptanceCriteria": [
+        "cmd_diagnose has at most 1 jq call to extract fields from the diagnostics file",
+        "Output format is unchanged",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
     }
   ]
 }
