@@ -19,7 +19,7 @@ jq empty backlog/*.json
 .aishore/aishore init               # Interactive setup wizard
 .aishore/aishore init -y            # Non-interactive (accept detected defaults)
 .aishore/aishore backlog list       # List all items
-.aishore/aishore backlog add        # Add item (interactive or with flags)
+.aishore/aishore backlog add        # Add item with flags
 .aishore/aishore backlog show <ID>  # Show full detail of one item
 .aishore/aishore backlog edit <ID>  # Update fields on an item
 .aishore/aishore backlog check <ID> # Check readiness gates for an item

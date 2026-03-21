@@ -4060,11 +4060,8 @@ cmd_backlog_add() {
     local -a step_entries=()
     local -a scope_entries=()
 
-    local interactive=false
-
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --interactive) interactive=true; shift ;;
             --type)
                 validate_arg "$1" "${2:-}" || return 1
                 item_type="$2"; shift 2 ;;
@@ -4121,110 +4118,11 @@ cmd_backlog_add() {
         ac_entries+=("$(printf '%s' "$pending_ac" | jq -Rs .)")
     fi
 
-    # Interactive mode: triggered when no title provided, or --interactive flag
-    if [[ -z "$title" ]] || [[ "$interactive" == "true" ]]; then
-        if [[ ! -t 0 ]]; then
-            log_error "No --title provided and stdin is not interactive"
-            return 1
-        fi
-        echo "Add new backlog item (interactive mode)"
-        echo ""
-
-        # Type
-        echo "  Type: feat (feature) or bug"
-        echo "  Example: feat"
-        read -r -p "  Type [${item_type}]: " input
-        [[ -n "$input" ]] && item_type="$input"
-        echo ""
-
-        # Title
-        echo "  Title: a short, descriptive name for the item"
-        echo "  Example: add CSV export to reports page"
-        if [[ -n "$title" ]]; then
-            read -r -p "  Title [${title}]: " input
-            [[ -n "$input" ]] && title="$input"
-        else
-            read -r -p "  Title: " title
-            [[ -z "$title" ]] && { log_error "Title is required"; return 1; }
-        fi
-        echo ""
-
-        # Intent
-        echo "  Intent: a directive stating what must be true when done (>=20 chars)"
-        echo "  Example: Users must be able to export any report as CSV from the UI"
-        if [[ -n "$intent" ]]; then
-            read -r -p "  Intent [${intent}]: " input
-            [[ -n "$input" ]] && intent="$input"
-        else
-            read -r -p "  Intent: " intent
-        fi
-        echo ""
-
-        # Priority
-        echo "  Priority: must (P0), should (P1), could (P2), future (P3)"
-        echo "  Example: should"
-        read -r -p "  Priority [${priority}]: " input
-        [[ -n "$input" ]] && priority="$input"
-        echo ""
-
-        # Steps
-        echo "  Steps: implementation steps (press Enter on empty line to finish)"
-        echo "  Example: Add export button to report toolbar"
-        local step_n=1
-        while true; do
-            local step_input=""
-            read -r -p "  Step ${step_n} (empty to finish): " step_input
-            [[ -z "$step_input" ]] && break
-            step_entries+=("$step_input")
-            step_n=$((step_n + 1))
-        done
-        echo ""
-
-        # Acceptance Criteria
-        echo "  Acceptance criteria: testable conditions that prove the item is done"
-        echo "  Example: Clicking Export CSV downloads a valid CSV file"
-        local ac_n=1
-        while true; do
-            local ac_input=""
-            read -r -p "  AC ${ac_n} (empty to finish): " ac_input
-            [[ -z "$ac_input" ]] && break
-            ac_entries+=("$(printf '%s' "$ac_input" | jq -Rs .)")
-            ac_n=$((ac_n + 1))
-        done
-        echo ""
-
-        # Summary
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "  Type:     ${item_type}"
-        echo "  Title:    ${title}"
-        echo "  Intent:   ${intent:-<none>}"
-        echo "  Priority: ${priority}"
-        if [[ ${#step_entries[@]} -gt 0 ]]; then
-            echo "  Steps:"
-            for s in "${step_entries[@]}"; do
-                echo "    - ${s}"
-            done
-        else
-            echo "  Steps:    <none>"
-        fi
-        if [[ ${#ac_entries[@]} -gt 0 ]]; then
-            echo "  AC:"
-            for a in "${ac_entries[@]}"; do
-                # ac_entries are jq-encoded strings; decode for display
-                echo "    - $(printf '%s' "$a" | jq -r .)"
-            done
-        else
-            echo "  AC:       <none>"
-        fi
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo ""
-
-        local confirm=""
-        read -r -p "  Create this item? (Y/n) " confirm
-        if [[ "$confirm" == "n" || "$confirm" == "N" ]]; then
-            echo "Cancelled."
-            return 0
-        fi
+    # Title is required
+    if [[ -z "$title" ]]; then
+        log_error "Missing required --title flag"
+        echo "  Example: .aishore/aishore backlog add --title \"Fix login timeout\" --type bug --intent \"Login no longer times out after 30s\"" >&2
+        return 1
     fi
 
     # Validate
