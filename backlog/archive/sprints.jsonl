@@ -150,3 +150,4 @@
 {"date":"2026-03-20","sprintId":"sprint-1774047769","itemId":"BUG-005","status":"complete","attempts":1,"filesChanged":2,"linesAdded":4,"linesRemoved":4,"duration":118,"priority":"must","category":null}
 {"date":"2026-03-20","sprintId":"sprint-1774052817","itemId":"FEAT-015","status":"complete","attempts":1,"filesChanged":1,"linesAdded":8,"linesRemoved":0,"duration":169,"priority":"must","category":"documentation"}
 {"date":"2026-03-20","sprintId":"sprint-1774052987","itemId":"FEAT-016","status":"complete","attempts":1,"filesChanged":1,"linesAdded":3,"linesRemoved":0,"duration":320,"priority":"should","category":"documentation"}
+{"date":"2026-03-20","sprintId":"sprint-1774053308","itemId":"FEAT-017","status":"complete","attempts":1,"filesChanged":1,"linesAdded":5,"linesRemoved":0,"duration":159,"priority":"should","category":"documentation"}
