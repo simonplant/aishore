@@ -1,31 +1,28 @@
 {
-  "sprintId": "sprint-1774120991",
-  "startedAt": "2026-03-21T12:23:11-07:00",
+  "sprintId": "sprint-1774121205",
+  "startedAt": "2026-03-21T12:26:45-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-106",
-    "title": "backlog list has no --ready filter — users cannot quickly see sprint candidates",
-    "intent": "Users must be able to run 'backlog list --ready' and see only items that pass readiness gates, so they can decide what to run next without scanning the full table.",
-    "description": "cmd_backlog_list() supports --status, --type, and --priority filters but has no --ready flag. Users preparing for a sprint must scan the full READY column to find actionable items. A --ready flag would filter the output to only items where readyForSprint is true, consistent with the existing filter pattern. The complementary --no-ready flag (items where readyForSprint is false) is useful for grooming triage.",
+    "id": "BUG-107",
+    "title": "status recent sprints section omits titles — archive stores them but display doesn't show them",
+    "intent": "The 'status' command recent sprints section must show item titles alongside date/ID/status so users can read what was done without cross-referencing the archive.",
+    "description": "After BUG-081 fixed archive to store .title in sprints.jsonl, the _status_output function at line 3536 still only displays date, itemId, and status. The title field is available and should be included for readability. Users can't tell what was done from IDs alone without running 'backlog history'.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In cmd_backlog_list(), add local ready_filter='' before the flag loop; add --ready case setting ready_filter=true and --no-ready setting ready_filter=false",
-      "After the existing --status and --type filter conditions, add ready_filter to the jq select expression: if ready_filter is set, add 'and (.readyForSprint == (env.READY_FILTER == \"true\"))' using --arg",
-      "Pass the ready_filter value as a jq --arg or env var into the jq pipeline",
-      "Add --ready and --no-ready to the usage message and cmd_help output",
+      "In _status_output, update the jq expression at line 3536 from '\\(.date) \\(.itemId) \\(.status)' to '\\(.date) \\(.itemId) \\(.status) \\(.title // \"-\")'",
+      "Ensure the output lines are still readable — consider aligning columns or truncating long titles to ~40 chars",
       "Run shellcheck — confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "aishore backlog list --ready shows only items where readyForSprint is true",
-      "aishore backlog list --no-ready shows only items where readyForSprint is false",
-      "aishore backlog list with no ready filter still shows all items (backwards compatible)",
-      "shellcheck reports no new warnings"
+      "aishore status recent sprints section shows item title for each sprint entry",
+      "sprints with no stored title (pre-BUG-081 archive entries) show '-' not an error",
+      "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T12:23:11-07:00",
+    "startedAt": "2026-03-21T12:26:45-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T12:26:44-07:00"
+    "completedAt": "2026-03-21T12:29:33-07:00"
   },
-  "completedAt": "2026-03-21T12:26:44-07:00",
+  "completedAt": "2026-03-21T12:29:33-07:00",
   "attempts": 1
 }
