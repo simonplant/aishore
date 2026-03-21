@@ -2127,13 +2127,17 @@ _run_preflight() {
 
 # Run developer agent for one attempt: build failure context, run fix_cmd on retry,
 # invoke developer, run fix_cmd after.
-# Uses outer-scope: retry_failure_history, retry_extra_prompt, auto_mode, session_failures, attempt, FIX_CMD
+# Uses outer-scope: retry_failure_history, retry_extra_prompt, initial_dev_context, auto_mode, session_failures, attempt, FIX_CMD
 # Returns 0 on success, 1 on failure (sets retry_extra_prompt with failure context).
 _run_developer_cycle() {
-    # Build prior failure context for retries (structured, capped at 2000 chars)
+    # Include initial context from caller (e.g., refinement hint) on every attempt
     local dev_extra_prompt=""
+    [[ -n "$initial_dev_context" ]] && dev_extra_prompt="$initial_dev_context"
+
+    # Build prior failure context for retries (structured, capped at 2000 chars)
     if [[ $attempt -gt 0 ]]; then
-        dev_extra_prompt=$(_build_prior_failure_context)
+        dev_extra_prompt="${dev_extra_prompt:+${dev_extra_prompt}
+}$(_build_prior_failure_context)"
     fi
 
     # Append session failure patterns for auto mode (last 5 failures only)
@@ -2312,10 +2316,11 @@ ${body}"
 
 # Developer → validation cmd → validator agent retry loop.
 # Uses outer-scope locals: retries, auto_mode, session_failures, sprint_passed,
-#   retry_extra_prompt, retry_failure_history, item_source, sprint_start, ITEM_ID
+#   retry_extra_prompt, retry_failure_history, initial_dev_context, item_source, sprint_start, ITEM_ID
 _run_retry_loop() {
     local attempt=0
     sprint_passed=false
+    initial_dev_context="$retry_extra_prompt"
     retry_extra_prompt=""
     retry_failure_history=()
 
@@ -2761,6 +2766,7 @@ run_sprint_loop() {
         # Developer → validation → validator (with retries)
         local sprint_passed=false
         local retry_extra_prompt=""
+        local initial_dev_context=""
         local total_attempts=1
         _run_retry_loop
 

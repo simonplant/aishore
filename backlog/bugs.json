@@ -2501,11 +2501,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Confirmed: _run_retry_loop line 2319 resets retry_extra_prompt to empty, which overwrites the refinement hint set at line 2782. Developer on refinement pass gets no context. Fix: separate initial context from retry history clearing.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T09:45:50-07:00"
     },
     {
       "id": "BUG-088",

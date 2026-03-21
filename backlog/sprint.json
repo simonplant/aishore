@@ -1,29 +1,29 @@
 {
-  "sprintId": "sprint-1774111175",
-  "startedAt": "2026-03-21T09:39:35-07:00",
+  "sprintId": "sprint-1774111299",
+  "startedAt": "2026-03-21T09:41:39-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-088",
-    "title": "head -n -1 in protect_items_from_groom is not portable on macOS BSD head",
-    "intent": "protect_items_from_groom must work correctly on macOS — replace GNU-only head -n -1 with a portable alternative",
+    "id": "BUG-087",
+    "title": "refine refinement context lost — retry_extra_prompt cleared by _run_retry_loop",
+    "intent": "Ensure developer agent on a --refine pass receives the refinement hint so it pays attention to the updated spec",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Find the head -n -1 call in protect_items_from_groom (line ~2990) used to strip the last line of jq output",
-      "Replace head -n -1 with a portable alternative such as: awk 'NR>1{print prev}{prev=$0}' or sed '$d'",
-      "Verify the fix correctly strips only the last line (the counts line) while preserving the JSON body",
-      "Run shellcheck to confirm no new issues"
+      "In _run_retry_loop, do not reset retry_extra_prompt to empty — separate retry history clearing from initial context",
+      "Introduce an initial_dev_context variable passed from the caller that is included in dev_extra_prompt regardless of attempt number",
+      "In _run_developer_cycle, include initial_dev_context in dev_extra_prompt on attempt 0 (not just retries)",
+      "Verify developer agent log shows refinement hint on the refinement pass"
     ],
     "acceptanceCriteria": [
-      "protect_items_from_groom produces correct output on both Linux (GNU head) and macOS (BSD head)",
-      "The counts line is correctly parsed and the JSON body is correctly written to the live backlog file",
+      "Developer on a --refine pass receives the refinement hint in its prompt",
+      "retry_extra_prompt retry history still works correctly (no regression)",
       "shellcheck reports no new issues"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T09:39:35-07:00",
+    "startedAt": "2026-03-21T09:41:39-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T09:41:38-07:00"
+    "completedAt": "2026-03-21T09:45:50-07:00"
   },
-  "completedAt": "2026-03-21T09:41:38-07:00",
+  "completedAt": "2026-03-21T09:45:50-07:00",
   "attempts": 1
 }
