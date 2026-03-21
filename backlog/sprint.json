@@ -1,32 +1,32 @@
 {
-  "sprintId": "sprint-1774121375",
-  "startedAt": "2026-03-21T12:29:35-07:00",
+  "sprintId": "sprint-1774122026",
+  "startedAt": "2026-03-21T12:40:26-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-109",
-    "title": "backlog list has no --priority filter — users cannot quickly see items by priority tier",
-    "intent": "Users must be able to run 'backlog list --priority must' and see only must-priority items, completing the filter set alongside --status, --type, and --ready.",
-    "description": "cmd_backlog_list supports --status, --type, and --ready filters but has no --priority flag. The most common pre-sprint question for scoped runs is 'what are all my must items?' Currently answered only by scanning the PRI column. A --priority filter would complete the filter set and mirror the auto p0/p1/p2 priority model.",
-    "sourceBacklog": "bugs.json",
+    "id": "FEAT-035",
+    "title": "backlog populate --preview mode — show AI-generated items before committing",
+    "intent": "Users must be able to preview what backlog populate will add before it modifies backlog.json, so AI-generated noise cannot silently pollute the backlog.",
+    "description": "cmd_backlog_populate runs the AI agent and writes items directly to backlog.json with no preview step. A --preview flag should run the agent, print proposed items in a readable format, and exit without writing.",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "In cmd_backlog_list(), add local filter_priority='' before the flag loop; add 'val:filter_priority:--priority' to the parse_opts call",
-      "Add validate_priority call: if [[ -n \"$filter_priority\" ]]; then validate_priority \"$filter_priority\" || return 1; fi",
-      "Add priority filter to jq_filter: if [[ -n \"$filter_priority\" ]]; then jq_filter=\"$jq_filter | select((.priority // \\\"should\\\") == \\\"$filter_priority\\\")\"; fi",
-      "Add --priority to the usage message and help text alongside --status and --type",
+      "Add --preview flag to cmd_backlog_populate() via parse_opts",
+      "When --preview is active, run agent but capture output to temp file instead of writing to backlog.json",
+      "Print proposed items in same table format as backlog list (id, priority, title)",
+      "Exit 0 after preview without modifying backlog.json",
+      "Add --preview to usage message and help output",
       "Run shellcheck — confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "aishore backlog list --priority must shows only must-priority items",
-      "aishore backlog list --priority should shows only should-priority items",
-      "aishore backlog list with no --priority still shows all items (backwards compatible)",
-      "aishore backlog list --priority invalid-value exits non-zero with an error message",
+      "Running backlog populate --preview prints proposed items and exits without modifying backlog.json",
+      "Running backlog populate without --preview still writes to backlog.json as before",
+      "Preview output includes id, priority, and title for each proposed item",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T12:29:35-07:00",
+    "startedAt": "2026-03-21T12:40:26-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T12:32:39-07:00"
+    "completedAt": "2026-03-21T12:44:30-07:00"
   },
-  "completedAt": "2026-03-21T12:32:39-07:00",
+  "completedAt": "2026-03-21T12:44:30-07:00",
   "attempts": 1
 }

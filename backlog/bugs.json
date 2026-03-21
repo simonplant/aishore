@@ -3083,7 +3083,8 @@
       "readyForSprint": false,
       "groomingNotes": "Simple one-line jq update. titles stored since BUG-081. Low risk, additive. No deps.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T12:29:33-07:00"
+      "completedAt": "2026-03-21T12:29:33-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-108",
@@ -3111,7 +3112,8 @@
       "readyForSprint": false,
       "groomingNotes": "Elevated to must: silently discarding must-priority items due to insertion order is a data integrity defect. A must item that vanishes after grooming with no log message is worse than the cap enforcement not existing at all. Priority-aware cap enforcement is the only correct behavior.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T12:23:10-07:00"
+      "completedAt": "2026-03-21T12:23:10-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-109",
@@ -3141,7 +3143,224 @@
       "readyForSprint": false,
       "groomingNotes": "Additive filter, same pattern as --status and --type. validate_priority already exists. No deps.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T12:32:39-07:00"
+      "completedAt": "2026-03-21T12:32:39-07:00",
+      "groomedNotes": null
+    },
+    {
+      "id": "BUG-110",
+      "title": "reset_sprint uses non-atomic write — sprint.json can be partially read mid-write",
+      "intent": "reset_sprint must write sprint.json atomically via a temp file and mv so readers never see a partial or empty file.",
+      "description": "reset_sprint() uses 'cat > \"$BACKLOG_DIR/sprint.json\" <<EOF' which writes directly in-place. BUG-103 fixed the same pattern in protect_items_from_groom and enforce_groom_limits, but reset_sprint was missed. Any concurrent reader (e.g. status --watch) that reads sprint.json during the write will see a truncated or empty file, causing a jq parse error.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Replace the cat heredoc in reset_sprint() with the atomic pattern: write to a temp file then mv",
+        "Use ensure_tmpdir to create the temp path, same as other write functions in the script",
+        "Run shellcheck — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "reset_sprint writes sprint.json atomically (temp file + mv, same pattern as other write functions)",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Atomic write pattern (temp + mv) is already established in the codebase. Simple one-liner fix. BUG-103 addressed the same issue elsewhere; this is the missed instance.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-111",
+      "title": "cmd_checksums overwrites checksums.sha256 with empty file when all hash operations fail",
+      "intent": "cmd_checksums must refuse to overwrite checksums.sha256 if the generated temp file is empty, and exit non-zero with a clear error.",
+      "description": "In cmd_checksums(), the hash loop writes hashes to a temp file and then runs 'mv \"$tmp\" \"$checksum_file\"' unconditionally. If every hash_cmd invocation fails silently (e.g. file not found, hash binary returns non-zero), the temp file remains empty and the mv replaces the real checksums.sha256 with an empty file. All subsequent 'aishore update' runs will then fail integrity checks or accept a corrupt state.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "After the hash loop, check that the temp file is non-empty: [[ -s \"$tmp\" ]] || { log_error \"No checksums generated — aborting to protect $checksum_file\"; return 1; }",
+        "Only then run: mv \"$tmp\" \"$checksum_file\"",
+        "Run shellcheck — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "Running cmd_checksums when all files are missing exits non-zero and does not modify checksums.sha256",
+        "Normal run with valid files still writes checksums.sha256 as before",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Must priority: empty checksums.sha256 silently breaks the update integrity check system. Fix is a single guard line. High blast radius for a small code change.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-112",
+      "title": "backlog history default output shows oldest-first — most recent items should appear at top",
+      "intent": "backlog history must display items newest-first so the most recent sprint is always the first row, matching user expectations for a history command.",
+      "description": "cmd_backlog_history uses 'tail -n \"$limit\"' to get the last N lines of sprints.jsonl, which are the most recent items. However they are then piped into the printf loop without reversal, so the output is chronological (oldest of the batch at the top). Users expect 'history' to show the most recent item first, like git log or shell history.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "After the tail, pipe through 'tac' (Linux) or detect macOS and use 'tail -r' to reverse the output before the printf loop",
+        "Check for tac availability; fall back to: awk 'NR==1{print; next} {lines[NR]=$0} END{for(i=NR;i>1;i--) print lines[i]}'",
+        "Apply the reversal in both the limited and --all branches",
+        "Run shellcheck — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "backlog history (default) shows the most recent sprint at the top row",
+        "backlog history --all shows all items newest-first",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Clear UX expectation mismatch. tac/tail-r is a standard pattern already used elsewhere in the codebase. Both branches need the fix.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-113",
+      "title": "list_pickable_ids sorts within each backlog file independently — must bugs appear after should feats",
+      "intent": "list_pickable_ids must return all pickable IDs in a single globally-sorted list so must-priority bugs are always listed before should-priority features regardless of which file they come from.",
+      "description": "list_pickable_ids calls _list_pickable_one via map_backlog_files, which sorts items per-file and emits them. The outputs are concatenated in BACKLOG_FILES order (backlog.json first, then bugs.json). A 'should' feature in backlog.json therefore appears before a 'must' bug in bugs.json in the queued_ids array used by auto sessions. This causes the displayed queue order in session headers to misrepresent priority, and could cause issues if this list is ever used for selection.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Change _list_pickable_one to collect items into a shared array instead of printing sorted per-file",
+        "After map_backlog_files completes, sort the combined list globally by priority (must=0, should=1, could=2) and print IDs",
+        "Alternative: collect all items via jq --slurp across files, then sort once",
+        "Run shellcheck — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "When backlog.json has a should item and bugs.json has a must item, list_pickable_ids returns the must item first",
+        "Existing single-file sort order is preserved",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Confirmed by reading list_pickable_ids: map_backlog_files processes files sequentially with per-file sort. A global merge-sort is needed. Affects auto session queue display accuracy.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-114",
+      "title": "Update CHANGELOG.md and bump version to v0.3.6",
+      "intent": "CHANGELOG.md must document every change since v0.3.5 and VERSION must read 0.3.6 so operators can track what shipped.",
+      "description": "v0.3.5 was the last tagged version. Since then ~20 items completed: FEAT-031 (auto --limit), FEAT-033 (live progress counter), FEAT-034 (end-of-session summary), BUG-093 through BUG-109 — including worktree archive fix, --no-merge repick, --ready filter, scope display, history limit, --priority filter, status titles, and checksums safety. CHANGELOG.md needs a v0.3.6 section and VERSION must be updated.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "Run backlog history --all to list completed items since v0.3.5",
+        "Add a v0.3.6 section to CHANGELOG.md covering all completed items",
+        "Update .aishore/VERSION to 0.3.6",
+        "Run shellcheck and confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "CHANGELOG.md contains a v0.3.6 section with entries for FEAT-031, FEAT-033, FEAT-034, BUG-093 through BUG-109",
+        "VERSION file reads 0.3.6",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Many changes shipped since v0.3.5 with no changelog update. Docs-only change with no logic risk.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-115",
+      "title": "backlog edit has no --remove-step N flag — individual steps cannot be removed",
+      "intent": "Users must be able to remove a specific step by 1-based index via backlog edit <ID> --remove-step N without clearing all steps.",
+      "description": "backlog edit supports --step to append steps and --clear-steps to wipe all steps, but has no way to remove a single step by index. Users who add a step in error or need to prune the list must clear all steps and re-add them manually. The steps array is JSON so jq del() can remove an element by index.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Add --remove-step flag to cmd_backlog_edit() option parser",
+        "Validate the argument is a positive integer",
+        "After loading the item, use jq to remove the (N-1)th element from steps array (1-based input)",
+        "If N is out of range, exit non-zero with clear error: 'step N does not exist (item has M steps)'",
+        "Write back atomically using temp file + mv pattern",
+        "Add --remove-step to backlog edit usage message",
+        "Run shellcheck and confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "backlog edit ID --remove-step 2 removes the second step from the item",
+        "backlog edit ID --remove-step 99 exits non-zero with a clear error when index is out of range",
+        "backlog edit ID --remove-step 0 exits non-zero with a validation error",
+        "All other fields on the item are unchanged after removal",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Step CRUD is incomplete: add exists, clear-all exists, but remove-one does not. Users editing specs regularly need this. jq del() makes it a small change.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-116",
+      "title": "backlog edit has no --remove-ac N flag — individual ACs cannot be removed",
+      "intent": "Users must be able to remove a specific AC by 1-based index via backlog edit <ID> --remove-ac N without clearing all acceptance criteria.",
+      "description": "backlog edit supports --ac to append acceptance criteria and --clear-ac to wipe all ACs, but no way to remove a single AC by index. This is the same gap as missing --remove-step (BUG-115) but for the AC array. AC entries can be plain strings or {text, verify} objects — the jq del() removal must handle both.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Add --remove-ac flag to cmd_backlog_edit() option parser",
+        "Validate the argument is a positive integer",
+        "After loading the item, use jq to remove the (N-1)th element from acceptanceCriteria array (1-based input)",
+        "If N is out of range, exit non-zero with clear error: 'AC N does not exist (item has M ACs)'",
+        "Write back atomically using temp file + mv pattern",
+        "Add --remove-ac to backlog edit usage message",
+        "Run shellcheck and confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "backlog edit ID --remove-ac 1 removes the first AC from the item",
+        "backlog edit ID --remove-ac 99 exits non-zero with a clear error when index is out of range",
+        "Removal works correctly for both plain-string ACs and {text, verify} object ACs",
+        "All other fields on the item are unchanged after removal",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "AC CRUD is incomplete: same gap as BUG-115 for steps. Users need granular control. jq del() handles both string and object AC entries.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-117",
+      "title": "auto session start does not show queued item count — users have no upfront visibility",
+      "intent": "When an auto session starts, it must log the total queued item count broken down by priority so users know what will run before committing to a long session.",
+      "description": "auto sessions can queue 10+ items but emit no upfront summary. Users starting 'auto done' have no idea if they'll wait 5 minutes or 2 hours. The queued IDs are available in run_auto_loop before the first sprint starts. A single log line ('Queuing 5 item(s): must=2 should=3') gives users the context to decide whether to proceed or narrow the scope.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In run_auto_loop() (or cmd_run when --_auto is set), after building the initial item queue, count total items and count per priority tier",
+        "Emit: log_info \"Queuing $total item(s): must=$n_must should=$n_should could=$n_could\" — omit tiers with zero count",
+        "If total is 0, emit: log_info \"No items to run\" and exit cleanly",
+        "Run shellcheck and confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "Starting 'auto done' with items queued prints a single log line with total count and per-priority breakdown",
+        "Starting 'auto done' with an empty backlog prints 'No items to run' instead of the breakdown",
+        "Tiers with zero items are omitted from the breakdown (e.g. if no must items, must= does not appear)",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "UX gap: users launching auto have no idea of session scope before waiting. Single log line costs nothing and helps users decide to narrow scope with --priority or --category.",
+      "groomedAt": "2026-03-21"
     }
   ]
 }
