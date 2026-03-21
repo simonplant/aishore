@@ -2643,11 +2643,12 @@
         ".aishore/aishore"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Bumping from could to should: silent auto-groom during a long auto session is actively confusing — user has no signal that grooming is happening. Two-line fix, high UX value.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T10:14:16-07:00"
     }
   ]
 }
