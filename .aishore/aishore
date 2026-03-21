@@ -2743,6 +2743,16 @@ run_sprint_loop() {
         fi
 
         if [[ "$auto_mode" == "true" ]]; then
+            # Session progress line
+            local elapsed_secs elapsed_min progress_count
+            elapsed_secs=$(( $(date +%s) - batch_start ))
+            elapsed_min=$(( elapsed_secs / 60 ))
+            if [[ ${#queued_ids[@]} -gt 0 ]]; then
+                progress_count="$passed/${#queued_ids[@]} complete"
+            else
+                progress_count="$passed complete"
+            fi
+            log_info "Sprint session: $progress_count | $failed failed | ${elapsed_min}m elapsed"
             log_subheader "Sprint $i (passed: $passed, failed: $failed)"
         else
             [[ $count -gt 1 ]] && log_subheader "Sprint $i/$count"
