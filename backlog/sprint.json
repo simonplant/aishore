@@ -1,31 +1,29 @@
 {
-  "sprintId": "sprint-1774055098",
-  "startedAt": "2026-03-20T18:04:58-07:00",
+  "sprintId": "sprint-1774055278",
+  "startedAt": "2026-03-20T18:07:58-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-033",
-    "title": "backlog add --scope flag missing in cmd_backlog_add — scope can only be set via edit",
-    "intent": "Users must be able to set scope constraints at item creation time — requiring an extra edit command after add is an unnecessary workflow friction that will be missed.",
-    "description": "cmd_backlog_add() does not have a --scope flag. The scope array (glob patterns constraining where the developer agent may create or modify files) can only be set by running 'backlog edit <ID> --scope' after the item is created. This is inconsistent with --ac and --step which are both supported at add-time. The fix follows the same pattern as --ac and --step: add --scope and --clear-scope flags to cmd_backlog_add that accumulate scope patterns into a local array and write them as the scope field.",
+    "id": "BUG-032",
+    "title": "backlog history output omits duration column when duration is 0",
+    "intent": "backlog history must display duration consistently — missing duration for items completed outside normal sprint flow is confusing and breaks column alignment",
+    "description": "cmd_backlog_history() formats the output table with ID, date, status, and duration columns. The duration field in sprints.jsonl is stored as an integer (seconds). When an item is archived without a valid startedAt timestamp (e.g. manually marked done, or archive written before sprint started), duration is 0. The display logic should show '0s' or '-' for zero-duration entries rather than silently omitting the column or showing raw '0', which breaks column alignment for scripting.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_backlog_add() and locate the --ac and --step flag handling as reference (around line 3617-3660)",
-      "Add a local scope_entries=() array before the flag parsing loop",
-      "Add a --scope flag case: validate_arg \"$1\" \"${2:-}\" || return 1; scope_entries+=(\"$2\"); shift 2",
-      "After the flag loop, build scope_json from scope_entries array: scope_json='['; for e in \"${scope_entries[@]:-}\"; do scope_json+=\"\\\"$e\\\",\"; done; scope_json='${scope_json%,}]'",
-      "Pass --argjson scope_arr \"$scope_json\" to the add_item jq call and include .scope: $scope_arr in the item structure",
-      "Verify: 'backlog add --title X --scope \"src/**\" --scope \"tests/**\"' creates item with scope: [\"src/**\",\"tests/**\"]"
+      "In .aishore/aishore, find cmd_backlog_history() (around line 4550)",
+      "Locate the jq format expression that renders the duration column",
+      "Change the duration display: if duration is 0 or null, show '-'; otherwise format as minutes and seconds (e.g. '2m 34s' for 154)",
+      "Verify: 'backlog history' shows '-' for items with duration 0 and formatted time for items with duration > 0"
     ],
     "acceptanceCriteria": [
-      "backlog add --scope 'src/**' creates an item with scope: [\"src/**\"]",
-      "backlog add --scope 'src/**' --scope 'tests/**' creates scope with both patterns in order",
-      "backlog add with no --scope flag creates item with scope: [] (unchanged default)"
+      "backlog history shows '-' for items where duration is 0 or null",
+      "backlog history formats non-zero duration as human-readable time (e.g. '2m 34s')",
+      "Column alignment is consistent across all rows"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T18:04:58-07:00",
+    "startedAt": "2026-03-20T18:07:58-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T18:07:57-07:00"
+    "completedAt": "2026-03-20T18:10:11-07:00"
   },
-  "completedAt": "2026-03-20T18:07:57-07:00",
+  "completedAt": "2026-03-20T18:10:11-07:00",
   "attempts": 1
 }

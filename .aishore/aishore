@@ -4779,7 +4779,7 @@ cmd_backlog_history() {
     printf "%-12s %-12s %-10s %s\n" "──────────" "──────────" "────────" "────────"
 
     local formatted
-    formatted=$(echo "$results" | jq -r '[.itemId // "-", .date // "-", .status // "-", (if .duration then "\(.duration)s" else "-" end)] | @tsv' | \
+    formatted=$(echo "$results" | jq -r '[.itemId // "-", .date // "-", .status // "-", (if (.duration // 0) > 0 then (if .duration >= 60 then "\(.duration / 60 | floor)m \(.duration % 60)s" else "\(.duration)s" end) else "-" end)] | @tsv' | \
         while IFS=$'\t' read -r id date status duration; do
             printf "%-12s %-12s %-10s %s\n" "$id" "$date" "$status" "$duration"
         done)

@@ -816,11 +816,12 @@
         "Column alignment is consistent across all rows"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Display bug in backlog history: duration=0 produces '0' in the table which looks wrong and breaks column alignment. Items manually marked done or archived before sprint started all have duration=0. Fix is display-only: show '-' for zero/null, format seconds as Xm Ys for non-zero. Low risk."
+      "groomingNotes": "Display bug in backlog history: duration=0 produces '0' in the table which looks wrong and breaks column alignment. Items manually marked done or archived before sprint started all have duration=0. Fix is display-only: show '-' for zero/null, format seconds as Xm Ys for non-zero. Low risk.",
+      "completedAt": "2026-03-20T18:10:11-07:00"
     },
     {
       "id": "BUG-033",
