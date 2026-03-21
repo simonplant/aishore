@@ -2348,7 +2348,8 @@ cmd_run() {
                 check_result || log_warning "Tech-lead groom did not pass — continuing"
                 run_agent "product-owner" "groom" "$MODEL_FAST" "$groom_context" || true
                 check_result || log_warning "Product-owner groom did not pass — continuing"
-                # Enforce groom limits in auto mode
+                # Protect existing items from groomer rewrites, then enforce limits
+                protect_items_from_groom "$auto_groom_snap"
                 enforce_groom_limits "$auto_groom_snap"
                 rm -rf "$auto_groom_snap"
                 if [[ "$GROOM_ITEMS_SKIPPED" -gt 0 ]]; then
@@ -4054,10 +4055,22 @@ cmd_backlog_populate() {
     local snap_before
     snap_before=$(snapshot_backlogs)
 
+    # Snapshot existing items to protect from agent overwrites
+    local populate_snap_dir
+    populate_snap_dir=$(mktemp -d)
+    for f in "${BACKLOG_FILES[@]}"; do
+        [[ -f "$BACKLOG_DIR/$f" ]] && cp "$BACKLOG_DIR/$f" "$populate_snap_dir/$f"
+    done
+
     log_info "Running product-owner agent to populate backlog..."
     echo ""
 
     GROOM_MONITOR=true run_agent "product-owner" "populate" "$MODEL_FAST" "$context_args"
+
+    # Protect existing items from agent rewrites, then enforce limits
+    protect_items_from_groom "$populate_snap_dir"
+    enforce_groom_limits "$populate_snap_dir"
+    rm -rf "$populate_snap_dir"
 
     # --- Post-populate diff ---
     print_groom_diff "$snap_before"
