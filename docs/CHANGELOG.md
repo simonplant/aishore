@@ -5,6 +5,92 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2026-03-20
+
+### Added
+
+- **`backlog history` command**: Query completed sprints from the archive with `--limit N` flag
+- **`diagnose` command**: Show last sprint failure diagnostics with inline 20-line log tail and agent log path
+- **`status --watch` mode**: Live refresh status display until sprint completes
+- **`--depends-on` flag**: Add dependency relationships via `backlog add` and `backlog edit`; dependencies now append instead of replace
+- **`--scope` flag for `backlog add`**: Set scope globs when adding items
+- **`--step` flag**: Add implementation steps via `backlog add` and `backlog edit`
+- **`--pr` flag**: Create GitHub PRs instead of merging (`run --pr`)
+- **`--auto-review` flag**: Auto-run architecture review after auto mode completes
+- **Dependency readiness gate**: `backlog check` verifies `dependsOn` items are complete, shows each dependency's current status
+- **Blocked dependency indicator**: `backlog list` shows blocked items
+- **Complexity gate**: Warns on under-specified items during grooming
+- **Configurable auto-fix command**: `fix_cmd` config option for automatic code fixes between retries
+- **Configurable squash-merge strategy**: Merge strategy configuration in config.yaml
+- **Git worktree isolation**: `--worktree` mode for running sprints in isolated worktrees
+- **Groom convergence limits**: Prevent unbounded grooming busywork with max-rounds cap
+- **Intent semantics in agent prompts**: Developer and validator agents now understand intent as the north star when AC conflicts with spec
+
+### Fixed
+
+- Use ANSI-C quoting for real newlines in AC verify report
+- Log skipped items when merge conflict aborts multi-sprint run
+- Remove dead if/else branch in AC JSON construction
+- Replace byte-based output truncation with line-based truncation
+- Warn unconditionally when config.yaml has content but yq is missing
+- Display AC `{text, verify}` objects as plain text in `backlog show`
+- Truncate VALIDATE_CMD output in retry prompts to prevent prompt bloat
+- Add `--clear-ac` and `--clear-scope` flags to `backlog edit`
+- Make `remove_items_by_status` accept relative filename
+- Reject unknown options across all subcommands (`run`, `review`, `update`, `groom`, `metrics`, `backlog populate/show/check`)
+- Include all supported flags in `backlog edit` usage messages
+- Add `validate_arg` calls for all value-bearing flags across CLI commands
+- Return non-zero exit from `backlog check` when gates fail
+- JSON-encode pending AC entry in mid-loop flush of `backlog edit`
+- Check `remove_items_by_status` return code in `clean`
+- Surface errors from `mark_item_failed` instead of swallowing with `|| true`
+- Make stash pop failures visible with actionable guidance
+- Use agent summary in commit messages instead of generic text
+- Verify item existence in `resolve_backlog_file` before returning
+- Show currently running sprint item in `status` output
+- Format duration column in `backlog history` as human-readable time
+- Add TITLE column to `backlog history` output
+- Filter non-numeric ID suffixes in `next_id()`
+- Robust JSON extraction in `refine_item_spec`
+- Replace `md5sum` with portable `_file_hash` in groom progress tracking
+- Protect existing items from groomer rewrites in all code paths
+- Suppress ShellCheck SC1010 false positive in backlog list jq filter
+
+### Changed
+
+- **Extract `run_validated_command()` helper**: Eliminates 3 duplicated timeout-aware command execution blocks
+- **Decompose `_run_retry_loop()`**: Split into `_run_preflight`, `_run_developer_cycle`, `_run_validation_cycle`
+- **Decompose `cmd_run()`**: Split into `cmd_run_parse_args`, `setup_sprint_environment`, `run_sprint_loop`, `print_sprint_summary` (30 lines, down from ~200)
+- **Extract shared `PICKABLE_ITEMS_FILTER`**: Single source of truth for item filtering in `pick_item()` and `list_pickable_ids()`
+- **Replace global side-effect variables**: Five globals eliminated, functions return via stdout with explicit capture
+- **Standardize error handling**: Functions `log_error` + `return 1`; only `main`, `acquire_lock`, and `require_tool` may `exit`
+- **Extract shared backlog iteration helpers**: `map_backlog_files`, `find_first_backlog`, `snapshot_backlog_files`, `restore_backlog_files`, `sum_backlog_count`
+- **Extract init scaffold heredocs to template files**: 6 template files in `.aishore/templates/`, `_init_scaffold_files` uses `cp`/`sed` exclusively
+- **Extract help text to `.aishore/help.txt`**: `cmd_help` reads via `sed`; `cmd_usage` is now an alias
+- **Move populate-mode docs to files**: Product-owner guidance and CLAUDE.md snippet moved out of bash string literals
+
+### Removed
+
+- **Interactive mode from `backlog add`**: `--interactive` flag removed; use flags (`--title`, `--priority`, etc.) exclusively
+- **`backlog sync` command**: 152 lines of dead code removed
+
+### Documentation
+
+- **docs/ARCHITECTURE.md**: Unified system architecture document covering pipeline, agents, quality gates, and design decisions
+- **docs/CONTRIBUTING.md**: Moved from root, added Agent Prompt Authoring section
+- **docs/CHANGELOG.md**: Moved from project root to `docs/`
+- **docs/QUICKSTART.md**: Zero to first completed sprint guide
+- **docs/CONFIGURATION.md**: Comprehensive configuration reference
+- **docs/PROBLEMS.md**: Known issues and workarounds
+- **docs/ROADMAP.md**: Project roadmap
+- Synced 5 missing flags (`--refine`, `--quick`, `--auto-review`, `--dry-run` for auto, `status --watch`) to README and CLAUDE.md
+
+## [0.3.3] - 2026-03-19
+
+### Fixed
+
+- **Update/install output**: Improved output with clear installed-files summary
+
 ## [0.3.2] - 2026-03-19
 
 ### Added
