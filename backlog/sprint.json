@@ -1,29 +1,27 @@
 {
-  "sprintId": "sprint-1774070027",
-  "startedAt": "2026-03-20T22:13:47-07:00",
+  "sprintId": "sprint-1774070285",
+  "startedAt": "2026-03-20T22:18:05-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-052",
-    "title": "Clean up unused and redundant variable declarations",
-    "intent": "Remove or properly scope variables that are declared globally but used locally (LAST_AGENT_LOG, GROOM_ITEMS_ADDED/SKIPPED init), fix the file_count/line_count naming bug, and clean up mid-file global declarations",
+    "id": "BUG-053",
+    "title": "Use printf instead of echo for variable output throughout the script",
+    "intent": "Replace ~20 instances of echo with variable arguments with printf to avoid issues when variables start with dash or contain escape sequences, following POSIX best practices",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Move LAST_AGENT_LOG to local scope in the functions that use it",
-      "Remove redundant global initialization of GROOM_ITEMS_ADDED/SKIPPED (already reset inside function)",
-      "Fix variable named file_count that should be line_count in truncate_sprints_jsonl",
-      "Consolidate all remaining global variable declarations to the top of the script"
+      "Find all echo calls that output variable content (not static strings)",
+      "Replace with printf '%s\\n' for simple variable output",
+      "Leave echo for static string literals which are safe"
     ],
     "acceptanceCriteria": [
-      "No global variables are declared mid-file (all at top or inside functions as local)",
-      "The file_count/line_count naming mismatch is fixed",
+      "No echo call outputs an unquoted or potentially-dash-prefixed variable",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T22:13:47-07:00",
+    "startedAt": "2026-03-20T22:18:05-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T22:18:03-07:00"
+    "completedAt": "2026-03-20T22:28:44-07:00"
   },
-  "completedAt": "2026-03-20T22:18:03-07:00",
+  "completedAt": "2026-03-20T22:28:44-07:00",
   "attempts": 1
 }

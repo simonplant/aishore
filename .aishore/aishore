@@ -54,7 +54,7 @@ trap cleanup_exit EXIT
 
 ensure_tmpdir() {
     [[ -z "$AISHORE_TMPDIR" ]] && AISHORE_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/aishore.XXXXXX")
-    echo "$AISHORE_TMPDIR"
+    printf '%s\n' "$AISHORE_TMPDIR"
 }
 
 # ============================================================================
@@ -315,13 +315,13 @@ restore_stash() {
         return 0
     fi
     # Show the git error output (conflicts, etc.)
-    [[ -n "$pop_output" ]] && echo "$pop_output"
+    [[ -n "$pop_output" ]] && printf '%s\n' "$pop_output"
     log_warning "Failed to restore stashed changes (likely due to conflicts)"
     local stash_contents
     stash_contents=$(git stash show 2>/dev/null) || true
     if [[ -n "$stash_contents" ]]; then
         log_warning "Stashed files:"
-        echo "$stash_contents"
+        printf '%s\n' "$stash_contents"
     fi
     log_warning "To resolve: run 'git stash show' to see files, then 'git stash pop' and fix conflicts"
     log_error "Stash restore failed"
@@ -350,7 +350,7 @@ build_context() {
         project_docs=$(find_project_docs)
         [[ -n "$project_docs" ]] && context="$context $project_docs"
     fi
-    echo "$context"
+    printf '%s\n' "$context"
 }
 
 build_completion_contract() {
@@ -380,7 +380,7 @@ acquire_lock() {
 append_log() {
     local file="$1" msg="$2"
     mkdir -p "$(dirname "$file")" 2>/dev/null || true
-    echo "$msg" >> "$file"
+    printf '%s\n' "$msg" >> "$file"
 }
 
 verify_checksum() {
@@ -415,7 +415,7 @@ find_claude_md() {
     local dir="$PROJECT_ROOT"
     # Check common locations
     for path in "$dir/CLAUDE.md" "$dir/claude.md" "$dir/docs/CLAUDE.md"; do
-        [[ -f "$path" ]] && { echo "$path"; return 0; }
+        [[ -f "$path" ]] && { printf '%s\n' "$path"; return 0; }
     done
     return 0
 }
@@ -427,7 +427,7 @@ find_project_docs() {
                 "$dir/PRODUCT.md" "$dir/docs/PRODUCT.md"; do
         [[ -f "$path" ]] && docs="$docs @$path"
     done
-    echo "$docs"
+    printf '%s\n' "$docs"
 }
 
 # Find the first matching PRD/product requirements file.
@@ -439,7 +439,7 @@ _find_prd() {
         "$PROJECT_ROOT/docs/PRODUCT.md" "$PROJECT_ROOT/docs/product.md" \
         "$PROJECT_ROOT/docs/PRD.md" "$PROJECT_ROOT/docs/prd.md" \
         "$PROJECT_ROOT/README.md"; do
-        [[ -f "$candidate" ]] && { echo "$candidate"; return 0; }
+        [[ -f "$candidate" ]] && { printf '%s\n' "$candidate"; return 0; }
     done
     return 0
 }
@@ -452,13 +452,13 @@ recent_sprints_file() {
     local line_count
     line_count=$(wc -l < "$src")
     if [[ "$line_count" -le "$max_lines" ]]; then
-        echo "@$src"
+        printf '%s\n' "@$src"
         return 0
     fi
     local tmp
     tmp="$(ensure_tmpdir)/recent_sprints.jsonl"
     tail -n "$max_lines" "$src" > "$tmp"
-    echo "@$tmp"
+    printf '%s\n' "@$tmp"
 }
 
 get_claudemd_snippet() {
@@ -582,12 +582,12 @@ pick_item() {
         full_item=$(find_item "$specific_id") || return 1
 
         # Project to sprint fields
-        item_json=$(echo "$full_item" | jq "$ITEM_PROJECTION")
+        item_json=$(printf '%s\n' "$full_item" | jq "$ITEM_PROJECTION")
 
         # Extract all needed scalar fields from full_item in one jq pass
         local item_intent item_status deps_json
         IFS=$'\t' read -r item_intent item_status deps_json < <(
-            echo "$full_item" | jq -r '[(.intent // ""), (.status // "todo"), (.dependsOn // null | tojson)] | @tsv'
+            printf '%s\n' "$full_item" | jq -r '[(.intent // ""), (.status // "todo"), (.dependsOn // null | tojson)] | @tsv'
         )
         [[ "$deps_json" == "null" ]] && deps_json=""
 
@@ -610,20 +610,20 @@ pick_item() {
             local all_done_ids
             all_done_ids=$(collect_done_ids)
             local unmet
-            unmet=$(echo "$deps_json" | jq -r --argjson done_ids "$all_done_ids" '.[] | select(. as $dep | $done_ids | index($dep) == null)' 2>/dev/null)
+            unmet=$(printf '%s\n' "$deps_json" | jq -r --argjson done_ids "$all_done_ids" '.[] | select(. as $dep | $done_ids | index($dep) == null)' 2>/dev/null)
             if [[ -n "$unmet" ]]; then
-                log_warning "Item $specific_id has unmet dependencies: $(echo "$unmet" | tr '\n' ', ' | sed 's/,$//')"
+                log_warning "Item $specific_id has unmet dependencies: $(printf '%s\n' "$unmet" | tr '\n' ', ' | sed 's/,$//')"
             fi
         fi
-        echo "$backlog" > "$source_file"
-        echo "$item_json"
+        printf '%s\n' "$backlog" > "$source_file"
+        printf '%s\n' "$item_json"
         return 0
     fi
 
     # Build skip list as JSON array for jq
     local skip_json="[]"
     if [[ -n "$skip_ids" ]]; then
-        skip_json=$(echo "$skip_ids" | tr ',' '\n' | jq -R . | jq -s .)
+        skip_json=$(printf '%s\n' "$skip_ids" | tr ',' '\n' | jq -R . | jq -s .)
     fi
 
     # Build list of done item IDs from both backlogs for dependency checking
@@ -654,8 +654,8 @@ pick_item() {
         ' "$BACKLOG_DIR/$backlog" 2>/dev/null)
 
         if [[ -n "$item_json" && "$item_json" != "null" ]]; then
-            echo "$backlog" > "$source_file"
-            echo "$item_json"
+            printf '%s\n' "$backlog" > "$source_file"
+            printf '%s\n' "$item_json"
             return 0
         fi
         return 1
@@ -724,7 +724,7 @@ sum_backlog_count() {
         [[ -f "$BACKLOG_DIR/$1" ]] && _sbc_total=$((_sbc_total + $("$_sbc_func" "$BACKLOG_DIR/$1")))
     }
     map_backlog_files _sbc_add
-    echo "$_sbc_total"
+    printf '%s\n' "$_sbc_total"
 }
 
 resolve_backlog_file() {
@@ -736,14 +736,14 @@ resolve_backlog_file() {
     esac
     # Check expected file first if prefix matched
     if [[ -n "$expected" ]] && [[ -f "$BACKLOG_DIR/$expected" ]] && jq -e --arg id "$id" '.items[] | select(.id == $id)' "$BACKLOG_DIR/$expected" &>/dev/null; then
-        echo "$expected"
+        printf '%s\n' "$expected"
         return 0
     fi
     # Fall through: search all files
     _try_resolve() {
         local f="$1" id="$2"
         if [[ -f "$BACKLOG_DIR/$f" ]] && jq -e --arg id "$id" '.items[] | select(.id == $id)' "$BACKLOG_DIR/$f" &>/dev/null; then
-            echo "$f"
+            printf '%s\n' "$f"
             return 0
         fi
         return 1
@@ -764,7 +764,7 @@ find_item() {
         log_error "Item not found: $id"
         return 1
     }
-    echo "$item"
+    printf '%s\n' "$item"
 }
 
 check_readiness_gates() {
@@ -777,7 +777,7 @@ check_readiness_gates() {
     # Extract all gate-check fields from item in one jq pass
     local title item_intent step_count ac_count short_steps has_scope deps
     IFS=$'\t' read -r title item_intent step_count ac_count short_steps has_scope < <(
-        echo "$item" | jq -r '[
+        printf '%s\n' "$item" | jq -r '[
             (.title // ""),
             (.intent // ""),
             ([.steps // [] | .[]] | length | tostring),
@@ -786,7 +786,7 @@ check_readiness_gates() {
             ([.scope // [] | .[]] | length | tostring)
         ] | @tsv'
     )
-    deps=$(echo "$item" | jq -r '.dependsOn // [] | .[]' 2>/dev/null)
+    deps=$(printf '%s\n' "$item" | jq -r '.dependsOn // [] | .[]' 2>/dev/null)
 
     # Check title non-empty
     if [[ -z "$title" ]]; then
@@ -832,7 +832,7 @@ check_readiness_gates() {
                 has_warning=true
             else
                 local dep_status
-                dep_status=$(echo "$dep_item" | jq -r '.status // "todo"')
+                dep_status=$(printf '%s\n' "$dep_item" | jq -r '.status // "todo"')
                 if [[ "$dep_status" != "done" ]]; then
                     warnings="${warnings}  - Dependency ${dep_id}: status is '${dep_status}'\n"
                     has_warning=true
@@ -854,7 +854,7 @@ check_readiness_gates() {
         has_warning=true
     fi
 
-    [[ -n "$warnings" ]] && echo "$warnings"
+    [[ -n "$warnings" ]] && printf '%s\n' "$warnings"
     if [[ "$has_warning" == "true" ]]; then
         log_error "Readiness gate check failed for $item_id"
         return 1
@@ -927,7 +927,7 @@ list_pickable_ids() {
     local priority_filter="${2:-}"
     local skip_json="[]"
     if [[ -n "$skip_ids" ]]; then
-        skip_json=$(echo "$skip_ids" | tr ',' '\n' | jq -R . | jq -s .)
+        skip_json=$(printf '%s\n' "$skip_ids" | tr ',' '\n' | jq -R . | jq -s .)
     fi
     local prio_json="[]"
     if [[ -n "$priority_filter" ]]; then
@@ -955,10 +955,10 @@ collect_done_ids() {
         [[ -f "$BACKLOG_DIR/$f" ]] || return 0
         local ids
         ids=$(jq '[.items[] | select(.status == "done") | .id]' "$BACKLOG_DIR/$f" 2>/dev/null || echo "[]")
-        done_ids=$(echo "$done_ids" "$ids" | jq -s 'add | unique')
+        done_ids=$(printf '%s %s\n' "$done_ids" "$ids" | jq -s 'add | unique')
     }
     map_backlog_files _collect_done_one
-    echo "$done_ids"
+    printf '%s\n' "$done_ids"
 }
 
 update_item() {
@@ -1110,9 +1110,9 @@ mark_complete() {
     local diffstat
     diffstat=$(git diff --shortstat HEAD~1 HEAD 2>/dev/null || true)
     if [[ -n "$diffstat" ]]; then
-        files_changed=$(echo "$diffstat" | sed -n 's/.*\([0-9][0-9]*\) file.*/\1/p')
-        lines_added=$(echo "$diffstat" | sed -n 's/.*\([0-9][0-9]*\) insertion.*/\1/p')
-        lines_removed=$(echo "$diffstat" | sed -n 's/.*\([0-9][0-9]*\) deletion.*/\1/p')
+        files_changed=$(printf '%s\n' "$diffstat" | sed -n 's/.*\([0-9][0-9]*\) file.*/\1/p')
+        lines_added=$(printf '%s\n' "$diffstat" | sed -n 's/.*\([0-9][0-9]*\) insertion.*/\1/p')
+        lines_removed=$(printf '%s\n' "$diffstat" | sed -n 's/.*\([0-9][0-9]*\) deletion.*/\1/p')
     fi
     files_changed="${files_changed:-0}"
     lines_added="${lines_added:-0}"
@@ -1405,7 +1405,7 @@ $validate_hint}
 ## Mode
 $mode
 $(build_completion_contract)"
-    echo "$prompt"
+    printf '%s\n' "$prompt"
 }
 
 run_agent() {
@@ -1489,7 +1489,7 @@ check_result() {
     # Support both simple format {"status":"pass"} and detailed format {"overall":"PASS"}
     status=$(jq -r '.status // .overall // "unknown"' "$STATUS_DIR/result.json" 2>/dev/null)
     # Normalize to lowercase so PASS/pass both match
-    status=$(echo "$status" | tr '[:upper:]' '[:lower:]')
+    status=$(printf '%s\n' "$status" | tr '[:upper:]' '[:lower:]')
 
     if [[ "$status" == "pass" ]]; then
         local summary
@@ -1558,11 +1558,11 @@ check_scope_violations() {
         printf '%s\n%s' "$violation_count file(s) outside declared scope:" "$violations"
         if [[ "$SCOPE_MODE" == "strict" ]]; then
             log_error "Scope violation (strict mode): $violation_count file(s) outside scope"
-            echo -e "$violations" >&2
+            printf '%b\n' "$violations" >&2
             return 1
         else
             log_warning "Scope violation: $violation_count file(s) outside scope" >&2
-            echo -e "$violations" >&2
+            printf '%b\n' "$violations" >&2
             return 0
         fi
     fi
@@ -1579,7 +1579,7 @@ run_ac_verification() {
 
     # Filter to objects with .verify field and get count in one pass
     local verifiable verify_count
-    verifiable=$(echo "$ac_json" | jq '[.[] | select(type == "object" and .verify != null)]' 2>/dev/null)
+    verifiable=$(printf '%s\n' "$ac_json" | jq '[.[] | select(type == "object" and .verify != null)]' 2>/dev/null)
     verify_count=$(jq 'length' <<< "$verifiable" 2>/dev/null || echo 0)
     [[ "$verify_count" -eq 0 ]] && return 0
 
@@ -1609,7 +1609,7 @@ run_ac_verification() {
         fi
     done < <(jq -r '.[] | [(.text // "unnamed"), .verify] | @tsv' <<< "$verifiable")
 
-    [[ -n "$report" ]] && echo "$report"
+    [[ -n "$report" ]] && printf '%s\n' "$report"
     [[ "$all_passed" == "true" ]] && return 0 || return 1
 }
 
@@ -1840,18 +1840,18 @@ _run_dry_run() {
     fi
 
     local item_id item_title
-    IFS=$'\t' read -r item_id item_title < <(echo "$item_json" | jq -r '[.id, (.title // .description)] | @tsv')
+    IFS=$'\t' read -r item_id item_title < <(printf '%s\n' "$item_json" | jq -r '[.id, (.title // .description)] | @tsv')
 
     log_subheader "Selected Item"
-    echo "$item_json" | jq .
+    printf '%s\n' "$item_json" | jq .
     echo ""
 
     # Advisory complexity warning in dry-run
     local gates_warnings
     if ! gates_warnings=$(check_readiness_gates "$item_id" 2>/dev/null); then
-        if echo -e "$gates_warnings" | grep -q "under-specified"; then
+        if printf '%b\n' "$gates_warnings" | grep -q "under-specified"; then
             log_warning "$item_id may be under-specified — consider adding more steps or scope"
-            echo -e "$gates_warnings" | grep -A 50 "under-specified"
+            printf '%b\n' "$gates_warnings" | grep -A 50 "under-specified"
             echo ""
         fi
     fi
@@ -1862,7 +1862,7 @@ _run_dry_run() {
 
     log_subheader "Validation Command"
     if [[ -n "$VALIDATE_CMD" ]]; then
-        echo "$VALIDATE_CMD"
+        printf '%s\n' "$VALIDATE_CMD"
     else
         echo "none configured"
     fi
@@ -1955,14 +1955,14 @@ Output ONLY the JSON object, no markdown fences, no explanation."
     local json_output=""
     # Strategy: strip markdown fences, then try each line starting with { as potential JSON start
     local stripped
-    stripped=$(echo "$raw_output" | sed '/^[[:space:]]*```/d')
+    stripped=$(printf '%s\n' "$raw_output" | sed '/^[[:space:]]*```/d')
     local line_num=0
     while IFS= read -r line; do
         line_num=$((line_num + 1))
         if [[ "$line" =~ ^[[:space:]]*\{ ]]; then
             local candidate
-            candidate=$(echo "$stripped" | tail -n +"$line_num" | jq '.' 2>/dev/null | head -500)
-            if [[ -n "$candidate" ]] && echo "$candidate" | jq -e '.steps and .acceptanceCriteria' &>/dev/null; then
+            candidate=$(printf '%s\n' "$stripped" | tail -n +"$line_num" | jq '.' 2>/dev/null | head -500)
+            if [[ -n "$candidate" ]] && printf '%s\n' "$candidate" | jq -e '.steps and .acceptanceCriteria' &>/dev/null; then
                 json_output="$candidate"
                 break
             fi
@@ -1971,7 +1971,7 @@ Output ONLY the JSON object, no markdown fences, no explanation."
     [[ -z "$json_output" ]] && { log_error "Refinement produced no valid JSON"; return 1; }
 
     # Validate JSON structure
-    if ! echo "$json_output" | jq -e '.steps and .acceptanceCriteria' &>/dev/null; then
+    if ! printf '%s\n' "$json_output" | jq -e '.steps and .acceptanceCriteria' &>/dev/null; then
         log_error "Refinement output missing required fields"
         return 1
     fi
@@ -2138,7 +2138,7 @@ _validation_failure_reason() {
         "Validation failed")        echo "Validation command failed" ;;
         "AC verification failed")   echo "Acceptance criteria verification commands failed" ;;
         "Validator failed")         echo "Validator agent rejected implementation" ;;
-        *)                          echo "$1" ;;
+        *)                          printf '%s\n' "$1" ;;
     esac
 }
 
@@ -2514,7 +2514,7 @@ run_sprint_loop() {
 
         # Build exclusion list from failed items
         local skip_list
-        skip_list=$(IFS=,; echo "${!FAILED_IDS[*]}")
+        skip_list=$(IFS=,; printf '%s\n' "${!FAILED_IDS[*]}")
 
         local item_json
         if ! item_json=$(pick_item "$specific_id" "$skip_list"); then
@@ -2548,15 +2548,15 @@ run_sprint_loop() {
         # Advisory complexity warning (does not block sprint)
         local gates_warnings
         if ! gates_warnings=$(check_readiness_gates "$ITEM_ID" 2>/dev/null); then
-            if echo -e "$gates_warnings" | grep -q "under-specified"; then
+            if printf '%b\n' "$gates_warnings" | grep -q "under-specified"; then
                 log_warning "$ITEM_ID may be under-specified — consider adding more steps or scope"
-                echo -e "$gates_warnings" | grep -A 50 "under-specified"
+                printf '%b\n' "$gates_warnings" | grep -A 50 "under-specified"
             fi
         fi
 
         # Create feature branch
         local branch_name="aishore/${ITEM_ID}"
-        branch_name=$(echo "$branch_name" | sed 's/[^a-zA-Z0-9/_-]/-/g')
+        branch_name=$(printf '%s\n' "$branch_name" | sed 's/[^a-zA-Z0-9/_-]/-/g')
         log_info "Creating branch: $branch_name"
 
         if [[ "$ISOLATION_MODE" == "worktree" ]]; then
@@ -2811,7 +2811,7 @@ print_groom_summary() {
                 log_subheader "High Priority — Not Yet Ready"
                 has_highlights=true
             fi
-            echo "$highlights"
+            printf '%s\n' "$highlights"
         fi
     done
 
@@ -2886,7 +2886,7 @@ snapshot_backlogs() {
     local ready_f=0 ready_b=0 total_f=0 total_b=0
     [[ -f "$backlog_file" ]] && { ready_f=$(count_ready_items "$backlog_file"); total_f=$(count_items "$backlog_file"); }
     [[ -f "$bugs_file" ]] && { ready_b=$(count_ready_items "$bugs_file"); total_b=$(count_items "$bugs_file"); }
-    echo "$ready_f $ready_b $total_f $total_b"
+    printf '%s\n' "$ready_f $ready_b $total_f $total_b"
 }
 
 # Enforce groom limits: max items and min priority.
@@ -2938,7 +2938,7 @@ enforce_groom_limits() {
     }
     map_backlog_files _enforce_limits_one
 
-    echo "$global_kept $total_skipped"
+    printf '%s\n' "$global_kept $total_skipped"
 }
 
 # Show what changed after grooming
@@ -3123,7 +3123,7 @@ cmd_metrics() {
     metrics_json=$(_compute_metrics_json)
 
     if [[ "$json_output" == "true" ]]; then
-        echo "$metrics_json"
+        printf '%s\n' "$metrics_json"
     else
         log_header "aishore Metrics"
         echo ""
@@ -3201,7 +3201,7 @@ _status_output() {
         local ready
         ready=$(list_ready_items "$f")
         if [[ -n "$ready" ]]; then
-            echo "$ready"
+            printf '%s\n' "$ready"
             has_ready=true
         fi
     done
@@ -3708,7 +3708,7 @@ cmd_update() {
     if [[ -n "$checksums_content" ]]; then
         while IFS= read -r line; do
             local fpath
-            fpath=$(echo "$line" | awk '{print $2}')
+            fpath=$(printf '%s\n' "$line" | awk '{print $2}')
             [[ -z "$fpath" ]] && continue
             # Validate: must be inside .aishore/, no traversal, no absolute paths
             if [[ "$fpath" != .aishore/* ]] || [[ "$fpath" == *..* ]] || [[ "$fpath" == /* ]]; then
@@ -3750,7 +3750,7 @@ cmd_update() {
     get_expected_checksum() {
         local filepath="$1"
         [[ -z "$checksums_content" ]] && { echo ""; return 0; }
-        echo "$checksums_content" | awk -v f="$filepath" '$2 == f {print $1; exit}' || true
+        printf '%s\n' "$checksums_content" | awk -v f="$filepath" '$2 == f {print $1; exit}' || true
     }
 
     verify_or_abort() {
@@ -3924,7 +3924,7 @@ cmd_backlog_check() {
         log_success "$id passes all readiness gates"
     else
         log_warning "$id has readiness warnings:"
-        echo -e "$gates_warnings"
+        printf '%b\n' "$gates_warnings"
         return 1
     fi
 }
@@ -4021,7 +4021,7 @@ cmd_backlog_list() {
     done
 
     echo ""
-    echo "$count item(s)"
+    printf '%s item(s)\n' "$count"
 }
 
 cmd_backlog_add() {
@@ -4157,7 +4157,7 @@ cmd_backlog_show() {
     item=$(find_item "$id") || return 1
 
     echo ""
-    echo "$item" | jq -r '
+    printf '%s\n' "$item" | jq -r '
         "ID:          \(.id)",
         "Title:       \(.title)",
         "Status:      \(.status // "todo")",
@@ -4308,7 +4308,7 @@ cmd_backlog_edit() {
         local gates_warnings
         if ! gates_warnings=$(check_readiness_gates "$id"); then
             log_warning "Readiness warnings for $id:"
-            echo -e "$gates_warnings"
+            printf '%b\n' "$gates_warnings"
         fi
     fi
 }
@@ -4429,7 +4429,7 @@ cmd_diagnose() {
     echo -e "${YELLOW}── Agent Log Tail (last 50 lines at failure time) ──${NC}"
     log_tail=$(jq -r '.logTail // ""' "$failure_file")
     if [[ -n "$log_tail" ]]; then
-        echo "$log_tail"
+        printf '%s\n' "$log_tail"
     else
         echo "(no log output captured)"
     fi
