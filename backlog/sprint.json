@@ -1,34 +1,30 @@
 {
-  "sprintId": "sprint-1774123515",
-  "startedAt": "2026-03-21T13:05:15-07:00",
+  "sprintId": "sprint-1774123799",
+  "startedAt": "2026-03-21T13:09:59-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-116",
-    "title": "backlog edit has no --remove-ac N flag — individual ACs cannot be removed",
-    "intent": "Users must be able to remove a specific AC by 1-based index via backlog edit <ID> --remove-ac N without clearing all acceptance criteria.",
-    "description": "backlog edit supports --ac to append acceptance criteria and --clear-ac to wipe all ACs, but no way to remove a single AC by index. This is the same gap as missing --remove-step (BUG-115) but for the AC array. AC entries can be plain strings or {text, verify} objects — the jq del() removal must handle both.",
+    "id": "BUG-117",
+    "title": "auto session start does not show queued item count — users have no upfront visibility",
+    "intent": "When an auto session starts, it must log the total queued item count broken down by priority so users know what will run before committing to a long session.",
+    "description": "auto sessions can queue 10+ items but emit no upfront summary. Users starting 'auto done' have no idea if they'll wait 5 minutes or 2 hours. The queued IDs are available in run_auto_loop before the first sprint starts. A single log line ('Queuing 5 item(s): must=2 should=3') gives users the context to decide whether to proceed or narrow the scope.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Add --remove-ac flag to cmd_backlog_edit() option parser",
-      "Validate the argument is a positive integer",
-      "After loading the item, use jq to remove the (N-1)th element from acceptanceCriteria array (1-based input)",
-      "If N is out of range, exit non-zero with clear error: 'AC N does not exist (item has M ACs)'",
-      "Write back atomically using temp file + mv pattern",
-      "Add --remove-ac to backlog edit usage message",
+      "In run_auto_loop() (or cmd_run when --_auto is set), after building the initial item queue, count total items and count per priority tier",
+      "Emit: log_info \"Queuing $total item(s): must=$n_must should=$n_should could=$n_could\" — omit tiers with zero count",
+      "If total is 0, emit: log_info \"No items to run\" and exit cleanly",
       "Run shellcheck and confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "backlog edit ID --remove-ac 1 removes the first AC from the item",
-      "backlog edit ID --remove-ac 99 exits non-zero with a clear error when index is out of range",
-      "Removal works correctly for both plain-string ACs and {text, verify} object ACs",
-      "All other fields on the item are unchanged after removal",
+      "Starting 'auto done' with items queued prints a single log line with total count and per-priority breakdown",
+      "Starting 'auto done' with an empty backlog prints 'No items to run' instead of the breakdown",
+      "Tiers with zero items are omitted from the breakdown (e.g. if no must items, must= does not appear)",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T13:05:15-07:00",
+    "startedAt": "2026-03-21T13:09:59-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T13:09:58-07:00"
+    "completedAt": "2026-03-21T13:14:04-07:00"
   },
-  "completedAt": "2026-03-21T13:09:58-07:00",
+  "completedAt": "2026-03-21T13:14:04-07:00",
   "attempts": 1
 }
