@@ -3164,15 +3164,27 @@ _status_output() {
     log_header "Backlog Status"
     echo ""
 
-    # --- Item counts by status ---
+    # --- Item counts by status (single jq pass per file) ---
     if [[ -f "$backlog_file" ]]; then
-        echo "Features: $(count_by_status "$backlog_file" "todo") todo, $(count_by_status "$backlog_file" "in-progress") in-progress, $(count_by_status "$backlog_file" "done") done"
+        local feat_todo feat_inprog feat_done
+        read -r feat_todo feat_inprog feat_done < <(jq -r '[
+            ([.items[] | select((.status // "todo") == "todo")] | length),
+            ([.items[] | select(.status == "in-progress")] | length),
+            ([.items[] | select(.status == "done")] | length)
+        ] | @tsv' "$backlog_file" 2>/dev/null || echo "0 0 0")
+        echo "Features: ${feat_todo:-0} todo, ${feat_inprog:-0} in-progress, ${feat_done:-0} done"
     else
         log_warning "Backlog is empty"
     fi
 
     if [[ -f "$bugs_file" ]]; then
-        echo "Bugs: $(count_by_status "$bugs_file" "todo") todo, $(count_by_status "$bugs_file" "in-progress") in-progress, $(count_by_status "$bugs_file" "done") done"
+        local bug_todo bug_inprog bug_done
+        read -r bug_todo bug_inprog bug_done < <(jq -r '[
+            ([.items[] | select((.status // "todo") == "todo")] | length),
+            ([.items[] | select(.status == "in-progress")] | length),
+            ([.items[] | select(.status == "done")] | length)
+        ] | @tsv' "$bugs_file" 2>/dev/null || echo "0 0 0")
+        echo "Bugs: ${bug_todo:-0} todo, ${bug_inprog:-0} in-progress, ${bug_done:-0} done"
     fi
 
     # --- Ready for sprint ---
@@ -3231,8 +3243,8 @@ _status_output() {
     for f in "$backlog_file" "$bugs_file"; do
         [[ -f "$f" ]] || continue
         total=$((total + $(count_items "$f")))
-        done_total=$((done_total + $(count_by_status "$f" "done")))
     done
+    done_total=$(( ${feat_done:-0} + ${bug_done:-0} ))
     if [[ "$total" -gt 0 && "$total" -eq "$done_total" ]]; then
         echo ""
         log_info "All items completed"
