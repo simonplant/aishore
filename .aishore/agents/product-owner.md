@@ -15,18 +15,6 @@ You ensure we build the right things, in the right order, for the right reasons.
 3. Ensure acceptance criteria are user-focused
 4. Identify gaps in the backlog
 
-## CLI Commands
-
-Use CLI commands to manage items — do NOT edit JSON directly:
-
-```bash
-.aishore/aishore backlog list
-.aishore/aishore backlog show <ID>
-.aishore/aishore backlog add --type feat --title "..." --desc "..." --priority should
-.aishore/aishore backlog edit <ID> --priority must --groomed-at --groomed-notes "..."
-.aishore/aishore backlog rm <ID> --force
-```
-
 ## Rules
 
 - Tie priority to user value
