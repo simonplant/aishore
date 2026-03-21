@@ -1,32 +1,35 @@
 {
-  "sprintId": "sprint-1774071616",
-  "startedAt": "2026-03-20T22:40:16-07:00",
+  "sprintId": "sprint-1774071762",
+  "startedAt": "2026-03-20T22:42:42-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-076",
-    "title": "Collapse npm detection block in _init_detect_project",
-    "intent": "npm validation command detection is 8 lines instead of 22. Three separate jq calls for has_test/has_build/has_check are replaced by a single priority-ordered jq expression.",
-    "description": "_init_detect_project has a 22-line block that calls jq 3 times into package.json to extract has_test, has_build, has_check, then uses a 4-way if/elif chain to pick the validation command. Replace with a single jq call that returns the best available script name, then map to the command string.",
+    "id": "BUG-077",
+    "title": "Inline single-use nested helpers in cmd_update",
+    "intent": "cmd_update has no single-call-site nested functions. get_expected_checksum and verify_or_abort are inlined into _fetch_and_stage where they are used once each. Saves ~12 lines of wrapper overhead.",
+    "description": "cmd_update defines get_expected_checksum (5 lines, called once) and verify_or_abort (21 lines, called once from _fetch_and_stage). Both are nested helpers with no reuse. Inline get_expected_checksum as an awk call at its one use site. Inline verify_or_abort logic into _fetch_and_stage. Also fix misleading Not modified output that lists backlog/* (not in the update manifest).",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Replace 3 separate jq calls with one jq expression that checks scripts.check, scripts.build, scripts.test in priority order",
-      "Map the result to the validation command string (npm run check, npm run build, npm test, etc.)",
-      "Remove the has_test/has_build/has_check variables and the 4-way if/elif",
-      "Verify: init -y on a node project detects the same validation command as before"
+      "Inline get_expected_checksum: replace call with direct awk expression in _fetch_and_stage",
+      "Inline verify_or_abort logic into _fetch_and_stage",
+      "Remove the two nested function definitions",
+      "Fix Not modified output: remove backlog/* line (backlog is never in the manifest)",
+      "Verify: update --dry-run shows correct file list and update installs correctly"
     ],
     "acceptanceCriteria": [
-      "npm script detection uses one jq call, not three",
-      "No has_test/has_build/has_check variables exist",
-      "init -y detects the correct validation command for projects with check, build, test, or combinations",
+      "No get_expected_checksum function exists in the script",
+      "No verify_or_abort function exists in the script",
+      "_fetch_and_stage handles checksum lookup and verification inline",
+      "Not modified output does not mention backlog",
+      "update --dry-run works correctly",
       "shellcheck passes"
     ],
     "scope": [
       ".aishore/**"
     ],
-    "startedAt": "2026-03-20T22:40:16-07:00",
+    "startedAt": "2026-03-20T22:42:42-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T22:42:41-07:00"
+    "completedAt": "2026-03-20T22:44:56-07:00"
   },
-  "completedAt": "2026-03-20T22:42:41-07:00",
+  "completedAt": "2026-03-20T22:44:56-07:00",
   "attempts": 1
 }
