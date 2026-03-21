@@ -2,8 +2,8 @@ aishore - AI Sprint Runner (v__VERSION__)
 Copyright (C) 2026 Simon Plant. Licensed under AGPL-3.0. See LICENSE.
 
 Usage: .aishore/aishore <command> [options]
-       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--auto-review] [--dry-run]
-       .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--pr] [--retries N] [--refine] [--quick]
+       .aishore/aishore auto <scope> [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--category <name>] [--auto-review] [--dry-run]
+       .aishore/aishore run [<count>|<ID>] [--dry-run] [--no-merge] [--pr] [--retries N] [--refine] [--quick] [--category <name>]
 
 Commands:
   backlog list      List all items (features + bugs)
@@ -51,6 +51,7 @@ Commands:
     --pr            Create GitHub PR (implies --no-merge, requires gh CLI)
     --refine        Refine spec on exhausted retries and try once more
     --quick         Skip maturity protocol (fast iteration)
+    --category <name>  Only run items matching this category
     --auto-review   Run architecture review automatically after completion
     --dry-run       Preview first item without running
 
@@ -62,6 +63,7 @@ Commands:
     --retries N     Allow up to N retry attempts on validation failure
     --refine        Refine spec on exhausted retries and try once more
     --quick         Skip maturity protocol (fast iteration)
+    --category <name>  Only run items matching this category
     --auto-review   Run architecture review after completion
 
   groom             Groom bugs/tech debt (Tech Lead mode)
@@ -90,6 +92,7 @@ Examples:
   .aishore/aishore run FEAT-001         # Run specific item
   .aishore/aishore run --no-merge 3     # Keep branches for PR review
   .aishore/aishore run --pr FEAT-001    # Create GitHub PR for review
+  .aishore/aishore auto done --category documentation  # Only documentation items
   .aishore/aishore groom --backlog      # Groom features
   .aishore/aishore update --dry-run     # Check for updates
 

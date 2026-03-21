@@ -144,7 +144,7 @@ CFG_PERMS_REVIEWER=""
 
 # Shared constants
 BACKLOG_FILES=("backlog.json" "bugs.json")
-ITEM_PROJECTION='{id, title, intent, description, steps, acceptanceCriteria, priority, scope, status: (.status // "todo"), passes: (.passes // false)}'
+ITEM_PROJECTION='{id, title, intent, description, steps, acceptanceCriteria, priority, scope, category, status: (.status // "todo"), passes: (.passes // false)}'
 # Shared jq filter for pickable items — used by pick_item() and list_pickable_ids()
 # Expects $skip (JSON array of IDs to skip) and $done_ids (JSON array of completed IDs)
 PICKABLE_ITEMS_FILTER='[.items[] |
@@ -625,6 +625,7 @@ send_notification() {
 pick_item() {
     local specific_id="${1:-}"
     local skip_ids="${2:-}"
+    local cat_filter="${3:-}"
     local item_json
     local source_file="$STATUS_DIR/.item_source"
 
@@ -642,11 +643,17 @@ pick_item() {
         item_json=$(printf '%s\n' "$full_item" | jq "$ITEM_PROJECTION")
 
         # Extract all needed scalar fields from full_item in one jq pass
-        local item_intent item_status deps_json
-        IFS=$'\t' read -r item_intent item_status deps_json < <(
-            printf '%s\n' "$full_item" | jq -r '[(.intent // ""), (.status // "todo"), (.dependsOn // null | tojson)] | @tsv'
+        local item_intent item_status deps_json item_category
+        IFS=$'\t' read -r item_intent item_status deps_json item_category < <(
+            printf '%s\n' "$full_item" | jq -r '[(.intent // ""), (.status // "todo"), (.dependsOn // null | tojson), (.category // "")] | @tsv'
         )
         [[ "$deps_json" == "null" ]] && deps_json=""
+
+        # Enforce category filter — reject if item does not match
+        if [[ -n "$cat_filter" && "$item_category" != "$cat_filter" ]]; then
+            log_error "Item $specific_id category '${item_category:-<none>}' does not match --category '$cat_filter'"
+            return 1
+        fi
 
         # Enforce commander's intent — no intent, no sprint
         if [[ -z "$item_intent" ]]; then
@@ -706,9 +713,9 @@ pick_item() {
         local backlog="$1"
         [[ -f "$BACKLOG_DIR/$backlog" ]] || return 0
         local candidates
-        candidates=$(jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --arg src "$backlog" '
+        candidates=$(jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --arg src "$backlog" --arg catf "$cat_filter" '
             '"$PICKABLE_ITEMS_FILTER"' |
-            [.[] | '"$ITEM_PROJECTION"' + {_source: $src}]
+            [.[] | select($catf == "" or (.category // "") == $catf) | '"$ITEM_PROJECTION"' + {_source: $src}]
         ' "$BACKLOG_DIR/$backlog" 2>/dev/null || echo "[]")
         all_candidates=$(printf '%s\n%s\n' "$all_candidates" "$candidates" | jq -s 'add')
     }
@@ -1011,6 +1018,7 @@ list_ready_items() {
 list_pickable_ids() {
     local skip_ids="${1:-}"
     local priority_filter="${2:-}"
+    local cat_filter="${3:-}"
     local skip_json="[]"
     if [[ -n "$skip_ids" ]]; then
         skip_json=$(printf '%s\n' "$skip_ids" | tr ',' '\n' | jq -R . | jq -s .)
@@ -1024,8 +1032,9 @@ list_pickable_ids() {
     done_ids_json=$(collect_done_ids)
     _list_pickable_one() {
         local backlog="$1"
-        jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --argjson prios "$prio_json" '
+        jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --argjson prios "$prio_json" --arg catf "$cat_filter" '
             '"$PICKABLE_ITEMS_FILTER"' |
+            [.[] | select($catf == "" or (.category // "") == $catf)] |
             [.[] | select(($prios | length) == 0 or (.priority // "should") as $p | $prios | index($p) != null)] |
             sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end) |
             .[].id
@@ -1904,7 +1913,7 @@ cmd_auto() {
     local scope="${1:-}"
 
     if [[ -z "$scope" ]]; then
-        log_error "Usage: auto {done|p0|p1|p2} [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--auto-review] [--dry-run]"
+        log_error "Usage: auto {done|p0|p1|p2} [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--category <name>] [--auto-review] [--dry-run]"
         echo "" >&2
         echo "Scopes:" >&2
         echo "  done  Drain entire backlog to completion" >&2
@@ -1927,7 +1936,7 @@ cmd_auto() {
 }
 
 # Dry-run handler for cmd_run.
-# Uses outer-scope locals: auto_mode, auto_scope, specific_id, quick_mode
+# Uses outer-scope locals: auto_mode, auto_scope, specific_id, quick_mode, category_filter
 _run_dry_run() {
     load_config
     cd "$PROJECT_ROOT"
@@ -1944,10 +1953,16 @@ _run_dry_run() {
     fi
     echo ""
 
+    if [[ -n "$category_filter" ]]; then
+        echo "Category filter: $category_filter"
+    fi
+
     local item_json
-    if ! item_json=$(pick_item "$specific_id" ""); then
+    if ! item_json=$(pick_item "$specific_id" "" "$category_filter"); then
         if [[ -n "$specific_id" ]]; then
             log_error "Item not found: $specific_id — check backlog/backlog.json and backlog/bugs.json for valid item IDs"
+        elif [[ -n "$category_filter" ]]; then
+            log_warning "No items found matching --category '$category_filter'"
         else
             log_warning "No ready items in backlog. Items need readyForSprint: true AND a commander's intent (>=20 chars). Run '.aishore/aishore groom' to prepare items."
         fi
@@ -2503,7 +2518,7 @@ cmd_run_parse_args() {
     parse_opts --positional \
         "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:create_pr:--pr" \
         "bool:refine_on_exhaust:--refine" "bool:quick_mode:--quick" "bool:auto_review:--auto-review" \
-        "val:auto_scope:--_auto" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" \
+        "val:auto_scope:--_auto" "val:category_filter:--category" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" \
         -- "$@" || return 1
     [[ -n "$auto_scope" ]] && auto_mode=true
     local _arg
@@ -2590,6 +2605,7 @@ setup_sprint_environment() {
     else
         echo "Sprints: $count"
     fi
+    [[ -n "$category_filter" ]] && echo "Category: $category_filter"
     [[ "$ISOLATION_MODE" != "stash" ]] && echo "Isolation: $ISOLATION_MODE"
     [[ "$no_merge" == "true" ]] && echo "Merge: disabled (branches kept for review)"
     [[ "$retries" -gt 0 ]] && echo "Retries: $retries"
@@ -2614,7 +2630,17 @@ setup_sprint_environment() {
     if [[ -n "$specific_id" ]]; then
         queued_ids=("$specific_id")
     else
-        mapfile -t queued_ids < <(list_pickable_ids "" "$auto_priorities")
+        mapfile -t queued_ids < <(list_pickable_ids "" "$auto_priorities" "$category_filter")
+    fi
+
+    # Category filter: exit early with clear message if no items match
+    if [[ -n "$category_filter" && ${#queued_ids[@]} -eq 0 && -z "$specific_id" ]]; then
+        log_warning "No items found matching --category '$category_filter'"
+        if [[ "$did_stash" == "true" ]]; then
+            git stash pop >/dev/null 2>&1 || true
+        fi
+        release_lock
+        return 1
     fi
 }
 
@@ -2698,9 +2724,11 @@ run_sprint_loop() {
         skip_list=$(IFS=,; printf '%s\n' "${!FAILED_IDS[*]}")
 
         local item_json
-        if ! item_json=$(pick_item "$specific_id" "$skip_list"); then
+        if ! item_json=$(pick_item "$specific_id" "$skip_list" "$category_filter"); then
             if [[ -n "$specific_id" ]]; then
                 log_error "Item not found: $specific_id — check backlog/backlog.json and backlog/bugs.json for valid item IDs"
+            elif [[ -n "$category_filter" ]]; then
+                log_warning "No items found matching --category '$category_filter'"
             elif [[ "$auto_mode" == "true" ]]; then
                 log_success "No more ready items — backlog drained"
             else
@@ -2900,6 +2928,7 @@ cmd_run() {
     local refine_on_exhaust=false quick_mode=false
     local auto_mode=false auto_scope="" auto_priorities=""
     local auto_review=false max_consecutive_failures=""
+    local category_filter=""
 
     cmd_run_parse_args "$@" || return $?
 
