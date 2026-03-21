@@ -1,29 +1,29 @@
 {
-  "sprintId": "sprint-1774062239",
-  "startedAt": "2026-03-20T20:03:59-07:00",
+  "sprintId": "sprint-1774063064",
+  "startedAt": "2026-03-20T20:17:44-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-047",
-    "title": "Standardize error handling — functions log+return, only main exits",
-    "intent": "Establish and enforce a consistent error handling convention: all functions use log_error + return 1 (never exit 1), only the main entry point and truly fatal pre-flight checks may call exit",
+    "id": "BUG-048",
+    "title": "Extract shared backlog iteration helper — for-loop-over-BACKLOG_FILES pattern repeated 10+ times",
+    "intent": "Replace the 10+ copies of the for f in BACKLOG_FILES / jq operation pattern with reusable helpers like map_backlog_files() and sum_backlog_field()",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Audit all exit 1 calls in functions (not main) and determine which should be return 1",
-      "Convert inappropriate exit 1 calls to return 1 with proper log_error",
-      "Add log_error to any bare return 1 calls that silently fail",
-      "Document the convention in a comment near the error handling functions"
+      "Identify all instances of the for f in BACKLOG_FILES iteration pattern",
+      "Categorize by usage: summing counts, finding items, transforming items",
+      "Extract sum_backlog_field() for count aggregation across files",
+      "Extract find_in_backlogs() for item lookup across files",
+      "Replace all call sites with the appropriate helper"
     ],
     "acceptanceCriteria": [
-      "No function other than main entry point or pre-flight checks uses exit 1",
-      "Every return 1 is preceded by a log_error call",
+      "The raw for f in BACKLOG_FILES pattern appears in at most 2 places (the helpers themselves)",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T20:03:59-07:00",
+    "startedAt": "2026-03-20T20:17:44-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T20:17:38-07:00"
+    "completedAt": "2026-03-20T20:27:13-07:00"
   },
-  "completedAt": "2026-03-20T20:17:38-07:00",
+  "completedAt": "2026-03-20T20:27:13-07:00",
   "attempts": 1
 }
