@@ -213,11 +213,15 @@ build_context() {
         claude_md=$(find_claude_md)
         [[ -n "$claude_md" ]] && context="$context @$claude_md"
     fi
-    # Only developer/architect need ARCHITECTURE.md/PRODUCT.md
-    if [[ "$agent_role" == "developer" || "$agent_role" == "architect" ]]; then
-        local project_docs
-        project_docs=$(find_project_docs)
-        [[ -n "$project_docs" ]] && context="$context $project_docs"
+    # Developer/architect need full docs; groom agents need PRODUCT.md/ARCHITECTURE.md
+    # to align new items with product vision and technical constraints
+    local project_docs
+    project_docs=$(find_project_docs)
+    if [[ -n "$project_docs" ]]; then
+        if [[ "$agent_role" == "developer" || "$agent_role" == "architect" \
+              || "$agent_role" == "tech-lead" || "$agent_role" == "product-owner" ]]; then
+            context="$context $project_docs"
+        fi
     fi
     echo "$context"
 }
@@ -1161,6 +1165,18 @@ Output phase markers: \`═══ PHASE 2: CRITIQUE ═══\` / \`═══ PH
 ## Validation
 Run \`$VALIDATE_CMD\` after implementing. Fix failures before writing result.json."
         fi
+
+        # Inject validation command into output template so agent reports actual results
+        if [[ -n "$VALIDATE_CMD" ]]; then
+            validate_hint="$validate_hint
+
+## Output — Validation Line
+In your IMPLEMENTATION COMPLETE summary, replace the \`Validation:\` line with actual output:
+\`\`\`
+Validation (\`$VALIDATE_CMD\`):
+- [PASS|FAIL]: [output summary]
+\`\`\`"
+        fi
     elif [[ "$agent_name" == "validator" ]]; then
         validate_hint="
 ## Commander's Intent
@@ -1173,7 +1189,13 @@ Every item should have an \`intent\` field — a non-negotiable directive statin
 ## Grooming Limits
 - **Maximum items per session:** $GROOM_MAX_ITEMS — stop adding new items after this cap. Focus on the highest-value items first.
 - **Minimum priority threshold:** $GROOM_MIN_PRIORITY — only add items at \`$GROOM_MIN_PRIORITY\` priority or higher. Skip lower-priority items (log them in your summary but do not add them).
-- When you reach the cap or run out of items above the threshold, stop and signal completion. Do not generate busywork."
+- When you reach the cap or run out of items above the threshold, stop and signal completion. Do not generate busywork.
+
+## Alignment
+Keep all items aligned with docs/PRODUCT.md and docs/ARCHITECTURE.md (if present). If a last-failure.json or agent-runs.log is in context, review it — if there is a recurring failure pattern, add a bug item to fix the root cause before adding new features.
+
+## Sequencing
+When adding new items, ensure foundational items (shared utilities, infrastructure, build fixes) come before items that depend on them. Set \`dependsOn\` appropriately to signal ordering."
     fi
 
     local prompt
@@ -2312,6 +2334,11 @@ run_sprint_loop() {
                 local groom_context="@$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
                 local recent_sprints; recent_sprints=$(recent_sprints_file 20)
                 [[ -n "$recent_sprints" ]] && groom_context="$groom_context $recent_sprints"
+                # Include failure context so groom agents can surface root-cause blockers
+                local failure_file="$STATUS_DIR/last-failure.json"
+                [[ -f "$failure_file" ]] && groom_context="$groom_context @$failure_file"
+                local agent_runs_log="$LOGS_DIR/agent-runs.log"
+                [[ -f "$agent_runs_log" ]] && groom_context="$groom_context @$agent_runs_log"
                 # Snapshot for groom limit enforcement
                 local auto_groom_snap
                 auto_groom_snap=$(mktemp -d)

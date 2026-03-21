@@ -5,6 +5,22 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Autonomous sprint driver enhancements** (issue #6):
+  - Developer agent now surfaces and fixes structural blockers in-scope when encountered during a sprint, and adds large blockers to the backlog as `must`-priority bug items
+  - Developer agent notes sprint ordering adjustments in commit messages when an item should be sequenced differently
+  - Auto-groom now includes `last-failure.json` and `agent-runs.log` as context so groom agents can identify and add bug items for recurring failure patterns
+  - Tech-lead and product-owner groom agents now receive `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` as context, keeping groomed items aligned with the product vision and architecture
+  - Groom agent prompts now include explicit sequencing guidance: foundational items should be ordered before dependent items with `dependsOn` set appropriately
+- **Validation command in developer output**: When `validation.command` is configured, the developer agent's IMPLEMENTATION COMPLETE summary references the actual validation command and its output instead of generic `Tests: PASS / Lint: PASS`
+
+### Fixed
+
+- **Groom context alignment**: Tech-lead and product-owner agents now receive project docs (PRODUCT.md, ARCHITECTURE.md) through `build_context`, the same path used by developer and architect agents — ensuring all agents work from the same product vision
+
 ## [0.3.2] - 2026-03-19
 
 ### Added
