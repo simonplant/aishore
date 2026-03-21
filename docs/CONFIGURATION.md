@@ -70,6 +70,7 @@ validation:
 # Notifications on sprint completion
 # notifications:
 #   on_complete: "notify-send 'aishore' \"Sprint $1: $2\""
+#   system: false      # System notification on auto session end (osascript/notify-send)
 
 # Auto-groom settings
 # auto:
@@ -246,6 +247,16 @@ validation:
 | **What it controls** | Command run when a sprint completes. Receives the item ID as `$1` and status as `$2`. |
 | **When to change** | Set to send desktop notifications, Slack messages, etc. Example: `notify-send 'aishore' "Sprint $1: $2"` |
 
+#### `notifications.system`
+
+| | |
+|---|---|
+| **Type** | boolean |
+| **Default** | `false` |
+| **Env var** | `AISHORE_NOTIFY` |
+| **What it controls** | When `true`, sends a platform-native system notification when an auto session ends. Uses `osascript` on macOS and `notify-send` on Linux. A terminal bell (`tput bel`) always fires regardless of this setting. |
+| **When to change** | Enable when you run long autonomous sessions and want a desktop notification when the session completes or hits the circuit breaker. |
+
 #### `auto.groom_threshold`
 
 | | |
@@ -335,6 +346,7 @@ All `AISHORE_*` environment variables and what they map to:
 | `AISHORE_MATURITY` | `maturity.enabled` | `true` | Maturity protocol toggle |
 | `AISHORE_MERGE_STRATEGY` | `merge.strategy` | `merge` | Merge strategy |
 | `AISHORE_NOTIFY_CMD` | `notifications.on_complete` | `""` | Completion notification command |
+| `AISHORE_NOTIFY` | `notifications.system` | `false` | System notification on auto session end |
 | `AISHORE_AUTO_GROOM_THRESHOLD` | `auto.groom_threshold` | `3` | Auto-groom item threshold |
 | `AISHORE_AUTO_MAX_FAILURES` | `auto.max_failures` | `5` | Circuit breaker limit |
 | `AISHORE_GROOM_MAX_ITEMS` | `groom.max_items` | `10` | Max items per groom session |
