@@ -1,30 +1,34 @@
 {
-  "sprintId": "sprint-1774108263",
-  "startedAt": "2026-03-21T08:51:03-07:00",
+  "sprintId": "sprint-1774109046",
+  "startedAt": "2026-03-21T09:04:06-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-079",
-    "title": "Remove update_desc tracking from cmd_backlog_edit",
-    "intent": "Cut 14 lines of string concatenation that builds a cosmetic Updated FEAT-001 title priority ready log message — marginal UX value for the code weight.",
-    "description": "",
-    "sourceBacklog": "bugs.json",
+    "id": "FEAT-027",
+    "title": "Multi-backlog support — run sprints across multiple backlog files in one session",
+    "intent": "aishore reads from all declared backlog files in a single session; items are picked by priority across all files with no manual pre-sorting required.",
+    "description": "Users working on large projects split work across component-specific backlog files. Currently aishore only reads from backlog.json and bugs.json. Multi-backlog support lets users declare additional backlog files (e.g. backlog/infra.json, backlog/api.json) in config.yaml, and the auto and run commands pick items from all declared files, respecting priority ordering across files. This removes the need to manually shuttle items between files before running sprints.",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "Remove the update_desc variable declaration and all lines that append to it in cmd_backlog_edit",
-      "Remove the final log_info line that prints update_desc",
-      "Verify backlog edit still works correctly without the summary message"
+      "Add a backlog_files config key (list of paths) to config.yaml, defaulting to the current two-file set",
+      "Update all backlog-reading functions (pick_item, list_pickable_ids, count_by_status, etc.) to iterate over the configured file list",
+      "Update resolve_backlog_file to search all declared files when resolving an item ID",
+      "Validate declared paths exist and are readable at startup; warn on missing files, don't abort",
+      "Update cmd_status to show counts per declared file",
+      "Update docs/CONFIGURATION.md with backlog_files knob",
+      "Verify: run auto done across two backlog files with items in each — both are picked and completed"
     ],
     "acceptanceCriteria": [
-      "No update_desc variable exists in cmd_backlog_edit",
-      "backlog edit still updates items correctly",
-      "shellcheck passes"
+      "config.yaml accepts a backlog_files list; omitting it defaults to current behaviour",
+      "Items are picked from all declared files in priority order across files",
+      "backlog list shows items from all declared files",
+      "resolve_backlog_file finds items in any declared file",
+      "Missing declared files produce a warning, not an abort"
     ],
-    "scope": [
-      ".aishore/**"
-    ],
-    "startedAt": "2026-03-21T08:51:03-07:00",
+    "scope": [],
+    "startedAt": "2026-03-21T09:04:06-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T08:52:37-07:00"
+    "completedAt": "2026-03-21T09:11:53-07:00"
   },
-  "completedAt": "2026-03-21T08:52:37-07:00",
+  "completedAt": "2026-03-21T09:11:53-07:00",
   "attempts": 1
 }
