@@ -1,32 +1,33 @@
 {
-  "sprintId": "sprint-1774071898",
-  "startedAt": "2026-03-20T22:44:58-07:00",
+  "sprintId": "sprint-1774105325",
+  "startedAt": "2026-03-21T08:02:05-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-078",
-    "title": "Move advisory complexity hints out of check_readiness_gates",
-    "intent": "check_readiness_gates is a pure gate function — it checks hard requirements only. Advisory hints (under-specified warnings) live in the caller. Saves ~10 lines from the gate function and improves separation of concerns.",
-    "description": "check_readiness_gates (98 lines) has 6 hard gate checks plus a 12-line advisory block (lines 648-660) that warns about under-specified items (few steps, no scope). The advisory block is not a gate — it never blocks anything. Move it to cmd_backlog_check (the primary caller) and the advisory check in cmd_run. This makes check_readiness_gates a clean pass/fail function.",
+    "id": "BUG-035",
+    "title": "collect_done_ids misses archived items — cleaned items cause false unmet-dependency warnings",
+    "intent": "Ensure dependency resolution accounts for items removed via 'clean' — a sprint item whose dependency was completed and then cleaned must not be blocked.",
+    "description": "collect_done_ids() only scans the active backlog files (backlog.json and bugs.json) for items with status=done. When a completed item is removed via 'aishore clean' or 'backlog rm', its ID disappears from both backlogs. Any item that depends on the cleaned item will now show an unmet dependency warning during pick_item and check_readiness_gates, even though the dependency WAS completed. The archive (sprints.jsonl) contains all completed sprint IDs and is the correct source of truth for historical completions. collect_done_ids() should also scan sprints.jsonl to include archived item IDs in the done set.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Extract the complexity hints block (step count < 3 advisory, no scope advisory) from check_readiness_gates",
-      "Add the advisory checks to cmd_backlog_check after the gate check",
-      "Update the advisory check in cmd_run dry-run and sprint loop to call the extracted logic",
-      "Verify: backlog check still shows advisory warnings alongside gate failures"
+      "Identify the collect_done_ids() function in .aishore/aishore",
+      "After collecting done IDs from active backlog files, also scan ARCHIVE_DIR/sprints.jsonl for all itemId values and add them to the done_ids set",
+      "Use jq to extract itemId values from sprints.jsonl (one JSON object per line) and merge with the existing done_ids array, deduplicating",
+      "Verify the change does not break items that are both in the active backlog (status=done) and in the archive — deduplication handles this",
+      "Test: add item B that depends on item A, complete item A, run 'aishore clean', then pick_item should still treat A's dependency as satisfied for B"
     ],
     "acceptanceCriteria": [
-      "check_readiness_gates contains only hard gate checks (title, intent, steps, AC, short steps, deps)",
-      "check_readiness_gates does not contain complexity_hints or under-specified logic",
-      "backlog check output still includes advisory warnings when relevant",
-      "shellcheck passes"
+      "pick_item no longer shows unmet-dependency warnings for items whose dependency has been completed and then cleaned via 'aishore clean'",
+      "check_readiness_gates no longer reports missing dependency warnings for items whose dependency was archived",
+      "collect_done_ids includes IDs from sprints.jsonl in addition to IDs from active backlog files",
+      "No regression: items with truly unmet dependencies (never completed) still produce warnings"
     ],
     "scope": [
-      ".aishore/**"
+      ".aishore/aishore"
     ],
-    "startedAt": "2026-03-20T22:44:58-07:00",
+    "startedAt": "2026-03-21T08:02:05-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T22:49:36-07:00"
+    "completedAt": "2026-03-21T08:05:23-07:00"
   },
-  "completedAt": "2026-03-20T22:49:36-07:00",
+  "completedAt": "2026-03-21T08:05:23-07:00",
   "attempts": 1
 }
