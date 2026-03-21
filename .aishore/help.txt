@@ -9,6 +9,7 @@ Commands:
   backlog list      List all items (features + bugs)
     --status <s>    Filter by status (todo, in-progress, done)
     --type <t>      Filter by type (feat, bug)
+    --priority <p>  Filter by priority (must, should, could, future)
     --ready         Show only sprint-ready items
     --no-ready      Show only items not yet ready
   backlog add       Add a new item with flags
