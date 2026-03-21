@@ -947,6 +947,17 @@ EOF
 # Optional: set AGENT_OUTPUT_FILE before calling to capture --print output to a file.
 # Optional: set GROOM_MONITOR=true to track backlog changes during the poll loop.
 
+# Helper: portable file hash for change detection (not cryptographic)
+_file_hash() {
+    if command -v sha256sum &>/dev/null; then
+        sha256sum "$1" | cut -d' ' -f1
+    elif command -v shasum &>/dev/null; then
+        shasum -a 256 "$1" | cut -d' ' -f1
+    else
+        cksum "$1" | cut -d' ' -f1
+    fi
+}
+
 # Helper: detect and report backlog file changes during grooming
 _check_groom_progress() {
     local label="$1"
@@ -954,7 +965,7 @@ _check_groom_progress() {
 
     if [[ -f "$BACKLOG_DIR/backlog.json" ]]; then
         local cur_hash
-        cur_hash=$(md5sum "$BACKLOG_DIR/backlog.json" 2>/dev/null | cut -d' ' -f1)
+        cur_hash=$(_file_hash "$BACKLOG_DIR/backlog.json")
         if [[ "$cur_hash" != "$last_backlog_hash" ]]; then
             last_backlog_hash="$cur_hash"
             changed=true
@@ -967,7 +978,7 @@ _check_groom_progress() {
 
     if [[ -f "$BACKLOG_DIR/bugs.json" ]]; then
         local cur_hash
-        cur_hash=$(md5sum "$BACKLOG_DIR/bugs.json" 2>/dev/null | cut -d' ' -f1)
+        cur_hash=$(_file_hash "$BACKLOG_DIR/bugs.json")
         if [[ "$cur_hash" != "$last_bugs_hash" ]]; then
             last_bugs_hash="$cur_hash"
             changed=true
@@ -1042,8 +1053,8 @@ run_agent_process() {
     local monitor_backlogs="${GROOM_MONITOR:-false}"
     local last_backlog_hash="" last_bugs_hash=""
     if [[ "$monitor_backlogs" == "true" ]]; then
-        [[ -f "$BACKLOG_DIR/backlog.json" ]] && last_backlog_hash=$(md5sum "$BACKLOG_DIR/backlog.json" 2>/dev/null | cut -d' ' -f1)
-        [[ -f "$BACKLOG_DIR/bugs.json" ]] && last_bugs_hash=$(md5sum "$BACKLOG_DIR/bugs.json" 2>/dev/null | cut -d' ' -f1)
+        [[ -f "$BACKLOG_DIR/backlog.json" ]] && last_backlog_hash=$(_file_hash "$BACKLOG_DIR/backlog.json")
+        [[ -f "$BACKLOG_DIR/bugs.json" ]] && last_bugs_hash=$(_file_hash "$BACKLOG_DIR/bugs.json")
     fi
 
     while [[ $elapsed -lt $AGENT_TIMEOUT ]]; do
