@@ -3335,11 +3335,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "AC CRUD is incomplete: same gap as BUG-115 for steps. Users need granular control. jq del() handles both string and object AC entries.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T13:09:58-07:00"
     },
     {
       "id": "BUG-117",
