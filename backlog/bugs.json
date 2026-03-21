@@ -2700,11 +2700,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Silent correctness hole: malformed AC JSON causes all verify commands to be skipped, allowing broken sprints to pass validation. Elevated to must — validation layer integrity is non-negotiable.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T10:55:04-07:00"
     },
     {
       "id": "BUG-095",
