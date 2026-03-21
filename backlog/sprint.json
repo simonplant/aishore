@@ -1,34 +1,34 @@
 {
-  "sprintId": "sprint-1774123185",
-  "startedAt": "2026-03-21T12:59:45-07:00",
+  "sprintId": "sprint-1774123515",
+  "startedAt": "2026-03-21T13:05:15-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-115",
-    "title": "backlog edit has no --remove-step N flag — individual steps cannot be removed",
-    "intent": "Users must be able to remove a specific step by 1-based index via backlog edit <ID> --remove-step N without clearing all steps.",
-    "description": "backlog edit supports --step to append steps and --clear-steps to wipe all steps, but has no way to remove a single step by index. Users who add a step in error or need to prune the list must clear all steps and re-add them manually. The steps array is JSON so jq del() can remove an element by index.",
+    "id": "BUG-116",
+    "title": "backlog edit has no --remove-ac N flag — individual ACs cannot be removed",
+    "intent": "Users must be able to remove a specific AC by 1-based index via backlog edit <ID> --remove-ac N without clearing all acceptance criteria.",
+    "description": "backlog edit supports --ac to append acceptance criteria and --clear-ac to wipe all ACs, but no way to remove a single AC by index. This is the same gap as missing --remove-step (BUG-115) but for the AC array. AC entries can be plain strings or {text, verify} objects — the jq del() removal must handle both.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Add --remove-step flag to cmd_backlog_edit() option parser",
+      "Add --remove-ac flag to cmd_backlog_edit() option parser",
       "Validate the argument is a positive integer",
-      "After loading the item, use jq to remove the (N-1)th element from steps array (1-based input)",
-      "If N is out of range, exit non-zero with clear error: 'step N does not exist (item has M steps)'",
+      "After loading the item, use jq to remove the (N-1)th element from acceptanceCriteria array (1-based input)",
+      "If N is out of range, exit non-zero with clear error: 'AC N does not exist (item has M ACs)'",
       "Write back atomically using temp file + mv pattern",
-      "Add --remove-step to backlog edit usage message",
+      "Add --remove-ac to backlog edit usage message",
       "Run shellcheck and confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "backlog edit ID --remove-step 2 removes the second step from the item",
-      "backlog edit ID --remove-step 99 exits non-zero with a clear error when index is out of range",
-      "backlog edit ID --remove-step 0 exits non-zero with a validation error",
+      "backlog edit ID --remove-ac 1 removes the first AC from the item",
+      "backlog edit ID --remove-ac 99 exits non-zero with a clear error when index is out of range",
+      "Removal works correctly for both plain-string ACs and {text, verify} object ACs",
       "All other fields on the item are unchanged after removal",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T12:59:45-07:00",
+    "startedAt": "2026-03-21T13:05:15-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T13:05:14-07:00"
+    "completedAt": "2026-03-21T13:09:58-07:00"
   },
-  "completedAt": "2026-03-21T13:05:14-07:00",
+  "completedAt": "2026-03-21T13:09:58-07:00",
   "attempts": 1
 }
