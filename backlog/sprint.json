@@ -1,27 +1,39 @@
 {
-  "sprintId": "sprint-1774063634",
-  "startedAt": "2026-03-20T20:27:14-07:00",
+  "sprintId": "sprint-1774063872",
+  "startedAt": "2026-03-20T20:31:12-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-056",
-    "title": "Update CHANGELOG.md with v0.3.3 release notes",
-    "intent": "Document all changes since v0.3.2 in CHANGELOG.md so the version file and changelog are in sync",
-    "description": "",
+    "id": "BUG-064",
+    "title": "Simplify AC and step accumulation in backlog add and edit",
+    "intent": "All array-building in backlog add and edit uses shared helpers. The pending_ac flush pattern, manual AC JSON string-cat, and triplicated scope/steps/deps append blocks are eliminated. Saves ~50 lines combined.",
+    "description": "Three patterns need fixing: (1) pending_ac/flush state machine for --ac/--ac-verify pairing — simplify to push-immediately-on-ac, modify-last-on-ac-verify. (2) AC JSON array built by manual string concatenation (10 identical lines in both add and edit) — extract _build_ac_json helper. (3) Three identical scope/steps/deps append blocks in edit (23 lines) each doing the same if-gt-0/printf/jq-R/jq-s/jq_updates pattern — extract _append_array_field helper. Also remove update_desc tracking from edit (14 lines of string concatenation for a cosmetic log message).",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Review git log from v0.3.2 tag to HEAD to identify all changes",
-      "Write a v0.3.3 section in CHANGELOG.md following the existing format",
-      "Verify VERSION file matches the new CHANGELOG entry"
+      "Extract _build_ac_json helper that converts ac_entries array to JSON array string",
+      "Replace manual AC string-cat in cmd_backlog_add with _build_ac_json call",
+      "Replace manual AC string-cat in cmd_backlog_edit with _build_ac_json call",
+      "Extract _append_array_field helper: takes field name, bash array, and jq update expression",
+      "Replace the 3 scope/steps/deps append blocks in cmd_backlog_edit with _append_array_field calls",
+      "Refactor --ac to push immediately; --ac-verify modifies last entry; remove pending_ac",
+      "Remove update_desc tracking from cmd_backlog_edit; simplify success message to Updated ID",
+      "Verify: add and edit with all flag combinations produce identical JSON output"
     ],
     "acceptanceCriteria": [
-      "CHANGELOG.md has a v0.3.3 section",
-      "All commits since v0.3.2 are represented in the changelog"
+      "No pending_ac variable exists in the script",
+      "No manual AC JSON string concatenation (first=true loop pattern) exists in the script",
+      "A shared _build_ac_json helper is used by both add and edit",
+      "A shared _append_array_field helper replaces the 3 identical blocks in edit",
+      "backlog add with --ac and --ac-verify produces correct JSON",
+      "backlog edit with --ac, --step, --scope, --depends-on produces correct JSON",
+      "shellcheck passes"
     ],
-    "scope": [],
-    "startedAt": "2026-03-20T20:27:14-07:00",
+    "scope": [
+      ".aishore/**"
+    ],
+    "startedAt": "2026-03-20T20:31:12-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T20:31:10-07:00"
+    "completedAt": "2026-03-20T20:36:23-07:00"
   },
-  "completedAt": "2026-03-20T20:31:10-07:00",
+  "completedAt": "2026-03-20T20:36:23-07:00",
   "attempts": 1
 }
