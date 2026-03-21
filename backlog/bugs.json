@@ -1029,11 +1029,12 @@
         ".aishore/aishore"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "API inconsistency: --step and --ac append, but --depends-on replaces. Fix is straightforward jq change. Adding --clear-depends-on completes the pattern. Priority could — less common operation than steps/AC but inconsistency is a footgun."
+      "groomingNotes": "API inconsistency: --step and --ac append, but --depends-on replaces. Fix is straightforward jq change. Adding --clear-depends-on completes the pattern. Priority could — less common operation than steps/AC but inconsistency is a footgun.",
+      "completedAt": "2026-03-20T18:34:11-07:00"
     }
   ]
 }
