@@ -1,27 +1,29 @@
 {
-  "sprintId": "sprint-1774122729",
-  "startedAt": "2026-03-21T12:52:09-07:00",
+  "sprintId": "sprint-1774122840",
+  "startedAt": "2026-03-21T12:54:00-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-110",
-    "title": "reset_sprint uses non-atomic write — sprint.json can be partially read mid-write",
-    "intent": "reset_sprint must write sprint.json atomically via a temp file and mv so readers never see a partial or empty file.",
-    "description": "reset_sprint() uses 'cat > \"$BACKLOG_DIR/sprint.json\" <<EOF' which writes directly in-place. BUG-103 fixed the same pattern in protect_items_from_groom and enforce_groom_limits, but reset_sprint was missed. Any concurrent reader (e.g. status --watch) that reads sprint.json during the write will see a truncated or empty file, causing a jq parse error.",
+    "id": "BUG-112",
+    "title": "backlog history default output shows oldest-first — most recent items should appear at top",
+    "intent": "backlog history must display items newest-first so the most recent sprint is always the first row, matching user expectations for a history command.",
+    "description": "cmd_backlog_history uses 'tail -n \"$limit\"' to get the last N lines of sprints.jsonl, which are the most recent items. However they are then piped into the printf loop without reversal, so the output is chronological (oldest of the batch at the top). Users expect 'history' to show the most recent item first, like git log or shell history.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Replace the cat heredoc in reset_sprint() with the atomic pattern: write to a temp file then mv",
-      "Use ensure_tmpdir to create the temp path, same as other write functions in the script",
+      "After the tail, pipe through 'tac' (Linux) or detect macOS and use 'tail -r' to reverse the output before the printf loop",
+      "Check for tac availability; fall back to: awk 'NR==1{print; next} {lines[NR]=$0} END{for(i=NR;i>1;i--) print lines[i]}'",
+      "Apply the reversal in both the limited and --all branches",
       "Run shellcheck — confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "reset_sprint writes sprint.json atomically (temp file + mv, same pattern as other write functions)",
+      "backlog history (default) shows the most recent sprint at the top row",
+      "backlog history --all shows all items newest-first",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T12:52:09-07:00",
+    "startedAt": "2026-03-21T12:54:00-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T12:53:59-07:00"
+    "completedAt": "2026-03-21T12:56:26-07:00"
   },
-  "completedAt": "2026-03-21T12:53:59-07:00",
+  "completedAt": "2026-03-21T12:56:26-07:00",
   "attempts": 1
 }
