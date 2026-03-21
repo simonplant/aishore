@@ -4466,6 +4466,8 @@ cmd_backlog_show() {
         if (.steps // [] | length) > 0 then "" else empty end,
         if (.acceptanceCriteria // [] | length) > 0 then "Acceptance Criteria:" else empty end,
         (.acceptanceCriteria // [] | .[] | if type == "object" then "  - \(.text)" + (if .verify then " (verify: \(.verify))" else "" end) else "  - \(.)" end),
+        if (.scope // [] | length) > 0 then "\nScope:" else empty end,
+        (.scope // [] | .[] | "  - \(.)"),
         if (.dependsOn // [] | length) > 0 then "\nDependencies: \(.dependsOn | join(", "))" else empty end,
         if .groomedAt then "\nGroomed:      \(.groomedAt)" else empty end,
         if .groomingNotes then "Notes:        \(.groomingNotes)" else empty end,
