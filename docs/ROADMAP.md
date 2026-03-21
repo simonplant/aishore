@@ -60,4 +60,4 @@ Honest constraints of the current version:
 
 ## Want to help?
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for how to get involved.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get involved.

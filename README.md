@@ -517,9 +517,9 @@ Updates pull from the latest GitHub release tag (not `main`), so you always get 
 
 Contributions are welcome! Whether it is a bug fix, new feature, documentation improvement, or idea -- please open a PR or issue.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and the pull request process.
+See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development setup, code style, and the pull request process.
 
-By contributing, you agree to the [CLA](CONTRIBUTING.md#contributor-license-agreement-cla).
+By contributing, you agree to the [CLA](docs/CONTRIBUTING.md#contributor-license-agreement-cla).
 
 ## License
 

@@ -88,43 +88,46 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ## Architecture
 
-```
-project/
-├── backlog/              # User content (version controlled by user)
-│   ├── backlog.json      # Feature backlog
-│   ├── bugs.json         # Bug/tech-debt backlog
-│   ├── sprint.json       # Current sprint state
-│   ├── DEFINITIONS.md    # DoR, DoD, priority/size definitions
-│   └── archive/          # Completed sprint history
-│       └── sprints.jsonl
-└── .aishore/             # Tool (this is what gets updated)
-    ├── aishore           # Single-file CLI (Bash)
-    ├── VERSION           # Version (single source of truth)
-    ├── checksums.sha256  # SHA-256 checksums for update verification
-    ├── config.yaml       # Optional overrides
-    ├── agents/           # Agent prompts (developer, validator, tech-lead, architect, product-owner)
-    └── data/             # Runtime data (logs, status, lock)
-```
+See [ARCHITECTURE.md](ARCHITECTURE.md) for system architecture and design decisions.
 
-### Key Design Decisions
+## Agent Prompt Authoring
 
-- **Separation of concerns** — Tool (`.aishore/`) vs user content (`backlog/`)
-- **Single-file CLI** — All logic in one self-contained Bash script
-- **Sensible defaults** — Config is optional; env vars override config, which overrides defaults
-- **Auto-detect context** — Finds `CLAUDE.md`, `PRODUCT.md`, and `ARCHITECTURE.md` automatically
-- **Checksum-verified updates** — `update` command verifies SHA-256 before installing
-- **Concurrency guard** — `flock`-based locking prevents parallel runs
-- **Completion contract** — Agents write to `result.json` to signal done
-- **Safe failure recovery** — Pre-existing uncommitted work is stashed and restored on sprint failure
+aishore uses markdown prompt files in `.aishore/agents/` to define each agent's behavior. If you want to modify how an agent works, this is where to look.
 
-### Version Management
+### Agent files
 
-`.aishore/VERSION` is the single source of truth. The CLI reads it at runtime.
+| File | Agent | Controls |
+|------|-------|----------|
+| `developer.md` | Developer | How features are implemented — process, rules, output format |
+| `validator.md` | Validator | How acceptance criteria and intent are verified |
+| `tech-lead.md` | Tech Lead | How bugs and features are groomed for technical clarity |
+| `product-owner.md` | Product Owner | How features are groomed for value alignment and backlog is populated |
+| `architect.md` | Architect | How architecture reviews are conducted |
 
-When bumping versions:
-1. Update `.aishore/VERSION`
-2. Run `.aishore/aishore checksums`
-3. CI verifies the runtime version matches the file
+### How prompts are assembled
+
+The orchestrator (`run_agent()`) assembles the final prompt by combining:
+
+1. The agent's markdown file (`.aishore/agents/<role>.md`)
+2. Project context files (`CLAUDE.md`, `PRODUCT.md`, `ARCHITECTURE.md` — auto-detected)
+3. The sprint item spec (for developer and validator)
+4. The completion contract (appended automatically)
+
+You only edit the agent markdown file. The orchestrator handles injection of context and the completion contract.
+
+### Modifying agent prompts
+
+1. Edit the relevant file in `.aishore/agents/`
+2. Run `.aishore/aishore checksums` to update checksums
+3. Test by running a sprint: `.aishore/aishore run --quick` (use `--quick` to skip the maturity protocol for faster iteration)
+4. Review the agent's output in `.aishore/data/logs/`
+
+### Guidelines
+
+- Keep prompts focused on the agent's role — don't duplicate orchestrator logic
+- Use markdown structure (headings, lists, tables) for clarity
+- Behavioral changes that affect all agents (e.g., new completion signals) belong in the orchestrator, not in individual prompts
+- Test prompt changes against a real backlog item before committing
 
 ## Contributor License Agreement (CLA)
 
