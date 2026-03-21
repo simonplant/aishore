@@ -1,30 +1,31 @@
 {
-  "sprintId": "sprint-1774123799",
-  "startedAt": "2026-03-21T13:09:59-07:00",
+  "sprintId": "sprint-1774124501",
+  "startedAt": "2026-03-21T13:21:41-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-117",
-    "title": "auto session start does not show queued item count — users have no upfront visibility",
-    "intent": "When an auto session starts, it must log the total queued item count broken down by priority so users know what will run before committing to a long session.",
-    "description": "auto sessions can queue 10+ items but emit no upfront summary. Users starting 'auto done' have no idea if they'll wait 5 minutes or 2 hours. The queued IDs are available in run_auto_loop before the first sprint starts. A single log line ('Queuing 5 item(s): must=2 should=3') gives users the context to decide whether to proceed or narrow the scope.",
+    "id": "BUG-118",
+    "title": "backlog history and status read full JSONL archive to show last N items",
+    "intent": "Both 'backlog history' and 'status' commands read the entire sprints.jsonl archive through jq before applying tail, causing O(n) work when only O(k) is needed. Archive reads must be bounded by the display limit, not file size.",
+    "description": "Two commands process the entire sprints.jsonl archive unnecessarily before taking the last few records. In 'backlog history' (default --limit 20), jq processes all N records then 'tail -n 20' discards all but the last 20. In '_status_output', jq processes all N records then 'tail -5' keeps only 5. Since sprints.jsonl is JSONL (one JSON object per line), 'tail -n N file | jq ...' gives the same result with O(k) file I/O instead of O(n). The archive grows by one line per sprint, so this gets progressively worse.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In run_auto_loop() (or cmd_run when --_auto is set), after building the initial item queue, count total items and count per priority tier",
-      "Emit: log_info \"Queuing $total item(s): must=$n_must should=$n_should could=$n_could\" — omit tiers with zero count",
-      "If total is 0, emit: log_info \"No items to run\" and exit cleanly",
+      "In cmd_backlog_history (lines ~4797-4802): replace 'jq -r ... \"$sprints_file\" | tail -n \"$limit\"' with 'tail -n \"$limit\" \"$sprints_file\" | jq -r ...'",
+      "In _status_output (line ~3603): replace 'jq -r ... \"$sprints_file\" ... | tail -5' with 'tail -5 \"$sprints_file\" | jq -r ...'",
+      "Verify both changes produce the same output as before when archive has <limit items",
+      "Verify output is correct when archive has exactly limit items and more than limit items",
       "Run shellcheck and confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "Starting 'auto done' with items queued prints a single log line with total count and per-priority breakdown",
-      "Starting 'auto done' with an empty backlog prints 'No items to run' instead of the breakdown",
-      "Tiers with zero items are omitted from the breakdown (e.g. if no must items, must= does not appear)",
+      "backlog history output is identical to before when total records <= limit",
+      "backlog history shows last N records in reverse-chronological order when total > limit",
+      "status recent sprints shows last 5 records correctly",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T13:09:59-07:00",
+    "startedAt": "2026-03-21T13:21:41-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T13:14:04-07:00"
+    "completedAt": "2026-03-21T13:25:27-07:00"
   },
-  "completedAt": "2026-03-21T13:14:04-07:00",
+  "completedAt": "2026-03-21T13:25:27-07:00",
   "attempts": 1
 }

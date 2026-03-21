@@ -1065,6 +1065,23 @@
       "groomedAt": "2026-03-21",
       "groomedNotes": null,
       "completedAt": "2026-03-21T12:44:30-07:00"
+    },
+    {
+      "id": "FEAT-036",
+      "title": "backlog check --all audits every item for readiness gates in one pass",
+      "intent": "Users must be able to run 'backlog check --all' and see a table of every non-done item with its readiness gate status and failure reasons, so they can fix the whole backlog in one pass instead of checking item by item.",
+      "description": "backlog check validates one item at a time. Users with large backlogs have no way to audit all items at once — they must loop manually. A --all flag on backlog check should iterate every non-done item, run the same gate checks, and print a summary table: item ID, PASS/FAIL, and which gates failed. This directly complements BUG-100: once auto warns about skipped items, users need a fast way to find and fix all broken items without running check N times.",
+      "priority": "should",
+      "category": null,
+      "steps": [],
+      "acceptanceCriteria": [],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false,
+      "groomingNotes": "Directly complements BUG-100. Once auto warns on skipped items, users need a fast audit path. 'backlog check <ID>' one at a time doesn't scale. This closes the feedback loop: warn (BUG-100) → audit (FEAT-036) → fix. Priority should is correct — not must because BUG-100 alone gives reactive feedback; --all is proactive convenience.",
+      "groomedAt": "2026-03-21"
     }
   ]
 }
