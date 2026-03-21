@@ -552,10 +552,8 @@ find_item() {
     echo "$item"
 }
 
-CHECK_GATES_WARNINGS=""
 check_readiness_gates() {
     local item_id="$1"
-    CHECK_GATES_WARNINGS=""
     local item
     item=$(find_item "$item_id") || return 1
     local warnings=""
@@ -645,7 +643,7 @@ check_readiness_gates() {
         has_warning=true
     fi
 
-    CHECK_GATES_WARNINGS="$warnings"
+    [[ -n "$warnings" ]] && echo "$warnings"
     if [[ "$has_warning" == "true" ]]; then
         return 1
     fi
@@ -1280,9 +1278,7 @@ check_result() {
     fi
 }
 
-SCOPE_VIOLATION_REPORT=""
 check_scope_violations() {
-    SCOPE_VIOLATION_REPORT=""
     local sprint_file="$BACKLOG_DIR/sprint.json"
     [[ ! -f "$sprint_file" ]] && return 0
 
@@ -1328,23 +1324,21 @@ check_scope_violations() {
     done <<< "$changed_files"
 
     if [[ "$violation_count" -gt 0 ]]; then
-        SCOPE_VIOLATION_REPORT="$violation_count file(s) outside declared scope:\n$violations"
+        printf '%s\n%s' "$violation_count file(s) outside declared scope:" "$violations"
         if [[ "$SCOPE_MODE" == "strict" ]]; then
             log_error "Scope violation (strict mode): $violation_count file(s) outside scope"
-            echo -e "$violations"
+            echo -e "$violations" >&2
             return 1
         else
-            log_warning "Scope violation: $violation_count file(s) outside scope"
-            echo -e "$violations"
+            log_warning "Scope violation: $violation_count file(s) outside scope" >&2
+            echo -e "$violations" >&2
             return 0
         fi
     fi
     return 0
 }
 
-AC_VERIFY_REPORT=""
 run_ac_verification() {
-    AC_VERIFY_REPORT=""
     local sprint_file="$BACKLOG_DIR/sprint.json"
     [[ ! -f "$sprint_file" ]] && return 0
 
@@ -1359,7 +1353,7 @@ run_ac_verification() {
     verify_count=$(echo "$verifiable" | jq 'length' 2>/dev/null || echo 0)
     [[ "$verify_count" -eq 0 ]] && return 0
 
-    log_info "Running $verify_count AC verification command(s)"
+    log_info "Running $verify_count AC verification command(s)" >&2
     local all_passed=true
     local report=""
     local idx=0
@@ -1380,7 +1374,7 @@ run_ac_verification() {
 
         if [[ "$ac_ok" == "true" ]]; then
             report="${report}  PASS: ${ac_text}"$'\n'
-            log_success "AC: $ac_text"
+            log_success "AC: $ac_text" >&2
         else
             report="${report}  FAIL: ${ac_text} (cmd: ${ac_cmd})"$'\n'"    Output: ${ac_output}"$'\n'
             log_error "AC: $ac_text"
@@ -1388,7 +1382,7 @@ run_ac_verification() {
         fi
     done < <(echo "$verifiable" | jq -c '.[]')
 
-    AC_VERIFY_REPORT="$report"
+    [[ -n "$report" ]] && echo "$report"
     [[ "$all_passed" == "true" ]] && return 0 || return 1
 }
 
@@ -1631,10 +1625,11 @@ _run_dry_run() {
     echo ""
 
     # Advisory complexity warning in dry-run
-    if ! check_readiness_gates "$item_id" 2>/dev/null; then
-        if echo -e "$CHECK_GATES_WARNINGS" | grep -q "under-specified"; then
+    local gates_warnings
+    if ! gates_warnings=$(check_readiness_gates "$item_id" 2>/dev/null); then
+        if echo -e "$gates_warnings" | grep -q "under-specified"; then
             log_warning "$item_id may be under-specified — consider adding more steps or scope"
-            echo -e "$CHECK_GATES_WARNINGS" | grep -A 50 "under-specified"
+            echo -e "$gates_warnings" | grep -A 50 "under-specified"
             echo ""
         fi
     fi
@@ -1838,17 +1833,20 @@ _run_developer_cycle() {
 }
 
 # Run validation cycle: scope check, validation command, AC verification, validator agent.
-# Uses outer-scope: retry_extra_prompt, VALIDATE_CMD, SCOPE_VIOLATION_REPORT, AC_VERIFY_REPORT
+# Uses outer-scope: retry_extra_prompt, VALIDATE_CMD
 # Sets: _validation_failure (short label for _record_sprint_failure)
 # Returns 0 if all validations pass, 1 on failure (sets retry_extra_prompt with context).
 _run_validation_cycle() {
     _validation_failure=""
     local validate_output=""
 
-    # Check scope violations
-    if ! check_scope_violations; then
+    # Check scope violations (report returned via stdout)
+    local scope_report
+    scope_report=$(check_scope_violations)
+    local scope_rc=$?
+    if [[ "$scope_rc" -ne 0 ]]; then
         retry_extra_prompt="Previous attempt modified files outside the declared scope. Scope violations:
-${SCOPE_VIOLATION_REPORT}
+${scope_report}
 Only modify files matching the declared scope globs. Fix the issues."
         _validation_failure="Scope violation"
         return 1
@@ -1875,10 +1873,13 @@ Fix the issues and ensure all acceptance criteria pass."
         fi
     fi
 
-    # Run AC verification commands (if any AC have .verify)
-    if ! run_ac_verification; then
+    # Run AC verification commands (report returned via stdout)
+    local ac_report
+    ac_report=$(run_ac_verification)
+    local ac_rc=$?
+    if [[ "$ac_rc" -ne 0 ]]; then
         retry_extra_prompt="Previous attempt failed acceptance criteria verification:
-${AC_VERIFY_REPORT}
+${ac_report}
 Fix the issues and ensure all acceptance criteria pass."
         _validation_failure="AC verification failed"
         return 1
@@ -1886,9 +1887,9 @@ Fix the issues and ensure all acceptance criteria pass."
 
     # Run validator agent (pass AC report as extra context if available)
     local validator_extra=""
-    [[ -n "$AC_VERIFY_REPORT" ]] && validator_extra="
+    [[ -n "$ac_report" ]] && validator_extra="
 ## AC Verification Results
-${AC_VERIFY_REPORT}"
+${ac_report}"
     run_agent "validator" "validate" "$MODEL_FAST" "" "" "$validator_extra"
     if ! check_result; then
         log_error "Validation failed"
@@ -2307,10 +2308,12 @@ run_sprint_loop() {
                 check_result || log_warning "Product-owner groom did not pass — continuing"
                 # Protect existing items from groomer rewrites, then enforce limits
                 protect_items_from_groom "$auto_groom_snap"
-                enforce_groom_limits "$auto_groom_snap"
+                local auto_groom_counts auto_groom_added auto_groom_skipped
+                auto_groom_counts=$(enforce_groom_limits "$auto_groom_snap")
+                read -r auto_groom_added auto_groom_skipped <<< "$auto_groom_counts"
                 rm -rf "$auto_groom_snap"
-                if [[ "$GROOM_ITEMS_SKIPPED" -gt 0 ]]; then
-                    log_info "Auto-groom: $GROOM_ITEMS_ADDED item(s) added, $GROOM_ITEMS_SKIPPED skipped (limits: max=$GROOM_MAX_ITEMS, min_priority=$GROOM_MIN_PRIORITY)"
+                if [[ "$auto_groom_skipped" -gt 0 ]]; then
+                    log_info "Auto-groom: $auto_groom_added item(s) added, $auto_groom_skipped skipped (limits: max=$GROOM_MAX_ITEMS, min_priority=$GROOM_MIN_PRIORITY)"
                 fi
                 if [[ "$(_count_total_ready)" -le "$total_ready" ]]; then
                     log_warning "Groom did not produce new ready items — pausing auto-groom"
@@ -2360,10 +2363,11 @@ run_sprint_loop() {
         save_backlog_snapshot
 
         # Advisory complexity warning (does not block sprint)
-        if ! check_readiness_gates "$ITEM_ID" 2>/dev/null; then
-            if echo -e "$CHECK_GATES_WARNINGS" | grep -q "under-specified"; then
+        local gates_warnings
+        if ! gates_warnings=$(check_readiness_gates "$ITEM_ID" 2>/dev/null); then
+            if echo -e "$gates_warnings" | grep -q "under-specified"; then
                 log_warning "$ITEM_ID may be under-specified — consider adding more steps or scope"
-                echo -e "$CHECK_GATES_WARNINGS" | grep -A 50 "under-specified"
+                echo -e "$gates_warnings" | grep -A 50 "under-specified"
             fi
         fi
 
@@ -2646,11 +2650,14 @@ cmd_groom() {
     protect_items_from_groom "$groom_snap_dir"
 
     # Enforce groom limits (max items, min priority)
-    enforce_groom_limits "$groom_snap_dir"
+    local groom_counts
+    groom_counts=$(enforce_groom_limits "$groom_snap_dir")
+    local groom_added groom_skipped
+    read -r groom_added groom_skipped <<< "$groom_counts"
     rm -rf "$groom_snap_dir"
 
     # --- Post-groom diff ---
-    print_groom_diff "$snap_before"
+    print_groom_diff "$snap_before" "$groom_added" "$groom_skipped"
 
     if ! check_result; then
         exit 1
@@ -2807,15 +2814,12 @@ snapshot_backlogs() {
 
 # Enforce groom limits: max items and min priority.
 # Removes new items that exceed the cap or fall below the priority threshold.
-# Sets GROOM_ITEMS_ADDED and GROOM_ITEMS_SKIPPED for summary reporting.
-GROOM_ITEMS_ADDED=0
-GROOM_ITEMS_SKIPPED=0
+# Outputs "ADDED SKIPPED" counts to stdout for caller to capture.
 enforce_groom_limits() {
     local snap_dir="$1"
     local max_items="$GROOM_MAX_ITEMS"
     local min_priority="$GROOM_MIN_PRIORITY"
-    GROOM_ITEMS_ADDED=0
-    GROOM_ITEMS_SKIPPED=0
+    local _groom_items_skipped=0
 
     # Priority rank: must=0, should=1, could=2, future=3
     local -A prio_rank=([must]=0 [should]=1 [could]=2 [future]=3)
@@ -2861,17 +2865,17 @@ enforce_groom_limits() {
             if [[ "$item_rank" -gt "$min_rank" ]]; then
                 # Below threshold — remove
                 removed_ids+=("$item_id")
-                log_info "Groom limit: skipped $item_id (priority: $item_prio, below $min_priority threshold)"
+                log_info "Groom limit: skipped $item_id (priority: $item_prio, below $min_priority threshold)" >&2
             elif [[ "$global_kept" -ge "$max_items" ]]; then
                 # Over global cap — remove
                 removed_ids+=("$item_id")
-                log_info "Groom limit: skipped $item_id (exceeded max $max_items items)"
+                log_info "Groom limit: skipped $item_id (exceeded max $max_items items)" >&2
             else
                 global_kept=$((global_kept + 1))
             fi
         done
 
-        GROOM_ITEMS_SKIPPED=$((GROOM_ITEMS_SKIPPED + ${#removed_ids[@]}))
+        _groom_items_skipped=$((_groom_items_skipped + ${#removed_ids[@]}))
 
         # Remove filtered items from the live file
         if [[ ${#removed_ids[@]} -gt 0 ]]; then
@@ -2884,12 +2888,15 @@ enforce_groom_limits() {
         fi
     done
 
-    GROOM_ITEMS_ADDED="$global_kept"
+    echo "$global_kept $_groom_items_skipped"
 }
 
 # Show what changed after grooming
+# Args: $1=before_snapshot $2=groom_items_added $3=groom_items_skipped
 print_groom_diff() {
     local before="$1"
+    local groom_added="${2:-0}"
+    local groom_skipped="${3:-0}"
     local snap_after
     snap_after=$(snapshot_backlogs)
 
@@ -2911,8 +2918,8 @@ print_groom_diff() {
     if [[ "$new_items" -gt 0 ]]; then
         log_success "$new_items new item(s) added"
     fi
-    if [[ "$GROOM_ITEMS_SKIPPED" -gt 0 ]]; then
-        log_info "$GROOM_ITEMS_SKIPPED item(s) skipped by groom limits (max=$GROOM_MAX_ITEMS, min_priority=$GROOM_MIN_PRIORITY)"
+    if [[ "$groom_skipped" -gt 0 ]]; then
+        log_info "$groom_skipped item(s) skipped by groom limits (max=$GROOM_MAX_ITEMS, min_priority=$GROOM_MIN_PRIORITY)"
     fi
     if [[ "$new_ready" -gt 0 ]]; then
         log_success "$new_ready item(s) moved to sprint-ready"
@@ -2921,8 +2928,8 @@ print_groom_diff() {
     fi
 
     echo "  Ready: $ready_before → $ready_after  |  Total: $total_before → $total_after"
-    if [[ "$GROOM_ITEMS_ADDED" -gt 0 || "$GROOM_ITEMS_SKIPPED" -gt 0 ]]; then
-        echo "  Added: $GROOM_ITEMS_ADDED  |  Skipped: $GROOM_ITEMS_SKIPPED"
+    if [[ "$groom_added" -gt 0 || "$groom_skipped" -gt 0 ]]; then
+        echo "  Added: $groom_added  |  Skipped: $groom_skipped"
     fi
 }
 
@@ -3897,11 +3904,12 @@ cmd_backlog_check() {
     # Verify item exists
     find_item "$id" >/dev/null || return 1
 
-    if check_readiness_gates "$id"; then
+    local gates_warnings
+    if gates_warnings=$(check_readiness_gates "$id"); then
         log_success "$id passes all readiness gates"
     else
         log_warning "$id has readiness warnings:"
-        echo -e "$CHECK_GATES_WARNINGS"
+        echo -e "$gates_warnings"
         return 1
     fi
 }
@@ -3979,11 +3987,13 @@ cmd_backlog_populate() {
 
     # Protect existing items from agent rewrites, then enforce limits
     protect_items_from_groom "$populate_snap_dir"
-    enforce_groom_limits "$populate_snap_dir"
+    local populate_counts populate_added populate_skipped
+    populate_counts=$(enforce_groom_limits "$populate_snap_dir")
+    read -r populate_added populate_skipped <<< "$populate_counts"
     rm -rf "$populate_snap_dir"
 
     # --- Post-populate diff ---
-    print_groom_diff "$snap_before"
+    print_groom_diff "$snap_before" "$populate_added" "$populate_skipped"
 
     if ! check_result; then
         exit 1
@@ -4450,9 +4460,10 @@ cmd_backlog_edit() {
 
     # Run readiness gates when setting --ready (warn but don't block)
     if [[ "$setting_ready" == "true" ]]; then
-        if ! check_readiness_gates "$id"; then
+        local gates_warnings
+        if ! gates_warnings=$(check_readiness_gates "$id"); then
             log_warning "Readiness warnings for $id:"
-            echo -e "$CHECK_GATES_WARNINGS"
+            echo -e "$gates_warnings"
         fi
     fi
 }
