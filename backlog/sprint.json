@@ -1,39 +1,34 @@
 {
-  "sprintId": "sprint-1774066706",
-  "startedAt": "2026-03-20T21:18:26-07:00",
+  "sprintId": "sprint-1774067200",
+  "startedAt": "2026-03-20T21:26:40-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-073",
-    "title": "Extract _find_prd and unify product/arch detection in init flow",
-    "intent": "The PRD candidate list exists in one place. Product and architecture doc paths are detected once, not three times with three variable names. Init flow loses ~35 lines of copy-paste.",
-    "description": "The same 10-element PRD candidate list (PRODUCT.md, product.md, PRD.md, prd.md, docs/ variants, WEBSITE_BRIEF.md, README.md) is copy-pasted verbatim in _init_detect_project, _init_scaffold_files, and cmd_backlog_populate. Product/arch existence is checked 3 times across the init flow with 3 different variable names (prd_found, product_found, found_product). Extract _find_prd function returning the path, use it everywhere. Detect product/arch docs once and pass paths through. Remove docs/WEBSITE_BRIEF.md from generic candidate list (project-specific leak).",
+    "id": "BUG-074",
+    "title": "Refactor cmd_metrics to compute once, render twice",
+    "intent": "Metrics are computed by one jq pass and rendered by two output modes. The 6 duplicated jq computations between JSON and human branches are eliminated. Saves ~12 lines and 6 jq forks.",
+    "description": "cmd_metrics (114 lines) computes avg_attempts, items_per_day, by_priority, by_category, and recent-10 trends twice: once in a big jq -s block for --json output, and again as 6 separate jq -s calls for human output. Extract _compute_metrics_json that always produces the JSON object. --json mode emits it directly. Human mode extracts fields from the pre-computed JSON with jq -r.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Create _find_prd function that returns the first matching PRD file path from the candidate list",
-      "Replace the candidate loop in _init_detect_project with _find_prd call",
-      "Replace the candidate loop in _init_scaffold_files with _find_prd call",
-      "Replace the candidate loop in cmd_backlog_populate with _find_prd call",
-      "Remove docs/WEBSITE_BRIEF.md from the candidate list",
-      "Unify product/arch detection: detect once in _init_detect_project, pass paths to scaffold and summary",
-      "Remove the re-detection loops in _init_scaffold_files and cmd_init summary",
-      "Verify: init -y and backlog populate both find the same docs as before"
+      "Extract _compute_metrics_json function that returns the full metrics JSON object",
+      "cmd_metrics --json: call _compute_metrics_json and emit directly",
+      "cmd_metrics human mode: call _compute_metrics_json, then render fields with jq -r extraction",
+      "Remove the 6 separate jq -s calls from the human branch",
+      "Verify: both --json and human output are identical to before"
     ],
     "acceptanceCriteria": [
-      "_find_prd function exists and is called from all 3 locations",
-      "No duplicate PRD candidate list exists in the script",
-      "docs/WEBSITE_BRIEF.md is not in the candidate list",
-      "Product/arch paths are detected once during init, not re-scanned",
-      "init -y produces identical output",
-      "backlog populate finds the same PRD file as before",
+      "A _compute_metrics_json function exists",
+      "No jq -s call appears in the human-output branch of cmd_metrics",
+      "cmd_metrics --json output is identical to before",
+      "cmd_metrics human output is identical to before",
       "shellcheck passes"
     ],
     "scope": [
       ".aishore/**"
     ],
-    "startedAt": "2026-03-20T21:18:26-07:00",
+    "startedAt": "2026-03-20T21:26:40-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T21:26:39-07:00"
+    "completedAt": "2026-03-20T21:35:48-07:00"
   },
-  "completedAt": "2026-03-20T21:26:39-07:00",
+  "completedAt": "2026-03-20T21:35:48-07:00",
   "attempts": 1
 }
