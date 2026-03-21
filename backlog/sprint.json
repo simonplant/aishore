@@ -1,29 +1,31 @@
 {
-  "sprintId": "sprint-1774115545",
-  "startedAt": "2026-03-21T10:52:25-07:00",
+  "sprintId": "sprint-1774115705",
+  "startedAt": "2026-03-21T10:55:05-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-094",
-    "title": "run_ac_verification silently skips all AC checks when jq fails to parse AC JSON",
-    "intent": "If AC JSON is malformed or jq fails, the sprint fails visibly with a clear error — it never silently passes with AC verification skipped.",
-    "description": "In run_ac_verification(), line 1761 computes verifiable with 2>/dev/null suppressing jq errors. If jq fails, verifiable is empty. Line 1762 falls back to verify_count=0 via || echo 0. Line 1763 returns 0 (success) when count is 0. Result: malformed AC JSON causes all AC verify commands to be silently skipped and the sprint proceeds as if verification passed. This is a correctness hole in the validation layer.",
+    "id": "BUG-095",
+    "title": "Update CHANGELOG.md and bump version to v0.3.5",
+    "intent": "CHANGELOG.md reflects all work completed since v0.3.4 and VERSION reads 0.3.5. Users and contributors can see exactly what changed in this release.",
+    "description": "BUG-082 was manually marked done but the actual work was never completed — VERSION is still 0.3.4 and docs/CHANGELOG.md has no 0.3.5 section. Since v0.3.4, 20+ items were completed (BUG-067 through BUG-092, FEAT-027 through FEAT-032): refactoring, simplification, notification system, multi-backlog support, retry intelligence, category filter, --limit flag, real-time streaming, and numerous bug fixes. These constitute a patch release (v0.3.5).",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In run_ac_verification(), after line 1761, check if verifiable is empty — if so, log_error and return 1",
-      "Remove 2>/dev/null from the jq call at line 1761 or capture its exit code explicitly so errors surface",
-      "Confirm existing behavior unchanged: valid AC with no verify fields still returns 0",
-      "shellcheck passes with no new warnings"
+      "Bump .aishore/VERSION from 0.3.4 to 0.3.5",
+      "Add a [0.3.5] - 2026-03-21 section to docs/CHANGELOG.md with Added, Fixed, and Changed subsections covering BUG-067 through BUG-092 and FEAT-027 through FEAT-032",
+      "Run .aishore/aishore checksums to regenerate checksums after version bump",
+      "Verify: .aishore/aishore version outputs 0.3.5"
     ],
     "acceptanceCriteria": [
-      "When acceptanceCriteria contains invalid JSON, run_ac_verification returns 1 and logs an error",
-      "When acceptanceCriteria is valid but has no verify fields, function returns 0 (unchanged behavior)",
-      "shellcheck passes"
+      "VERSION file contains 0.3.5",
+      "docs/CHANGELOG.md has a [0.3.5] section dated 2026-03-21",
+      "[0.3.5] section covers the key items completed since v0.3.4 (at minimum: notifications, streaming, multi-backlog, retry intelligence, category filter, --limit, and the major bug fixes)",
+      ".aishore/aishore version outputs 0.3.5",
+      "checksums.sha256 is updated (aishore checksums exits 0)"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T10:52:25-07:00",
+    "startedAt": "2026-03-21T10:55:05-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T10:55:04-07:00"
+    "completedAt": "2026-03-21T10:57:09-07:00"
   },
-  "completedAt": "2026-03-21T10:55:04-07:00",
+  "completedAt": "2026-03-21T10:57:09-07:00",
   "attempts": 1
 }
