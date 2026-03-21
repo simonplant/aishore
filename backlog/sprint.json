@@ -1,32 +1,29 @@
 {
-  "sprintId": "sprint-1774112984",
-  "startedAt": "2026-03-21T10:09:44-07:00",
+  "sprintId": "sprint-1774113114",
+  "startedAt": "2026-03-21T10:11:54-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-091",
-    "title": "pick_item emits spurious error log when auto-mode backlog is drained",
-    "intent": "In auto mode, backlog exhaustion is normal and expected — pick_item must not log an error when the sprint loop will immediately handle the empty result as success.",
-    "description": "When auto done drains the backlog completely, pick_item() at line 734 logs log_error 'No eligible item found in backlog' before returning 1. The sprint loop (line 2704) then correctly prints log_success 'No more ready items — backlog drained'. The spurious red error appears in terminal output right before the green success message, confusing users into thinking something went wrong when the session completed cleanly.",
+    "id": "BUG-092",
+    "title": "Auto-groom in sprint loop missing GROOM_MONITOR=true — no live progress output",
+    "intent": "Auto-groom sessions during auto done must show the same real-time backlog change updates as manual groom sessions — silent grooming during a long auto run leaves users wondering if the agent is working.",
+    "description": "In run_sprint_loop(), the auto-groom block calls run_agent 'tech-lead' 'groom' and run_agent 'product-owner' 'groom' without GROOM_MONITOR=true. The run_agent_process poll loop has logic to check backlog file hashes and log progress updates every 10 seconds when GROOM_MONITOR=true (used by run_groom_flow). Without it, auto-groom sessions show only generic 'Waiting for agent...' messages, not the 'backlog.json updated — 5 items (3 ready)' updates that make manual groom sessions informative.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In pick_item(), replace the unconditional log_error on the 'no item found' exit path with a return 1 only — remove the log_error call",
-      "Callers already provide their own context-appropriate messages (sprint loop handles auto vs non-auto vs specific-id cases)",
-      "Verify: run auto done to exhaust backlog — terminal shows only the success message, no error",
-      "Verify: run backlog list on empty-ready backlog — caller still shows warning (cmd_run sprint loop handles this)",
+      "In run_sprint_loop(), change the two run_agent calls in the auto-groom block to prefix GROOM_MONITOR=true",
+      "Verify: auto done with low ready items triggers auto-groom and shows backlog update messages during groom",
       "shellcheck passes"
     ],
     "acceptanceCriteria": [
-      "auto done completes with no red error log when all items are done",
-      "Non-auto mode still shows the 'No ready items' warning from the sprint loop caller",
+      "Auto-groom during auto done shows live backlog change updates matching run_groom_flow behavior",
       "shellcheck passes"
     ],
     "scope": [
       ".aishore/aishore"
     ],
-    "startedAt": "2026-03-21T10:09:44-07:00",
+    "startedAt": "2026-03-21T10:11:54-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T10:11:53-07:00"
+    "completedAt": "2026-03-21T10:14:16-07:00"
   },
-  "completedAt": "2026-03-21T10:11:53-07:00",
+  "completedAt": "2026-03-21T10:14:16-07:00",
   "attempts": 1
 }
