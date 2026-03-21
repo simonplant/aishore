@@ -2746,6 +2746,59 @@ setup_sprint_environment() {
         fi
         return 1
     fi
+
+    # Auto mode: log queued item count with per-priority breakdown
+    if [[ "$auto_mode" == "true" && -z "$specific_id" ]]; then
+        local total=${#queued_ids[@]}
+        if [[ "$total" -eq 0 ]]; then
+            log_info "No items to run"
+            if [[ "$did_stash" == "true" ]]; then
+                git stash pop >/dev/null 2>&1 || true
+            fi
+            return 0
+        fi
+
+        # Count items per priority tier from backlogs
+        local ids_json n_must=0 n_should=0 n_could=0
+        ids_json=$(printf '%s\n' "${queued_ids[@]}" | jq -R . | jq -s .)
+        local _prio_counts
+        _prio_counts="$(ensure_tmpdir)/prio_counts.txt"
+        : > "$_prio_counts"
+        _count_prios_one() {
+            local f="$1"
+            [[ -f "$BACKLOG_DIR/$f" ]] || return 0
+            jq -r --argjson ids "$ids_json" '
+                [.items[] | select(.id as $id | $ids | index($id) != null)] |
+                group_by(.priority // "should") |
+                .[] | "\(.[0].priority // "should") \(length)"
+            ' "$BACKLOG_DIR/$f" 2>/dev/null >> "$_prio_counts" || true
+        }
+        map_backlog_files _count_prios_one
+
+        local prio cnt
+        while read -r prio cnt; do
+            [[ -z "$prio" ]] && continue
+            case "$prio" in
+                must)   n_must=$((n_must + cnt)) ;;
+                should) n_should=$((n_should + cnt)) ;;
+                could)  n_could=$((n_could + cnt)) ;;
+            esac
+        done < "$_prio_counts"
+
+        # Build breakdown string, omitting tiers with zero count
+        local parts=()
+        [[ "$n_must" -gt 0 ]] && parts+=("must=$n_must")
+        [[ "$n_should" -gt 0 ]] && parts+=("should=$n_should")
+        [[ "$n_could" -gt 0 ]] && parts+=("could=$n_could")
+
+        if [[ ${#parts[@]} -gt 0 ]]; then
+            local breakdown
+            breakdown=$(IFS=' '; echo "${parts[*]}")
+            log_info "Queuing $total item(s): $breakdown"
+        else
+            log_info "Queuing $total item(s)"
+        fi
+    fi
 }
 
 # Count total ready items across all backlogs

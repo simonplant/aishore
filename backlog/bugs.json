@@ -3363,11 +3363,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "UX gap: users launching auto have no idea of session scope before waiting. Single log line costs nothing and helps users decide to narrow scope with --priority or --category.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T13:14:04-07:00"
     }
   ]
 }
