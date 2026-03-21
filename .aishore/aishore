@@ -3087,7 +3087,7 @@ print_sprint_summary() {
         else
             echo ""
             log_info "All items complete. Run architecture review to evaluate accumulated changes?"
-            read -r -p "  Run architecture review? [y/N] " _review_answer
+            read -r -p "  Run architecture review? [y/N] " _review_answer || true
             [[ "$_review_answer" == "y" || "$_review_answer" == "Y" ]] && run_review=true
         fi
 
