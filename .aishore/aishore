@@ -2718,43 +2718,13 @@ cmd_groom() {
         agent="tech-lead"
     fi
 
-    # --- Pre-launch summary ---
     print_groom_summary
 
     local context_args="@$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
     local recent_sprints; recent_sprints=$(recent_sprints_file 20)
     [[ -n "$recent_sprints" ]] && context_args="$context_args $recent_sprints"
 
-    # Snapshot backlog state for progress tracking
-    local snap_before
-    snap_before=$(snapshot_backlogs)
-
-    # Snapshot existing items so we can protect them from groomer overwrites
-    local groom_snap_dir
-    groom_snap_dir=$(mktemp -d)
-    snapshot_backlog_files "$groom_snap_dir"
-
-    log_info "Running $agent agent..."
-    echo ""
-
-    GROOM_MONITOR=true run_agent "$agent" "groom" "$MODEL_FAST" "$context_args"
-
-    # Protect pre-existing items from groomer modifications/deletions
-    protect_items_from_groom "$groom_snap_dir"
-
-    # Enforce groom limits (max items, min priority)
-    local groom_counts
-    groom_counts=$(enforce_groom_limits "$groom_snap_dir")
-    local groom_added groom_skipped
-    read -r groom_added groom_skipped <<< "$groom_counts"
-    rm -rf "$groom_snap_dir"
-
-    # --- Post-groom diff ---
-    print_groom_diff "$snap_before" "$groom_added" "$groom_skipped"
-
-    if ! check_result; then
-        return 1
-    fi
+    run_groom_flow "$agent" "groom" "$context_args"
 }
 
 # Print a rich summary of backlog state before grooming
@@ -2964,6 +2934,37 @@ print_groom_diff() {
     echo "  Ready: $ready_before → $ready_after  |  Total: $total_before → $total_after"
     if [[ "$groom_added" -gt 0 || "$groom_skipped" -gt 0 ]]; then
         echo "  Added: $groom_added  |  Skipped: $groom_skipped"
+    fi
+}
+
+# Shared groom/populate pipeline: snapshot → agent → protect → enforce → diff → check
+# Args: $1=agent $2=mode $3=context_args
+run_groom_flow() {
+    local agent="$1" mode="$2" context_args="$3"
+
+    local snap_before
+    snap_before=$(snapshot_backlogs)
+
+    local snap_dir
+    snap_dir=$(mktemp -d)
+    snapshot_backlog_files "$snap_dir"
+
+    log_info "Running $agent agent..."
+    echo ""
+
+    GROOM_MONITOR=true run_agent "$agent" "$mode" "$MODEL_FAST" "$context_args"
+
+    protect_items_from_groom "$snap_dir"
+
+    local counts added skipped
+    counts=$(enforce_groom_limits "$snap_dir")
+    read -r added skipped <<< "$counts"
+    rm -rf "$snap_dir"
+
+    print_groom_diff "$snap_before" "$added" "$skipped"
+
+    if ! check_result; then
+        return 1
     fi
 }
 
@@ -4000,36 +4001,9 @@ cmd_backlog_populate() {
     log_info "Using requirements from: $prd_file"
 
     local context_args="@$prd_file @$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
-    # Include definitions doc for quality examples if available
     [[ -f "$BACKLOG_DIR/DEFINITIONS.md" ]] && context_args="$context_args @$BACKLOG_DIR/DEFINITIONS.md"
 
-    # Snapshot backlog state for progress tracking
-    local snap_before
-    snap_before=$(snapshot_backlogs)
-
-    # Snapshot existing items to protect from agent overwrites
-    local populate_snap_dir
-    populate_snap_dir=$(mktemp -d)
-    snapshot_backlog_files "$populate_snap_dir"
-
-    log_info "Running product-owner agent to populate backlog..."
-    echo ""
-
-    GROOM_MONITOR=true run_agent "product-owner" "populate" "$MODEL_FAST" "$context_args"
-
-    # Protect existing items from agent rewrites, then enforce limits
-    protect_items_from_groom "$populate_snap_dir"
-    local populate_counts populate_added populate_skipped
-    populate_counts=$(enforce_groom_limits "$populate_snap_dir")
-    read -r populate_added populate_skipped <<< "$populate_counts"
-    rm -rf "$populate_snap_dir"
-
-    # --- Post-populate diff ---
-    print_groom_diff "$snap_before" "$populate_added" "$populate_skipped"
-
-    if ! check_result; then
-        return 1
-    fi
+    run_groom_flow "product-owner" "populate" "$context_args"
 }
 
 cmd_backlog_list() {
