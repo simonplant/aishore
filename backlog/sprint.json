@@ -1,34 +1,33 @@
 {
-  "sprintId": "sprint-1774056263",
-  "startedAt": "2026-03-20T18:24:23-07:00",
+  "sprintId": "sprint-1774056446",
+  "startedAt": "2026-03-20T18:27:26-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-037",
-    "title": "backlog history output missing title column — makes history hard to read",
-    "intent": "Ensure backlog history output includes the item title so users can read the history without cross-referencing backlog list.",
-    "description": "cmd_backlog_history outputs a table with columns: ID, DATE, STATUS, DURATION. It does not include the item title. The archive (sprints.jsonl) does not store the title — it only stores itemId, date, status, duration, filesChanged, linesAdded, linesRemoved, priority, category. To show a title, the command would need to look it up in the active backlog. However, since items may have been cleaned out, the title may not always be available. The fix should: (1) attempt to look up the title from active backlogs, and (2) fall back to showing the itemId if the item has been cleaned. This makes history scannable without requiring a separate backlog list lookup.",
+    "id": "BUG-038",
+    "title": "_check_groom_progress uses md5sum which fails on macOS without coreutils",
+    "intent": "Ensure groom progress monitoring works on macOS by using a portable hashing command, so backlog change detection during grooming is not broken for macOS users.",
+    "description": "In _check_groom_progress(), backlog file changes are detected using md5sum (lines 958 and 969 in the current codebase). md5sum is a GNU coreutils command that is not available on macOS by default. macOS provides 'md5' (different interface) or 'shasum'/'sha256sum' (different output format). When md5sum is missing, the command silently fails (cur_hash will be empty) and no changes are ever detected, so the progress monitor never reports backlog updates during groom sessions. The fix should use the same portability pattern as verify_checksum() — try sha256sum first, then shasum, then fall back to a simple wc-c checksum if neither is available.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In cmd_backlog_history(), after collecting the jq results, join each itemId against the active backlogs to retrieve the title",
-      "Build a lookup map of id->title from both backlog.json and bugs.json using jq before printing the table",
-      "Add a TITLE column to the printf format string in the table header and the formatted output",
-      "When a title is not found in active backlogs (item was cleaned), fall back to displaying the itemId itself or '-' in the title column",
-      "Adjust column widths: ID 12, DATE 12, STATUS 10, DURATION 10, TITLE remainder",
-      "Test: run backlog history on a repo with both active and cleaned items to verify titles are shown correctly"
+      "Locate _check_groom_progress() in .aishore/aishore and find the two md5sum calls that compute cur_hash",
+      "Replace both md5sum calls with a portable hash helper that tries sha256sum, then shasum -a 256, then cksum as a last resort",
+      "Define a local _file_hash function or inline the portable hash command using the same approach as verify_checksum(): if command -v sha256sum, elif command -v shasum, else cksum",
+      "Verify the replacement produces a stable hash for the same file content (cksum is acceptable as a fallback since we only need change detection, not cryptographic security)",
+      "Test on macOS: run 'aishore groom' and confirm that backlog update messages are printed during the session"
     ],
     "acceptanceCriteria": [
-      "backlog history output includes a TITLE column showing the item's title from the active backlog",
-      "When an item has been cleaned from the backlog, history shows '-' or the itemId in the title column rather than failing",
-      "Column headers are aligned: ID, DATE, STATUS, DURATION, TITLE",
-      "Existing --since, --failed, --limit flags still work correctly with the updated output"
+      "_check_groom_progress correctly detects backlog file changes on macOS when only md5 or shasum is available (not md5sum)",
+      "_check_groom_progress correctly detects backlog file changes on Linux where sha256sum or md5sum are available",
+      "No regression: progress messages are still printed when backlog files change during groom sessions",
+      "The portable hash approach does not generate errors or warnings when md5sum is absent"
     ],
     "scope": [
       ".aishore/aishore"
     ],
-    "startedAt": "2026-03-20T18:24:23-07:00",
+    "startedAt": "2026-03-20T18:27:26-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T18:27:25-07:00"
+    "completedAt": "2026-03-20T18:29:45-07:00"
   },
-  "completedAt": "2026-03-20T18:27:25-07:00",
+  "completedAt": "2026-03-20T18:29:45-07:00",
   "attempts": 1
 }
