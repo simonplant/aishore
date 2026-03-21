@@ -67,6 +67,8 @@ Commands:
     --quick         Skip maturity protocol (fast iteration)
     --category <name>  Only run items matching this category
     --auto-review   Run architecture review after completion
+    --limit N       Cap session at N successful items then exit cleanly
+    --no-summary    Suppress end-of-session summary table
 
   groom             Groom bugs/tech debt (Tech Lead mode)
     --backlog       Groom features instead (Product Owner mode)

@@ -93,7 +93,7 @@ All env vars override the equivalent `config.yaml` setting. See [Configuration](
 
 Quick reference for all flags. See `aishore help` for full per-command usage.
 
-**`run` / `auto`:** `--dry-run` `--no-merge` `--pr` `--retries` `--refine` `--quick` `--category` `--auto-review` `--limit` `--max-failures`
+**`run` / `auto`:** `--dry-run` `--no-merge` `--pr` `--retries` `--refine` `--quick` `--category` `--auto-review` `--limit` `--max-failures` `--no-summary`
 
 **`backlog add`:** `--title` `--intent` `--desc` `--type` `--priority` `--category` `--ready` `--ac` `--ac-verify` `--step` `--scope` `--depends-on`
 

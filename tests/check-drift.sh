@@ -172,11 +172,11 @@ extract_code_flags() {
         # Equality checks: == "--flag" or == '--flag'
         echo "$all_body" | grep -oP '==\s*["\x27]--[\w-]+["\x27]' | grep -oP '\-\-[\w-]+'
         # parse_opts style: "bool:var:--flag" or "val:var:--flag|--alias" or "num:var:--flag"
-        # Extract flags from parse_opts spec strings (type:var:--flag format)
+        # Extract flags from parse_opts spec strings (type:var:--flag format, or -x|--flag aliases)
         echo "$all_body" | grep -oP '"(?:bool|val|num|arr|passval):[^"]*"' \
-            | grep -oP '(?<=:)--[\w-]+(?=["| ])' || true
+            | grep -oP '(?<=[:|])--[\w-]+(?=["| ])' || true
         echo "$all_body" | grep -oP '"(?:bool|val|num|arr|passval):[^"]*"' \
-            | grep -oP '(?<=:)--[\w-]+"' | tr -d '"' || true
+            | grep -oP '(?<=[:|])--[\w-]+"' | tr -d '"' || true
     } | grep -v '^--_' | grep -v '^--positional$' | sort -u
 }
 
