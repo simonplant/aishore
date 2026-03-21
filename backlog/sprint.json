@@ -1,35 +1,31 @@
 {
-  "sprintId": "sprint-1774126572",
-  "startedAt": "2026-03-21T13:56:12-07:00",
+  "sprintId": "sprint-1774126652",
+  "startedAt": "2026-03-21T13:57:32-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-022",
-    "title": "Add .doc-standard.yaml schema file for doc structure enforcement",
-    "intent": "The repo must declare its doc standard version and structure so automated checks can validate compliance — undeclared standards are unenforceable.",
-    "description": "This is part of a cross-repo documentation standard (see repo-docs-system.md in the std-docs repo). The .doc-standard.yaml file declares: schema version, project metadata (name, tagline, category), required files list, cross-repo links to sibling projects (ClawHQ, Easy-Markdown, GigOS), and author info for consistency enforcement. This file enables a future GitHub Action (doc-check.yml) to validate that all required docs exist and the README follows the template structure. The schema is lightweight — under 30 lines of YAML.",
-    "sourceBacklog": "backlog.json",
+    "id": "BUG-123",
+    "title": "status and list --ready report items as sprint-ready even when intent gate would block them",
+    "intent": "status 'Ready for sprint' section and 'backlog list --ready' must only show items that would actually be picked by auto — items missing or with too-short intent must be excluded.",
+    "description": "count_ready_items() and list_ready_items() check readyForSprint==true and passes==false but do not check the intent gate (intent != null, length >= 20). PICKABLE_ITEMS_FILTER — the actual picker — requires both. So 'status' shows an inflated ready count and 'backlog list --ready' shows items that auto/run would skip. After BUG-100 adds per-item warnings when items are skipped, this display gap becomes even more visible: users see an item listed as ready in status, then get a warning that it was skipped. Fix: add the intent filter to count_ready_items and list_ready_items so that ready counts and listings reflect what is actually pickable.",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "Create .doc-standard.yaml at repo root",
-      "Set schema_version to '1.0'",
-      "Set project name to 'aishore', tagline to 'Autonomous sprint orchestration for Claude Code', category to 'tool'",
-      "List required_files matching the docs/ structure: README.md, docs/ARCHITECTURE.md, docs/QUICKSTART.md, docs/CONFIGURATION.md, docs/PROBLEMS.md, docs/ROADMAP.md, docs/CONTRIBUTING.md, docs/CHANGELOG.md",
-      "Add portfolio section with sibling repos: ClawHQ (complementary), Easy-Markdown (related), GigOS (related)",
-      "Add author section: name Simon Plant, location Santa Barbara CA, status 'Building AI infrastructure tools. Open to roles.'",
-      "Verify the file is valid YAML"
+      "In count_ready_items(), add .intent != null and (.intent | length) >= 20 to the jq select filter",
+      "In list_ready_items(), add the same intent filter to the jq expression",
+      "Verify: create a test item with readyForSprint=true but no intent — confirm it is absent from 'status' ready section and 'backlog list --ready' output",
+      "Verify: items with valid intent still appear in ready sections",
+      "Run shellcheck — zero new warnings"
     ],
     "acceptanceCriteria": [
-      ".doc-standard.yaml exists at repo root and is valid YAML",
-      "File declares schema_version, project metadata, required_files list, portfolio sibling repos, and author info",
-      "required_files list matches the actual docs/ file structure created by FEAT-014 through FEAT-020",
-      "Portfolio section lists ClawHQ, Easy-Markdown, and GigOS with correct GitHub URLs"
+      "An item with readyForSprint=true and no intent does not appear under 'Ready for sprint' in 'status' output",
+      "An item with readyForSprint=true and an intent shorter than 20 chars does not appear in 'backlog list --ready'",
+      "An item with readyForSprint=true and a valid intent (>=20 chars) still appears correctly",
+      "shellcheck passes with zero new warnings"
     ],
-    "scope": [
-      ".doc-standard.yaml"
-    ],
-    "startedAt": "2026-03-21T13:56:12-07:00",
+    "scope": [],
+    "startedAt": "2026-03-21T13:57:32-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T13:57:31-07:00"
+    "completedAt": "2026-03-21T13:59:39-07:00"
   },
-  "completedAt": "2026-03-21T13:57:31-07:00",
+  "completedAt": "2026-03-21T13:59:39-07:00",
   "attempts": 1
 }
