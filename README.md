@@ -61,6 +61,64 @@ What works well: sprint orchestration, maturity protocol, autonomous mode with c
 
 What's rough: single-repo only (no monorepo support), error messages could be friendlier, limited to Claude Code CLI as the AI backend.
 
+## Environment Variables
+
+All env vars override the equivalent `config.yaml` setting. See [Configuration](docs/CONFIGURATION.md) for full details and defaults.
+
+| Variable | What it controls |
+|----------|-----------------|
+| `AISHORE_MODEL_PRIMARY` | AI model for developer and architect agents |
+| `AISHORE_MODEL_FAST` | AI model for grooming, validation, and refinement agents |
+| `AISHORE_AGENT_TIMEOUT` | Max seconds an agent process can run |
+| `AISHORE_VALIDATE_CMD` | Shell command to validate the codebase (e.g., `npm test`) |
+| `AISHORE_VALIDATE_TIMEOUT` | Max seconds the validate command can run |
+| `AISHORE_FIX_CMD` | Shell command run before validation (e.g., `npm run lint -- --fix`) |
+| `AISHORE_NOTIFY_CMD` | Command run on sprint completion — receives status and item ID as args |
+| `AISHORE_NOTIFY` | `true` to send a system notification when an auto session ends |
+| `AISHORE_SCOPE_MODE` | `warn` (default) or `strict` — behavior when agent touches out-of-scope files |
+| `AISHORE_MATURITY` | `false` to disable the 3-phase maturity protocol globally |
+| `AISHORE_STREAMING` | `false` to disable streaming output from agents |
+| `AISHORE_STREAMING_MAX_LINES` | Lines to show during streaming (default: 20) |
+| `AISHORE_MERGE_STRATEGY` | `merge` (default, `--no-ff`) or `squash` |
+| `AISHORE_CREATE_PR` | `true` to always create a GitHub PR instead of merging |
+| `AISHORE_ISOLATION` | `stash` (default) or `worktree` — branch isolation mode |
+| `AISHORE_AUTO_GROOM_THRESHOLD` | Auto-groom triggers in autonomous mode when ready items drop below this |
+| `AISHORE_AUTO_MAX_FAILURES` | Circuit breaker: max consecutive failures in autonomous mode |
+| `AISHORE_GROOM_MAX_ITEMS` | Max items the grooming agent creates or refines per session |
+| `AISHORE_GROOM_MIN_PRIORITY` | Min priority for groomed items (`must`, `should`, `could`) |
+| `AISHORE_OUTPUT_TRUNCATE_LINES` | Lines shown when truncating long command output in logs |
+| `AISHORE_BACKLOG_FILES` | Comma-separated backlog files (relative to `backlog/`), overrides config |
+
+## Flags Reference
+
+Quick reference for all flags. See `aishore help` for full per-command usage.
+
+**`run` / `auto`:** `--dry-run` `--no-merge` `--pr` `--retries` `--refine` `--quick` `--category` `--auto-review` `--limit` `--max-failures`
+
+**`backlog add`:** `--title` `--intent` `--desc` `--type` `--priority` `--category` `--ready` `--ac` `--ac-verify` `--step` `--scope` `--depends-on`
+
+**`backlog edit`:** `--title` `--intent` `--desc` `--priority` `--status` `--category` `--ready` `--no-ready` `--groomed-at` `--groomed-notes` `--step` `--clear-steps` `--scope` `--clear-scope` `--ac` `--ac-verify` `--clear-ac` `--depends-on` `--clear-depends-on`
+
+**`backlog list`:** `--status` `--type` `--ready`
+
+**`backlog rm`:** `--force`
+
+**`backlog sync`:** `--dry-run` `--auto`
+
+**`groom`:** `--backlog`
+
+**`review`:** `--update-docs` `--since`
+
+**`status`:** `--watch` `--interval`
+
+**`metrics`:** `--json`
+
+**`update`:** `--dry-run` `--force`
+
+**`clean`:** `--dry-run`
+
+**`init`:** `--yes`
+
 ## Documentation
 
 | Document | Description |

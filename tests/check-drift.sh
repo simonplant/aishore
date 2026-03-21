@@ -153,12 +153,31 @@ extract_code_flags() {
     local func_name="$1"
     local body
     body=$(sed -n "/^${func_name}()/,/^[a-z_]*() *{*$/p" "$CLI")
+
+    # Also pull in any *_parse_args or *_opts helper functions referenced in the body
+    local helper_body=""
+    local helper
+    while IFS= read -r helper; do
+        [[ -z "$helper" ]] && continue
+        local h_body
+        h_body=$(sed -n "/^${helper}()/,/^[a-z_]*() *{*$/p" "$CLI")
+        helper_body+="$h_body"$'\n'
+    done < <(echo "$body" | grep -oP '\b\w+_parse_args\b|\b\w+_opts\b' | sort -u)
+
+    local all_body="$body"$'\n'"$helper_body"
+
     {
         # Case-statement patterns: --flag) or --flag| or -x|--flag)
-        echo "$body" | grep -oP '(?<=[\s|])--[\w-]+(?=\)|\|)'
+        echo "$all_body" | grep -oP '(?<=[\s|])--[\w-]+(?=\)|\|)'
         # Equality checks: == "--flag" or == '--flag'
-        echo "$body" | grep -oP '==\s*["\x27]--[\w-]+["\x27]' | grep -oP '\-\-[\w-]+'
-    } | grep -v '^--_' | sort -u
+        echo "$all_body" | grep -oP '==\s*["\x27]--[\w-]+["\x27]' | grep -oP '\-\-[\w-]+'
+        # parse_opts style: "bool:var:--flag" or "val:var:--flag|--alias" or "num:var:--flag"
+        # Extract flags from parse_opts spec strings (type:var:--flag format)
+        echo "$all_body" | grep -oP '"(?:bool|val|num|arr|passval):[^"]*"' \
+            | grep -oP '(?<=:)--[\w-]+(?=["| ])' || true
+        echo "$all_body" | grep -oP '"(?:bool|val|num|arr|passval):[^"]*"' \
+            | grep -oP '(?<=:)--[\w-]+"' | tr -d '"' || true
+    } | grep -v '^--_' | grep -v '^--positional$' | sort -u
 }
 
 # Extract flags from help for a specific command section.
