@@ -430,10 +430,12 @@
         "docs/CONFIGURATION.md"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "readyForSprint": true,
+      "status": "done",
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "ACs are clear. Source files (README.md Configuration + Flag Reference, CLAUDE.md config precedence, .aishore/config.yaml) are all in-repo. Good scope — moves the Flag Reference out of README.md as a side effect. No blockers."
+      "groomingNotes": "ACs are clear. Source files (README.md Configuration + Flag Reference, CLAUDE.md config precedence, .aishore/config.yaml) are all in-repo. Good scope — moves the Flag Reference out of README.md as a side effect. No blockers.",
+      "passes": true,
+      "completedAt": "2026-03-20T17:35:07-07:00"
     },
     {
       "id": "FEAT-017",
