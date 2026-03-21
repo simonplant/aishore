@@ -3216,8 +3216,10 @@ enforce_groom_limits() {
         # jq extracts new items (not in snapshot) with their priority
         local new_ids_with_prio
         new_ids_with_prio=$(jq -r --slurpfile snap "$snap_file" '
+            {"must":0,"should":1,"could":2,"future":3} as $rank |
             ($snap[0].items | map(.id)) as $old |
             [.items[] | select(.id as $id | $old | index($id) | not)] |
+            sort_by($rank[.priority // "could"] // 2) |
             .[] | "\(.id) \(.priority // "could")"
         ' "$live_file" 2>/dev/null || true)
         [[ -z "$new_ids_with_prio" ]] && return 0

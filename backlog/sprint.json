@@ -1,29 +1,30 @@
 {
-  "sprintId": "sprint-1774119668",
-  "startedAt": "2026-03-21T12:01:08-07:00",
+  "sprintId": "sprint-1774120508",
+  "startedAt": "2026-03-21T12:15:08-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-105",
-    "title": "backlog show does not display scope field — scope globs invisible to users",
-    "intent": "All user-set item fields must be visible via backlog show; scope globs affect sprint behavior and must be surfaced",
-    "description": "",
+    "id": "BUG-108",
+    "title": "enforce_groom_limits removes new items in file order — high-priority items after cap fills get discarded",
+    "intent": "When the groom cap is reached, the highest-priority new items must be kept and the lowest-priority ones removed, so a must item is never discarded to make room for a should item.",
+    "description": "enforce_groom_limits processes new items in the order they appear in the JSON file. If the grooming agent adds 12 items (cap=10) and the last 2 happen to be 'must' while earlier items are 'should', the 'must' items are removed because the cap was already filled. The cap enforcement should sort new items by priority rank and remove the lowest-priority ones when the limit is exceeded.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Locate cmd_backlog_show jq rendering block (lines ~4437-4458) — confirm .scope is absent from the output",
-      "After the acceptanceCriteria section, add conditional scope rendering: if .scope is non-empty, print 'Scope:' header followed by each glob on its own indented line",
-      "Match the formatting style of existing sections (blank line separator, label + content)",
+      "In enforce_groom_limits, after collecting new_ids_with_prio, sort the list by priority rank (must=0, should=1, could=2, future=3) before applying the max_items cap",
+      "Keep the priority-threshold check first (remove items below min_priority regardless), then apply the sorted cap so high-priority items are always preferred",
+      "Test: add 12 items where items 11-12 are 'must' and items 1-10 are 'should' — confirm 'must' items are kept and 2 'should' items are removed",
       "Run shellcheck — confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "aishore backlog show <ID> for an item with scope=[\"src/**\"] displays a 'Scope:' section with 'src/**' listed",
-      "aishore backlog show <ID> for an item with no scope set shows no Scope section",
-      "shellcheck reports no new warnings"
+      "When cap is exceeded, must items are always kept over should items regardless of insertion order",
+      "Priority threshold still rejects items below GROOM_MIN_PRIORITY",
+      "Existing items (in snapshot) are never removed",
+      "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T12:01:08-07:00",
+    "startedAt": "2026-03-21T12:15:08-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T12:03:29-07:00"
+    "completedAt": "2026-03-21T12:23:10-07:00"
   },
-  "completedAt": "2026-03-21T12:03:29-07:00",
+  "completedAt": "2026-03-21T12:23:10-07:00",
   "attempts": 1
 }

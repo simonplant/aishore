@@ -2005,7 +2005,7 @@
       "title": "Trim verbose defensive coding across all functions",
       "intent": "Error handling is terse and consistent. Redundant null guards, verbose suggestions, unnecessary fallbacks, single-use variables, and redundant return 0 statements are removed. Saves ~200 lines spread across the entire script.",
       "description": "Across 82 functions, the script has accumulated verbose patterns: (1) jq calls with 2>/dev/null || true on caller-guaranteed input. (2) Error messages with full command examples belonging in help text. (3) Existence checks on files just created or caller-validated. (4) Multi-line error blocks where single log_error suffices. (5) ~5 redundant return 0 at end of functions. (6) Per-item dual jq calls in enforce_groom_limits and mark_complete that can be combined into single calls. (7) Variables computed and used exactly once that should be inlined. (8) cmd_diagnose has 6 separate jq -r calls on the same file — consolidate to one.",
-      "priority": "should",
+      "priority": "could",
       "category": null,
       "steps": [
         "Remove 2>/dev/null from jq calls where input JSON was constructed in the same function",
@@ -2831,7 +2831,7 @@
       "title": "auto silently skips items with missing or too-short intent — no feedback to user",
       "intent": "When auto-pick bypasses items due to missing or insufficient intent, a warning must be logged identifying each skipped item by ID and stating the reason, so users can fix their backlog.",
       "description": "pick_item silently skips items where intent is absent or under 20 characters. In an auto session with multiple unready items, the user sees no items processed and no explanation. This makes the intent gate invisible: users don't know why their backlog isn't draining. A targeted log_warn call when each item is bypassed for intent reasons closes the feedback loop.",
-      "priority": "should",
+      "priority": "must",
       "category": null,
       "steps": [
         "In pick_item, when an item is rejected due to missing or too-short intent, emit: log_warn \"Skipping $id: intent missing or too short (9 chars, need >=20)\"",
@@ -2907,7 +2907,8 @@
       "readyForSprint": false,
       "groomingNotes": "Groomed by tech-lead agent: confirmed real bug via direct code inspection; steps and AC are precise and implementable",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T11:55:48-07:00"
+      "completedAt": "2026-03-21T11:55:48-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-102",
@@ -2935,7 +2936,8 @@
       "readyForSprint": false,
       "groomingNotes": "Groomed by tech-lead agent: confirmed real bug via direct code inspection; steps and AC are precise and implementable",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T11:57:47-07:00"
+      "completedAt": "2026-03-21T11:57:47-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-103",
@@ -2964,7 +2966,8 @@
       "readyForSprint": false,
       "groomingNotes": "Escalating to must: non-atomic writes to the live backlog file are a data corruption risk. If jq or sed exits non-zero mid-write, the backlog is left truncated or partially written. The backlog is the single source of truth for all work — corrupting it silently during a groom session is a user-hostile failure mode. The fix pattern (write to temp, mv atomically) is already established by update_item; this is bringing two outliers into conformance. No scope increase — same functions, same behavior on success.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T11:53:43-07:00"
+      "completedAt": "2026-03-21T11:53:43-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-104",
@@ -2995,7 +2998,8 @@
       "readyForSprint": false,
       "groomingNotes": "Groomed by tech-lead agent: confirmed real bug via direct code inspection; steps and AC are precise and implementable",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T12:01:07-07:00"
+      "completedAt": "2026-03-21T12:01:07-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-105",
@@ -3022,7 +3026,8 @@
       "readyForSprint": false,
       "groomingNotes": "Groomed by tech-lead agent: confirmed real bug via direct code inspection; steps and AC are precise and implementable",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T12:03:29-07:00"
+      "completedAt": "2026-03-21T12:03:29-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-106",
@@ -3048,8 +3053,91 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
+      "readyForSprint": true,
       "groomingNotes": "Core workflow gap: the most common pre-sprint question is 'what can I run right now?' Currently answered only by scanning the READY column. A --ready flag gives a one-command answer. Implementation is additive and low-risk: follows the established --status/--type filter pattern. --no-ready is the natural complement for grooming triage ('what still needs grooming?'). No deps.",
+      "groomedAt": "2026-03-21",
+      "groomedNotes": null
+    },
+    {
+      "id": "BUG-107",
+      "title": "status recent sprints section omits titles — archive stores them but display doesn't show them",
+      "intent": "The 'status' command recent sprints section must show item titles alongside date/ID/status so users can read what was done without cross-referencing the archive.",
+      "description": "After BUG-081 fixed archive to store .title in sprints.jsonl, the _status_output function at line 3536 still only displays date, itemId, and status. The title field is available and should be included for readability. Users can't tell what was done from IDs alone without running 'backlog history'.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In _status_output, update the jq expression at line 3536 from '\\(.date) \\(.itemId) \\(.status)' to '\\(.date) \\(.itemId) \\(.status) \\(.title // \"-\")'",
+        "Ensure the output lines are still readable — consider aligning columns or truncating long titles to ~40 chars",
+        "Run shellcheck — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "aishore status recent sprints section shows item title for each sprint entry",
+        "sprints with no stored title (pre-BUG-081 archive entries) show '-' not an error",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Simple one-line jq update. titles stored since BUG-081. Low risk, additive. No deps.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-108",
+      "title": "enforce_groom_limits removes new items in file order — high-priority items after cap fills get discarded",
+      "intent": "When the groom cap is reached, the highest-priority new items must be kept and the lowest-priority ones removed, so a must item is never discarded to make room for a should item.",
+      "description": "enforce_groom_limits processes new items in the order they appear in the JSON file. If the grooming agent adds 12 items (cap=10) and the last 2 happen to be 'must' while earlier items are 'should', the 'must' items are removed because the cap was already filled. The cap enforcement should sort new items by priority rank and remove the lowest-priority ones when the limit is exceeded.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "In enforce_groom_limits, after collecting new_ids_with_prio, sort the list by priority rank (must=0, should=1, could=2, future=3) before applying the max_items cap",
+        "Keep the priority-threshold check first (remove items below min_priority regardless), then apply the sorted cap so high-priority items are always preferred",
+        "Test: add 12 items where items 11-12 are 'must' and items 1-10 are 'should' — confirm 'must' items are kept and 2 'should' items are removed",
+        "Run shellcheck — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "When cap is exceeded, must items are always kept over should items regardless of insertion order",
+        "Priority threshold still rejects items below GROOM_MIN_PRIORITY",
+        "Existing items (in snapshot) are never removed",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomingNotes": "Elevated to must: silently discarding must-priority items due to insertion order is a data integrity defect. A must item that vanishes after grooming with no log message is worse than the cap enforcement not existing at all. Priority-aware cap enforcement is the only correct behavior.",
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T12:23:10-07:00"
+    },
+    {
+      "id": "BUG-109",
+      "title": "backlog list has no --priority filter — users cannot quickly see items by priority tier",
+      "intent": "Users must be able to run 'backlog list --priority must' and see only must-priority items, completing the filter set alongside --status, --type, and --ready.",
+      "description": "cmd_backlog_list supports --status, --type, and --ready filters but has no --priority flag. The most common pre-sprint question for scoped runs is 'what are all my must items?' Currently answered only by scanning the PRI column. A --priority filter would complete the filter set and mirror the auto p0/p1/p2 priority model.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In cmd_backlog_list(), add local filter_priority='' before the flag loop; add 'val:filter_priority:--priority' to the parse_opts call",
+        "Add validate_priority call: if [[ -n \"$filter_priority\" ]]; then validate_priority \"$filter_priority\" || return 1; fi",
+        "Add priority filter to jq_filter: if [[ -n \"$filter_priority\" ]]; then jq_filter=\"$jq_filter | select((.priority // \\\"should\\\") == \\\"$filter_priority\\\")\"; fi",
+        "Add --priority to the usage message and help text alongside --status and --type",
+        "Run shellcheck — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "aishore backlog list --priority must shows only must-priority items",
+        "aishore backlog list --priority should shows only should-priority items",
+        "aishore backlog list with no --priority still shows all items (backwards compatible)",
+        "aishore backlog list --priority invalid-value exits non-zero with an error message",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Additive filter, same pattern as --status and --type. validate_priority already exists. No deps.",
       "groomedAt": "2026-03-21"
     }
   ]
