@@ -4508,39 +4508,11 @@ validate_arg() {
 }
 
 cmd_backlog_history() {
-    local since="" failed_only=false limit=0
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --since)
-                [[ -z "${2:-}" ]] && { log_error "Usage: backlog history [--since YYYY-MM-DD] [--failed] [--limit N]"; return 1; }
-                since="$2"
-                if ! [[ "$since" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-                    log_error "Invalid date format: $since (expected YYYY-MM-DD)"
-                    return 1
-                fi
-                shift 2
-                ;;
-            --limit)
-                validate_arg "$1" "${2:-}" || return 1
-                limit="$2"
-                if ! [[ "$limit" =~ ^[1-9][0-9]*$ ]]; then
-                    log_error "Invalid limit: $limit (must be a positive integer)"
-                    return 1
-                fi
-                shift 2
-                ;;
-            --failed)
-                failed_only=true
-                shift
-                ;;
-            *)
-                log_error "Unknown option: $1"
-                echo "Usage: backlog history [--since YYYY-MM-DD] [--failed] [--limit N]" >&2
-                return 1
-                ;;
-        esac
-    done
+    if [[ $# -gt 0 ]]; then
+        log_error "Unknown option: $1"
+        echo "Usage: backlog history" >&2
+        return 1
+    fi
 
     local sprints_file="$ARCHIVE_DIR/sprints.jsonl"
     if [[ ! -f "$sprints_file" || ! -s "$sprints_file" ]]; then
@@ -4548,49 +4520,14 @@ cmd_backlog_history() {
         return 0
     fi
 
-    local jq_filter='.'
-    if [[ -n "$since" ]]; then
-        jq_filter="select(.date >= \"$since\")"
-    fi
-    if [[ "$failed_only" == "true" ]]; then
-        jq_filter="$jq_filter | select(.status != \"complete\")"
-    fi
-
-    local results
-    results=$(jq -c "$jq_filter" "$sprints_file" 2>/dev/null) || true
-
-    if [[ -z "$results" ]]; then
-        echo "No matching sprint history entries"
-        return 0
-    fi
-
-    # Build title lookup map from active backlogs
-    declare -A title_map
-    _load_titles() {
-        local bf="$1"
-        [[ -f "$BACKLOG_DIR/$bf" ]] || return 0
-        while IFS=$'\t' read -r _id _title; do
-            title_map["$_id"]="$_title"
-        done < <(jq -r '.items[] | [.id, .title] | @tsv' "$BACKLOG_DIR/$bf" 2>/dev/null || true)
-    }
-    map_backlog_files _load_titles
-
-    # Print table header
     printf "%-12s %-12s %-10s %-10s %s\n" "ID" "DATE" "STATUS" "DURATION" "TITLE"
     printf "%-12s %-12s %-10s %-10s %s\n" "──────────" "──────────" "────────" "────────" "─────────────────────"
 
-    local formatted
-    formatted=$(echo "$results" | jq -r '[.itemId // "-", .date // "-", .status // "-", (if (.duration // 0) > 0 then (if .duration >= 60 then "\(.duration / 60 | floor)m \(.duration % 60)s" else "\(.duration)s" end) else "-" end)] | @tsv' | \
-        while IFS=$'\t' read -r id date status duration; do
-            local title="${title_map[$id]:-"-"}"
+    jq -r '[.itemId // "-", .date // "-", .status // "-", (if (.duration // 0) > 0 then (if .duration >= 60 then "\(.duration / 60 | floor)m \(.duration % 60)s" else "\(.duration)s" end) else "-" end), .title // "-"] | @tsv' "$sprints_file" | \
+        tail -n 20 | \
+        while IFS=$'\t' read -r id date status duration title; do
             printf "%-12s %-12s %-10s %-10s %s\n" "$id" "$date" "$status" "$duration" "$title"
-        done)
-
-    if [[ "$limit" -gt 0 ]]; then
-        echo "$formatted" | tail -n "$limit"
-    else
-        echo "$formatted"
-    fi
+        done
 }
 
 cmd_backlog_rm() {
