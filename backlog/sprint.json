@@ -1,30 +1,31 @@
 {
-  "sprintId": "sprint-1774059421",
-  "startedAt": "2026-03-20T19:17:01-07:00",
+  "sprintId": "sprint-1774059622",
+  "startedAt": "2026-03-20T19:20:22-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-043",
-    "title": "Decompose _run_retry_loop() into focused sub-functions",
-    "intent": "Break the 167-line _run_retry_loop() into 3-4 focused functions (run_preflight, run_developer_cycle, run_validation_cycle) so each does one thing and is independently testable",
+    "id": "BUG-044",
+    "title": "Decompose cmd_run() into focused sub-functions",
+    "intent": "Break the 477-line cmd_run() into 5-6 focused functions separating arg parsing, git operations, sprint loop, auto-groom logic, and summary reporting",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Extract run_preflight_validation() — baseline validation before developer runs",
-      "Extract run_developer_cycle() — developer agent invocation with fix command",
-      "Extract run_validation_cycle() — scope check, validation cmd, AC verify, validator agent",
-      "Refactor _run_retry_loop to orchestrate the extracted functions",
+      "Extract cmd_run_parse_args() for option parsing",
+      "Extract setup_sprint_environment() for lock, stash, worktree, config loading",
+      "Extract run_sprint_loop() for the core pick-implement-validate-merge cycle",
+      "Extract print_sprint_summary() for end-of-run reporting",
+      "Refactor cmd_run to orchestrate the extracted functions",
       "Verify sprint execution still works end-to-end"
     ],
     "acceptanceCriteria": [
-      "_run_retry_loop is under 60 lines",
+      "cmd_run is under 80 lines",
       "Each extracted function has a single clear responsibility",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T19:17:01-07:00",
+    "startedAt": "2026-03-20T19:20:22-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T19:20:20-07:00"
+    "completedAt": "2026-03-20T19:27:20-07:00"
   },
-  "completedAt": "2026-03-20T19:20:20-07:00",
+  "completedAt": "2026-03-20T19:27:20-07:00",
   "attempts": 1
 }
