@@ -1,34 +1,34 @@
 {
-  "sprintId": "sprint-1774067200",
-  "startedAt": "2026-03-20T21:26:40-07:00",
+  "sprintId": "sprint-1774067750",
+  "startedAt": "2026-03-20T21:35:50-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-074",
-    "title": "Refactor cmd_metrics to compute once, render twice",
-    "intent": "Metrics are computed by one jq pass and rendered by two output modes. The 6 duplicated jq computations between JSON and human branches are eliminated. Saves ~12 lines and 6 jq forks.",
-    "description": "cmd_metrics (114 lines) computes avg_attempts, items_per_day, by_priority, by_category, and recent-10 trends twice: once in a big jq -s block for --json output, and again as 6 separate jq -s calls for human output. Extract _compute_metrics_json that always produces the JSON object. --json mode emits it directly. Human mode extracts fields from the pre-computed JSON with jq -r.",
+    "id": "BUG-075",
+    "title": "Collapse sub-shell jq extractions in create_sprint and mark_complete",
+    "intent": "Sprint state functions pass item JSON as a single --argjson argument instead of forking 5-7 sub-shells to extract individual fields. Saves ~13 lines and 7 process forks.",
+    "description": "create_sprint (44 lines) calls echo item_json | jq 5 separate times to extract intent, description, steps, AC, scope — then passes each as a --argjson to jq -n. Pass item_json as a single --argjson item and reference fields inline. mark_complete (78 lines) calls jq twice to get item_priority and item_category separately from the same backlog file — combine into one call.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Extract _compute_metrics_json function that returns the full metrics JSON object",
-      "cmd_metrics --json: call _compute_metrics_json and emit directly",
-      "cmd_metrics human mode: call _compute_metrics_json, then render fields with jq -r extraction",
-      "Remove the 6 separate jq -s calls from the human branch",
-      "Verify: both --json and human output are identical to before"
+      "Refactor create_sprint: pass item_json as --argjson item, reference .intent/.steps/etc inline in the jq expression",
+      "Remove the 5 sub-shell extractions in create_sprint",
+      "Refactor mark_complete: combine item_priority and item_category into one jq call returning both",
+      "Verify: sprint.json and sprints.jsonl archive records are identical to before"
     ],
     "acceptanceCriteria": [
-      "A _compute_metrics_json function exists",
-      "No jq -s call appears in the human-output branch of cmd_metrics",
-      "cmd_metrics --json output is identical to before",
-      "cmd_metrics human output is identical to before",
+      "create_sprint has zero echo item_json | jq sub-shell calls",
+      "create_sprint uses --argjson item to pass the full item",
+      "mark_complete uses one jq call for priority+category, not two",
+      "sprint.json structure is unchanged",
+      "sprints.jsonl archive records are unchanged",
       "shellcheck passes"
     ],
     "scope": [
       ".aishore/**"
     ],
-    "startedAt": "2026-03-20T21:26:40-07:00",
+    "startedAt": "2026-03-20T21:35:50-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T21:35:48-07:00"
+    "completedAt": "2026-03-20T21:38:54-07:00"
   },
-  "completedAt": "2026-03-20T21:35:48-07:00",
+  "completedAt": "2026-03-20T21:38:54-07:00",
   "attempts": 1
 }
