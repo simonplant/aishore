@@ -1,29 +1,29 @@
 {
-  "sprintId": "sprint-1774110082",
-  "startedAt": "2026-03-21T09:21:22-07:00",
+  "sprintId": "sprint-1774111175",
+  "startedAt": "2026-03-21T09:39:35-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-086",
-    "title": "mark_complete sprint diff stats use HEAD~1..HEAD, missing changes from multi-commit sprints",
-    "intent": "Sprint archive stats (filesChanged, linesAdded, linesRemoved) accurately reflect all changes made during the sprint, not just the final commit.",
-    "description": "In mark_complete(), git diff --shortstat HEAD~1 HEAD is used to compute sprint stats. This only captures the last commit's diff. If a developer makes multiple commits during a sprint (common with maturity protocol), the earlier commits' changes are excluded. The archive record then shows inaccurate metrics. Fix: use git diff --shortstat $AISHORE_BASE_BRANCH HEAD to capture all sprint changes since branching.",
+    "id": "BUG-088",
+    "title": "head -n -1 in protect_items_from_groom is not portable on macOS BSD head",
+    "intent": "protect_items_from_groom must work correctly on macOS — replace GNU-only head -n -1 with a portable alternative",
+    "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In mark_complete(), replace 'git diff --shortstat HEAD~1 HEAD' with 'git diff --shortstat \"$AISHORE_BASE_BRANCH\" HEAD'",
-      "Guard against empty AISHORE_BASE_BRANCH: fall back to HEAD~1 HEAD if it is unset",
-      "Verify with a sprint that produces multiple developer commits: all file changes appear in the archive record",
-      "shellcheck passes"
+      "Find the head -n -1 call in protect_items_from_groom (line ~2990) used to strip the last line of jq output",
+      "Replace head -n -1 with a portable alternative such as: awk 'NR>1{print prev}{prev=$0}' or sed '$d'",
+      "Verify the fix correctly strips only the last line (the counts line) while preserving the JSON body",
+      "Run shellcheck to confirm no new issues"
     ],
     "acceptanceCriteria": [
-      "Archive record filesChanged/linesAdded/linesRemoved reflects total diff between base branch and feature branch HEAD, not just the last commit",
-      "Falls back gracefully (stats = 0) if AISHORE_BASE_BRANCH is unset or git diff fails",
-      "shellcheck passes"
+      "protect_items_from_groom produces correct output on both Linux (GNU head) and macOS (BSD head)",
+      "The counts line is correctly parsed and the JSON body is correctly written to the live backlog file",
+      "shellcheck reports no new issues"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T09:21:22-07:00",
+    "startedAt": "2026-03-21T09:39:35-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T09:23:16-07:00"
+    "completedAt": "2026-03-21T09:41:38-07:00"
   },
-  "completedAt": "2026-03-21T09:23:16-07:00",
+  "completedAt": "2026-03-21T09:41:38-07:00",
   "attempts": 1
 }

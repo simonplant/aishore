@@ -2987,7 +2987,7 @@ protect_items_from_groom() {
         # Last line is "del mod" counts; everything before is the protected JSON
         local counts
         counts=$(tail -n1 <<< "$output" | tr -d '"')
-        head -n -1 <<< "$output" > "$live_file"
+        sed '$d' <<< "$output" > "$live_file"
         local d m; read -r d m <<< "$counts"
         deleted_restored=$((deleted_restored + d)); restored=$((restored + m))
     }

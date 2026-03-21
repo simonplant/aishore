@@ -2424,7 +2424,8 @@
       "readyForSprint": false,
       "groomingNotes": "Clear bug: output_file is always non-empty in cmd_review, so architect always gets Edit/Write. Steps include fixing in run_agent or cmd_review. Confirmed by code inspection at run_agent line 1507-1512.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T09:21:21-07:00"
+      "completedAt": "2026-03-21T09:21:21-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-086",
@@ -2451,7 +2452,8 @@
       "readyForSprint": false,
       "groomingNotes": "Mark_complete at line 1156 uses HEAD~1 HEAD; AISHORE_BASE_BRANCH is available as global. Single-line fix with fallback guard.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T09:23:16-07:00"
+      "completedAt": "2026-03-21T09:23:16-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-080",
@@ -2476,8 +2478,113 @@
       "status": "todo",
       "passes": false,
       "readyForSprint": false,
-      "groomedAt": null,
+      "groomedAt": "2026-03-21",
       "groomedNotes": null
+    },
+    {
+      "id": "BUG-087",
+      "title": "refine refinement context lost — retry_extra_prompt cleared by _run_retry_loop",
+      "intent": "Ensure developer agent on a --refine pass receives the refinement hint so it pays attention to the updated spec",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In _run_retry_loop, do not reset retry_extra_prompt to empty — separate retry history clearing from initial context",
+        "Introduce an initial_dev_context variable passed from the caller that is included in dev_extra_prompt regardless of attempt number",
+        "In _run_developer_cycle, include initial_dev_context in dev_extra_prompt on attempt 0 (not just retries)",
+        "Verify developer agent log shows refinement hint on the refinement pass"
+      ],
+      "acceptanceCriteria": [
+        "Developer on a --refine pass receives the refinement hint in its prompt",
+        "retry_extra_prompt retry history still works correctly (no regression)",
+        "shellcheck reports no new issues"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Confirmed: _run_retry_loop line 2319 resets retry_extra_prompt to empty, which overwrites the refinement hint set at line 2782. Developer on refinement pass gets no context. Fix: separate initial context from retry history clearing.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-088",
+      "title": "head -n -1 in protect_items_from_groom is not portable on macOS BSD head",
+      "intent": "protect_items_from_groom must work correctly on macOS — replace GNU-only head -n -1 with a portable alternative",
+      "description": "",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "Find the head -n -1 call in protect_items_from_groom (line ~2990) used to strip the last line of jq output",
+        "Replace head -n -1 with a portable alternative such as: awk 'NR>1{print prev}{prev=$0}' or sed '$d'",
+        "Verify the fix correctly strips only the last line (the counts line) while preserving the JSON body",
+        "Run shellcheck to confirm no new issues"
+      ],
+      "acceptanceCriteria": [
+        "protect_items_from_groom produces correct output on both Linux (GNU head) and macOS (BSD head)",
+        "The counts line is correctly parsed and the JSON body is correctly written to the live backlog file",
+        "shellcheck reports no new issues"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomingNotes": "Promoting to must: head -n -1 is GNU-only and protect_items_from_groom is silently broken for all macOS users. macOS is a primary development platform — this blocks grooming entirely on Mac. Must fix before v0.3.5.",
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T09:41:38-07:00"
+    },
+    {
+      "id": "BUG-089",
+      "title": "_handle_sprint_success leaves git on feature branch when mark_complete fails",
+      "intent": "Sprint loop must return to base branch after any failure in _handle_sprint_success so subsequent sprints branch from the correct base",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In _handle_sprint_success, when mark_complete fails (the else branch at line ~2386), switch back to the base branch before returning 0",
+        "Also clear AISHORE_FEATURE_BRANCH and delete the abandoned feature branch to avoid cleanup_exit confusion",
+        "Add a log_warning stating the feature branch was abandoned due to archival failure",
+        "Verify subsequent sprint iterations create branches off the correct base branch even after an archival failure"
+      ],
+      "acceptanceCriteria": [
+        "When mark_complete fails, the working directory is on base_branch after _handle_sprint_success returns",
+        "AISHORE_FEATURE_BRANCH is cleared so cleanup_exit does not attempt to delete it again",
+        "shellcheck reports no new issues"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Confirmed: when mark_complete fails at line 1179, _handle_sprint_success returns 0 early without switching back to base_branch. Next sprint branches off the failed feature branch. Edge case but correctness-critical.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-090",
+      "title": "total_attempts undercounted in --refine path — second _run_retry_loop resets counter",
+      "intent": "Archive metrics must accurately record total developer attempts including all retries before spec refinement",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Before the second _run_retry_loop call in the --refine path (line ~2784), save the current total_attempts as prior_attempts",
+        "After the refinement _run_retry_loop completes, set total_attempts = prior_attempts + total_attempts (instead of prior_attempts + 1)",
+        "This correctly counts: N failed attempts in first loop + M attempts in refinement loop",
+        "Verify archive sprints.jsonl records the correct attempts count for --refine sprints"
+      ],
+      "acceptanceCriteria": [
+        "When --refine triggers and the refinement pass succeeds, total_attempts equals first-loop attempts + refinement-loop attempts",
+        "No change to behavior when --refine is not used",
+        "shellcheck reports no new issues"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Confirmed: second _run_retry_loop call at line 2784 sets total_attempts = attempt+1 = 1, then line 2788 adds 1 = 2. First loop's attempts (e.g., 3 with --retries 2) are lost. Archive metrics show 2 instead of 4.",
+      "groomedAt": "2026-03-21"
     }
   ]
 }
