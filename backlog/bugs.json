@@ -2737,7 +2737,8 @@
       "readyForSprint": false,
       "groomingNotes": "One-line fix confirmed: watch loop exit condition missing 'completed' state. High user value — without this fix, users must ctrl+C after every sprint when using --watch. Priority should is correct.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T11:15:51-07:00"
+      "completedAt": "2026-03-21T11:15:51-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-097",
@@ -2764,7 +2765,8 @@
       "readyForSprint": false,
       "groomingNotes": "Simple field name typo causing silent data loss. Groomed notes are written by groom agents and are the only place we capture why an item was prioritized a certain way. Losing them silently undermines the grooming workflow. Priority should is correct.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T11:17:33-07:00"
+      "completedAt": "2026-03-21T11:17:33-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-098",
@@ -2792,7 +2794,8 @@
       "readyForSprint": false,
       "groomingNotes": "Data integrity bug in worktree mode — completed sprints vanish from history. Any user using worktree isolation would lose all metrics and history. The fix (capture archive entry before cleanup) is well-specified. Priority should is correct; could argue must since it's silent data loss.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T11:20:24-07:00"
+      "completedAt": "2026-03-21T11:20:24-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-099",
@@ -2820,7 +2823,8 @@
       "readyForSprint": false,
       "groomingNotes": "Behavioral correctness bug: auto --no-merge sessions waste cycles and could cause conflicts by re-attempting already-completed items. Directly impacts users running autonomous sessions without merge. The session-scoped skip-list approach (paralleling FAILED_IDS) is the right fix. Priority should is correct.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T11:24:43-07:00"
+      "completedAt": "2026-03-21T11:24:43-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-100",
@@ -2848,7 +2852,8 @@
       "groomedAt": "2026-03-21",
       "lastFailReason": "Validator agent rejected implementation",
       "lastFailAt": "2026-03-21T11:27:51-07:00",
-      "failCount": 1
+      "failCount": 1,
+      "groomedNotes": null
     },
     {
       "id": "BUG-080",
@@ -2876,6 +2881,172 @@
       "groomedAt": "2026-03-21",
       "groomedNotes": null,
       "completedAt": "2026-03-21T11:31:15-07:00"
+    },
+    {
+      "id": "BUG-101",
+      "title": "GROOM_MONITOR=true run_agent sets global shell var — bleeds into developer agents",
+      "intent": "GROOM_MONITOR must not persist beyond groom agents; developer and validator must run with GROOM_MONITOR unset",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Understand that VAR=val shell_function sets VAR globally in current bash shell (unlike external commands)",
+        "Confirm: after auto-groom in run_sprint_loop (lines 2804/2806), GROOM_MONITOR=true persists into subsequent run_agent calls for developer and validator",
+        "Fix by adding an explicit reset after each groom run_agent call: add GROOM_MONITOR= on the line immediately after each GROOM_MONITOR=true run_agent invocation (lines 2804, 2806, 3271)",
+        "Confirm run_groom_flow (line 3271) has the same issue and apply the same fix there",
+        "Run shellcheck on .aishore/aishore — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "After auto-groom runs in a multi-sprint session, developer and validator agent log output contains no backlog monitoring progress messages (no 'updated — N items' lines from _check_groom_progress)",
+        "shellcheck reports no new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Groomed by tech-lead agent: confirmed real bug via direct code inspection; steps and AC are precise and implementable",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-102",
+      "title": "check_scope_violations embeds literal \\n in developer retry prompt — file list garbled",
+      "intent": "Developer retry_extra_prompt must contain real newlines in the scope violations file list, not literal backslash-n sequences",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Locate violations string accumulation in check_scope_violations: violations=\"${violations}  - $file\\n\" (literal backslash-n)",
+        "Confirm that scope_report=$(check_scope_violations) captures this garbled output in _run_validation_cycle",
+        "Confirm that scope_report is embedded directly into retry_extra_prompt string without printf %b interpretation",
+        "Fix: change violations accumulation from literal \\n to real newline using violations+=\"  - $file\"$'\\n'",
+        "Verify the non-strict path in check_scope_violations also benefits (stdout to terminal now displays correctly)",
+        "Run shellcheck — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "In strict scope mode with 2+ violated files, the developer retry_extra_prompt contains each violated filename on its own separate line (no literal \\n sequences visible)",
+        "shellcheck reports no new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Groomed by tech-lead agent: confirmed real bug via direct code inspection; steps and AC are precise and implementable",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-103",
+      "title": "protect_items_from_groom and enforce_groom_limits write directly to live backlog — no atomic swap",
+      "intent": "All backlog file writes in groom protection and limit enforcement must be atomic; direct truncating writes must be replaced with temp-file-then-mv",
+      "description": "",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "Locate direct write in protect_items_from_groom: sed '$d' <<< \"$output\" > \"$live_file\" (line ~3172)",
+        "Locate direct write in enforce_groom_limits: printf '%s\\n' \"$tmp\" > \"$live_file\" (line ~3238)",
+        "Compare with update_item which correctly uses: jq ... > tmpfile && mv tmpfile live_file",
+        "Fix protect_items_from_groom: write to a temp file via ensure_tmpdir, then mv atomically to live_file; ensure sed failure leaves live_file intact",
+        "Fix enforce_groom_limits: same pattern — write jq output to temp file, mv to live_file; ensure jq failure leaves live_file intact",
+        "Run shellcheck — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "If jq or sed returns non-zero in either function, the live backlog file is unchanged (not truncated or partially written)",
+        "Normal groom flow still completes successfully: items are protected and limits enforced correctly",
+        "shellcheck reports no new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomingNotes": "Escalating to must: non-atomic writes to the live backlog file are a data corruption risk. If jq or sed exits non-zero mid-write, the backlog is left truncated or partially written. The backlog is the single source of truth for all work — corrupting it silently during a groom session is a user-hostile failure mode. The fix pattern (write to temp, mv atomically) is already established by update_item; this is bringing two outliers into conformance. No scope increase — same functions, same behavior on success.",
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T11:53:43-07:00"
+    },
+    {
+      "id": "BUG-104",
+      "title": "backlog history hardcoded tail -n 20 — no way to see more than 20 entries",
+      "intent": "Users must be able to control how many history entries are shown; 20 is too low for projects with many completed items",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Locate cmd_backlog_history in aishore: tail -n 20 at end of jq pipeline (hardcoded)",
+        "Note that cmd_backlog_history currently rejects all arguments with 'Unknown option' error",
+        "Add --limit N flag (default 20) and --all flag to cmd_backlog_history",
+        "Use the parsed limit value instead of hardcoded 20 in the tail command; --all omits tail entirely",
+        "Update usage error message in the function to list the new flags",
+        "Run shellcheck — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "aishore backlog history shows 20 entries by default (backwards compatible)",
+        "aishore backlog history --limit 50 shows up to 50 entries",
+        "aishore backlog history --all shows all entries in the archive",
+        "aishore backlog history --unknown-flag prints error and exits non-zero",
+        "shellcheck reports no new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Groomed by tech-lead agent: confirmed real bug via direct code inspection; steps and AC are precise and implementable",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-105",
+      "title": "backlog show does not display scope field — scope globs invisible to users",
+      "intent": "All user-set item fields must be visible via backlog show; scope globs affect sprint behavior and must be surfaced",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Locate cmd_backlog_show jq rendering block (lines ~4437-4458) — confirm .scope is absent from the output",
+        "After the acceptanceCriteria section, add conditional scope rendering: if .scope is non-empty, print 'Scope:' header followed by each glob on its own indented line",
+        "Match the formatting style of existing sections (blank line separator, label + content)",
+        "Run shellcheck — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "aishore backlog show <ID> for an item with scope=[\"src/**\"] displays a 'Scope:' section with 'src/**' listed",
+        "aishore backlog show <ID> for an item with no scope set shows no Scope section",
+        "shellcheck reports no new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Groomed by tech-lead agent: confirmed real bug via direct code inspection; steps and AC are precise and implementable",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-106",
+      "title": "backlog list has no --ready filter — users cannot quickly see sprint candidates",
+      "intent": "Users must be able to run 'backlog list --ready' and see only items that pass readiness gates, so they can decide what to run next without scanning the full table.",
+      "description": "cmd_backlog_list() supports --status, --type, and --priority filters but has no --ready flag. Users preparing for a sprint must scan the full READY column to find actionable items. A --ready flag would filter the output to only items where readyForSprint is true, consistent with the existing filter pattern. The complementary --no-ready flag (items where readyForSprint is false) is useful for grooming triage.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In cmd_backlog_list(), add local ready_filter='' before the flag loop; add --ready case setting ready_filter=true and --no-ready setting ready_filter=false",
+        "After the existing --status and --type filter conditions, add ready_filter to the jq select expression: if ready_filter is set, add 'and (.readyForSprint == (env.READY_FILTER == \"true\"))' using --arg",
+        "Pass the ready_filter value as a jq --arg or env var into the jq pipeline",
+        "Add --ready and --no-ready to the usage message and cmd_help output",
+        "Run shellcheck — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "aishore backlog list --ready shows only items where readyForSprint is true",
+        "aishore backlog list --no-ready shows only items where readyForSprint is false",
+        "aishore backlog list with no ready filter still shows all items (backwards compatible)",
+        "shellcheck reports no new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false,
+      "groomingNotes": "Core workflow gap: the most common pre-sprint question is 'what can I run right now?' Currently answered only by scanning the READY column. A --ready flag gives a one-command answer. Implementation is additive and low-risk: follows the established --status/--type filter pattern. --no-ready is the natural complement for grooming triage ('what still needs grooming?'). No deps.",
+      "groomedAt": "2026-03-21"
     }
   ]
 }

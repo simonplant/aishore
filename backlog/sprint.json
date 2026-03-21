@@ -1,29 +1,31 @@
 {
-  "sprintId": "sprint-1774117671",
-  "startedAt": "2026-03-21T11:27:51-07:00",
+  "sprintId": "sprint-1774119097",
+  "startedAt": "2026-03-21T11:51:37-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-080",
-    "title": "Consolidate 6 separate jq calls in cmd_diagnose into one",
-    "intent": "cmd_diagnose makes 6 separate jq -r calls on the same JSON file to extract individual fields. Combine into a single jq invocation to reduce forks and lines.",
+    "id": "BUG-103",
+    "title": "protect_items_from_groom and enforce_groom_limits write directly to live backlog — no atomic swap",
+    "intent": "All backlog file writes in groom protection and limit enforcement must be atomic; direct truncating writes must be replaced with temp-file-then-mv",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Replace the 6 individual jq -r calls in cmd_diagnose with a single jq call that extracts all fields at once",
-      "Verify diagnose output is unchanged"
+      "Locate direct write in protect_items_from_groom: sed '$d' <<< \"$output\" > \"$live_file\" (line ~3172)",
+      "Locate direct write in enforce_groom_limits: printf '%s\\n' \"$tmp\" > \"$live_file\" (line ~3238)",
+      "Compare with update_item which correctly uses: jq ... > tmpfile && mv tmpfile live_file",
+      "Fix protect_items_from_groom: write to a temp file via ensure_tmpdir, then mv atomically to live_file; ensure sed failure leaves live_file intact",
+      "Fix enforce_groom_limits: same pattern — write jq output to temp file, mv to live_file; ensure jq failure leaves live_file intact",
+      "Run shellcheck — confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "cmd_diagnose has at most 1 jq call to extract fields from the diagnostics file",
-      "Output format is unchanged",
-      "shellcheck passes"
+      "If jq or sed returns non-zero in either function, the live backlog file is unchanged (not truncated or partially written)",
+      "Normal groom flow still completes successfully: items are protected and limits enforced correctly",
+      "shellcheck reports no new warnings"
     ],
-    "scope": [
-      ".aishore/**"
-    ],
-    "startedAt": "2026-03-21T11:27:51-07:00",
+    "scope": [],
+    "startedAt": "2026-03-21T11:51:37-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T11:31:15-07:00"
+    "completedAt": "2026-03-21T11:53:43-07:00"
   },
-  "completedAt": "2026-03-21T11:31:15-07:00",
+  "completedAt": "2026-03-21T11:53:43-07:00",
   "attempts": 1
 }
