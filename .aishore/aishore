@@ -4788,14 +4788,14 @@ cmd_backlog_history() {
     printf "%-12s %-12s %-10s %-10s %s\n" "──────────" "──────────" "────────" "────────" "─────────────────────"
 
     if [[ "$all" == "true" ]]; then
-        jq -r '[.itemId // "-", .date // "-", .status // "-", (if (.duration // 0) > 0 then (if .duration >= 60 then "\(.duration / 60 | floor)m \(.duration % 60)s" else "\(.duration)s" end) else "-" end), .title // "-"] | @tsv' "$sprints_file" | \
+        jq -r '[.itemId // "-", .date // "-", .status // "-", (if (.duration // 0) > 0 then (if .duration >= 60 then "\(.duration / 60 | floor)m \(.duration % 60)s" else "\(.duration)s" end) else "-" end), ((.title // "-") | if length > 40 then .[:40] + "…" else . end)] | @tsv' "$sprints_file" | \
             reverse_lines | \
             while IFS=$'\t' read -r id date status duration title; do
                 printf "%-12s %-12s %-10s %-10s %s\n" "$id" "$date" "$status" "$duration" "$title"
             done
     else
         tail -n "$limit" "$sprints_file" | \
-            jq -r '[.itemId // "-", .date // "-", .status // "-", (if (.duration // 0) > 0 then (if .duration >= 60 then "\(.duration / 60 | floor)m \(.duration % 60)s" else "\(.duration)s" end) else "-" end), .title // "-"] | @tsv' | \
+            jq -r '[.itemId // "-", .date // "-", .status // "-", (if (.duration // 0) > 0 then (if .duration >= 60 then "\(.duration / 60 | floor)m \(.duration % 60)s" else "\(.duration)s" end) else "-" end), ((.title // "-") | if length > 40 then .[:40] + "…" else . end)] | @tsv' | \
             reverse_lines | \
             while IFS=$'\t' read -r id date status duration title; do
                 printf "%-12s %-12s %-10s %-10s %s\n" "$id" "$date" "$status" "$duration" "$title"
