@@ -2514,7 +2514,15 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
     if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
         # Preserve result.json for PR body / squash message
         [[ -f "$STATUS_DIR/result.json" ]] && cp "$STATUS_DIR/result.json" "$DATA_DIR/status/result.json"
+        # Capture archive entry before worktree is destroyed
+        local _wt_archive_entry
+        _wt_archive_entry=$(tail -1 "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null || true)
         _cleanup_worktree
+        # Append the captured archive entry to the main repo's sprints.jsonl
+        if [[ -n "$_wt_archive_entry" ]]; then
+            mkdir -p "$ARCHIVE_DIR"
+            printf '%s\n' "$_wt_archive_entry" >> "$ARCHIVE_DIR/sprints.jsonl"
+        fi
     fi
 
     # Merge feature branch back to base, push, and pull before next item

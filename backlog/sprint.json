@@ -1,29 +1,30 @@
 {
-  "sprintId": "sprint-1774116952",
-  "startedAt": "2026-03-21T11:15:52-07:00",
+  "sprintId": "sprint-1774117055",
+  "startedAt": "2026-03-21T11:17:35-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-097",
-    "title": "protect_items_from_groom uses wrong field name 'groomedNotes' — groomed notes silently discarded",
-    "intent": "Groomed notes written by groom agents must survive the protect_items_from_groom pass.",
+    "id": "BUG-098",
+    "title": "Worktree mode: sprint archive entries lost after worktree cleanup",
+    "intent": "Every completed sprint in worktree mode must appear in the main repo's sprints.jsonl exactly as in stash mode.",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Locate the jq merge in protect_items_from_groom (~line 3149): 'groomedNotes: (.groomedNotes // $orig[.id].groomedNotes)'",
-      "Confirm actual field name: backlog edit --groomed-notes writes '.groomingNotes', backlog show reads '.groomingNotes'",
-      "Change the field reference in protect_items_from_groom from 'groomedNotes' to 'groomingNotes' (both sides of the //)",
+      "In _handle_sprint_success, locate the worktree cleanup block (~line 2514)",
+      "Before calling _cleanup_worktree, capture the last line appended to the worktree's sprints.jsonl (the just-written archive entry)",
+      "After _cleanup_worktree restores ARCHIVE_DIR to the main repo path, append the captured entry to the main repo's sprints.jsonl",
+      "Create ARCHIVE_DIR if it doesn't exist (mkdir -p)",
       "Run shellcheck and verify no new warnings"
     ],
     "acceptanceCriteria": [
-      "After a groom session writes --groomed-notes, the notes appear in backlog show output after protect_items_from_groom runs",
-      "No spurious 'groomedNotes: null' field is added to items during protect run",
+      "After a sprint completes in worktree mode, the entry appears in backlog/archive/sprints.jsonl in the main repo",
+      "aishore metrics and aishore backlog history show the sprint in worktree mode",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T11:15:52-07:00",
+    "startedAt": "2026-03-21T11:17:35-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T11:17:33-07:00"
+    "completedAt": "2026-03-21T11:20:24-07:00"
   },
-  "completedAt": "2026-03-21T11:17:33-07:00",
+  "completedAt": "2026-03-21T11:20:24-07:00",
   "attempts": 1
 }

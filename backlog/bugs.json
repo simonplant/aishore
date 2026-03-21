@@ -2787,11 +2787,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Data integrity bug in worktree mode — completed sprints vanish from history. Any user using worktree isolation would lose all metrics and history. The fix (capture archive entry before cleanup) is well-specified. Priority should is correct; could argue must since it's silent data loss.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T11:20:24-07:00"
     },
     {
       "id": "BUG-099",
