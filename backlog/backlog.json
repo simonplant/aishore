@@ -25,7 +25,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Steps and AC added. Picker enforcement is the runtime safety gate — companion to FEAT-003 (check-time gate). Scope: find_next_item() only.",
-      "completedAt": "2026-03-20T11:27:25-07:00"
+      "completedAt": "2026-03-20T11:27:25-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-002",
@@ -53,7 +54,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Steps and AC added. Architect agent already exists; this is wiring, not building. Main risk: cleanly distinguishing all-done vs abort exit path in cmd_auto().",
-      "completedAt": "2026-03-20T11:37:59-07:00"
+      "completedAt": "2026-03-20T11:37:59-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-003",
@@ -80,7 +82,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Steps and AC added. This is the check-time companion to FEAT-001 (pick-time). Together they cover the full dependency enforcement surface. Low implementation risk — additive check in cmd_backlog_check().",
-      "completedAt": "2026-03-20T11:30:50-07:00"
+      "completedAt": "2026-03-20T11:30:50-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-004",
@@ -100,7 +103,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Bumped to must: FEAT-001 and FEAT-003 ship dependsOn enforcement at pick-time and check-time, but users can only set dependsOn by hand-editing the backlog JSON. That makes the enforcement features essentially unusable — users cannot express ordering constraints without violating the CLI-first design principle. This item must ship to close the usability gap left by FEAT-001 and FEAT-003. AC are concrete and user-focused.",
-      "completedAt": "2026-03-20T11:47:18-07:00"
+      "completedAt": "2026-03-20T11:47:18-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-005",
@@ -120,7 +124,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Kept as could. Depends on FEAT-004 being done first — visibility of blocked items only delivers value once users can actually set dependsOn via CLI. Low implementation risk (display-only change), but lower user value until FEAT-004 ships. AC are concrete.",
-      "completedAt": "2026-03-20T11:51:37-07:00"
+      "completedAt": "2026-03-20T11:51:37-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-006",
@@ -148,7 +153,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "PO bump to should: we now have 20 sprint entries in the archive from today's session. Users who want to answer 'what did I complete today?' or audit a sprint run are blocked until this ships — they must read raw JSONL. The metrics command covers aggregates; history fills the item-level gap. With real data in the archive, this feature has immediate user value rather than speculative future value. Bumped from could.",
-      "completedAt": "2026-03-20T13:08:16-07:00"
+      "completedAt": "2026-03-20T13:08:16-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-007",
@@ -175,7 +181,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T14:29:43-07:00"
+      "completedAt": "2026-03-20T14:29:43-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "FEAT-008",
@@ -201,7 +209,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T14:37:48-07:00"
+      "completedAt": "2026-03-20T14:37:48-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "FEAT-009",
@@ -228,7 +238,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T14:49:27-07:00"
+      "completedAt": "2026-03-20T14:49:27-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "FEAT-010",
@@ -256,7 +268,9 @@
       "lastFailReason": "Validator agent rejected implementation",
       "lastFailAt": "2026-03-20T15:02:32-07:00",
       "failCount": 1,
-      "completedAt": "2026-03-20T16:02:47-07:00"
+      "completedAt": "2026-03-20T16:02:47-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "FEAT-011",
@@ -283,7 +297,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T15:13:40-07:00"
+      "completedAt": "2026-03-20T15:13:40-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "FEAT-012",
@@ -309,7 +325,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T15:21:55-07:00"
+      "completedAt": "2026-03-20T15:21:55-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "FEAT-013",
@@ -334,7 +352,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T15:28:54-07:00"
+      "completedAt": "2026-03-20T15:28:54-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "FEAT-014",
@@ -371,7 +391,8 @@
       "lastFailAt": "2026-03-20T17:26:57-07:00",
       "failCount": 1,
       "passes": true,
-      "completedAt": "2026-03-20T19:05:59-07:00"
+      "completedAt": "2026-03-20T19:05:59-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-015",
@@ -404,7 +425,8 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "All ACs are clear and testable. Source files (.aishore/README.md, README.md Quick Start) are well-defined. Explicit length constraint (<300 lines) keeps scope tight. No blockers.",
       "passes": true,
-      "completedAt": "2026-03-20T17:29:46-07:00"
+      "completedAt": "2026-03-20T17:29:46-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-016",
@@ -437,7 +459,8 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "ACs are clear. Source files (README.md Configuration + Flag Reference, CLAUDE.md config precedence, .aishore/config.yaml) are all in-repo. Good scope — moves the Flag Reference out of README.md as a side effect. No blockers.",
       "passes": true,
-      "completedAt": "2026-03-20T17:35:07-07:00"
+      "completedAt": "2026-03-20T17:35:07-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-017",
@@ -470,7 +493,8 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "ACs are clear. Structured problem/evidence/solution format is well-defined. 6+ problem minimum is testable. Seed content from README.md 'Why aishore?' is sufficient starting point. No blockers.",
       "passes": true,
-      "completedAt": "2026-03-20T17:37:47-07:00"
+      "completedAt": "2026-03-20T17:37:47-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-018",
@@ -501,7 +525,8 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "Raised from could to should — FEAT-018 is a hard dependency of FEAT-021 (must). A must item cannot be blocked by a could item. ROADMAP.md must exist before README can link to it in the Links section.",
       "passes": true,
-      "completedAt": "2026-03-20T17:39:22-07:00"
+      "completedAt": "2026-03-20T17:39:22-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-019",
@@ -537,7 +562,8 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "Elevated from should to must: FEAT-019 is a direct blocker for FEAT-021 (must). Running p0-only would skip FEAT-019 and leave FEAT-021 permanently blocked. Both must complete in the same priority pass to deliver the doc chain.",
       "passes": true,
-      "completedAt": "2026-03-20T19:08:52-07:00"
+      "completedAt": "2026-03-20T19:08:52-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-020",
@@ -569,7 +595,8 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "Raised from could to should — FEAT-020 is a hard dependency of FEAT-021 (must). A must item cannot be blocked by a could item. docs/CHANGELOG.md must exist before README can link to it in the Links section.",
       "passes": true,
-      "completedAt": "2026-03-20T17:49:58-07:00"
+      "completedAt": "2026-03-20T17:49:58-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-021",
@@ -608,10 +635,13 @@
         "FEAT-019",
         "FEAT-020"
       ],
-      "status": "todo",
+      "status": "done",
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "High-value user-facing item: README is the project storefront and currently a wall of text. Correct priority (must). Depends on the full doc chain (FEAT-014 through FEAT-020) which ensures all content has a home before removal. Step 1 has an explicit pre-flight check. readyForSprint: false until dependency chain completes — spec is solid, holding on deps."
+      "groomingNotes": "High-value user-facing item: README is the project storefront and currently a wall of text. Correct priority (must). Depends on the full doc chain (FEAT-014 through FEAT-020) which ensures all content has a home before removal. Step 1 has an explicit pre-flight check. readyForSprint: false until dependency chain completes — spec is solid, holding on deps.",
+      "groomedNotes": null,
+      "passes": true,
+      "completedAt": "2026-03-21T08:14:09-07:00"
     },
     {
       "id": "FEAT-022",
@@ -644,7 +674,8 @@
       "status": "todo",
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Portfolio/meta tooling — machine-readable doc standard for cross-repo enforcement. Low direct user value for aishore users; value is in the broader ecosystem. 'could' priority is correct. Depends on FEAT-021 (all docs must exist first). No changes needed to spec."
+      "groomingNotes": "Portfolio/meta tooling — machine-readable doc standard for cross-repo enforcement. Low direct user value for aishore users; value is in the broader ecosystem. 'could' priority is correct. Depends on FEAT-021 (all docs must exist first). No changes needed to spec.",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-023",
@@ -671,7 +702,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Practical UX: after many sprint sessions, backlog history produces hundreds of rows. Users want 'show me the last 10' not 'show me all 200 then pipe through head'. Implementation is additive: add --limit flag parsing, add tail -n N after result collection. Low risk, small scope. No deps.",
-      "completedAt": "2026-03-20T17:52:58-07:00"
+      "completedAt": "2026-03-20T17:52:58-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-024",
@@ -698,7 +730,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Practical QoL: users currently poll 'aishore status' manually during long sprints. --watch eliminates the loop. Implementation is self-contained in cmd_status(): add flag, add sleep loop with terminal clear, exit condition checks sprint.json. Low risk, no deps. Kept as could because watch(1) is an alternative, but in-tool is more discoverable.",
-      "completedAt": "2026-03-20T18:00:32-07:00"
+      "completedAt": "2026-03-20T18:00:32-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-025",
@@ -727,7 +760,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "New user onboarding gap: users who type 'backlog add' with no flags get a minimal item with empty steps/AC that fails readiness gates. Interactive mode closes this by guiding them through all required fields. Pattern exists: init already does interactive prompts. TTY check ensures scripted use is unaffected. No external deps.",
-      "completedAt": "2026-03-20T17:57:24-07:00"
+      "completedAt": "2026-03-20T17:57:24-07:00",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-026",
@@ -750,7 +784,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T19:11:10-07:00"
+      "completedAt": "2026-03-20T19:11:10-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     }
   ]
 }
