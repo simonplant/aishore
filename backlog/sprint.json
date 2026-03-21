@@ -1,28 +1,27 @@
 {
-  "sprintId": "sprint-1774069286",
-  "startedAt": "2026-03-20T22:01:26-07:00",
+  "sprintId": "sprint-1774069432",
+  "startedAt": "2026-03-20T22:03:52-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-050",
-    "title": "Replace JSON array string concatenation with jq -s in backlog add",
-    "intent": "Replace the manual JSON array construction via string concatenation in a loop (ac_json building) with proper jq -s array construction to avoid potential escaping issues",
+    "id": "BUG-051",
+    "title": "Reduce double jq parsing — extract all needed fields in one pass",
+    "intent": "Eliminate the pattern of extracting a jq projection then re-parsing the result for individual fields, by extracting all needed fields in a single jq pass using @base64 or multi-output",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Find the string concatenation pattern that builds ac_json with manual comma insertion",
-      "Replace with printf and jq -s . to build the array safely",
-      "Verify AC entries with special characters (quotes, newlines) are handled correctly"
+      "Identify all places where jq output is captured then re-parsed with another jq call",
+      "Consolidate into single jq calls that extract all needed fields at once",
+      "Use read or IFS-based splitting for multiple field extraction"
     ],
     "acceptanceCriteria": [
-      "No manual JSON array construction via string concatenation exists in the codebase",
-      "AC entries with quotes and special characters round-trip correctly",
+      "No instance of echo item_json pipe jq for single field extraction after a prior jq projection",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T22:01:26-07:00",
+    "startedAt": "2026-03-20T22:03:52-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T22:03:50-07:00"
+    "completedAt": "2026-03-20T22:13:46-07:00"
   },
-  "completedAt": "2026-03-20T22:03:50-07:00",
+  "completedAt": "2026-03-20T22:13:46-07:00",
   "attempts": 1
 }
