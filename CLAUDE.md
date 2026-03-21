@@ -23,6 +23,7 @@ jq empty backlog/*.json
 .aishore/aishore backlog show <ID>  # Show full detail of one item
 .aishore/aishore backlog edit <ID>  # Update fields on an item
 .aishore/aishore backlog check <ID> # Check readiness gates for an item
+.aishore/aishore backlog check --all # Audit all non-done items in one pass
 .aishore/aishore backlog rm <ID>    # Remove an item (--force to skip confirmation)
 .aishore/aishore backlog history    # List completed sprint items
 .aishore/aishore backlog populate   # AI-populate backlog from PRODUCT.md
