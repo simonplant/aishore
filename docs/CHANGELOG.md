@@ -5,6 +5,30 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] - 2026-03-21
+
+### Added
+
+- **`--priority` filter for `backlog list`**: Filter items by priority level (e.g., `--priority must`) (BUG-109)
+- **`--ready` / `--no-ready` filters for `backlog list`**: Filter items by readiness state (BUG-106)
+- **`--limit` and `--all` flags for `backlog history`**: Default output capped at 20 items, `--all` shows everything (BUG-104)
+- **`--preview` flag for `backlog populate`**: Snapshot backlog, run agent, display new items, then restore originals (FEAT-035)
+- **Scope display in `backlog show`**: Scope globs now rendered when present (BUG-105)
+- **Item titles in `status` recent sprints**: Status output includes item titles alongside IDs (BUG-107)
+
+### Fixed
+
+- `cmd_status --watch` now exits cleanly when sprint status is `completed` (BUG-096)
+- Corrected field name in `protect_items_from_groom` from `groomedNotes` to `groomingNotes` (BUG-097)
+- Preserved sprint archive entry before worktree cleanup destroys it (BUG-098)
+- Prevent `auto --no-merge` from re-picking already-completed items via `COMPLETED_IDS` associative array (BUG-099)
+- Consolidated 6 `jq` calls in `cmd_diagnose` into one (BUG-080)
+- Unset `GROOM_MONITOR` after each groom `run_agent` call to prevent leaking into subsequent calls (BUG-101)
+- Use real newlines in scope violations string instead of literal `\n` (BUG-102)
+- Atomic temp-file-then-move writes in `protect_items_from_groom` and `enforce_groom_limits` (BUG-103)
+- Sort new groom items by priority rank before applying cap (BUG-108)
+- Guard `cmd_checksums` against overwriting `checksums.sha256` with empty temp file (BUG-111)
+
 ## [0.3.5] - 2026-03-21
 
 ### Added
