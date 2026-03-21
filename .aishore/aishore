@@ -3773,7 +3773,6 @@ cmd_update() {
     echo ""
     echo "Not modified (your content):"
     echo "  .aishore/config.yaml"
-    echo "  backlog/*"
     echo ""
 
     if [[ "$dry_run" == "true" ]]; then
@@ -3783,34 +3782,6 @@ cmd_update() {
         echo "  .aishore/aishore update"
         return 0
     fi
-
-    get_expected_checksum() {
-        local filepath="$1"
-        [[ -z "$checksums_content" ]] && { echo ""; return 0; }
-        printf '%s\n' "$checksums_content" | awk -v f="$filepath" '$2 == f {print $1; exit}' || true
-    }
-
-    verify_or_abort() {
-        local file="$1" label="$2" checksum_key="$3"
-        local expected
-        expected=$(get_expected_checksum "$checksum_key") || true
-        if [[ -n "$expected" ]]; then
-            if verify_checksum "$file" "$expected"; then
-                : # verified — shown after install
-            else
-                log_error "Checksum mismatch for $label — file may be corrupted or tampered"
-                return 1
-            fi
-        elif [[ -n "$checksums_content" ]]; then
-            if [[ "$no_verify" == "true" ]]; then
-                log_warning "No checksum entry for $label — skipping (--no-verify)"
-            else
-                log_error "No checksum entry for $label — aborting (use --force --no-verify to skip)"
-                return 1
-            fi
-        fi
-        return 0
-    }
 
     # Fetch a remote file into staging and verify its checksum.
     # Args: remote_path local_path label checksum_key [required]
@@ -3827,8 +3798,23 @@ cmd_update() {
             all_verified=false
             return
         fi
-        if ! verify_or_abort "$local_path" "$label" "$checksum_key"; then
-            all_verified=false
+        # Inline checksum lookup and verification
+        local expected=""
+        if [[ -n "$checksums_content" ]]; then
+            expected=$(printf '%s\n' "$checksums_content" | awk -v f="$checksum_key" '$2 == f {print $1; exit}') || true
+        fi
+        if [[ -n "$expected" ]]; then
+            if ! verify_checksum "$local_path" "$expected"; then
+                log_error "Checksum mismatch for $label — file may be corrupted or tampered"
+                all_verified=false
+            fi
+        elif [[ -n "$checksums_content" ]]; then
+            if [[ "$no_verify" == "true" ]]; then
+                log_warning "No checksum entry for $label — skipping (--no-verify)"
+            else
+                log_error "No checksum entry for $label — aborting (use --force --no-verify to skip)"
+                all_verified=false
+            fi
         fi
     }
 
