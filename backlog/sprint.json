@@ -1,26 +1,32 @@
 {
-  "sprintId": "sprint-1774071534",
-  "startedAt": "2026-03-20T22:38:54-07:00",
+  "sprintId": "sprint-1774071616",
+  "startedAt": "2026-03-20T22:40:16-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-059",
-    "title": "Remove TODO placeholder links from docs/PROBLEMS.md",
-    "intent": "Either fill in the evidence links (TODO: Link forum posts, TODO: Link articles) in PROBLEMS.md or remove the placeholder text so the document looks complete",
-    "description": "",
+    "id": "BUG-076",
+    "title": "Collapse npm detection block in _init_detect_project",
+    "intent": "npm validation command detection is 8 lines instead of 22. Three separate jq calls for has_test/has_build/has_check are replaced by a single priority-ordered jq expression.",
+    "description": "_init_detect_project has a 22-line block that calls jq 3 times into package.json to extract has_test, has_build, has_check, then uses a 4-way if/elif chain to pick the validation command. Replace with a single jq call that returns the best available script name, then map to the command string.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Review all TODO placeholders in PROBLEMS.md",
-      "Search for relevant evidence links or remove the placeholders",
-      "Ensure the document reads cleanly without dangling TODOs"
+      "Replace 3 separate jq calls with one jq expression that checks scripts.check, scripts.build, scripts.test in priority order",
+      "Map the result to the validation command string (npm run check, npm run build, npm test, etc.)",
+      "Remove the has_test/has_build/has_check variables and the 4-way if/elif",
+      "Verify: init -y on a node project detects the same validation command as before"
     ],
     "acceptanceCriteria": [
-      "No TODO placeholders remain in PROBLEMS.md"
+      "npm script detection uses one jq call, not three",
+      "No has_test/has_build/has_check variables exist",
+      "init -y detects the correct validation command for projects with check, build, test, or combinations",
+      "shellcheck passes"
     ],
-    "scope": [],
-    "startedAt": "2026-03-20T22:38:54-07:00",
+    "scope": [
+      ".aishore/**"
+    ],
+    "startedAt": "2026-03-20T22:40:16-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T22:40:15-07:00"
+    "completedAt": "2026-03-20T22:42:41-07:00"
   },
-  "completedAt": "2026-03-20T22:40:15-07:00",
+  "completedAt": "2026-03-20T22:42:41-07:00",
   "attempts": 1
 }
