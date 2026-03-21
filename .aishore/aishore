@@ -3403,19 +3403,14 @@ _init_detect_project() {
     local detected_validate=""
     if [[ -f "$PROJECT_ROOT/package.json" ]]; then
         if command -v jq &>/dev/null; then
-            local has_test has_build has_check
-            has_test=$(jq -r '.scripts.test // empty' "$PROJECT_ROOT/package.json" 2>/dev/null || true)
-            has_build=$(jq -r '.scripts.build // empty' "$PROJECT_ROOT/package.json" 2>/dev/null || true)
-            has_check=$(jq -r '.scripts.check // empty' "$PROJECT_ROOT/package.json" 2>/dev/null || true)
-            if [[ -n "$has_check" ]]; then
-                detected_validate="npm run check"
-            elif [[ -n "$has_build" && -n "$has_test" ]]; then
-                detected_validate="npm run build && npm test"
-            elif [[ -n "$has_build" ]]; then
-                detected_validate="npm run build"
-            elif [[ -n "$has_test" ]]; then
-                detected_validate="npm test"
-            fi
+            local npm_script
+            npm_script=$(jq -r '.scripts // {} | if .check then "check" elif .build and .test then "build+test" elif .build then "build" elif .test then "test" else empty end' "$PROJECT_ROOT/package.json" 2>/dev/null || true)
+            case "$npm_script" in
+                check)      detected_validate="npm run check" ;;
+                build+test) detected_validate="npm run build && npm test" ;;
+                build)      detected_validate="npm run build" ;;
+                test)       detected_validate="npm test" ;;
+            esac
         fi
     elif [[ -f "$PROJECT_ROOT/Cargo.toml" ]]; then
         detected_validate="cargo test"
