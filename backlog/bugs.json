@@ -2446,11 +2446,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Mark_complete at line 1156 uses HEAD~1 HEAD; AISHORE_BASE_BRANCH is available as global. Single-line fix with fallback guard.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T09:23:16-07:00"
     },
     {
       "id": "BUG-080",
