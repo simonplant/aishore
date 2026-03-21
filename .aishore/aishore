@@ -2835,64 +2835,13 @@ cmd_groom() {
     run_groom_flow "$agent" "groom" "$context_args"
 }
 
-# Print a rich summary of backlog state before grooming
 print_groom_summary() {
     local backlog_file="$BACKLOG_DIR/backlog.json"
     local bugs_file="$BACKLOG_DIR/bugs.json"
-
-    log_subheader "Current Status"
-
-    # Status counts
-    if [[ -f "$backlog_file" ]]; then
-        echo "  Features: $(count_by_status "$backlog_file" "todo") todo, $(count_by_status "$backlog_file" "in-progress") in-progress, $(count_by_status "$backlog_file" "done") done"
-    fi
-    if [[ -f "$bugs_file" ]]; then
-        echo "  Bugs:     $(count_by_status "$bugs_file" "todo") todo, $(count_by_status "$bugs_file" "in-progress") in-progress, $(count_by_status "$bugs_file" "done") done"
-    fi
-
-    # Ready buffer
-    local ready_backlog ready_bugs
-    ready_backlog=$(count_ready_items "$backlog_file")
-    ready_bugs=$(count_ready_items "$bugs_file")
-    echo ""
-    echo "  Ready for sprint: $((ready_backlog + ready_bugs)) ($ready_backlog features, $ready_bugs bugs)"
-
-    # Priority breakdown — highlight must/should items that need grooming
-    local has_highlights=false
-    for f in "$backlog_file" "$bugs_file"; do
-        [[ -f "$f" ]] || continue
-        local highlights
-        highlights=$(jq -r '
-            .items[]
-            | select((.priority == "must" or .priority == "should") and (.readyForSprint != true) and ((.status // "todo") != "done"))
-            | "  \(.priority | ascii_upcase)  \(.id): \(.title)"
-        ' "$f" 2>/dev/null)
-        if [[ -n "$highlights" ]]; then
-            if [[ "$has_highlights" == "false" ]]; then
-                echo ""
-                log_subheader "High Priority — Not Yet Ready"
-                has_highlights=true
-            fi
-            printf '%s\n' "$highlights"
-        fi
-    done
-
-    if [[ "$has_highlights" == "false" ]]; then
-        # Show a note if everything high-priority is already groomed
-        local must_should_total=0
-        for f in "$backlog_file" "$bugs_file"; do
-            [[ -f "$f" ]] || continue
-            local count
-            count=$(jq '[.items[] | select((.priority == "must" or .priority == "should") and ((.status // "todo") != "done"))] | length' "$f" 2>/dev/null || echo 0)
-            must_should_total=$((must_should_total + count))
-        done
-        if [[ "$must_should_total" -gt 0 ]]; then
-            echo ""
-            log_success "All $must_should_total must/should items are already sprint-ready"
-        fi
-    fi
-
-    echo ""
+    local total_f=0 total_b=0 ready_f=0 ready_b=0
+    [[ -f "$backlog_file" ]] && { total_f=$(count_items "$backlog_file"); ready_f=$(count_ready_items "$backlog_file"); }
+    [[ -f "$bugs_file" ]] && { total_b=$(count_items "$bugs_file"); ready_b=$(count_ready_items "$bugs_file"); }
+    log_info "Items: $((total_f + total_b)) ($total_f features, $total_b bugs)  |  Ready: $((ready_f + ready_b)) ($ready_f features, $ready_b bugs)"
 }
 
 # Protect pre-existing items from groomer overwrites.
@@ -3008,43 +2957,11 @@ enforce_groom_limits() {
 # Show what changed after grooming
 # Args: $1=before_snapshot $2=groom_items_added $3=groom_items_skipped
 print_groom_diff() {
-    local before="$1"
-    local groom_added="${2:-0}"
-    local groom_skipped="${3:-0}"
-    local snap_after
-    snap_after=$(snapshot_backlogs)
-
-    local rb_before rb_after rf_before rf_after tf_before tf_after tb_before tb_after
-    read -r rf_before rb_before tf_before tb_before <<< "$before"
-    read -r rf_after rb_after tf_after tb_after <<< "$snap_after"
-
-    local ready_before=$((rf_before + rb_before))
-    local ready_after=$((rf_after + rb_after))
-    local total_before=$((tf_before + tb_before))
-    local total_after=$((tf_after + tb_after))
-
-    echo ""
-    log_subheader "Grooming Results"
-
-    local new_items=$((total_after - total_before))
-    local new_ready=$((ready_after - ready_before))
-
-    if [[ "$new_items" -gt 0 ]]; then
-        log_success "$new_items new item(s) added"
-    fi
-    if [[ "$groom_skipped" -gt 0 ]]; then
-        log_info "$groom_skipped item(s) skipped by groom limits (max=$GROOM_MAX_ITEMS, min_priority=$GROOM_MIN_PRIORITY)"
-    fi
-    if [[ "$new_ready" -gt 0 ]]; then
-        log_success "$new_ready item(s) moved to sprint-ready"
-    elif [[ "$new_ready" -eq 0 && "$new_items" -eq 0 ]]; then
-        log_info "No changes to item counts"
-    fi
-
-    echo "  Ready: $ready_before → $ready_after  |  Total: $total_before → $total_after"
-    if [[ "$groom_added" -gt 0 || "$groom_skipped" -gt 0 ]]; then
-        echo "  Added: $groom_added  |  Skipped: $groom_skipped"
-    fi
+    local before="$1" added="${2:-0}" skipped="${3:-0}"
+    local rf_b rb_b tf_b tb_b rf_a rb_a tf_a tb_a
+    read -r rf_b rb_b tf_b tb_b <<< "$before"
+    read -r rf_a rb_a tf_a tb_a <<< "$(snapshot_backlogs)"
+    log_info "Ready: $((rf_b+rb_b)) → $((rf_a+rb_a))  |  Items: $((tf_b+tb_b)) → $((tf_a+tb_a))  |  Added: $added  Skipped: $skipped"
 }
 
 # Shared groom/populate pipeline: snapshot → agent → protect → enforce → diff → check
