@@ -97,6 +97,7 @@ AUTO_GROOM_THRESHOLD="3"
 AUTO_MAX_FAILURES="5"
 GROOM_MAX_ITEMS="10"
 GROOM_MIN_PRIORITY="should"
+readonly GROOM_SAFE_FIELDS=(title intent description steps acceptanceCriteria)
 SCOPE_MODE="warn"
 MATURITY_ENABLED="true"
 OUTPUT_TRUNCATE_LINES="50"
@@ -2846,14 +2847,16 @@ protect_items_from_groom() {
         [[ -f "$snap_file" && -f "$live_file" ]] || return 0
 
         # Single jq pass: protect pre-existing items and output "deleted modified" counts on last line
+        local safe_fields_json
+        safe_fields_json=$(printf '%s\n' "${GROOM_SAFE_FIELDS[@]}" | jq -R . | jq -sc .)
         local output
-        output=$(jq --slurpfile snap "$snap_file" '
+        output=$(jq --slurpfile snap "$snap_file" --argjson safe_fields "$safe_fields_json" '
             ($snap[0].items | map({(.id): .}) | add // {}) as $orig |
             (.items | map(.id)) as $live_ids |
             ([$orig | keys[] | select(. as $id | $live_ids | index($id) | not)] | length) as $del |
             ([.items[] | select($orig[.id] != null) | select(. as $c |
-                $orig[.id] | {title,intent,description,steps,acceptanceCriteria}
-                != ($c | {title,intent,description,steps,acceptanceCriteria}))] | length) as $mod |
+                ($orig[.id] | with_entries(select(.key | IN($safe_fields[]))))
+                != ($c | with_entries(select(.key | IN($safe_fields[])))))] | length) as $mod |
             .items = ([.items[] |
                 if $orig[.id] then $orig[.id] + {
                     readyForSprint: (.readyForSprint // $orig[.id].readyForSprint),

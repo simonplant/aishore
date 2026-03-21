@@ -1,27 +1,27 @@
 {
-  "sprintId": "sprint-1774070285",
-  "startedAt": "2026-03-20T22:18:05-07:00",
+  "sprintId": "sprint-1774070925",
+  "startedAt": "2026-03-20T22:28:45-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-053",
-    "title": "Use printf instead of echo for variable output throughout the script",
-    "intent": "Replace ~20 instances of echo with variable arguments with printf to avoid issues when variables start with dash or contain escape sequences, following POSIX best practices",
+    "id": "BUG-054",
+    "title": "Hardcoded safe fields in protect_items_from_groom() should be a declared constant",
+    "intent": "Extract the hardcoded safe fields list in protect_items_from_groom() into a named constant array so the merge logic is transparent and maintainable",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Find all echo calls that output variable content (not static strings)",
-      "Replace with printf '%s\\n' for simple variable output",
-      "Leave echo for static string literals which are safe"
+      "Find the hardcoded safe fields comparison in protect_items_from_groom()",
+      "Extract to a GROOM_SAFE_FIELDS constant array declared with other constants",
+      "Update the jq filter to reference the constant"
     ],
     "acceptanceCriteria": [
-      "No echo call outputs an unquoted or potentially-dash-prefixed variable",
+      "Safe fields are declared as a named constant, not inline in the jq filter",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T22:18:05-07:00",
+    "startedAt": "2026-03-20T22:28:45-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T22:28:44-07:00"
+    "completedAt": "2026-03-20T22:30:49-07:00"
   },
-  "completedAt": "2026-03-20T22:28:44-07:00",
+  "completedAt": "2026-03-20T22:30:49-07:00",
   "attempts": 1
 }
