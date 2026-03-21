@@ -3880,11 +3880,10 @@ cmd_backlog() {
         rm|remove)  cmd_backlog_rm "$@" ;;
         check)      cmd_backlog_check "$@" ;;
         history)    cmd_backlog_history "$@" ;;
-        sync)       cmd_backlog_sync "$@" ;;
         populate)   cmd_backlog_populate "$@" ;;
         *)
             log_error "Unknown backlog command: $subcmd"
-            echo "Usage: backlog {list|add|show|edit|check|rm|history|sync|populate}" >&2
+            echo "Usage: backlog {list|add|show|edit|check|rm|history|populate}" >&2
             return 1
             ;;
     esac
@@ -4548,159 +4547,6 @@ cmd_backlog_history() {
         echo "$formatted" | tail -n "$limit"
     else
         echo "$formatted"
-    fi
-}
-
-cmd_backlog_sync() {
-    local dry_run=false auto_mark=false
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --dry-run) dry_run=true; shift ;;
-            --auto)    auto_mark=true; shift ;;
-            *)
-                log_error "Unknown option: $1"
-                echo "Usage: backlog sync [--dry-run] [--auto]" >&2
-                return 1
-                ;;
-        esac
-    done
-
-    # Detect default branch for comparison
-    local default_branch=""
-    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@') || true
-    if [[ -z "$default_branch" ]]; then
-        for candidate in main master; do
-            if git rev-parse --verify "$candidate" >/dev/null 2>&1; then
-                default_branch="$candidate"
-                break
-            fi
-        done
-    fi
-    if [[ -z "$default_branch" ]]; then
-        log_error "Cannot detect default branch (main/master). Cannot compare git history."
-        return 1
-    fi
-
-    # Get files changed on current branch relative to default branch
-    local current_branch changed_files=""
-    current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || true
-    if [[ "$current_branch" != "$default_branch" ]]; then
-        changed_files=$(git log --name-only --pretty=format: "$default_branch"..HEAD 2>/dev/null | sort -u | grep -v '^$') || true
-    fi
-    # Fallback: if on default branch or no branch-specific changes, check recent commits
-    if [[ -z "$changed_files" ]]; then
-        changed_files=$(git log --name-only --pretty=format: -50 2>/dev/null | sort -u | grep -v '^$') || true
-    fi
-
-    if [[ -z "$changed_files" ]]; then
-        echo "No file changes detected on current branch"
-        return 0
-    fi
-
-    # Scan all backlog files for todo items with scope
-    local candidate_files=()
-    local candidate_ids=()
-    local candidate_titles=()
-    local candidate_matches=()
-
-    for bf in "${BACKLOG_FILES[@]}"; do
-        local backlog_path="$BACKLOG_DIR/$bf"
-        [[ -f "$backlog_path" ]] || continue
-
-        local items_json
-        items_json=$(jq -c '.items[] | select((.status // "todo") == "todo" or (.status // "todo") == "in-progress") | select((.scope // []) | length > 0)' "$backlog_path" 2>/dev/null) || continue
-
-        while IFS= read -r item; do
-            [[ -z "$item" ]] && continue
-            local item_id item_title
-            item_id=$(echo "$item" | jq -r '.id')
-            item_title=$(echo "$item" | jq -r '.title')
-
-            # Read scope globs
-            local -a globs=()
-            while IFS= read -r glob; do
-                globs+=("$glob")
-            done < <(echo "$item" | jq -r '.scope[]' 2>/dev/null)
-
-            [[ ${#globs[@]} -eq 0 ]] && continue
-
-            # Check if any changed files match any scope glob
-            local match_count=0
-            while IFS= read -r file; do
-                [[ -z "$file" ]] && continue
-                for glob in "${globs[@]}"; do
-                    local pattern="${glob//\*\*/*}"
-                    # shellcheck disable=SC2254,SC2053
-                    if [[ "$file" == $pattern ]]; then
-                        match_count=$((match_count + 1))
-                        break
-                    fi
-                done
-            done <<< "$changed_files"
-
-            if [[ "$match_count" -gt 0 ]]; then
-                candidate_ids+=("$item_id")
-                candidate_titles+=("$item_title")
-                candidate_files+=("$bf")
-                candidate_matches+=("$match_count")
-            fi
-        done <<< "$items_json"
-    done
-
-    if [[ ${#candidate_ids[@]} -eq 0 ]]; then
-        echo "No apparently completed items detected"
-        return 0
-    fi
-
-    echo "Apparently completed items (scope matches git history):"
-    echo ""
-    for i in "${!candidate_ids[@]}"; do
-        printf "  %-12s %s  (%d file(s) match scope)\n" "${candidate_ids[$i]}" "${candidate_titles[$i]}" "${candidate_matches[$i]}"
-    done
-    echo ""
-
-    if [[ "$dry_run" == "true" ]]; then
-        echo "${#candidate_ids[@]} candidate(s) found (dry-run, no changes made)"
-        return 0
-    fi
-
-    local marked=0
-    for i in "${!candidate_ids[@]}"; do
-        local cid="${candidate_ids[$i]}"
-        local ctitle="${candidate_titles[$i]}"
-        local cfile="${candidate_files[$i]}"
-
-        if [[ "$auto_mark" == "true" ]]; then
-            local now
-            now=$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S%z')
-            update_item "$cfile" "$cid" '| .status = "done" | .completedAt = $now' --arg now "$now" || {
-                log_error "Failed to mark $cid done"
-                continue
-            }
-            log_success "Marked $cid done: $ctitle"
-            marked=$((marked + 1))
-        else
-            echo "Mark $cid done? ($ctitle)"
-            read -r -p "  (y/N): " confirm
-            if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
-                local now
-                now=$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S%z')
-                update_item "$cfile" "$cid" '| .status = "done" | .completedAt = $now' --arg now "$now" || {
-                    log_error "Failed to mark $cid done"
-                    continue
-                }
-                log_success "Marked $cid done: $ctitle"
-                marked=$((marked + 1))
-            else
-                echo "  Skipped"
-            fi
-        fi
-    done
-
-    if [[ "$marked" -gt 0 ]]; then
-        echo ""
-        echo "Marked $marked item(s) done"
     fi
 }
 
