@@ -1,27 +1,29 @@
 {
-  "sprintId": "sprint-1774068080",
-  "startedAt": "2026-03-20T21:41:20-07:00",
+  "sprintId": "sprint-1774068211",
+  "startedAt": "2026-03-20T21:43:31-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-042",
-    "title": "Extract require_numeric_arg() helper — numeric validation duplicated for multiple flags",
-    "intent": "Replace the 3+ copies of numeric argument validation (regex check, log error, return 1) with a single require_numeric_arg() helper function",
+    "id": "BUG-049",
+    "title": "Extract shared option parser to reduce duplication across cmd_* functions",
+    "intent": "Replace the duplicated while/case/shift option parsing in every cmd_* function with a shared parse_opts() helper or standardized pattern, eliminating ~100 lines of boilerplate",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Identify all places that validate numeric CLI arguments with the same if/regex/error pattern",
-      "Extract require_numeric_arg() that takes flag name and value, validates, and errors",
-      "Replace all call sites"
+      "Catalog all cmd_* functions and their option parsing patterns",
+      "Design a shared parse_opts() helper or declare-based pattern",
+      "Refactor cmd_run, cmd_backlog_add, cmd_backlog_edit, cmd_backlog_list and others to use it",
+      "Ensure unknown option rejection still works per-command"
     ],
     "acceptanceCriteria": [
-      "Only one function contains the numeric argument validation logic",
+      "Option parsing boilerplate is reduced by at least 50%",
+      "All commands still correctly parse their flags and reject unknown options",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T21:41:20-07:00",
+    "startedAt": "2026-03-20T21:43:31-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T21:43:29-07:00"
+    "completedAt": "2026-03-20T22:01:25-07:00"
   },
-  "completedAt": "2026-03-20T21:43:29-07:00",
+  "completedAt": "2026-03-20T22:01:25-07:00",
   "attempts": 1
 }
