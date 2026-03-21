@@ -1,31 +1,31 @@
 {
-  "sprintId": "sprint-1774126652",
-  "startedAt": "2026-03-21T13:57:32-07:00",
+  "sprintId": "sprint-1774126781",
+  "startedAt": "2026-03-21T13:59:41-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-123",
-    "title": "status and list --ready report items as sprint-ready even when intent gate would block them",
-    "intent": "status 'Ready for sprint' section and 'backlog list --ready' must only show items that would actually be picked by auto — items missing or with too-short intent must be excluded.",
-    "description": "count_ready_items() and list_ready_items() check readyForSprint==true and passes==false but do not check the intent gate (intent != null, length >= 20). PICKABLE_ITEMS_FILTER — the actual picker — requires both. So 'status' shows an inflated ready count and 'backlog list --ready' shows items that auto/run would skip. After BUG-100 adds per-item warnings when items are skipped, this display gap becomes even more visible: users see an item listed as ready in status, then get a warning that it was skipped. Fix: add the intent filter to count_ready_items and list_ready_items so that ready counts and listings reflect what is actually pickable.",
+    "id": "BUG-124",
+    "title": "backlog add --ready silently skips readiness gate warnings that backlog edit --ready runs",
+    "intent": "When creating an item with --ready, readiness gate warnings must be shown exactly as they are when using 'backlog edit <ID> --ready', so users get immediate feedback instead of a silent gotcha.",
+    "description": "cmd_backlog_edit runs check_readiness_gates after setting readyForSprint=true via --ready, printing warnings if gates fail (while still allowing the operation). cmd_backlog_add has no equivalent check. A user who adds an item with --ready and no steps, no AC, or no intent sees 'Created BUG-XXX' with no indication that the item will fail 'backlog check'. This is inconsistent with 'backlog edit' and BUG-100 behavior — once auto warns on skipped items, users need to know at add-time too.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In count_ready_items(), add .intent != null and (.intent | length) >= 20 to the jq select filter",
-      "In list_ready_items(), add the same intent filter to the jq expression",
-      "Verify: create a test item with readyForSprint=true but no intent — confirm it is absent from 'status' ready section and 'backlog list --ready' output",
-      "Verify: items with valid intent still appear in ready sections",
+      "After log_success 'Created $new_id' in cmd_backlog_add, check if ready==true",
+      "If ready is true, call check_readiness_gates \"$new_id\" and capture warnings",
+      "If gates fail, print the same warning format as cmd_backlog_edit: 'log_warning \"Readiness warnings for $new_id:\"; printf '%b\\n' \"$gates_warnings\"'",
+      "Do not block item creation — warnings are advisory, matching edit behavior",
       "Run shellcheck — zero new warnings"
     ],
     "acceptanceCriteria": [
-      "An item with readyForSprint=true and no intent does not appear under 'Ready for sprint' in 'status' output",
-      "An item with readyForSprint=true and an intent shorter than 20 chars does not appear in 'backlog list --ready'",
-      "An item with readyForSprint=true and a valid intent (>=20 chars) still appears correctly",
+      "Running 'backlog add --title X --ready' with no steps or AC prints readiness warnings after the Created success message",
+      "Running 'backlog add --title X --ready' with valid steps, AC, and intent prints no readiness warnings",
+      "Item is still created in both cases — warnings do not block creation",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T13:57:32-07:00",
+    "startedAt": "2026-03-21T13:59:41-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T13:59:39-07:00"
+    "completedAt": "2026-03-21T14:02:19-07:00"
   },
-  "completedAt": "2026-03-21T13:59:39-07:00",
+  "completedAt": "2026-03-21T14:02:19-07:00",
   "attempts": 1
 }
