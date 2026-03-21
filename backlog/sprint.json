@@ -1,29 +1,29 @@
 {
-  "sprintId": "sprint-1774054833",
-  "startedAt": "2026-03-20T18:00:33-07:00",
+  "sprintId": "sprint-1774054971",
+  "startedAt": "2026-03-20T18:02:51-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-030",
-    "title": "resolve_backlog_file returns wrong file for IDs that don't exist in expected file",
-    "intent": "Ensure resolve_backlog_file returns an error when an ID is not found in its expected file, not a stale filename",
-    "description": "resolve_backlog_file() uses a prefix case statement: FEAT-* maps to backlog.json, BUG-* maps to bugs.json. It returns the filename immediately without verifying the item actually exists in that file. If find_item then calls jq on the returned filename, it gets an error like 'null' rather than a clear 'item not found'. This is latent: when a FEAT-* item is present only in a custom file, or after backlog clean removes it, resolve_backlog_file returns a stale path and find_item produces a confusing error. The fix is to verify item existence in the resolved file before returning, or at minimum ensure find_item handles the null case gracefully.",
+    "id": "BUG-031",
+    "title": "cmd_status silently omits in-progress items from sprint readiness display",
+    "intent": "cmd_status must show in-progress items clearly so users know a sprint is running and what is being worked on",
+    "description": "cmd_status() calls list_ready_items() which filters by readyForSprint: true. Items currently in-progress have readyForSprint set to false by mark_item_failed and related logic, and sprint.json tracks the active sprint separately. But the status output never shows what is currently running — a user who runs 'aishore status' during a sprint sees the item missing from the ready list with no explanation. The status command should query sprint.json and display the active sprint item ID and title if a sprint is in progress.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find resolve_backlog_file() (around line 520)",
-      "For the FEAT-* and BUG-* prefix cases, add a jq existence check after resolving the filename: if jq -e --arg id \"$id\" '.items[] | select(.id == $id)' \"$BACKLOG_DIR/$file\" &>/dev/null; then echo \"$file\"; return 0; fi",
-      "Fall through to the generic search-both-files loop if the prefix-matched file doesn't contain the item",
-      "Verify: resolve_backlog_file BUG-999 (nonexistent) returns non-zero; resolve_backlog_file BUG-001 still returns bugs.json"
+      "In .aishore/aishore, find cmd_status() (around line 3114)",
+      "After the 'Ready for sprint' section, add a block that reads BACKLOG_DIR/sprint.json",
+      "If sprint.json has status \\!= 'idle' and item is non-null, print a 'Currently running' section with item ID and title",
+      "Verify: running 'aishore status' during a sprint shows 'Currently running: FEAT-001 — My Feature'; running it with no sprint shows nothing for that section"
     ],
     "acceptanceCriteria": [
-      "resolve_backlog_file returns non-zero for an ID that doesn't exist in any file, even if the prefix matches",
-      "resolve_backlog_file still returns the correct file for existing FEAT-* and BUG-* items",
-      "find_item error message is 'Item not found: <ID>' not a jq null error when the item is absent"
+      "aishore status shows 'Currently running: <ID> — <title>' when a sprint is active (sprint.json status \\!= idle)",
+      "aishore status shows no 'Currently running' section when no sprint is active",
+      "In-progress display does not interfere with the Ready for sprint section"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T18:00:33-07:00",
+    "startedAt": "2026-03-20T18:02:51-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T18:02:49-07:00"
+    "completedAt": "2026-03-20T18:04:57-07:00"
   },
-  "completedAt": "2026-03-20T18:02:49-07:00",
+  "completedAt": "2026-03-20T18:04:57-07:00",
   "attempts": 1
 }

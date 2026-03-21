@@ -790,11 +790,12 @@
         "In-progress display does not interfere with the Ready for sprint section"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "UX gap: 'aishore status' is the go-to command for checking system state, but it shows nothing about an actively running sprint. Users running status mid-sprint see an empty ready list with no explanation — they can't tell if a sprint is running or if something is wrong. sprint.json already tracks the active item; this is a display-only change in cmd_status(). Low risk, additive."
+      "groomingNotes": "UX gap: 'aishore status' is the go-to command for checking system state, but it shows nothing about an actively running sprint. Users running status mid-sprint see an empty ready list with no explanation — they can't tell if a sprint is running or if something is wrong. sprint.json already tracks the active item; this is a display-only change in cmd_status(). Low risk, additive.",
+      "completedAt": "2026-03-20T18:04:57-07:00"
     },
     {
       "id": "BUG-032",
