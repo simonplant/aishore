@@ -1,35 +1,32 @@
 {
-  "sprintId": "sprint-1774071762",
-  "startedAt": "2026-03-20T22:42:42-07:00",
+  "sprintId": "sprint-1774071898",
+  "startedAt": "2026-03-20T22:44:58-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-077",
-    "title": "Inline single-use nested helpers in cmd_update",
-    "intent": "cmd_update has no single-call-site nested functions. get_expected_checksum and verify_or_abort are inlined into _fetch_and_stage where they are used once each. Saves ~12 lines of wrapper overhead.",
-    "description": "cmd_update defines get_expected_checksum (5 lines, called once) and verify_or_abort (21 lines, called once from _fetch_and_stage). Both are nested helpers with no reuse. Inline get_expected_checksum as an awk call at its one use site. Inline verify_or_abort logic into _fetch_and_stage. Also fix misleading Not modified output that lists backlog/* (not in the update manifest).",
+    "id": "BUG-078",
+    "title": "Move advisory complexity hints out of check_readiness_gates",
+    "intent": "check_readiness_gates is a pure gate function — it checks hard requirements only. Advisory hints (under-specified warnings) live in the caller. Saves ~10 lines from the gate function and improves separation of concerns.",
+    "description": "check_readiness_gates (98 lines) has 6 hard gate checks plus a 12-line advisory block (lines 648-660) that warns about under-specified items (few steps, no scope). The advisory block is not a gate — it never blocks anything. Move it to cmd_backlog_check (the primary caller) and the advisory check in cmd_run. This makes check_readiness_gates a clean pass/fail function.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Inline get_expected_checksum: replace call with direct awk expression in _fetch_and_stage",
-      "Inline verify_or_abort logic into _fetch_and_stage",
-      "Remove the two nested function definitions",
-      "Fix Not modified output: remove backlog/* line (backlog is never in the manifest)",
-      "Verify: update --dry-run shows correct file list and update installs correctly"
+      "Extract the complexity hints block (step count < 3 advisory, no scope advisory) from check_readiness_gates",
+      "Add the advisory checks to cmd_backlog_check after the gate check",
+      "Update the advisory check in cmd_run dry-run and sprint loop to call the extracted logic",
+      "Verify: backlog check still shows advisory warnings alongside gate failures"
     ],
     "acceptanceCriteria": [
-      "No get_expected_checksum function exists in the script",
-      "No verify_or_abort function exists in the script",
-      "_fetch_and_stage handles checksum lookup and verification inline",
-      "Not modified output does not mention backlog",
-      "update --dry-run works correctly",
+      "check_readiness_gates contains only hard gate checks (title, intent, steps, AC, short steps, deps)",
+      "check_readiness_gates does not contain complexity_hints or under-specified logic",
+      "backlog check output still includes advisory warnings when relevant",
       "shellcheck passes"
     ],
     "scope": [
       ".aishore/**"
     ],
-    "startedAt": "2026-03-20T22:42:42-07:00",
+    "startedAt": "2026-03-20T22:44:58-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T22:44:56-07:00"
+    "completedAt": "2026-03-20T22:49:36-07:00"
   },
-  "completedAt": "2026-03-20T22:44:56-07:00",
+  "completedAt": "2026-03-20T22:49:36-07:00",
   "attempts": 1
 }
