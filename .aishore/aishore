@@ -2456,6 +2456,7 @@ _sync_remote() {
 _handle_sprint_success() {
     if mark_complete "$ITEM_ID" "$item_source" "$total_attempts"; then
         log_success "Sprint complete: $ITEM_ID"
+        COMPLETED_IDS["$ITEM_ID"]=1
         passed=$((passed + 1))
         consecutive_failures=0
         groom_exhausted=false
@@ -2820,9 +2821,13 @@ run_sprint_loop() {
             fi
         fi
 
-        # Build exclusion list from failed items
+        # Build exclusion list from failed and already-completed items
+        local -a _skip_keys=()
+        local _k
+        for _k in "${!FAILED_IDS[@]}"; do _skip_keys+=("$_k"); done
+        for _k in "${!COMPLETED_IDS[@]}"; do _skip_keys+=("$_k"); done
         local skip_list
-        skip_list=$(IFS=,; printf '%s\n' "${!FAILED_IDS[*]}")
+        skip_list=$(IFS=,; printf '%s' "${_skip_keys[*]}")
 
         local item_json
         if ! item_json=$(pick_item "$specific_id" "$skip_list" "$category_filter"); then
@@ -3078,6 +3083,7 @@ cmd_run() {
     local session_lines_added=0 session_lines_removed=0
     local passed=0 failed=0
     declare -A FAILED_IDS
+    declare -A COMPLETED_IDS
     local batch_start sprint_results=() sprint_items=() sprint_times=()
     local consecutive_failures=0 groom_exhausted=false
     local -a session_failures=() queued_ids=() skipped_ids=()
