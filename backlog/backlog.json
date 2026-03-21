@@ -1111,11 +1111,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Config validation is a recurring pain point: silent fallback to defaults hides misconfiguration. This surfaces the full effective config in one command, removing a class of support questions. Priority should is correct; no dependencies.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T13:56:11-07:00"
     }
   ]
 }
