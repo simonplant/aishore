@@ -1,30 +1,33 @@
 {
-  "sprintId": "sprint-1774119349",
-  "startedAt": "2026-03-21T11:55:49-07:00",
+  "sprintId": "sprint-1774119468",
+  "startedAt": "2026-03-21T11:57:48-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-102",
-    "title": "check_scope_violations embeds literal \\n in developer retry prompt — file list garbled",
-    "intent": "Developer retry_extra_prompt must contain real newlines in the scope violations file list, not literal backslash-n sequences",
+    "id": "BUG-104",
+    "title": "backlog history hardcoded tail -n 20 — no way to see more than 20 entries",
+    "intent": "Users must be able to control how many history entries are shown; 20 is too low for projects with many completed items",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Locate violations string accumulation in check_scope_violations: violations=\"${violations}  - $file\\n\" (literal backslash-n)",
-      "Confirm that scope_report=$(check_scope_violations) captures this garbled output in _run_validation_cycle",
-      "Confirm that scope_report is embedded directly into retry_extra_prompt string without printf %b interpretation",
-      "Fix: change violations accumulation from literal \\n to real newline using violations+=\"  - $file\"$'\\n'",
-      "Verify the non-strict path in check_scope_violations also benefits (stdout to terminal now displays correctly)",
+      "Locate cmd_backlog_history in aishore: tail -n 20 at end of jq pipeline (hardcoded)",
+      "Note that cmd_backlog_history currently rejects all arguments with 'Unknown option' error",
+      "Add --limit N flag (default 20) and --all flag to cmd_backlog_history",
+      "Use the parsed limit value instead of hardcoded 20 in the tail command; --all omits tail entirely",
+      "Update usage error message in the function to list the new flags",
       "Run shellcheck — confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "In strict scope mode with 2+ violated files, the developer retry_extra_prompt contains each violated filename on its own separate line (no literal \\n sequences visible)",
+      "aishore backlog history shows 20 entries by default (backwards compatible)",
+      "aishore backlog history --limit 50 shows up to 50 entries",
+      "aishore backlog history --all shows all entries in the archive",
+      "aishore backlog history --unknown-flag prints error and exits non-zero",
       "shellcheck reports no new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T11:55:49-07:00",
+    "startedAt": "2026-03-21T11:57:48-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T11:57:47-07:00"
+    "completedAt": "2026-03-21T12:01:07-07:00"
   },
-  "completedAt": "2026-03-21T11:57:47-07:00",
+  "completedAt": "2026-03-21T12:01:07-07:00",
   "attempts": 1
 }
