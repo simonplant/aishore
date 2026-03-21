@@ -1,32 +1,28 @@
 {
-  "sprintId": "sprint-1774122026",
-  "startedAt": "2026-03-21T12:40:26-07:00",
+  "sprintId": "sprint-1774122272",
+  "startedAt": "2026-03-21T12:44:32-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-035",
-    "title": "backlog populate --preview mode — show AI-generated items before committing",
-    "intent": "Users must be able to preview what backlog populate will add before it modifies backlog.json, so AI-generated noise cannot silently pollute the backlog.",
-    "description": "cmd_backlog_populate runs the AI agent and writes items directly to backlog.json with no preview step. A --preview flag should run the agent, print proposed items in a readable format, and exit without writing.",
-    "sourceBacklog": "backlog.json",
+    "id": "BUG-111",
+    "title": "cmd_checksums overwrites checksums.sha256 with empty file when all hash operations fail",
+    "intent": "cmd_checksums must refuse to overwrite checksums.sha256 if the generated temp file is empty, and exit non-zero with a clear error.",
+    "description": "In cmd_checksums(), the hash loop writes hashes to a temp file and then runs 'mv \"$tmp\" \"$checksum_file\"' unconditionally. If every hash_cmd invocation fails silently (e.g. file not found, hash binary returns non-zero), the temp file remains empty and the mv replaces the real checksums.sha256 with an empty file. All subsequent 'aishore update' runs will then fail integrity checks or accept a corrupt state.",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "Add --preview flag to cmd_backlog_populate() via parse_opts",
-      "When --preview is active, run agent but capture output to temp file instead of writing to backlog.json",
-      "Print proposed items in same table format as backlog list (id, priority, title)",
-      "Exit 0 after preview without modifying backlog.json",
-      "Add --preview to usage message and help output",
+      "After the hash loop, check that the temp file is non-empty: [[ -s \"$tmp\" ]] || { log_error \"No checksums generated — aborting to protect $checksum_file\"; return 1; }",
+      "Only then run: mv \"$tmp\" \"$checksum_file\"",
       "Run shellcheck — confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "Running backlog populate --preview prints proposed items and exits without modifying backlog.json",
-      "Running backlog populate without --preview still writes to backlog.json as before",
-      "Preview output includes id, priority, and title for each proposed item",
+      "Running cmd_checksums when all files are missing exits non-zero and does not modify checksums.sha256",
+      "Normal run with valid files still writes checksums.sha256 as before",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T12:40:26-07:00",
+    "startedAt": "2026-03-21T12:44:32-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T12:44:30-07:00"
+    "completedAt": "2026-03-21T12:46:49-07:00"
   },
-  "completedAt": "2026-03-21T12:44:30-07:00",
+  "completedAt": "2026-03-21T12:46:49-07:00",
   "attempts": 1
 }
