@@ -1,29 +1,29 @@
 {
-  "sprintId": "sprint-1774111552",
-  "startedAt": "2026-03-21T09:45:52-07:00",
+  "sprintId": "sprint-1774111671",
+  "startedAt": "2026-03-21T09:47:51-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-089",
-    "title": "_handle_sprint_success leaves git on feature branch when mark_complete fails",
-    "intent": "Sprint loop must return to base branch after any failure in _handle_sprint_success so subsequent sprints branch from the correct base",
+    "id": "BUG-090",
+    "title": "total_attempts undercounted in --refine path — second _run_retry_loop resets counter",
+    "intent": "Archive metrics must accurately record total developer attempts including all retries before spec refinement",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In _handle_sprint_success, when mark_complete fails (the else branch at line ~2386), switch back to the base branch before returning 0",
-      "Also clear AISHORE_FEATURE_BRANCH and delete the abandoned feature branch to avoid cleanup_exit confusion",
-      "Add a log_warning stating the feature branch was abandoned due to archival failure",
-      "Verify subsequent sprint iterations create branches off the correct base branch even after an archival failure"
+      "Before the second _run_retry_loop call in the --refine path (line ~2784), save the current total_attempts as prior_attempts",
+      "After the refinement _run_retry_loop completes, set total_attempts = prior_attempts + total_attempts (instead of prior_attempts + 1)",
+      "This correctly counts: N failed attempts in first loop + M attempts in refinement loop",
+      "Verify archive sprints.jsonl records the correct attempts count for --refine sprints"
     ],
     "acceptanceCriteria": [
-      "When mark_complete fails, the working directory is on base_branch after _handle_sprint_success returns",
-      "AISHORE_FEATURE_BRANCH is cleared so cleanup_exit does not attempt to delete it again",
+      "When --refine triggers and the refinement pass succeeds, total_attempts equals first-loop attempts + refinement-loop attempts",
+      "No change to behavior when --refine is not used",
       "shellcheck reports no new issues"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T09:45:52-07:00",
+    "startedAt": "2026-03-21T09:47:51-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T09:47:50-07:00"
+    "completedAt": "2026-03-21T09:50:24-07:00"
   },
-  "completedAt": "2026-03-21T09:47:50-07:00",
+  "completedAt": "2026-03-21T09:50:24-07:00",
   "attempts": 1
 }

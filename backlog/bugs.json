@@ -2582,11 +2582,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Confirmed: second _run_retry_loop call at line 2784 sets total_attempts = attempt+1 = 1, then line 2788 adds 1 = 2. First loop's attempts (e.g., 3 with --retries 2) are lost. Archive metrics show 2 instead of 4.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T09:50:24-07:00"
     }
   ]
 }
