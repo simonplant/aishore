@@ -86,6 +86,7 @@ Commands:
     --interval N    Refresh interval in seconds (default: 30)
   update            Update from upstream (--dry-run to check, --force to override)
   clean             Remove done items (--dry-run to preview)
+  config check      Validate config.yaml and print effective settings with sources
   diagnose          Show extended diagnostics from last sprint failure
   checksums         Regenerate checksums.sha256 for update verification
   init              Setup wizard — checks prerequisites, configures project
