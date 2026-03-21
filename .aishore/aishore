@@ -160,6 +160,16 @@ log_error()   { echo -e "${RED}✗ $1${NC}" >&2; }
 log_info()    { echo -e "${CYAN}$1${NC}"; }
 log_agent()   { echo -e "${MAGENTA}[$1]${NC} $2"; }
 
+# Validate that a CLI flag's argument is a positive integer.
+# Usage: require_numeric_arg "--flag-name" "$value" "$#" || return 1
+require_numeric_arg() {
+    local flag="$1" value="$2" argc="$3"
+    if [[ "$argc" -eq 0 || ! "$value" =~ ^[0-9]+$ ]]; then
+        log_error "$flag requires a numeric argument"
+        return 1
+    fi
+}
+
 # Truncate file content to last OUTPUT_TRUNCATE_LINES lines, prepending notice if truncated.
 # Usage: result=$(truncate_output "$tmpfile")
 truncate_output() {
@@ -2227,18 +2237,12 @@ cmd_run_parse_args() {
                 shift 2 ;;
             --max-failures)
                 shift
-                if [[ $# -eq 0 || ! "$1" =~ ^[0-9]+$ ]]; then
-                    log_error "--max-failures requires a numeric argument"
-                    return 1
-                fi
+                require_numeric_arg "--max-failures" "${1:-}" "$#" || return 1
                 max_consecutive_failures="$1"
                 shift ;;
             --retries)
                 shift
-                if [[ $# -eq 0 || ! "$1" =~ ^[0-9]+$ ]]; then
-                    log_error "--retries requires a numeric argument"
-                    return 1
-                fi
+                require_numeric_arg "--retries" "${1:-}" "$#" || return 1
                 retries="$1"
                 shift ;;
             *)
@@ -3203,10 +3207,7 @@ cmd_status() {
             --watch) watch=true; shift ;;
             --interval)
                 shift
-                if [[ $# -eq 0 || ! "$1" =~ ^[0-9]+$ ]]; then
-                    log_error "--interval requires a numeric argument"
-                    return 1
-                fi
+                require_numeric_arg "--interval" "${1:-}" "$#" || return 1
                 interval="$1"
                 shift ;;
             *)
