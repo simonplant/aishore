@@ -1,30 +1,29 @@
 {
-  "sprintId": "sprint-1774061747",
-  "startedAt": "2026-03-20T19:55:47-07:00",
+  "sprintId": "sprint-1774062239",
+  "startedAt": "2026-03-20T20:03:59-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-046",
-    "title": "Replace global side-effect variables with explicit function returns",
-    "intent": "Eliminate CHECK_GATES_WARNINGS, SCOPE_VIOLATION_REPORT, AC_VERIFY_REPORT, and GROOM_ITEMS_ADDED/SKIPPED globals by having functions return results via stdout capture instead of global mutation",
+    "id": "BUG-047",
+    "title": "Standardize error handling — functions log+return, only main exits",
+    "intent": "Establish and enforce a consistent error handling convention: all functions use log_error + return 1 (never exit 1), only the main entry point and truly fatal pre-flight checks may call exit",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Refactor check_readiness_gates() to output warnings to stdout instead of setting CHECK_GATES_WARNINGS",
-      "Refactor check_scope_violations() to output report to stdout instead of setting SCOPE_VIOLATION_REPORT",
-      "Refactor run_ac_verification() to output report to stdout instead of setting AC_VERIFY_REPORT",
-      "Refactor enforce_groom_limits() to return counts via stdout instead of global GROOM_ITEMS_ADDED/SKIPPED",
-      "Update all callers to capture output instead of reading globals"
+      "Audit all exit 1 calls in functions (not main) and determine which should be return 1",
+      "Convert inappropriate exit 1 calls to return 1 with proper log_error",
+      "Add log_error to any bare return 1 calls that silently fail",
+      "Document the convention in a comment near the error handling functions"
     ],
     "acceptanceCriteria": [
-      "No CHECK_GATES_WARNINGS, SCOPE_VIOLATION_REPORT, AC_VERIFY_REPORT, GROOM_ITEMS_ADDED, or GROOM_ITEMS_SKIPPED global variables exist",
-      "All callers capture function output explicitly",
+      "No function other than main entry point or pre-flight checks uses exit 1",
+      "Every return 1 is preceded by a log_error call",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T19:55:47-07:00",
+    "startedAt": "2026-03-20T20:03:59-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T20:03:58-07:00"
+    "completedAt": "2026-03-20T20:17:38-07:00"
   },
-  "completedAt": "2026-03-20T20:03:58-07:00",
+  "completedAt": "2026-03-20T20:17:38-07:00",
   "attempts": 1
 }

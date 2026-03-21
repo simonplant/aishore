@@ -1231,9 +1231,10 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-20T20:17:38-07:00"
     },
     {
       "id": "BUG-048",
@@ -1838,20 +1839,26 @@
     {
       "id": "BUG-071",
       "title": "Clean up cmd_run: extract auto-review and trim verbosity",
-      "intent": "cmd_run is leaner and reads top-to-bottom without embedded ceremony blocks. The inline auto-review block and verbose conditional logging are extracted or trimmed. Saves ~50 lines.",
-      "description": "cmd_run (478 lines) has a 68-line auto-review block at the end that duplicates most of cmd_review. It also has verbose conditional echo statements for every config option. Extract auto-review to call cmd_review directly. Trim the startup banner to essential info only.",
+      "intent": "cmd_run is leaner and reads top-to-bottom. The inline auto-review block, verbose bash idioms in the sprint loop, and nested helper definitions are cleaned up. Saves ~65 lines.",
+      "description": "cmd_run (478 lines) has: (1) a 68-line auto-review block at the end duplicating cmd_review — replace with direct call. (2) A 4-line skip-list builder loop replaceable with IFS=,; echo. (3) A 13-line priority scope check loop replaceable with a single [[ string match ]]. (4) Verbose startup banner echoing every config value. (5) Nested _count_total_ready and _record_sprint_failure function defs that should be at file scope. (6) Duplicate [[ -s review_output ]] check in post-summary.",
       "priority": "should",
       "category": null,
       "steps": [
-        "Replace the 68-line inline auto-review block with a direct call to cmd_review",
-        "Trim the startup banner: remove conditional echo lines that repeat config values the user already set",
-        "Move nested function _count_total_ready to file scope (its used elsewhere conceptually)",
-        "Verify: auto done --auto-review still triggers review on completion"
+        "Replace 68-line inline auto-review block with a direct call to cmd_review",
+        "Replace skip-list builder loop with: local skip_list; skip_list=dollar{!FAILED_IDS[*]}",
+        "Replace priority scope check loop with: [[ -z auto_priorities || ' auto_priorities ' == *' item_priority '* ]]",
+        "Move nested _count_total_ready to file scope",
+        "Move nested _record_sprint_failure to file scope",
+        "Merge duplicate [[ -s review_output ]] checks into one block",
+        "Trim startup banner to essential info only",
+        "Verify: auto done --auto-review, auto p1, run --dry-run all work correctly"
       ],
       "acceptanceCriteria": [
         "No inline review agent invocation in cmd_run — it calls cmd_review",
+        "No skip-list builder loop — uses IFS one-liner",
+        "No priority scope for-loop — uses string match",
+        "No nested function definitions inside cmd_run",
         "auto done --auto-review still runs architecture review after completion",
-        "Startup banner shows project, scope, and key flags but not every config value",
         "shellcheck passes"
       ],
       "scope": [
@@ -1865,22 +1872,206 @@
     {
       "id": "BUG-072",
       "title": "Trim verbose defensive coding across all functions",
-      "intent": "Error handling is terse and consistent. Redundant null guards, verbose suggestion messages, and unnecessary fallbacks are removed. Saves ~200 lines spread across the entire script.",
-      "description": "Across 82 functions, the script has accumulated verbose defensive patterns: (1) every jq call has 2>/dev/null || true even when the caller already guarantees valid input, (2) error messages include full command examples and suggestions that belong in help text not inline, (3) existence checks on files that were just created or passed by the caller, (4) multi-line error blocks where a single log_error suffices. Systematically trim these while keeping genuine error handling.",
+      "intent": "Error handling is terse and consistent. Redundant null guards, verbose suggestions, unnecessary fallbacks, single-use variables, and redundant return 0 statements are removed. Saves ~200 lines spread across the entire script.",
+      "description": "Across 82 functions, the script has accumulated verbose patterns: (1) jq calls with 2>/dev/null || true on caller-guaranteed input. (2) Error messages with full command examples belonging in help text. (3) Existence checks on files just created or caller-validated. (4) Multi-line error blocks where single log_error suffices. (5) ~5 redundant return 0 at end of functions. (6) Per-item dual jq calls in enforce_groom_limits and mark_complete that can be combined into single calls. (7) Variables computed and used exactly once that should be inlined. (8) cmd_diagnose has 6 separate jq -r calls on the same file — consolidate to one.",
       "priority": "should",
       "category": null,
       "steps": [
-        "Audit all jq calls: remove 2>/dev/null where input is guaranteed valid (e.g. just-created JSON)",
-        "Shorten error messages: remove inline command examples and suggestions, keep the error itself",
+        "Remove 2>/dev/null from jq calls where input JSON was constructed in the same function",
+        "Shorten error messages: remove inline command examples and suggestions",
         "Remove redundant file existence checks where the caller already validated",
-        "Collapse multi-line error handling blocks into single log_error calls where appropriate",
-        "Keep all genuine error handling: user input validation, external file reads, git operations",
-        "Run full test: init, backlog add, backlog list, groom, run --dry-run to verify no regressions"
+        "Collapse multi-line error blocks into single log_error calls",
+        "Remove ~5 redundant return 0 at end of functions (load_config, _apply_env_overrides, etc.)",
+        "Combine per-item dual jq calls in enforce_groom_limits (id+priority in one call)",
+        "Combine two separate jq calls for priority+category in mark_complete into one",
+        "Consolidate 6 separate jq -r calls in cmd_diagnose into one jq invocation",
+        "Inline single-use variables where the expression is short and clear",
+        "Run full test: init, backlog add, backlog list, groom, run --dry-run"
       ],
       "acceptanceCriteria": [
-        "No jq call has 2>/dev/null where the input JSON was constructed in the same function",
+        "No jq call has 2>/dev/null where input JSON was constructed in the same function",
         "No error message contains a full command example longer than 60 characters",
+        "No function ends with a redundant return 0",
+        "enforce_groom_limits uses one jq call per item, not two",
+        "mark_complete uses one jq call for priority+category, not two",
+        "cmd_diagnose uses one jq invocation for initial field extraction, not six",
         "All commands still produce correct error output on bad input",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-073",
+      "title": "Extract _find_prd and unify product/arch detection in init flow",
+      "intent": "The PRD candidate list exists in one place. Product and architecture doc paths are detected once, not three times with three variable names. Init flow loses ~35 lines of copy-paste.",
+      "description": "The same 10-element PRD candidate list (PRODUCT.md, product.md, PRD.md, prd.md, docs/ variants, WEBSITE_BRIEF.md, README.md) is copy-pasted verbatim in _init_detect_project, _init_scaffold_files, and cmd_backlog_populate. Product/arch existence is checked 3 times across the init flow with 3 different variable names (prd_found, product_found, found_product). Extract _find_prd function returning the path, use it everywhere. Detect product/arch docs once and pass paths through. Remove docs/WEBSITE_BRIEF.md from generic candidate list (project-specific leak).",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Create _find_prd function that returns the first matching PRD file path from the candidate list",
+        "Replace the candidate loop in _init_detect_project with _find_prd call",
+        "Replace the candidate loop in _init_scaffold_files with _find_prd call",
+        "Replace the candidate loop in cmd_backlog_populate with _find_prd call",
+        "Remove docs/WEBSITE_BRIEF.md from the candidate list",
+        "Unify product/arch detection: detect once in _init_detect_project, pass paths to scaffold and summary",
+        "Remove the re-detection loops in _init_scaffold_files and cmd_init summary",
+        "Verify: init -y and backlog populate both find the same docs as before"
+      ],
+      "acceptanceCriteria": [
+        "_find_prd function exists and is called from all 3 locations",
+        "No duplicate PRD candidate list exists in the script",
+        "docs/WEBSITE_BRIEF.md is not in the candidate list",
+        "Product/arch paths are detected once during init, not re-scanned",
+        "init -y produces identical output",
+        "backlog populate finds the same PRD file as before",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-074",
+      "title": "Refactor cmd_metrics to compute once, render twice",
+      "intent": "Metrics are computed by one jq pass and rendered by two output modes. The 6 duplicated jq computations between JSON and human branches are eliminated. Saves ~12 lines and 6 jq forks.",
+      "description": "cmd_metrics (114 lines) computes avg_attempts, items_per_day, by_priority, by_category, and recent-10 trends twice: once in a big jq -s block for --json output, and again as 6 separate jq -s calls for human output. Extract _compute_metrics_json that always produces the JSON object. --json mode emits it directly. Human mode extracts fields from the pre-computed JSON with jq -r.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Extract _compute_metrics_json function that returns the full metrics JSON object",
+        "cmd_metrics --json: call _compute_metrics_json and emit directly",
+        "cmd_metrics human mode: call _compute_metrics_json, then render fields with jq -r extraction",
+        "Remove the 6 separate jq -s calls from the human branch",
+        "Verify: both --json and human output are identical to before"
+      ],
+      "acceptanceCriteria": [
+        "A _compute_metrics_json function exists",
+        "No jq -s call appears in the human-output branch of cmd_metrics",
+        "cmd_metrics --json output is identical to before",
+        "cmd_metrics human output is identical to before",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-075",
+      "title": "Collapse sub-shell jq extractions in create_sprint and mark_complete",
+      "intent": "Sprint state functions pass item JSON as a single --argjson argument instead of forking 5-7 sub-shells to extract individual fields. Saves ~13 lines and 7 process forks.",
+      "description": "create_sprint (44 lines) calls echo item_json | jq 5 separate times to extract intent, description, steps, AC, scope — then passes each as a --argjson to jq -n. Pass item_json as a single --argjson item and reference fields inline. mark_complete (78 lines) calls jq twice to get item_priority and item_category separately from the same backlog file — combine into one call.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Refactor create_sprint: pass item_json as --argjson item, reference .intent/.steps/etc inline in the jq expression",
+        "Remove the 5 sub-shell extractions in create_sprint",
+        "Refactor mark_complete: combine item_priority and item_category into one jq call returning both",
+        "Verify: sprint.json and sprints.jsonl archive records are identical to before"
+      ],
+      "acceptanceCriteria": [
+        "create_sprint has zero echo item_json | jq sub-shell calls",
+        "create_sprint uses --argjson item to pass the full item",
+        "mark_complete uses one jq call for priority+category, not two",
+        "sprint.json structure is unchanged",
+        "sprints.jsonl archive records are unchanged",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-076",
+      "title": "Collapse npm detection block in _init_detect_project",
+      "intent": "npm validation command detection is 8 lines instead of 22. Three separate jq calls for has_test/has_build/has_check are replaced by a single priority-ordered jq expression.",
+      "description": "_init_detect_project has a 22-line block that calls jq 3 times into package.json to extract has_test, has_build, has_check, then uses a 4-way if/elif chain to pick the validation command. Replace with a single jq call that returns the best available script name, then map to the command string.",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Replace 3 separate jq calls with one jq expression that checks scripts.check, scripts.build, scripts.test in priority order",
+        "Map the result to the validation command string (npm run check, npm run build, npm test, etc.)",
+        "Remove the has_test/has_build/has_check variables and the 4-way if/elif",
+        "Verify: init -y on a node project detects the same validation command as before"
+      ],
+      "acceptanceCriteria": [
+        "npm script detection uses one jq call, not three",
+        "No has_test/has_build/has_check variables exist",
+        "init -y detects the correct validation command for projects with check, build, test, or combinations",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-077",
+      "title": "Inline single-use nested helpers in cmd_update",
+      "intent": "cmd_update has no single-call-site nested functions. get_expected_checksum and verify_or_abort are inlined into _fetch_and_stage where they are used once each. Saves ~12 lines of wrapper overhead.",
+      "description": "cmd_update defines get_expected_checksum (5 lines, called once) and verify_or_abort (21 lines, called once from _fetch_and_stage). Both are nested helpers with no reuse. Inline get_expected_checksum as an awk call at its one use site. Inline verify_or_abort logic into _fetch_and_stage. Also fix misleading Not modified output that lists backlog/* (not in the update manifest).",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Inline get_expected_checksum: replace call with direct awk expression in _fetch_and_stage",
+        "Inline verify_or_abort logic into _fetch_and_stage",
+        "Remove the two nested function definitions",
+        "Fix Not modified output: remove backlog/* line (backlog is never in the manifest)",
+        "Verify: update --dry-run shows correct file list and update installs correctly"
+      ],
+      "acceptanceCriteria": [
+        "No get_expected_checksum function exists in the script",
+        "No verify_or_abort function exists in the script",
+        "_fetch_and_stage handles checksum lookup and verification inline",
+        "Not modified output does not mention backlog",
+        "update --dry-run works correctly",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-078",
+      "title": "Move advisory complexity hints out of check_readiness_gates",
+      "intent": "check_readiness_gates is a pure gate function — it checks hard requirements only. Advisory hints (under-specified warnings) live in the caller. Saves ~10 lines from the gate function and improves separation of concerns.",
+      "description": "check_readiness_gates (98 lines) has 6 hard gate checks plus a 12-line advisory block (lines 648-660) that warns about under-specified items (few steps, no scope). The advisory block is not a gate — it never blocks anything. Move it to cmd_backlog_check (the primary caller) and the advisory check in cmd_run. This makes check_readiness_gates a clean pass/fail function.",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Extract the complexity hints block (step count < 3 advisory, no scope advisory) from check_readiness_gates",
+        "Add the advisory checks to cmd_backlog_check after the gate check",
+        "Update the advisory check in cmd_run dry-run and sprint loop to call the extracted logic",
+        "Verify: backlog check still shows advisory warnings alongside gate failures"
+      ],
+      "acceptanceCriteria": [
+        "check_readiness_gates contains only hard gate checks (title, intent, steps, AC, short steps, deps)",
+        "check_readiness_gates does not contain complexity_hints or under-specified logic",
+        "backlog check output still includes advisory warnings when relevant",
         "shellcheck passes"
       ],
       "scope": [
