@@ -1,31 +1,31 @@
 {
-  "sprintId": "sprint-1774126940",
-  "startedAt": "2026-03-21T14:02:20-07:00",
+  "sprintId": "sprint-1774127276",
+  "startedAt": "2026-03-21T14:07:56-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-125",
-    "title": "auto progress denominator goes stale after auto-groom adds new items mid-session",
-    "intent": "The progress counter denominator must reflect the actual number of items available for the session at the time of display, not a snapshot taken at session start that becomes wrong after auto-groom fires.",
-    "description": "setup_sprint_environment() builds queued_ids once before the sprint loop via list_pickable_ids(). The progress line 'X/${#queued_ids[@]} complete' uses this pre-session count as denominator. When auto-groom fires mid-session (ready < AUTO_GROOM_THRESHOLD), it can add new items to the backlog. These new items are picked by pick_item() in subsequent loops (since pick_item queries the live backlog), but they were never added to queued_ids. The denominator stays fixed, so passed can exceed it (e.g. '6/5 complete') or the denominator is just misleading. The fix is to recompute display_total from list_pickable_ids(skip_list) after groom completes, so the denominator always reflects current reality.",
+    "id": "BUG-126",
+    "title": "auto exits silently when session processes zero items — no actionable guidance shown",
+    "intent": "When an auto session ends with zero items processed, a session-level message must be shown stating how many items were skipped and why, with a suggested remediation command.",
+    "description": "When all items in an auto session are skipped (intent gate, not ready, or dependencies unmet), the session exits with no session-level summary. After BUG-100 adds per-item skip warnings, users will see individual warning lines but no closing message directing them to fix the backlog. A user who runs 'auto done' and sees 0 items processed needs the session to close with: 'Session complete: 0 of N items processed. X items skipped for intent issues — run backlog check --all to audit readiness.' This closes the feedback loop that BUG-100 opens.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "After auto-groom runs in the sprint loop (the block around line 2870-2883), call list_pickable_ids with the current skip_list and priority filter to get updated_ids",
-      "Append any IDs in updated_ids that are not already in queued_ids (or not in skipped_ids/completed) to queued_ids",
-      "Recompute display_total from the updated queued_ids length (already capped by session_limit)",
-      "Verify: a session that auto-grooms shows accurate denominator after groom adds new items",
+      "In cmd_auto (or the sprint loop exit path), after the loop ends, check if items_processed == 0",
+      "If zero items were processed, print: log_warn 'Session ended: 0 items processed. Check backlog readiness with: aishore backlog check --all'",
+      "Include the count of items that were available but skipped if that count is available from the loop state",
+      "If items_processed > 0 but less than queued, still show the normal summary (BUG-122 end-of-session table) — no change needed for the success path",
       "Run shellcheck — zero new warnings"
     ],
     "acceptanceCriteria": [
-      "When auto-groom fires and adds 3 new items during a session, the progress denominator increases to include them",
-      "passed never exceeds display_total during a normal session",
-      "session_limit cap is still respected: display_total does not exceed session_limit when one is set",
+      "Running 'auto done' when all items lack intent shows per-item warnings (BUG-100) plus a session-level closing message with remediation hint",
+      "Running 'auto done' when some items succeed shows the normal summary table with no extra warning",
+      "Running 'auto done' with an empty backlog shows the existing 'no items' message unchanged",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T14:02:20-07:00",
+    "startedAt": "2026-03-21T14:07:56-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T14:07:54-07:00"
+    "completedAt": "2026-03-21T14:13:22-07:00"
   },
-  "completedAt": "2026-03-21T14:07:54-07:00",
+  "completedAt": "2026-03-21T14:13:22-07:00",
   "attempts": 1
 }

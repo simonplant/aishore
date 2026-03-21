@@ -3133,6 +3133,15 @@ print_sprint_summary() {
         fi
     fi
 
+    # Zero-items-processed warning: when auto mode processes nothing but backlog has items
+    if [[ "$auto_mode" == "true" && $passed -eq 0 && $failed -eq 0 ]]; then
+        local total_backlog_items
+        total_backlog_items=$(sum_backlog_count count_items)
+        if [[ "$total_backlog_items" -gt 0 ]]; then
+            log_warning "Session ended: 0 items processed. $total_backlog_items item(s) in backlog were not ready — run '.aishore/aishore backlog check --all' to audit readiness."
+        fi
+    fi
+
     if [[ "$auto_mode" == "true" ]]; then
         if [[ $failed -eq 0 && $passed -gt 0 ]]; then
             log_header "Mission complete: $passed items done"
