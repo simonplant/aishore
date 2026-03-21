@@ -1,35 +1,35 @@
 {
-  "sprintId": "sprint-1774052987",
-  "startedAt": "2026-03-20T17:29:47-07:00",
+  "sprintId": "sprint-1774053308",
+  "startedAt": "2026-03-20T17:35:08-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-016",
-    "title": "Create docs/CONFIGURATION.md — every knob, what it does, safe defaults",
-    "intent": "Users must be able to find and understand every configuration option in one place — undocumented config options are invisible features.",
-    "description": "Configuration content is split between README.md (Configuration section: config.yaml example with 6 settings + environment variable table with 11 AISHORE_* vars + Complete Flag Reference for every CLI command) and CLAUDE.md (configuration precedence: env vars > config.yaml > defaults, scope checking modes, maturity protocol settings, agent permission descriptions). The unified document must cover: config.yaml with every option annotated, all environment variables with precedence rules, CLI flag reference grouped by command, and agent permissions. The current README Configuration section is a good foundation but only shows a subset of config.yaml options. The Complete Flag Reference section (~100 lines) should move here entirely.",
+    "id": "FEAT-017",
+    "title": "Create docs/PROBLEMS.md — the pain points aishore solves, with evidence",
+    "intent": "People search for problems, not solutions — this document must rank for the frustrations that drive users to aishore.",
+    "description": "This is the weakest content area. The only existing source is README.md's 'Why aishore?' section (two paragraphs: vibe coding breaks at scale, no memory between sessions, no quality gate, no batch work). The document needs to articulate specific, googleable failure modes: context loss between AI coding sessions, no regression detection in AI-generated code, no audit trail for AI development decisions, one-shot prompting fails for multi-feature work, no quality gate between AI implementation and merge, AI agents don't self-critique without structure. For each problem, describe the pain as the user experiences it, link evidence where possible (forum posts, tweets, articles about vibe coding limitations), and explain concretely how aishore addresses it. This is part documentation, part SEO, part positioning.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Read README.md Configuration section (config.yaml example, environment variable table)",
-      "Read README.md Complete Flag Reference section (all flags for backlog add/edit/list/check/populate/history, init, run, auto, groom, review, and other commands)",
-      "Read CLAUDE.md for: configuration precedence note, scope checking modes, maturity protocol settings, agent permission descriptions",
-      "Read .aishore/config.yaml for the actual config file schema with all available options",
-      "Compose docs/CONFIGURATION.md with these sections: Configuration File (annotated config.yaml with every option, its type, default value, and what it controls), Environment Variables (full table with precedence rules), CLI Flag Reference (moved from README Complete Flag Reference, grouped by command), Agent Permissions (what each permission enables, security implications), Configuration Precedence (env > config.yaml > defaults, with examples)",
-      "For each config option, document: name, type, default value, what it controls, when to change it"
+      "Read README.md 'Why aishore?' section for the seed content (vibe coding limitations, no memory, no quality gate, no batch work)",
+      "Read README.md opening paragraphs for the positioning statement (structured intent-based batch development with inline critic loops)",
+      "Read .aishore/README.md 'The Intent-Driven Model' section for implicit problem statements (why intent-driven is needed vs ad-hoc)",
+      "Compose docs/PROBLEMS.md with one section per problem, each structured as: Problem heading (stated as user would search for it), Description of the pain (2-3 sentences, concrete), Evidence section (link to real discussions — GitHub issues, forum posts, articles about AI coding limitations — or mark as TODO if evidence needs gathering), How aishore addresses this (concrete explanation referencing specific aishore features)",
+      "Cover at minimum these problems: AI coding context loss between sessions, No quality gates on AI-generated code, One-shot prompting fails at project scale, No audit trail for AI development decisions, AI agents don't self-critique without structure, No way to batch AI development work",
+      "Write problem headings as search queries: e.g. 'AI-generated code has no quality gate before merge' not 'Quality Gates'"
     ],
     "acceptanceCriteria": [
-      "docs/CONFIGURATION.md exists and documents every config.yaml option, every AISHORE_* environment variable, and every CLI flag",
-      "Each option includes: name, type, default, description, and when to change it",
-      "Configuration precedence (env > config.yaml > defaults) is clearly explained",
-      "The Complete Flag Reference from README.md is fully represented here",
-      "No undocumented options remain — every setting in config.yaml and every AISHORE_* env var has an entry"
+      "docs/PROBLEMS.md exists with at least 6 distinct problem sections",
+      "Each problem is stated as a user would search for it (search-friendly heading)",
+      "Each problem section includes: pain description, evidence or TODO placeholder for evidence, and how aishore addresses it",
+      "The document does not read as marketing copy — it reads as honest problem documentation with concrete solutions",
+      "Problems reference specific aishore features (maturity protocol, commander's intent, backlog system) not vague claims"
     ],
     "scope": [
-      "docs/CONFIGURATION.md"
+      "docs/PROBLEMS.md"
     ],
-    "startedAt": "2026-03-20T17:29:47-07:00",
+    "startedAt": "2026-03-20T17:35:08-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T17:35:07-07:00"
+    "completedAt": "2026-03-20T17:37:47-07:00"
   },
-  "completedAt": "2026-03-20T17:35:07-07:00",
+  "completedAt": "2026-03-20T17:37:47-07:00",
   "attempts": 1
 }
