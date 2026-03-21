@@ -1,27 +1,26 @@
 {
-  "sprintId": "sprint-1774071308",
-  "startedAt": "2026-03-20T22:35:08-07:00",
+  "sprintId": "sprint-1774071534",
+  "startedAt": "2026-03-20T22:38:54-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-058",
-    "title": "Inconsistent date portability — some date calls lack BSD fallback",
-    "intent": "Add consistent BSD/GNU date handling throughout the script — some calls have macOS fallback (date -j) while others assume GNU date, which will break on macOS without coreutils",
+    "id": "BUG-059",
+    "title": "Remove TODO placeholder links from docs/PROBLEMS.md",
+    "intent": "Either fill in the evidence links (TODO: Link forum posts, TODO: Link articles) in PROBLEMS.md or remove the placeholder text so the document looks complete",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Audit all date command invocations for BSD compatibility",
-      "Extract a portable_date() helper that handles both GNU and BSD date",
-      "Replace direct date calls with the helper where format conversion is needed"
+      "Review all TODO placeholders in PROBLEMS.md",
+      "Search for relevant evidence links or remove the placeholders",
+      "Ensure the document reads cleanly without dangling TODOs"
     ],
     "acceptanceCriteria": [
-      "All date calls either use the portable helper or only use universally supported formats like +%s",
-      "shellcheck passes"
+      "No TODO placeholders remain in PROBLEMS.md"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T22:35:08-07:00",
+    "startedAt": "2026-03-20T22:38:54-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T22:38:52-07:00"
+    "completedAt": "2026-03-20T22:40:15-07:00"
   },
-  "completedAt": "2026-03-20T22:38:52-07:00",
+  "completedAt": "2026-03-20T22:40:15-07:00",
   "attempts": 1
 }
