@@ -1,31 +1,28 @@
 {
-  "sprintId": "sprint-1774115705",
-  "startedAt": "2026-03-21T10:55:05-07:00",
+  "sprintId": "sprint-1774116854",
+  "startedAt": "2026-03-21T11:14:14-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-095",
-    "title": "Update CHANGELOG.md and bump version to v0.3.5",
-    "intent": "CHANGELOG.md reflects all work completed since v0.3.4 and VERSION reads 0.3.5. Users and contributors can see exactly what changed in this release.",
-    "description": "BUG-082 was manually marked done but the actual work was never completed — VERSION is still 0.3.4 and docs/CHANGELOG.md has no 0.3.5 section. Since v0.3.4, 20+ items were completed (BUG-067 through BUG-092, FEAT-027 through FEAT-032): refactoring, simplification, notification system, multi-backlog support, retry intelligence, category filter, --limit flag, real-time streaming, and numerous bug fixes. These constitute a patch release (v0.3.5).",
+    "id": "BUG-096",
+    "title": "cmd_status --watch loops forever after successful sprint — status is 'completed' not 'idle'",
+    "intent": "After a sprint succeeds, cmd_status --watch must exit cleanly without user intervention.",
+    "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Bump .aishore/VERSION from 0.3.4 to 0.3.5",
-      "Add a [0.3.5] - 2026-03-21 section to docs/CHANGELOG.md with Added, Fixed, and Changed subsections covering BUG-067 through BUG-092 and FEAT-027 through FEAT-032",
-      "Run .aishore/aishore checksums to regenerate checksums after version bump",
-      "Verify: .aishore/aishore version outputs 0.3.5"
+      "Locate the terminal-state check in cmd_status watch loop (~line 3549)",
+      "Add 'completed' as a terminal state alongside 'idle': [[ $sprint_status == 'idle' || $sprint_status == 'completed' ]]",
+      "Run shellcheck and verify no new warnings"
     ],
     "acceptanceCriteria": [
-      "VERSION file contains 0.3.5",
-      "docs/CHANGELOG.md has a [0.3.5] section dated 2026-03-21",
-      "[0.3.5] section covers the key items completed since v0.3.4 (at minimum: notifications, streaming, multi-backlog, retry intelligence, category filter, --limit, and the major bug fixes)",
-      ".aishore/aishore version outputs 0.3.5",
-      "checksums.sha256 is updated (aishore checksums exits 0)"
+      "Running cmd_status --watch exits automatically after a sprint completes with status 'completed' in sprint.json",
+      "Running cmd_status --watch still exits when sprint.json is absent or has status 'idle'",
+      "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T10:55:05-07:00",
+    "startedAt": "2026-03-21T11:14:14-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T10:57:09-07:00"
+    "completedAt": "2026-03-21T11:15:51-07:00"
   },
-  "completedAt": "2026-03-21T10:57:09-07:00",
+  "completedAt": "2026-03-21T11:15:51-07:00",
   "attempts": 1
 }
