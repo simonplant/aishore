@@ -1,27 +1,27 @@
 {
-  "sprintId": "sprint-1774067935",
-  "startedAt": "2026-03-20T21:38:55-07:00",
+  "sprintId": "sprint-1774068080",
+  "startedAt": "2026-03-20T21:41:20-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-041",
-    "title": "Cache timeout command detection at startup instead of repeated runtime checks",
-    "intent": "Detect timeout vs gtimeout once at startup and store in TIMEOUT_CMD variable, eliminating repeated command -v checks scattered through the script",
+    "id": "BUG-042",
+    "title": "Extract require_numeric_arg() helper — numeric validation duplicated for multiple flags",
+    "intent": "Replace the 3+ copies of numeric argument validation (regex check, log error, return 1) with a single require_numeric_arg() helper function",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Add TIMEOUT_CMD detection near other startup constants after set -euo pipefail",
-      "Replace all inline command -v timeout and command -v gtimeout checks with usage of TIMEOUT_CMD",
-      "Verify gtimeout fallback still works on macOS"
+      "Identify all places that validate numeric CLI arguments with the same if/regex/error pattern",
+      "Extract require_numeric_arg() that takes flag name and value, validates, and errors",
+      "Replace all call sites"
     ],
     "acceptanceCriteria": [
-      "No command -v timeout or command -v gtimeout checks remain outside the single detection point",
+      "Only one function contains the numeric argument validation logic",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T21:38:55-07:00",
+    "startedAt": "2026-03-20T21:41:20-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T21:41:19-07:00"
+    "completedAt": "2026-03-20T21:43:29-07:00"
   },
-  "completedAt": "2026-03-20T21:41:19-07:00",
+  "completedAt": "2026-03-20T21:43:29-07:00",
   "attempts": 1
 }
