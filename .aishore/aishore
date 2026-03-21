@@ -170,6 +170,118 @@ require_numeric_arg() {
     fi
 }
 
+# Validate that a CLI flag has a non-empty, non-flag value.
+# Usage: validate_arg "--flag" "${2:-}" || return 1
+validate_arg() {
+    local flag="$1" val="$2"
+    if [[ -z "$val" || "$val" == --* ]]; then
+        log_error "$flag requires a value"
+        return 1
+    fi
+}
+
+# parse_opts — Declarative option parser for cmd_* functions.
+# Sets variables in the caller's scope via Bash dynamic scoping.
+# Callers must declare target variables as local before calling.
+#
+# Usage: parse_opts [--positional] SPEC... -- "$@"
+#
+# SPEC types (TYPE:VAR:FLAGS where FLAGS are pipe-separated):
+#   bool:VAR:--flag|-f        Set VAR=true
+#   val:VAR:--flag            Set VAR=<next arg> (validates non-empty)
+#   num:VAR:--flag            Set VAR=<next arg> (validates numeric)
+#   arr:VAR:--flag            Append <next arg> to VAR array (validates non-empty)
+#   passval:--flag            Pass flag + value to _PARSE_REMAINING (for custom handling)
+#
+# Options:
+#   --positional  Allow non-flag positional args (collected in _PARSE_REMAINING).
+#                 Without this, any non-flag arg triggers an error.
+#
+# Unknown --* flags always trigger an error.
+# After parsing, _PARSE_REMAINING holds passval items and (if --positional) positional args.
+parse_opts() {
+    local _po_positional=false
+    local -a _po_specs=()
+    while [[ $# -gt 0 && "$1" != "--" ]]; do
+        if [[ "$1" == "--positional" ]]; then
+            _po_positional=true
+        else
+            _po_specs+=("$1")
+        fi
+        shift
+    done
+    [[ "${1:-}" == "--" ]] && shift
+
+    _PARSE_REMAINING=()
+
+    while [[ $# -gt 0 ]]; do
+        local _po_matched=false _po_s
+        for _po_s in "${_po_specs[@]}"; do
+            local _po_type _po_rest _po_var _po_flags
+            _po_type="${_po_s%%:*}"
+            _po_rest="${_po_s#*:}"
+            if [[ "$_po_type" == "passval" ]]; then
+                _po_var=""
+                _po_flags="$_po_rest"
+            else
+                _po_var="${_po_rest%%:*}"
+                _po_flags="${_po_rest#*:}"
+            fi
+
+            local _po_f _po_sifs="$IFS"
+            IFS='|'
+            for _po_f in $_po_flags; do
+                IFS="$_po_sifs"
+                [[ "$1" != "$_po_f" ]] && continue
+                case "$_po_type" in
+                    bool)
+                        eval "${_po_var}=true"
+                        shift ;;
+                    val)
+                        validate_arg "$1" "${2:-}" || return 1
+                        eval "${_po_var}=\"\$2\""
+                        shift 2 ;;
+                    num)
+                        local _po_fn="$1"; shift
+                        require_numeric_arg "$_po_fn" "${1:-}" "$#" || return 1
+                        eval "${_po_var}=\"\$1\""
+                        shift ;;
+                    arr)
+                        validate_arg "$1" "${2:-}" || return 1
+                        eval "${_po_var}+=(\"\$2\")"
+                        shift 2 ;;
+                    passval)
+                        if [[ -n "${2:-}" && "${2:-}" != --* ]]; then
+                            _PARSE_REMAINING+=("$1" "$2")
+                            shift 2
+                        else
+                            _PARSE_REMAINING+=("$1")
+                            shift
+                        fi ;;
+                esac
+                _po_matched=true
+                break
+            done
+            IFS="$_po_sifs"
+            [[ "$_po_matched" == "true" ]] && break
+        done
+
+        if [[ "$_po_matched" == "false" ]]; then
+            if [[ "$1" == --* || "$1" == -* ]]; then
+                log_error "Unknown option: $1"
+                return 1
+            fi
+            if [[ "$_po_positional" == "true" ]]; then
+                _PARSE_REMAINING+=("$1")
+            else
+                log_error "Unknown option: $1"
+                return 1
+            fi
+            shift
+        fi
+    done
+}
+
 # Truncate file content to last OUTPUT_TRUNCATE_LINES lines, prepending notice if truncated.
 # Usage: result=$(truncate_output "$tmpfile")
 truncate_output() {
@@ -2223,41 +2335,20 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
 #   create_pr, refine_on_exhaust, quick_mode, auto_mode, auto_scope,
 #   auto_review, max_consecutive_failures
 cmd_run_parse_args() {
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --dry-run) dry_run=true; shift ;;
-            --no-merge) no_merge=true; shift ;;
-            --pr) create_pr=true; shift ;;
-            --refine) refine_on_exhaust=true; shift ;;
-            --quick) quick_mode=true; shift ;;
-            --auto-review) auto_review=true; shift ;;
-            --_auto)
-                auto_mode=true
-                auto_scope="$2"
-                shift 2 ;;
-            --max-failures)
-                shift
-                require_numeric_arg "--max-failures" "${1:-}" "$#" || return 1
-                max_consecutive_failures="$1"
-                shift ;;
-            --retries)
-                shift
-                require_numeric_arg "--retries" "${1:-}" "$#" || return 1
-                retries="$1"
-                shift ;;
-            *)
-                if [[ "$1" == --* ]]; then
-                    log_error "Unknown option: $1"
-                    return 1
-                fi
-                if [[ "$1" =~ ^[0-9]+$ ]]; then
-                    count="$1"
-                else
-                    specific_id="$1"
-                    count=1
-                fi
-                shift ;;
-        esac
+    parse_opts --positional \
+        "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:create_pr:--pr" \
+        "bool:refine_on_exhaust:--refine" "bool:quick_mode:--quick" "bool:auto_review:--auto-review" \
+        "val:auto_scope:--_auto" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" \
+        -- "$@" || return 1
+    [[ -n "$auto_scope" ]] && auto_mode=true
+    local _arg
+    for _arg in "${_PARSE_REMAINING[@]}"; do
+        if [[ "$_arg" =~ ^[0-9]+$ ]]; then
+            count="$_arg"
+        else
+            specific_id="$_arg"
+            count=1
+        fi
     done
 }
 
@@ -2672,13 +2763,9 @@ cmd_run() {
 cmd_groom() {
     require_tool jq
 
-    local mode="bugs"
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --backlog) mode="backlog"; shift ;;
-            *) log_error "Unknown option: $1"; return 1 ;;
-        esac
-    done
+    local mode="bugs" _backlog=false
+    parse_opts "bool:_backlog:--backlog" -- "$@" || return 1
+    [[ "$_backlog" == "true" ]] && mode="backlog"
 
     acquire_lock
     load_config
@@ -2948,14 +3035,7 @@ cmd_review() {
 
     local update_docs=false
     local since=""
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --update-docs) update_docs=true; shift ;;
-            --since) validate_arg "$1" "${2:-}" || return 1; since="$2"; shift 2 ;;
-            *) log_error "Unknown option: $1"; return 1 ;;
-        esac
-    done
+    parse_opts "bool:update_docs:--update-docs" "val:since:--since" -- "$@" || return 1
 
     acquire_lock
     load_config
@@ -3051,12 +3131,7 @@ cmd_metrics() {
     require_tool jq
 
     local json_output=false
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --json) json_output=true; shift ;;
-            *) log_error "Unknown option: $1"; return 1 ;;
-        esac
-    done
+    parse_opts "bool:json_output:--json" -- "$@" || return 1
 
     load_config
 
@@ -3201,20 +3276,7 @@ cmd_status() {
 
     local watch=false
     local interval=30
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --watch) watch=true; shift ;;
-            --interval)
-                shift
-                require_numeric_arg "--interval" "${1:-}" "$#" || return 1
-                interval="$1"
-                shift ;;
-            *)
-                log_error "Unknown option: $1"
-                return 1 ;;
-        esac
-    done
+    parse_opts "bool:watch:--watch" "num:interval:--interval" -- "$@" || return 1
 
     if [[ "$watch" == "false" ]]; then
         _status_output
@@ -3511,12 +3573,7 @@ _init_scaffold_files() {
 cmd_init() {
     local auto_yes=false
 
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            -y|--yes) auto_yes=true; shift ;;
-            *) log_error "Unknown option: $1"; return 1 ;;
-        esac
-    done
+    parse_opts "bool:auto_yes:-y|--yes" -- "$@" || return 1
 
     log_header "aishore setup wizard"
     echo ""
@@ -3598,18 +3655,8 @@ cmd_version() {
 }
 
 cmd_update() {
-    local dry_run=false
-    local force=false
-    local no_verify=false
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --dry-run|--check) dry_run=true; shift ;;
-            --force) force=true; shift ;;
-            --no-verify) no_verify=true; shift ;;
-            *) log_error "Unknown option: $1"; return 1 ;;
-        esac
-    done
+    local dry_run=false force=false no_verify=false
+    parse_opts "bool:dry_run:--dry-run|--check" "bool:force:--force" "bool:no_verify:--no-verify" -- "$@" || return 1
 
     if [[ "$no_verify" == "true" && "$force" != "true" ]]; then
         log_error "--no-verify requires --force"
@@ -3899,11 +3946,7 @@ cmd_backlog_check() {
 }
 
 cmd_backlog_populate() {
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            *) log_error "Unknown option: $1"; return 1 ;;
-        esac
-    done
+    parse_opts -- "$@" || return 1
 
     if [[ ! -f "$BACKLOG_DIR/backlog.json" ]]; then
         log_error "aishore not initialized — run '.aishore/aishore init' first"
@@ -3946,15 +3989,7 @@ cmd_backlog_populate() {
 
 cmd_backlog_list() {
     local filter_status="" filter_type="" filter_ready=false
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --status)  validate_arg "$1" "${2:-}" || return 1; filter_status="$2"; shift 2 ;;
-            --type)    validate_arg "$1" "${2:-}" || return 1; filter_type="$2"; shift 2 ;;
-            --ready)   filter_ready=true; shift ;;
-            *) log_error "Unknown option: $1"; return 1 ;;
-        esac
-    done
+    parse_opts "val:filter_status:--status" "val:filter_type:--type" "bool:filter_ready:--ready" -- "$@" || return 1
 
     # Determine which files to scan
     local files=()
@@ -4012,30 +4047,18 @@ cmd_backlog_add() {
     local -a step_entries=()
     local -a scope_entries=()
 
+    parse_opts \
+        "val:item_type:--type" "val:title:--title" "val:intent:--intent" \
+        "val:desc:--desc" "val:priority:--priority" "val:category:--category" \
+        "bool:ready:--ready" "val:depends_on:--depends-on" \
+        "arr:step_entries:--step" "arr:scope_entries:--scope" \
+        "passval:--ac" "passval:--ac-verify" \
+        -- "$@" || return 1
+
+    # Process --ac / --ac-verify from _PARSE_REMAINING (order-dependent)
+    set -- "${_PARSE_REMAINING[@]}"
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --type)
-                validate_arg "$1" "${2:-}" || return 1
-                item_type="$2"; shift 2 ;;
-            --title)
-                validate_arg "$1" "${2:-}" || return 1
-                title="$2"; shift 2 ;;
-            --intent)
-                validate_arg "$1" "${2:-}" || return 1
-                intent="$2"; shift 2 ;;
-            --desc)
-                validate_arg "$1" "${2:-}" || return 1
-                desc="$2"; shift 2 ;;
-            --priority)
-                validate_arg "$1" "${2:-}" || return 1
-                priority="$2"; shift 2 ;;
-            --category)
-                validate_arg "$1" "${2:-}" || return 1
-                category="$2"; shift 2 ;;
-            --ready)     ready=true; shift ;;
-            --depends-on)
-                validate_arg "$1" "${2:-}" || return 1
-                depends_on="$2"; shift 2 ;;
             --ac)
                 validate_arg "$1" "${2:-}" || return 1
                 ac_entries+=("$(printf '%s' "$2" | jq -Rs .)")
@@ -4046,17 +4069,8 @@ cmd_backlog_add() {
                     log_error "--ac-verify must follow --ac"
                     return 1
                 fi
-                # Replace last plain-string entry with {text, verify} object
                 local last_text="${ac_entries[-1]}"
                 ac_entries[-1]="{\"text\":$last_text,\"verify\":$(printf '%s' "$2" | jq -Rs .)}"
-                shift 2 ;;
-            --step)
-                validate_arg "$1" "${2:-}" || return 1
-                step_entries+=("$2")
-                shift 2 ;;
-            --scope)
-                validate_arg "$1" "${2:-}" || return 1
-                scope_entries+=("$2")
                 shift 2 ;;
             *) log_error "Unknown option: $1"; return 1 ;;
         esac
@@ -4195,79 +4209,49 @@ cmd_backlog_edit() {
     file=$(resolve_backlog_file "$id") || return 1
 
     # Parse update flags
-    local updates=()
-    local jq_updates=""
-    local setting_ready=false
-    local -a ac_entries=()
-    local -a scope_vals=()
-    local -a step_vals=()
-    local -a deps_vals=()
+    local _e_title="" _e_intent="" _e_desc="" _e_priority="" _e_status="" _e_category="" _e_gnotes=""
+    local _e_ready=false _e_no_ready=false
+    local _e_clear_scope=false _e_clear_steps=false _e_clear_deps=false _e_clear_ac=false
+    local -a scope_vals=() step_vals=() ac_entries=()
 
+    parse_opts \
+        "val:_e_title:--title" "val:_e_intent:--intent" "val:_e_desc:--desc" \
+        "val:_e_priority:--priority" "val:_e_status:--status" "val:_e_category:--category" \
+        "val:_e_gnotes:--groomed-notes" \
+        "bool:_e_ready:--ready" "bool:_e_no_ready:--no-ready" \
+        "bool:_e_clear_scope:--clear-scope" "bool:_e_clear_steps:--clear-steps" \
+        "bool:_e_clear_deps:--clear-depends-on" "bool:_e_clear_ac:--clear-ac" \
+        "arr:scope_vals:--scope" "arr:step_vals:--step" \
+        "passval:--ac" "passval:--ac-verify" "passval:--depends-on" "passval:--groomed-at" \
+        -- "$@" || return 1
+
+    # Build jq updates from parsed values
+    local updates=() jq_updates="" setting_ready=false
+    [[ -n "$_e_title" ]] && { jq_updates+=" | .title = \$title"; updates+=("--arg" "title" "$_e_title"); }
+    [[ -n "$_e_intent" ]] && { jq_updates+=" | .intent = \$intent"; updates+=("--arg" "intent" "$_e_intent"); }
+    [[ -n "$_e_desc" ]] && { jq_updates+=" | .description = \$desc"; updates+=("--arg" "desc" "$_e_desc"); }
+    if [[ -n "$_e_priority" ]]; then
+        validate_priority "$_e_priority" || return 1
+        jq_updates+=" | .priority = \$priority"; updates+=("--arg" "priority" "$_e_priority")
+    fi
+    if [[ -n "$_e_status" ]]; then
+        validate_status "$_e_status" || return 1
+        jq_updates+=" | .status = \$status"; updates+=("--arg" "status" "$_e_status")
+    fi
+    [[ -n "$_e_category" ]] && { jq_updates+=" | .category = \$category"; updates+=("--arg" "category" "$_e_category"); }
+    [[ -n "$_e_gnotes" ]] && { jq_updates+=" | .groomingNotes = \$gnotes"; updates+=("--arg" "gnotes" "$_e_gnotes"); }
+    [[ "$_e_ready" == "true" ]] && { jq_updates+=" | .readyForSprint = true"; setting_ready=true; }
+    [[ "$_e_no_ready" == "true" ]] && jq_updates+=" | .readyForSprint = false"
+    [[ "$_e_clear_scope" == "true" ]] && jq_updates+=" | .scope = []"
+    [[ "$_e_clear_steps" == "true" ]] && jq_updates+=" | .steps = []"
+    [[ "$_e_clear_deps" == "true" ]] && jq_updates+=" | .dependsOn = []"
+    [[ "$_e_clear_ac" == "true" ]] && jq_updates+=" | .acceptanceCriteria = []"
+
+    # Process custom flags from _PARSE_REMAINING (order-dependent)
+    local -a deps_vals=()
+    set -- "${_PARSE_REMAINING[@]}"
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --title)
-                validate_arg "$1" "${2:-}" || return 1
-                jq_updates="$jq_updates | .title = \$title"
-                updates+=("--arg" "title" "$2")
-                shift 2 ;;
-            --intent)
-                validate_arg "$1" "${2:-}" || return 1
-                jq_updates="$jq_updates | .intent = \$intent"
-                updates+=("--arg" "intent" "$2")
-                shift 2 ;;
-            --desc)
-                validate_arg "$1" "${2:-}" || return 1
-                jq_updates="$jq_updates | .description = \$desc"
-                updates+=("--arg" "desc" "$2")
-                shift 2 ;;
-            --priority)
-                validate_arg "$1" "${2:-}" || return 1
-                validate_priority "$2" || return 1
-                jq_updates="$jq_updates | .priority = \$priority"
-                updates+=("--arg" "priority" "$2")
-                shift 2 ;;
-            --status)
-                validate_arg "$1" "${2:-}" || return 1
-                validate_status "$2" || return 1
-                jq_updates="$jq_updates | .status = \$status"
-                updates+=("--arg" "status" "$2")
-                shift 2 ;;
-            --category)
-                validate_arg "$1" "${2:-}" || return 1
-                jq_updates="$jq_updates | .category = \$category"
-                updates+=("--arg" "category" "$2")
-                shift 2 ;;
-            --ready)
-                jq_updates="$jq_updates | .readyForSprint = true"
-                setting_ready=true
-                shift ;;
-            --no-ready)
-                jq_updates="$jq_updates | .readyForSprint = false"
-                shift ;;
-            --scope)
-                validate_arg "$1" "${2:-}" || return 1
-                scope_vals+=("$2")
-                shift 2 ;;
-            --clear-scope)
-                jq_updates="$jq_updates | .scope = []"
-                shift ;;
-            --step)
-                validate_arg "$1" "${2:-}" || return 1
-                step_vals+=("$2")
-                shift 2 ;;
-            --clear-steps)
-                jq_updates="$jq_updates | .steps = []"
-                shift ;;
-            --depends-on)
-                validate_arg "$1" "${2:-}" || return 1
-                # Split comma-separated values and accumulate
-                while IFS= read -r dep; do
-                    [[ -n "$dep" ]] && deps_vals+=("$dep")
-                done < <(printf '%s\n' "$2" | tr ',' '\n')
-                shift 2 ;;
-            --clear-depends-on)
-                jq_updates="$jq_updates | .dependsOn = []"
-                shift ;;
             --ac)
                 validate_arg "$1" "${2:-}" || return 1
                 ac_entries+=("$(printf '%s' "$2" | jq -Rs .)")
@@ -4278,17 +4262,14 @@ cmd_backlog_edit() {
                     log_error "--ac-verify must follow --ac"
                     return 1
                 fi
-                # Replace last plain-string entry with {text, verify} object
                 local last_text="${ac_entries[-1]}"
                 ac_entries[-1]="{\"text\":$last_text,\"verify\":$(printf '%s' "$2" | jq -Rs .)}"
                 shift 2 ;;
-            --clear-ac)
-                jq_updates="$jq_updates | .acceptanceCriteria = []"
-                shift ;;
-            --groomed-notes)
+            --depends-on)
                 validate_arg "$1" "${2:-}" || return 1
-                jq_updates="$jq_updates | .groomingNotes = \$gnotes"
-                updates+=("--arg" "gnotes" "$2")
+                while IFS= read -r dep; do
+                    [[ -n "$dep" ]] && deps_vals+=("$dep")
+                done < <(printf '%s\n' "$2" | tr ',' '\n')
                 shift 2 ;;
             --groomed-at)
                 local gdate
@@ -4303,7 +4284,7 @@ cmd_backlog_edit() {
                     gdate=$(date +%Y-%m-%d)
                     shift
                 fi
-                jq_updates="$jq_updates | .groomedAt = \$gdate"
+                jq_updates+=" | .groomedAt = \$gdate"
                 updates+=("--arg" "gdate" "$gdate")
                 ;;
             *) log_error "Unknown option: $1"; return 1 ;;
@@ -4348,14 +4329,6 @@ cmd_backlog_edit() {
     fi
 }
 
-validate_arg() {
-    local flag="$1" val="$2"
-    if [[ -z "$val" || "$val" == --* ]]; then
-        log_error "$flag requires a value"
-        return 1
-    fi
-}
-
 cmd_backlog_history() {
     if [[ $# -gt 0 ]]; then
         log_error "Unknown option: $1"
@@ -4384,12 +4357,7 @@ cmd_backlog_rm() {
     [[ -z "$id" ]] && { log_error "Usage: backlog rm <ID> [--force]"; return 1; }
     shift || true
 
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --force|-f) force=true; shift ;;
-            *) log_error "Unknown option: $1"; return 1 ;;
-        esac
-    done
+    parse_opts "bool:force:--force|-f" -- "$@" || return 1
 
     local item
     item=$(find_item "$id") || return 1
@@ -4417,12 +4385,7 @@ cmd_clean() {
     require_tool jq
 
     local dry_run=false
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --dry-run) dry_run=true; shift ;;
-            *) log_error "Unknown option: $1"; return 1 ;;
-        esac
-    done
+    parse_opts "bool:dry_run:--dry-run" -- "$@" || return 1
 
     local feat_count=0 bug_count=0
 
