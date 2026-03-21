@@ -662,11 +662,12 @@
         "backlog history with no limit flag still prints all entries unchanged"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Practical UX: after many sprint sessions, backlog history produces hundreds of rows. Users want 'show me the last 10' not 'show me all 200 then pipe through head'. Implementation is additive: add --limit flag parsing, add tail -n N after result collection. Low risk, small scope. No deps."
+      "groomingNotes": "Practical UX: after many sprint sessions, backlog history produces hundreds of rows. Users want 'show me the last 10' not 'show me all 200 then pipe through head'. Implementation is additive: add --limit flag parsing, add tail -n N after result collection. Low risk, small scope. No deps.",
+      "completedAt": "2026-03-20T17:52:58-07:00"
     },
     {
       "id": "FEAT-024",
