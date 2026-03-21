@@ -1794,10 +1794,23 @@ Output ONLY the JSON object, no markdown fences, no explanation."
     raw_output=$(cat "$refine_output_file" 2>/dev/null || true)
     rm -f "$refine_output_file"
 
-    # Extract JSON from output (handle potential markdown fences)
-    local json_output
-    json_output=$(echo "$raw_output" | sed -n '/^{/,/^}/p' | head -100)
-    [[ -z "$json_output" ]] && json_output=$(echo "$raw_output" | sed -n '/```json/,/```/p' | sed '1d;$d')
+    # Extract JSON from output (handle indentation, markdown fences, surrounding text)
+    local json_output=""
+    # Strategy: strip markdown fences, then try each line starting with { as potential JSON start
+    local stripped
+    stripped=$(echo "$raw_output" | sed '/^[[:space:]]*```/d')
+    local line_num=0
+    while IFS= read -r line; do
+        line_num=$((line_num + 1))
+        if [[ "$line" =~ ^[[:space:]]*\{ ]]; then
+            local candidate
+            candidate=$(echo "$stripped" | tail -n +"$line_num" | jq '.' 2>/dev/null | head -500)
+            if [[ -n "$candidate" ]] && echo "$candidate" | jq -e '.steps and .acceptanceCriteria' &>/dev/null; then
+                json_output="$candidate"
+                break
+            fi
+        fi
+    done <<< "$stripped"
     [[ -z "$json_output" ]] && { log_error "Refinement produced no valid JSON"; return 1; }
 
     # Validate JSON structure

@@ -1,29 +1,34 @@
 {
-  "sprintId": "sprint-1774055413",
-  "startedAt": "2026-03-20T18:10:13-07:00",
+  "sprintId": "sprint-1774056095",
+  "startedAt": "2026-03-20T18:21:35-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-034",
-    "title": "next_id scans sprints.jsonl with per-line jq — slow on large archives",
-    "intent": "ID generation must remain fast as the sprint archive grows — per-line jq invocations in a shell loop are O(n) and will become noticeable at hundreds of entries.",
-    "description": "In next_id(), the archive max-ID computation uses 'jq -r ... archive_file | sort -rn | head -1'. This invokes jq once on the whole JSONL file, which is correct. However the BACKLOG_FILES loop calls jq once per file, and the archive jq reads all lines just to get the max numeric suffix. For large archives (hundreds of sprint entries), this is still fast, but the JSONL slurp approach (jq -r '[...] | max') is more robust than relying on sort -rn with potentially non-numeric values. The real risk is that if a non-numeric suffix appears in itemId (e.g. 'FEAT-new'), jq tonumber throws an error that is silently swallowed by 2>/dev/null, hiding ID conflicts. Fix: add error handling and filter to numeric-only suffixes before max.",
+    "id": "BUG-036",
+    "title": "refine_item_spec JSON extraction fails when agent output has indented or wrapped JSON",
+    "intent": "Ensure spec refinement reliably extracts the JSON from the agent's output regardless of indentation or formatting, so retries with spec refinement don't silently fail.",
+    "description": "In refine_item_spec(), the JSON extraction from the agent's raw output uses: sed -n '/^\\{/,/^\\}/p'. This only matches a { that starts at column 0, so any indented JSON (e.g. the agent wraps it in a code block with indented content, or the JSON is inside markdown with indentation) will fail to extract. The fallback tries markdown fences but the primary extraction is unreliable. The fix should robustly extract a JSON object that contains both .steps and .acceptanceCriteria keys, using jq itself to validate and extract rather than relying on sed line patterns.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find next_id() (around line 652)",
-      "In the archive scan, change the jq pipeline to filter to numeric IDs only: jq -r --arg pfx \"$prefix-\" '[.itemId | select(startswith($pfx)) | ltrimstr($pfx) | select(test(\"^[0-9]+$\")) | tonumber] | max // 0'",
-      "Apply the same numeric-only filter in the BACKLOG_FILES loop: add | select(test(\"^[0-9]+$\")) before tonumber",
-      "Verify: next_id FEAT still returns FEAT-023 (or correct next ID) with numeric items; non-numeric IDs in archive are silently skipped"
+      "Locate refine_item_spec() in .aishore/aishore, specifically the JSON extraction block that uses sed -n '/^\\{/,/^\\}/p'",
+      "Replace the fragile sed-based extraction with a jq-based approach: strip markdown fences first, then use jq to find a valid JSON object containing .steps and .acceptanceCriteria",
+      "Use: json_output=$(echo \"$raw_output\" | sed '/^```/d' | jq -s 'first(.[] | objects | select(.steps and .acceptanceCriteria))' 2>/dev/null) as the primary extraction",
+      "Keep the existing validation check: if ! echo \"$json_output\" | jq -e '.steps and .acceptanceCriteria' — but only if json_output is non-empty",
+      "Log a clear error if extraction still fails after the improved approach",
+      "Test: verify refinement works when agent wraps JSON in a markdown code block (common output format)"
     ],
     "acceptanceCriteria": [
-      "next_id correctly skips non-numeric ID suffixes without crashing",
-      "next_id still returns the correct next sequential ID for FEAT and BUG prefixes",
-      "No regression in ID generation for existing items"
+      "refine_item_spec succeeds when the agent returns JSON indented inside a markdown code block",
+      "refine_item_spec succeeds when the agent returns JSON at top-level with no indentation",
+      "refine_item_spec logs 'Refinement produced no valid JSON' and returns 1 when the agent returns no JSON object",
+      "No regression in the existing fallback path for markdown-fenced JSON"
     ],
-    "scope": [],
-    "startedAt": "2026-03-20T18:10:13-07:00",
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "startedAt": "2026-03-20T18:21:35-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T18:13:09-07:00"
+    "completedAt": "2026-03-20T18:24:22-07:00"
   },
-  "completedAt": "2026-03-20T18:13:09-07:00",
+  "completedAt": "2026-03-20T18:24:22-07:00",
   "attempts": 1
 }

@@ -506,7 +506,7 @@
       "title": "Move CONTRIBUTING.md to docs/CONTRIBUTING.md and update references",
       "intent": "All documentation must live in docs/ for consistency — a contributor looking in docs/ must find contribution guidelines there, not hunt at the repo root.",
       "description": "CONTRIBUTING.md exists at repo root with complete content: Development Setup, Requirements, Code Style (bash conventions + naming table), Linting and Testing (shellcheck, syntax check, smoke test, JSON validation, checksums), Pull Request Process, Commit Convention table, Architecture section, and CLA. The move is straightforward: relocate the file, replace the inline Architecture section with a link to docs/ARCHITECTURE.md (FEAT-014), and add a section on agent prompt authoring (how to modify files in .aishore/agents/ and test prompt changes). Update any references to CONTRIBUTING.md in README.md and other files to point to the new location. GitHub will still find CONTRIBUTING.md via the docs/ path for its contributing prompt.",
-      "priority": "should",
+      "priority": "must",
       "category": "documentation",
       "steps": [
         "Move CONTRIBUTING.md to docs/CONTRIBUTING.md",
@@ -533,7 +533,7 @@
       "status": "todo",
       "readyForSprint": true,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Spec is complete: steps and AC are clear, scope and dependsOn set correctly. Depends on FEAT-014 (ARCHITECTURE.md must exist first). The 'Agent Prompt Authoring' section addition is good product value — surfaces a non-obvious contribution path. readyForSprint: true; dependency enforcement handles pick ordering."
+      "groomingNotes": "Elevated from should to must: FEAT-019 is a direct blocker for FEAT-021 (must). Running p0-only would skip FEAT-019 and leave FEAT-021 permanently blocked. Both must complete in the same priority pass to deliver the doc chain."
     },
     {
       "id": "FEAT-020",
