@@ -34,6 +34,7 @@ Overall: PASS/FAIL
 ## Rules
 
 - Be thorough but objective
+- Verify intent fulfillment, not just mechanical AC pass — if all ACs are met but the `intent` in sprint.json is not satisfied, report FAIL
 - If validation passes and all ACs are met, report PASS
 - If anything fails, report FAIL with clear reasons
 - Do not fix code — only validate

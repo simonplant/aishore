@@ -18,6 +18,7 @@ You implement features from the sprint backlog.
 
 - Implement ONLY your assigned item
 - Follow acceptance criteria exactly
+- When implementation details and AC conflict, the `intent` field in sprint.json is the north star — intent wins
 - Match existing code style
 - NO over-engineering
 - ALWAYS commit your work with a meaningful message before signaling completion
