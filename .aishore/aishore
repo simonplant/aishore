@@ -138,6 +138,11 @@ CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'
 NC='\033[0m'
 
+# Error handling convention:
+#   - All functions signal failure with: log_error "message"; return 1
+#   - Functions must NEVER call exit 1 — only return 1
+#   - Only main() and pre-flight guards (acquire_lock, require_tool) may call exit
+#   - Every return 1 must be preceded by a log_error call (directly or via a called function)
 log_header()  { echo -e "\n${BLUE}════════════════════════════════════════${NC}\n${BLUE}  $1${NC}\n${BLUE}════════════════════════════════════════${NC}"; }
 log_subheader() { echo -e "\n${CYAN}─── $1 ───${NC}"; }
 log_success() { echo -e "${GREEN}✓ $1${NC}"; }
@@ -188,6 +193,7 @@ restore_stash() {
         echo "$stash_contents"
     fi
     log_warning "To resolve: run 'git stash show' to see files, then 'git stash pop' and fix conflicts"
+    log_error "Stash restore failed"
     return 1
 }
 
@@ -249,7 +255,7 @@ append_log() {
 verify_checksum() {
     local file="$1"
     local expected="$2"
-    [[ -z "$expected" ]] && return 1
+    [[ -z "$expected" ]] && { log_error "No expected checksum provided"; return 1; }
     local actual
     if command -v sha256sum &>/dev/null; then
         actual=$(sha256sum "$file" | cut -d' ' -f1)
@@ -506,6 +512,8 @@ pick_item() {
         fi
     done
 
+    # Callers provide context-appropriate messages (auto-mode: drained; manual: no ready items)
+    log_error "No eligible item found in backlog"
     return 1
 }
 
@@ -537,13 +545,14 @@ resolve_backlog_file() {
             return 0
         fi
     done
+    log_error "Item not found in any backlog: $id"
     return 1
 }
 
 find_item() {
     local id="$1"
     local file
-    file=$(resolve_backlog_file "$id") || { log_error "Item not found: $id"; return 1; }
+    file=$(resolve_backlog_file "$id") || return 1
     local item
     item=$(jq -e --arg id "$id" '.items[] | select(.id == $id)' "$BACKLOG_DIR/$file" 2>/dev/null) || {
         log_error "Item not found: $id"
@@ -645,6 +654,7 @@ check_readiness_gates() {
 
     [[ -n "$warnings" ]] && echo "$warnings"
     if [[ "$has_warning" == "true" ]]; then
+        log_error "Readiness gate check failed for $item_id"
         return 1
     fi
     return 0
@@ -753,6 +763,7 @@ update_item() {
     jq --arg id "$id" "$@" \
         "(.items[] | select(.id == \$id)) |= (. $jq_expr)" \
         "$BACKLOG_DIR/$file" > "$tmp" || {
+        log_error "Failed to update item $id in $file"
         rm -f "$tmp"
         return 1
     }
@@ -766,6 +777,7 @@ add_item() {
     local tmp
     tmp="$(ensure_tmpdir)/add_item.json"
     jq "$@" "$BACKLOG_DIR/$file" > "$tmp" || {
+        log_error "Failed to add item to $file"
         rm -f "$tmp"
         return 1
     }
@@ -777,6 +789,7 @@ remove_item() {
     local tmp
     tmp="$(ensure_tmpdir)/remove_item.json"
     jq --arg id "$id" '.items |= map(select(.id != $id))' "$BACKLOG_DIR/$file" > "$tmp" || {
+        log_error "Failed to remove item $id from $file"
         rm -f "$tmp"
         return 1
     }
@@ -788,6 +801,7 @@ remove_items_by_status() {
     local tmp
     tmp="$(ensure_tmpdir)/remove_by_status.json"
     jq --arg s "$status" '.items |= map(select((.status // "todo") != $s))' "$BACKLOG_DIR/$file" > "$tmp" || {
+        log_error "Failed to remove $status items from $file"
         rm -f "$tmp"
         return 1
     }
@@ -1664,7 +1678,7 @@ refine_item_spec() {
 
     local current_spec
     current_spec=$(jq '.item' "$sprint_file" 2>/dev/null)
-    [[ -z "$current_spec" || "$current_spec" == "null" ]] && return 1
+    [[ -z "$current_spec" || "$current_spec" == "null" ]] && { log_error "Cannot refine: sprint item spec is empty"; return 1; }
 
     local refinement_prompt
     refinement_prompt="You are refining a sprint item spec that failed implementation.
@@ -1707,7 +1721,7 @@ Output ONLY the JSON object, no markdown fences, no explanation."
             -p "$refinement_prompt" > "$refine_output_file" 2>&1 || {
             local exit_code=$?
             if [[ $exit_code -eq 124 ]]; then
-                log_warning "Refinement agent timed out after ${refine_timeout}s"
+                log_error "Refinement agent timed out after ${refine_timeout}s"
                 return 1
             fi
         }
@@ -1717,7 +1731,7 @@ Output ONLY the JSON object, no markdown fences, no explanation."
             -p "$refinement_prompt" > "$refine_output_file" 2>&1 || {
             local exit_code=$?
             if [[ $exit_code -eq 124 ]]; then
-                log_warning "Refinement agent timed out after ${refine_timeout}s"
+                log_error "Refinement agent timed out after ${refine_timeout}s"
                 return 1
             fi
         }
@@ -1848,6 +1862,7 @@ _run_validation_cycle() {
         retry_extra_prompt="Previous attempt modified files outside the declared scope. Scope violations:
 ${scope_report}
 Only modify files matching the declared scope globs. Fix the issues."
+        log_error "Scope violation detected"
         _validation_failure="Scope violation"
         return 1
     fi
@@ -1881,6 +1896,7 @@ Fix the issues and ensure all acceptance criteria pass."
         retry_extra_prompt="Previous attempt failed acceptance criteria verification:
 ${ac_report}
 Fix the issues and ensure all acceptance criteria pass."
+        log_error "AC verification failed"
         _validation_failure="AC verification failed"
         return 1
     fi
@@ -2565,7 +2581,11 @@ Read-only review. Do not modify files."
     else
         log_header "Results: $passed passed, $failed failed"
     fi
-    [[ $failed -gt 0 || $passed -eq 0 ]] && exit 1 || exit 0
+    if [[ $failed -gt 0 || $passed -eq 0 ]]; then
+        log_error "Sprint completed with failures ($passed passed, $failed failed)"
+        return 1
+    fi
+    return 0
 }
 
 cmd_run() {
@@ -2660,7 +2680,7 @@ cmd_groom() {
     print_groom_diff "$snap_before" "$groom_added" "$groom_skipped"
 
     if ! check_result; then
-        exit 1
+        return 1
     fi
 }
 
@@ -2991,7 +3011,7 @@ $([[ "$update_docs" == "true" ]] && echo "You may update documentation and add b
     fi
 
     if ! check_result; then
-        exit 1
+        return 1
     fi
 }
 
@@ -3258,7 +3278,7 @@ _init_check_prereqs() {
         log_error "Not a git repository"
         echo "  aishore tracks work via git commits. Please initialize git first:"
         echo "    git init && git add -A && git commit -m 'initial commit'"
-        exit 1
+        return 1
     fi
 
     if command -v claude &>/dev/null; then
@@ -3266,7 +3286,7 @@ _init_check_prereqs() {
     else
         log_error "Claude CLI not found"
         echo "  Install it: https://docs.anthropic.com/en/docs/claude-code"
-        exit 1
+        return 1
     fi
 
     if command -v jq &>/dev/null; then
@@ -3629,7 +3649,7 @@ cmd_update() {
 
     if [[ "$no_verify" == "true" && "$force" != "true" ]]; then
         log_error "--no-verify requires --force"
-        exit 1
+        return 1
     fi
 
     log_header "aishore Update"
@@ -3644,7 +3664,7 @@ cmd_update() {
         fetch_cmd="wget -qO-"
     else
         log_error "curl or wget required for update"
-        exit 1
+        return 1
     fi
 
     # Resolve latest release tag
@@ -3664,12 +3684,12 @@ cmd_update() {
     local remote_version
     remote_version=$($fetch_cmd "$repo_url/.aishore/VERSION" 2>/dev/null | tr -d '[:space:]') || {
         log_error "Failed to fetch remote version from $repo_url/.aishore/VERSION"
-        exit 1
+        return 1
     }
 
     if [[ -z "$remote_version" ]]; then
         log_error "Could not determine remote version"
-        exit 1
+        return 1
     fi
 
     echo "Remote version: $remote_version (tag: $release_tag)"
@@ -3685,7 +3705,7 @@ cmd_update() {
     local checksums_content=""
     checksums_content=$($fetch_cmd "$repo_url/.aishore/checksums.sha256" 2>/dev/null) || {
         log_error "Cannot fetch checksums manifest — check connectivity and try again"
-        exit 1
+        return 1
     }
 
     # Build file list from checksums manifest (with path validation)
@@ -3698,7 +3718,7 @@ cmd_update() {
             # Validate: must be inside .aishore/, no traversal, no absolute paths
             if [[ "$fpath" != .aishore/* ]] || [[ "$fpath" == *..* ]] || [[ "$fpath" == /* ]]; then
                 log_error "Unsafe path in checksums manifest: $fpath"
-                exit 1
+                return 1
             fi
             # Protect user config from overwrite
             if [[ "$fpath" == ".aishore/config.yaml" ]]; then
@@ -3710,7 +3730,7 @@ cmd_update() {
 
     if [[ ${#update_files[@]} -eq 0 ]]; then
         log_error "No files found in checksums manifest"
-        exit 1
+        return 1
     fi
 
     # Show what will be updated
@@ -3769,7 +3789,7 @@ cmd_update() {
         if ! $fetch_cmd "$repo_url/$remote_path" > "$local_path" 2>/dev/null; then
             if [[ "$required" == "true" ]]; then
                 log_error "Failed to fetch $label"
-                exit 1
+                return 1
             fi
             log_error "Could not fetch $label"
             all_verified=false
@@ -3808,7 +3828,7 @@ cmd_update() {
     # ── Phase 2: Install (only if all verified) ──
     if [[ "$all_verified" != "true" ]]; then
         log_error "Verification failed — no files were modified"
-        exit 1
+        return 1
     fi
 
     # Install and show each file
@@ -3857,7 +3877,7 @@ cmd_checksums() {
         hash_cmd=(shasum -a 256)
     else
         log_error "No sha256sum or shasum found"
-        exit 1
+        return 1
     fi
 
     local tmp
@@ -3996,7 +4016,7 @@ cmd_backlog_populate() {
     print_groom_diff "$snap_before" "$populate_added" "$populate_skipped"
 
     if ! check_result; then
-        exit 1
+        return 1
     fi
 }
 
