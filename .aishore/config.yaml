@@ -7,6 +7,13 @@ validation:
   command: ""
   timeout: 120
 
+# Backlog files to read from (relative to backlog/ directory).
+# Omit to use the default: [backlog.json, bugs.json]
+# backlog_files:
+#   - backlog.json
+#   - bugs.json
+#   - infra.json
+
 # models:
 #   primary: "claude-opus-4-6"
 #   fast: "claude-sonnet-4-6"

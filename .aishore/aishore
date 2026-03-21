@@ -531,8 +531,25 @@ load_config() {
         fi
     fi
 
+    # Read backlog_files list if present (yq path only)
+    if command -v yq &> /dev/null; then
+        local bf_count
+        bf_count=$(yq -r '.backlog_files // [] | length' "$CONFIG_FILE" 2>/dev/null || echo "0")
+        if [[ "$bf_count" -gt 0 ]]; then
+            BACKLOG_FILES=()
+            local _bf_entry
+            while IFS= read -r _bf_entry; do
+                [[ -n "$_bf_entry" ]] && BACKLOG_FILES+=("$_bf_entry")
+            done < <(yq -r '.backlog_files[]' "$CONFIG_FILE" 2>/dev/null)
+        fi
+    fi
+
     # Env vars always win last
     _apply_env_overrides
+
+    # Validate declared backlog files exist
+    _validate_backlog_files
+
     return 0
 }
 
@@ -562,7 +579,29 @@ _apply_env_overrides() {
         local _val="${!_env_name:-}"
         [[ -n "$_val" ]] && printf -v "$_target_var" '%s' "$_val"
     done
+
+    # AISHORE_BACKLOG_FILES: comma-separated list overrides config/default
+    if [[ -n "${AISHORE_BACKLOG_FILES:-}" ]]; then
+        BACKLOG_FILES=()
+        local _bf_entry
+        IFS=',' read -ra _bf_parts <<< "$AISHORE_BACKLOG_FILES"
+        for _bf_entry in "${_bf_parts[@]}"; do
+            _bf_entry=$(printf '%s' "$_bf_entry" | xargs)  # trim whitespace
+            [[ -n "$_bf_entry" ]] && BACKLOG_FILES+=("$_bf_entry")
+        done
+    fi
+
     return 0
+}
+
+# Validate that declared backlog files exist; warn on missing, don't abort
+_validate_backlog_files() {
+    local f
+    for f in "${BACKLOG_FILES[@]}"; do
+        if [[ ! -f "$BACKLOG_DIR/$f" ]]; then
+            log_warning "Declared backlog file not found: $BACKLOG_DIR/$f"
+        fi
+    done
 }
 
 # ============================================================================
@@ -661,24 +700,33 @@ pick_item() {
     }
     map_backlog_files _warn_self_refs
 
-    # Auto-pick: highest priority ready item (excluding failed items and unmet dependencies)
-    _try_pick() {
+    # Auto-pick: highest priority ready item across ALL declared backlog files
+    local all_candidates="[]"
+    _collect_candidates() {
         local backlog="$1"
-        item_json=$(jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" '
+        [[ -f "$BACKLOG_DIR/$backlog" ]] || return 0
+        local candidates
+        candidates=$(jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --arg src "$backlog" '
             '"$PICKABLE_ITEMS_FILTER"' |
-            sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end) |
-            first |
-            if . then '"$ITEM_PROJECTION"' else empty end
-        ' "$BACKLOG_DIR/$backlog" 2>/dev/null)
-
-        if [[ -n "$item_json" && "$item_json" != "null" ]]; then
-            printf '%s\n' "$backlog" > "$source_file"
-            printf '%s\n' "$item_json"
-            return 0
-        fi
-        return 1
+            [.[] | '"$ITEM_PROJECTION"' + {_source: $src}]
+        ' "$BACKLOG_DIR/$backlog" 2>/dev/null || echo "[]")
+        all_candidates=$(printf '%s\n%s\n' "$all_candidates" "$candidates" | jq -s 'add')
     }
-    if find_first_backlog _try_pick; then
+    map_backlog_files _collect_candidates
+
+    # Pick highest priority across all files
+    local best
+    best=$(printf '%s\n' "$all_candidates" | jq -r '
+        sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end) |
+        first // empty
+    ' 2>/dev/null)
+
+    if [[ -n "$best" && "$best" != "null" ]]; then
+        local best_source
+        best_source=$(printf '%s\n' "$best" | jq -r '._source')
+        item_json=$(printf '%s\n' "$best" | jq 'del(._source)')
+        printf '%s\n' "$best_source" > "$source_file"
+        printf '%s\n' "$item_json"
         return 0
     fi
 
@@ -1239,31 +1287,24 @@ _check_groom_progress() {
     local label="$1"
     local changed=false
 
-    if [[ -f "$BACKLOG_DIR/backlog.json" ]]; then
-        local cur_hash
-        cur_hash=$(_file_hash "$BACKLOG_DIR/backlog.json")
-        if [[ "$cur_hash" != "$last_backlog_hash" ]]; then
-            last_backlog_hash="$cur_hash"
-            changed=true
-            local ready total
-            ready=$(count_ready_items "$BACKLOG_DIR/backlog.json")
-            total=$(count_items "$BACKLOG_DIR/backlog.json")
-            log_agent "$label" "backlog.json updated — $total items ($ready ready)"
+    local _gp_f
+    for _gp_f in "${BACKLOG_FILES[@]}"; do
+        if [[ -f "$BACKLOG_DIR/$_gp_f" ]]; then
+            local cur_hash
+            cur_hash=$(_file_hash "$BACKLOG_DIR/$_gp_f")
+            local hash_var
+            hash_var="_groom_hash_$(printf '%s' "$_gp_f" | tr -c 'a-zA-Z0-9' '_')"
+            local prev_hash="${!hash_var:-}"
+            if [[ "$cur_hash" != "$prev_hash" ]]; then
+                printf -v "$hash_var" '%s' "$cur_hash"
+                changed=true
+                local ready total
+                ready=$(count_ready_items "$BACKLOG_DIR/$_gp_f")
+                total=$(count_items "$BACKLOG_DIR/$_gp_f")
+                log_agent "$label" "$_gp_f updated — $total items ($ready ready)"
+            fi
         fi
-    fi
-
-    if [[ -f "$BACKLOG_DIR/bugs.json" ]]; then
-        local cur_hash
-        cur_hash=$(_file_hash "$BACKLOG_DIR/bugs.json")
-        if [[ "$cur_hash" != "$last_bugs_hash" ]]; then
-            last_bugs_hash="$cur_hash"
-            changed=true
-            local ready total
-            ready=$(count_ready_items "$BACKLOG_DIR/bugs.json")
-            total=$(count_items "$BACKLOG_DIR/bugs.json")
-            log_agent "$label" "bugs.json updated — $total items ($ready ready)"
-        fi
-    fi
+    done
 
     if [[ "$changed" != "true" && $((elapsed % 30)) -eq 0 ]]; then
         log_agent "$label" "Working... (${elapsed}s elapsed)"
@@ -1327,10 +1368,15 @@ run_agent_process() {
 
     # Progress monitoring: track backlog file changes during grooming
     local monitor_backlogs="${GROOM_MONITOR:-false}"
-    local last_backlog_hash="" last_bugs_hash=""
     if [[ "$monitor_backlogs" == "true" ]]; then
-        [[ -f "$BACKLOG_DIR/backlog.json" ]] && last_backlog_hash=$(_file_hash "$BACKLOG_DIR/backlog.json")
-        [[ -f "$BACKLOG_DIR/bugs.json" ]] && last_bugs_hash=$(_file_hash "$BACKLOG_DIR/bugs.json")
+        local _init_f
+        for _init_f in "${BACKLOG_FILES[@]}"; do
+            if [[ -f "$BACKLOG_DIR/$_init_f" ]]; then
+                local hash_var
+                hash_var="_groom_hash_$(printf '%s' "$_init_f" | tr -c 'a-zA-Z0-9' '_')"
+                printf -v "$hash_var" '%s' "$(_file_hash "$BACKLOG_DIR/$_init_f")"
+            fi
+        done
     fi
 
     while [[ $elapsed -lt $AGENT_TIMEOUT ]]; do
@@ -3157,34 +3203,33 @@ cmd_metrics() {
 }
 
 _status_output() {
-    local backlog_file="$BACKLOG_DIR/backlog.json"
-    local bugs_file="$BACKLOG_DIR/bugs.json"
     local sprints_file="$ARCHIVE_DIR/sprints.jsonl"
 
     log_header "Backlog Status"
     echo ""
 
-    # --- Item counts by status (single jq pass per file) ---
-    if [[ -f "$backlog_file" ]]; then
-        local feat_todo feat_inprog feat_done
-        read -r feat_todo feat_inprog feat_done < <(jq -r '[
+    # --- Item counts by status per declared file (single jq pass per file) ---
+    local any_file=false
+    local total=0 done_total=0
+    local f
+    for f in "${BACKLOG_FILES[@]}"; do
+        local full_path="$BACKLOG_DIR/$f"
+        [[ -f "$full_path" ]] || continue
+        any_file=true
+        local f_todo f_inprog f_done
+        read -r f_todo f_inprog f_done < <(jq -r '[
             ([.items[] | select((.status // "todo") == "todo")] | length),
             ([.items[] | select(.status == "in-progress")] | length),
             ([.items[] | select(.status == "done")] | length)
-        ] | @tsv' "$backlog_file" 2>/dev/null || echo "0 0 0")
-        echo "Features: ${feat_todo:-0} todo, ${feat_inprog:-0} in-progress, ${feat_done:-0} done"
-    else
-        log_warning "Backlog is empty"
-    fi
+        ] | @tsv' "$full_path" 2>/dev/null || echo "0 0 0")
+        local label="${f%.json}"
+        echo "${label}: ${f_todo:-0} todo, ${f_inprog:-0} in-progress, ${f_done:-0} done"
+        total=$((total + $(count_items "$full_path")))
+        done_total=$((done_total + ${f_done:-0}))
+    done
 
-    if [[ -f "$bugs_file" ]]; then
-        local bug_todo bug_inprog bug_done
-        read -r bug_todo bug_inprog bug_done < <(jq -r '[
-            ([.items[] | select((.status // "todo") == "todo")] | length),
-            ([.items[] | select(.status == "in-progress")] | length),
-            ([.items[] | select(.status == "done")] | length)
-        ] | @tsv' "$bugs_file" 2>/dev/null || echo "0 0 0")
-        echo "Bugs: ${bug_todo:-0} todo, ${bug_inprog:-0} in-progress, ${bug_done:-0} done"
+    if [[ "$any_file" == "false" ]]; then
+        log_warning "Backlog is empty"
     fi
 
     # --- Ready for sprint ---
@@ -3192,10 +3237,10 @@ _status_output() {
     log_subheader "Ready for sprint"
     local has_ready=false
 
-    for f in "$backlog_file" "$bugs_file"; do
-        [[ -f "$f" ]] || continue
+    for f in "${BACKLOG_FILES[@]}"; do
+        [[ -f "$BACKLOG_DIR/$f" ]] || continue
         local ready
-        ready=$(list_ready_items "$f")
+        ready=$(list_ready_items "$BACKLOG_DIR/$f")
         if [[ -n "$ready" ]]; then
             printf '%s\n' "$ready"
             has_ready=true
@@ -3234,17 +3279,11 @@ _status_output() {
     fi
 
     # --- Warnings ---
-    if [[ ! -f "$backlog_file" ]] && [[ ! -f "$bugs_file" ]]; then
+    if [[ "$any_file" == "false" ]]; then
         echo ""
         log_warning "Backlog is empty — run 'backlog add' to create items"
     fi
 
-    local total=0 done_total=0
-    for f in "$backlog_file" "$bugs_file"; do
-        [[ -f "$f" ]] || continue
-        total=$((total + $(count_items "$f")))
-    done
-    done_total=$(( ${feat_done:-0} + ${bug_done:-0} ))
     if [[ "$total" -gt 0 && "$total" -eq "$done_total" ]]; then
         echo ""
         log_info "All items completed"
@@ -3952,7 +3991,11 @@ cmd_backlog_populate() {
 
     log_info "Using requirements from: $prd_file"
 
-    local -a context_args=("@$prd_file" "@$BACKLOG_DIR/backlog.json" "@$BACKLOG_DIR/bugs.json")
+    local -a context_args=("@$prd_file")
+    local _pop_f
+    for _pop_f in "${BACKLOG_FILES[@]}"; do
+        [[ -f "$BACKLOG_DIR/$_pop_f" ]] && context_args+=("@$BACKLOG_DIR/$_pop_f")
+    done
     [[ -f "$BACKLOG_DIR/DEFINITIONS.md" ]] && context_args+=("@$BACKLOG_DIR/DEFINITIONS.md")
 
     run_groom_flow "product-owner" "populate" context_args
@@ -4356,28 +4399,34 @@ cmd_clean() {
     local dry_run=false
     parse_opts "bool:dry_run:--dry-run" -- "$@" || return 1
 
-    local feat_count=0 bug_count=0
+    local total=0
+    local -A file_counts=()
 
-    local backlog_file="$BACKLOG_DIR/backlog.json"
-    local bugs_file="$BACKLOG_DIR/bugs.json"
-
-    [[ -f "$backlog_file" ]] && feat_count=$(count_by_status "$backlog_file" "done")
-    [[ -f "$bugs_file" ]] && bug_count=$(count_by_status "$bugs_file" "done")
-
-    local total=$((feat_count + bug_count))
+    local f
+    for f in "${BACKLOG_FILES[@]}"; do
+        [[ -f "$BACKLOG_DIR/$f" ]] || continue
+        local cnt
+        cnt=$(count_by_status "$BACKLOG_DIR/$f" "done")
+        file_counts["$f"]="$cnt"
+        total=$((total + cnt))
+    done
 
     if [[ "$total" -eq 0 ]]; then
         echo "Nothing to clean"
     elif [[ "$dry_run" == "true" ]]; then
-        echo "Would remove: $feat_count features, $bug_count bugs"
+        echo "Would remove $total done items across ${#file_counts[@]} file(s)"
+        for f in "${!file_counts[@]}"; do
+            [[ "${file_counts[$f]}" -gt 0 ]] && echo "  $f: ${file_counts[$f]}"
+        done
     else
-        if [[ "$feat_count" -gt 0 ]]; then
-            remove_items_by_status "backlog.json" "done" || { log_error "Failed to clean backlog.json"; return 1; }
-        fi
-        if [[ "$bug_count" -gt 0 ]]; then
-            remove_items_by_status "bugs.json" "done" || { log_error "Failed to clean bugs.json"; return 1; }
-        fi
-        echo "Cleaned $feat_count features, $bug_count bugs ($total total removed)"
+        local cleaned=0
+        for f in "${!file_counts[@]}"; do
+            if [[ "${file_counts[$f]}" -gt 0 ]]; then
+                remove_items_by_status "$f" "done" || { log_error "Failed to clean $f"; return 1; }
+                cleaned=$((cleaned + ${file_counts[$f]}))
+            fi
+        done
+        echo "Cleaned $cleaned done items ($total total removed)"
     fi
 }
 
