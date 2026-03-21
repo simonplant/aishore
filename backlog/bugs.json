@@ -1856,14 +1856,15 @@
         ".aishore/**"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "lastFailReason": "Validator agent rejected implementation",
       "lastFailAt": "2026-03-20T20:43:30-07:00",
       "failCount": 1,
       "groomedAt": "2026-03-21",
-      "groomedNotes": null
+      "groomedNotes": null,
+      "completedAt": "2026-03-21T08:17:03-07:00"
     },
     {
       "id": "BUG-068",
