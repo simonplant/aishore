@@ -3078,11 +3078,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Simple one-line jq update. titles stored since BUG-081. Low risk, additive. No deps.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T12:29:33-07:00"
     },
     {
       "id": "BUG-108",
