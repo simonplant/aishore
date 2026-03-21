@@ -2305,15 +2305,13 @@ setup_sprint_environment() {
     echo "Project: $PROJECT_ROOT"
     if [[ "$auto_mode" == "true" ]]; then
         echo "Scope: $scope_label"
-        echo "Auto-groom: when ready < $AUTO_GROOM_THRESHOLD"
         echo "Circuit breaker: $max_consecutive_failures consecutive failures"
     elif [[ -n "$specific_id" ]]; then
         echo "Item: $specific_id"
     else
         echo "Sprints: $count"
     fi
-    echo "Isolation: $ISOLATION_MODE"
-    echo "Branching: feature branches (agent commits)"
+    [[ "$ISOLATION_MODE" != "stash" ]] && echo "Isolation: $ISOLATION_MODE"
     [[ "$no_merge" == "true" ]] && echo "Merge: disabled (branches kept for review)"
     [[ "$retries" -gt 0 ]] && echo "Retries: $retries"
     echo ""
@@ -2341,31 +2339,34 @@ setup_sprint_environment() {
     fi
 }
 
+# Count total ready items across all backlogs
+_count_total_ready() {
+    sum_backlog_count count_ready_items
+}
+
+# Record a sprint failure: update counters, mark item, store context, notify
+# Uses outer-scope locals from cmd_run and setup_sprint_environment.
+_record_sprint_failure() {
+    local reason="$1" detail="$2"
+    failed=$((failed + 1))
+    consecutive_failures=$((consecutive_failures + 1))
+    FAILED_IDS["$ITEM_ID"]="$reason"
+    session_failures+=("$ITEM_ID: $reason")
+    mark_item_failed "$ITEM_ID" "$detail" "$item_source"
+    sprint_results+=("fail")
+    sprint_items+=("$ITEM_ID")
+    sprint_times+=("$(( $(date +%s) - sprint_start ))")
+
+    # Store failure context for later diagnosis
+    _store_failure_context "$ITEM_ID" "$reason" "$detail"
+
+    send_notification "fail" "$ITEM_ID"
+    handle_sprint_failure
+}
+
 # Execute the core pick-implement-validate-merge cycle.
 # Uses and modifies outer-scope locals from cmd_run and setup_sprint_environment.
 run_sprint_loop() {
-    _count_total_ready() {
-        sum_backlog_count count_ready_items
-    }
-
-    _record_sprint_failure() {
-        local reason="$1" detail="$2"
-        failed=$((failed + 1))
-        consecutive_failures=$((consecutive_failures + 1))
-        FAILED_IDS["$ITEM_ID"]="$reason"
-        session_failures+=("$ITEM_ID: $reason")
-        mark_item_failed "$ITEM_ID" "$detail" "$item_source"
-        sprint_results+=("fail")
-        sprint_items+=("$ITEM_ID")
-        sprint_times+=("$(( $(date +%s) - sprint_start ))")
-
-        # Store failure context for later diagnosis
-        _store_failure_context "$ITEM_ID" "$reason" "$detail"
-
-        send_notification "fail" "$ITEM_ID"
-        handle_sprint_failure
-    }
-
     for ((i=1; i<=count; i++)); do
         if [[ "$auto_mode" == "true" && "$consecutive_failures" -ge "$max_consecutive_failures" ]]; then
             log_error "Circuit breaker: $consecutive_failures consecutive failures — stopping"
@@ -2414,10 +2415,8 @@ run_sprint_loop() {
         fi
 
         # Build exclusion list from failed items
-        local skip_list=""
-        for fid in "${!FAILED_IDS[@]}"; do
-            [[ -n "$skip_list" ]] && skip_list="$skip_list,$fid" || skip_list="$fid"
-        done
+        local skip_list
+        skip_list=$(IFS=,; echo "${!FAILED_IDS[*]}")
 
         local item_json
         if ! item_json=$(pick_item "$specific_id" "$skip_list"); then
@@ -2435,12 +2434,7 @@ run_sprint_loop() {
         if [[ "$auto_mode" == "true" && -n "$auto_priorities" ]]; then
             local item_priority
             item_priority=$(echo "$item_json" | jq -r '.priority // "should"')
-            local in_scope=false
-            # shellcheck disable=SC2086 # intentional word-splitting on priority list
-            for _p in $auto_priorities; do
-                [[ "$item_priority" == "$_p" ]] && { in_scope=true; break; }
-            done
-            if [[ "$in_scope" != "true" ]]; then
+            if [[ " $auto_priorities " != *" $item_priority "* ]]; then
                 log_success "All $auto_scope items complete — remaining items are lower priority"
                 break
             fi
@@ -2588,55 +2582,17 @@ print_sprint_summary() {
         fi
 
         if [[ "$run_review" == "true" ]]; then
-            # Count items before review
             local _items_before
             _items_before=$(sum_backlog_count count_items)
 
-            log_header "Architecture Review"
-            echo "Mode: Read-only"
-            echo ""
+            cmd_review || true
 
-            local review_context="@$BACKLOG_DIR/backlog.json @$BACKLOG_DIR/bugs.json"
-            local recent_sprints; recent_sprints=$(recent_sprints_file 20)
-            [[ -n "$recent_sprints" ]] && review_context="$review_context $recent_sprints"
-
-            local review_extra="## Additional Context
-Read-only review. Do not modify files."
-
-            local review_output
-            review_output="$(ensure_tmpdir)/review_output.txt"
-
-            log_info "Running architect agent..."
-            run_agent "architect" "review" "$MODEL_PRIMARY" "$review_context" "$review_output" "$review_extra" || true
-
-            local review_log
-            review_log="$DATA_DIR/logs/review-$(date +%Y%m%dT%H%M%S).md"
-            if [[ -s "$review_output" ]]; then
-                cp "$review_output" "$review_log"
-                log_info "Review output saved to: $review_log"
-            fi
-
-            if [[ -s "$review_output" ]]; then
+            local _items_after
+            _items_after=$(sum_backlog_count count_items)
+            if [[ "$_items_after" -gt "$_items_before" ]]; then
+                local _new_count=$((_items_after - _items_before))
                 echo ""
-                echo "═══════════════════════════════════════════"
-                echo "  ARCHITECTURE REVIEW OUTPUT"
-                echo "═══════════════════════════════════════════"
-                echo ""
-                cat "$review_output"
-                echo ""
-            fi
-
-            if check_result; then
-                # Check if new backlog items were added during review
-                local _items_after
-                _items_after=$(sum_backlog_count count_items)
-                if [[ "$_items_after" -gt "$_items_before" ]]; then
-                    local _new_count=$((_items_after - _items_before))
-                    echo ""
-                    log_info "Hint: $_new_count new item(s) added to the backlog during review. Run '.aishore/aishore auto done' to continue."
-                fi
-            else
-                log_warning "Architecture review did not complete successfully"
+                log_info "Hint: $_new_count new item(s) added to the backlog during review. Run '.aishore/aishore auto done' to continue."
             fi
         fi
     fi
@@ -3002,16 +2958,12 @@ $([[ "$update_docs" == "true" ]] && echo "You may update documentation and add b
 
     run_agent "architect" "review" "$MODEL_PRIMARY" "$context_args" "$output_file" "$extra_prompt"
 
-    # Save review output to persistent log
-    local review_log
-    review_log="$DATA_DIR/logs/review-$(date +%Y%m%dT%H%M%S).md"
+    # Save and print review output
     if [[ -s "$output_file" ]]; then
+        local review_log
+        review_log="$DATA_DIR/logs/review-$(date +%Y%m%dT%H%M%S).md"
         cp "$output_file" "$review_log"
         log_info "Review output saved to: $review_log"
-    fi
-
-    # Print the review output
-    if [[ -s "$output_file" ]]; then
         echo ""
         echo "═══════════════════════════════════════════"
         echo "  ARCHITECTURE REVIEW OUTPUT"
