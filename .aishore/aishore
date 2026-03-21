@@ -846,8 +846,15 @@ check_readiness_gates() {
             local dep_item=""
             dep_item=$(find_item "$dep_id" 2>/dev/null) || true
             if [[ -z "$dep_item" ]]; then
-                warnings="${warnings}  - Dependency ${dep_id}: not found in any backlog\n"
-                has_warning=true
+                # Check if dependency was completed and archived (cleaned items)
+                local archived=""
+                if [[ -f "$ARCHIVE_DIR/sprints.jsonl" ]]; then
+                    archived=$(jq -r --arg id "$dep_id" 'select(.itemId == $id) | .itemId' "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null | head -1)
+                fi
+                if [[ -z "$archived" ]]; then
+                    warnings="${warnings}  - Dependency ${dep_id}: not found in any backlog\n"
+                    has_warning=true
+                fi
             else
                 local dep_status
                 dep_status=$(printf '%s\n' "$dep_item" | jq -r '.status // "todo"')
@@ -989,6 +996,13 @@ collect_done_ids() {
         done_ids=$(printf '%s %s\n' "$done_ids" "$ids" | jq -s 'add | unique')
     }
     map_backlog_files _collect_done_one
+    # Also include archived sprint item IDs (completed items removed via 'clean')
+    local archive_file="$ARCHIVE_DIR/sprints.jsonl"
+    if [[ -f "$archive_file" ]] && [[ -s "$archive_file" ]]; then
+        local archived_ids
+        archived_ids=$(jq -r '.itemId // empty' "$archive_file" 2>/dev/null | jq -R . | jq -s '.' 2>/dev/null || echo "[]")
+        done_ids=$(printf '%s %s\n' "$done_ids" "$archived_ids" | jq -s 'add | unique')
+    fi
     printf '%s\n' "$done_ids"
 }
 
