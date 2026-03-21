@@ -1,34 +1,33 @@
 {
-  "sprintId": "sprint-1774064610",
-  "startedAt": "2026-03-20T20:43:30-07:00",
+  "sprintId": "sprint-1774065035",
+  "startedAt": "2026-03-20T20:50:35-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-068",
-    "title": "Tighten enforce_groom_limits and protect_items_from_groom",
-    "intent": "Groom protection and limit enforcement logic is tighter and less verbose. Combined size drops from 149 to ~100 lines while preserving all safety guarantees.",
-    "description": "enforce_groom_limits (76 lines) and protect_items_from_groom (73 lines) are correct but verbose. The protection function does per-field comparison with a 6-field jq check then a separate merge — this can be a single jq expression. The limits function iterates items one-by-one in bash when a single jq filter would suffice.",
+    "id": "BUG-069",
+    "title": "Deduplicate backlog populate with cmd_groom flow",
+    "intent": "backlog populate reuses the groom infrastructure instead of duplicating it. The cmd_backlog_populate function shrinks from 83 to ~40 lines by calling shared helpers.",
+    "description": "cmd_backlog_populate (83 lines) duplicates the pattern from cmd_groom: acquire lock, load config, find context files, snapshot backlogs, run agent, protect items, enforce limits, print diff. Extract the shared groom/populate flow into a helper that both call with different agent name and context.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Rewrite protect_items_from_groom to use a single jq pass: for each pre-existing ID, replace the live item with the original but carry over safe fields",
-      "Rewrite enforce_groom_limits to use jq to filter new items by priority rank and cap count, then remove excess in one pass",
-      "Remove per-item bash loops where jq can do the work",
-      "Keep all log_warning output for transparency",
-      "Verify: groom with a snapshot produces identical protection behavior"
+      "Extract the common flow (lock, config, snapshot, run agent, protect, enforce limits, diff) into a shared helper function",
+      "cmd_groom calls the helper with agent=tech-lead or product-owner and standard context",
+      "cmd_backlog_populate calls the helper with agent=product-owner and PRODUCT.md context",
+      "Keep populate-specific logic: PRD file discovery, empty template guard",
+      "Verify: both groom and populate produce identical behavior"
     ],
     "acceptanceCriteria": [
-      "protect_items_from_groom is under 50 lines",
-      "enforce_groom_limits is under 50 lines",
-      "Pre-existing items are never modified by groomer (title, intent, desc, steps, AC preserved)",
-      "New items exceeding max count or below min priority are removed",
+      "No duplicated snapshot/protect/enforce/diff code between groom and populate",
+      "cmd_groom works identically to before",
+      "cmd_backlog_populate works identically to before",
       "shellcheck passes"
     ],
     "scope": [
       ".aishore/**"
     ],
-    "startedAt": "2026-03-20T20:43:30-07:00",
+    "startedAt": "2026-03-20T20:50:35-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T20:50:34-07:00"
+    "completedAt": "2026-03-20T20:54:59-07:00"
   },
-  "completedAt": "2026-03-20T20:50:34-07:00",
+  "completedAt": "2026-03-20T20:54:59-07:00",
   "attempts": 1
 }
