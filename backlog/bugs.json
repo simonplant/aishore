@@ -2651,6 +2651,87 @@
       "readyForSprint": true,
       "groomedAt": "2026-03-21",
       "groomedNotes": null
+    },
+    {
+      "id": "BUG-093",
+      "title": "setup_sprint_environment calls undefined release_lock function",
+      "intent": "When --category yields no items, aishore exits cleanly with code 1 and a clear message — no 'command not found' crash, no fd leak.",
+      "description": "When --category filter yields no ready items, setup_sprint_environment() at line 2706 calls release_lock which is never defined anywhere in the script. With set -euo pipefail this triggers exit code 127 ('command not found') rather than a clean return 1. The user sees a confusing crash instead of the log_warning message that precedes it. The lock fd (9) is released on process exit anyway, so the fix is simply removing the undefined call.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "Confirm release_lock is not defined anywhere in .aishore/aishore",
+        "At line 2706, remove the release_lock call — the flock on fd 9 is released on process exit and no explicit release is needed here",
+        "Verify the early-exit path at lines 2701-2708 returns 1 cleanly after the log_warning",
+        "Run: .aishore/aishore run --category nonexistent and confirm exit code is 1 with no 'command not found' in output",
+        "shellcheck passes with no new warnings"
+      ],
+      "acceptanceCriteria": [
+        "Running .aishore/aishore run --category nonexistent returns exit 1 with the category warning, not a command-not-found error",
+        "A subsequent .aishore/aishore run succeeds in acquiring the lock normally",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Crash path: release_lock undefined triggers exit 127 on --category filter with no matches. Users see cryptic 'command not found' instead of clean exit. Elevated to must — this breaks a documented CLI option.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-094",
+      "title": "run_ac_verification silently skips all AC checks when jq fails to parse AC JSON",
+      "intent": "If AC JSON is malformed or jq fails, the sprint fails visibly with a clear error — it never silently passes with AC verification skipped.",
+      "description": "In run_ac_verification(), line 1761 computes verifiable with 2>/dev/null suppressing jq errors. If jq fails, verifiable is empty. Line 1762 falls back to verify_count=0 via || echo 0. Line 1763 returns 0 (success) when count is 0. Result: malformed AC JSON causes all AC verify commands to be silently skipped and the sprint proceeds as if verification passed. This is a correctness hole in the validation layer.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "In run_ac_verification(), after line 1761, check if verifiable is empty — if so, log_error and return 1",
+        "Remove 2>/dev/null from the jq call at line 1761 or capture its exit code explicitly so errors surface",
+        "Confirm existing behavior unchanged: valid AC with no verify fields still returns 0",
+        "shellcheck passes with no new warnings"
+      ],
+      "acceptanceCriteria": [
+        "When acceptanceCriteria contains invalid JSON, run_ac_verification returns 1 and logs an error",
+        "When acceptanceCriteria is valid but has no verify fields, function returns 0 (unchanged behavior)",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Silent correctness hole: malformed AC JSON causes all verify commands to be skipped, allowing broken sprints to pass validation. Elevated to must — validation layer integrity is non-negotiable.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-095",
+      "title": "Update CHANGELOG.md and bump version to v0.3.5",
+      "intent": "CHANGELOG.md reflects all work completed since v0.3.4 and VERSION reads 0.3.5. Users and contributors can see exactly what changed in this release.",
+      "description": "BUG-082 was manually marked done but the actual work was never completed — VERSION is still 0.3.4 and docs/CHANGELOG.md has no 0.3.5 section. Since v0.3.4, 20+ items were completed (BUG-067 through BUG-092, FEAT-027 through FEAT-032): refactoring, simplification, notification system, multi-backlog support, retry intelligence, category filter, --limit flag, real-time streaming, and numerous bug fixes. These constitute a patch release (v0.3.5).",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Bump .aishore/VERSION from 0.3.4 to 0.3.5",
+        "Add a [0.3.5] - 2026-03-21 section to docs/CHANGELOG.md with Added, Fixed, and Changed subsections covering BUG-067 through BUG-092 and FEAT-027 through FEAT-032",
+        "Run .aishore/aishore checksums to regenerate checksums after version bump",
+        "Verify: .aishore/aishore version outputs 0.3.5"
+      ],
+      "acceptanceCriteria": [
+        "VERSION file contains 0.3.5",
+        "docs/CHANGELOG.md has a [0.3.5] section dated 2026-03-21",
+        "[0.3.5] section covers the key items completed since v0.3.4 (at minimum: notifications, streaming, multi-backlog, retry intelligence, category filter, --limit, and the major bug fixes)",
+        ".aishore/aishore version outputs 0.3.5",
+        "checksums.sha256 is updated (aishore checksums exits 0)"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "BUG-082 was marked done manually but VERSION is still 0.3.4 and no 0.3.5 CHANGELOG section exists. 20+ items completed since v0.3.4.",
+      "groomedAt": "2026-03-21"
     }
   ]
 }
