@@ -519,20 +519,24 @@ get_item_source() {
 
 resolve_backlog_file() {
     local id="$1"
+    local expected=""
     case "$id" in
-        FEAT-*) echo "backlog.json" ;;
-        BUG-*)  echo "bugs.json" ;;
-        *)
-            # Search both files
-            for f in "${BACKLOG_FILES[@]}"; do
-                if [[ -f "$BACKLOG_DIR/$f" ]] && jq -e --arg id "$id" '.items[] | select(.id == $id)' "$BACKLOG_DIR/$f" &>/dev/null; then
-                    echo "$f"
-                    return 0
-                fi
-            done
-            return 1
-            ;;
+        FEAT-*) expected="backlog.json" ;;
+        BUG-*)  expected="bugs.json" ;;
     esac
+    # Check expected file first if prefix matched
+    if [[ -n "$expected" ]] && [[ -f "$BACKLOG_DIR/$expected" ]] && jq -e --arg id "$id" '.items[] | select(.id == $id)' "$BACKLOG_DIR/$expected" &>/dev/null; then
+        echo "$expected"
+        return 0
+    fi
+    # Fall through: search all files
+    for f in "${BACKLOG_FILES[@]}"; do
+        if [[ -f "$BACKLOG_DIR/$f" ]] && jq -e --arg id "$id" '.items[] | select(.id == $id)' "$BACKLOG_DIR/$f" &>/dev/null; then
+            echo "$f"
+            return 0
+        fi
+    done
+    return 1
 }
 
 find_item() {

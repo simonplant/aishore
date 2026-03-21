@@ -1,30 +1,29 @@
 {
-  "sprintId": "sprint-1774054645",
-  "startedAt": "2026-03-20T17:57:25-07:00",
+  "sprintId": "sprint-1774054833",
+  "startedAt": "2026-03-20T18:00:33-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-024",
-    "title": "aishore status --watch mode for live sprint progress monitoring",
-    "intent": "Users must be able to monitor a running sprint without manually re-running status every few seconds — a watch mode eliminates the polling loop.",
-    "description": "cmd_status() is a snapshot command. Users running long sprints (1+ hour agent sessions) have no way to monitor progress without repeatedly running 'aishore status'. A --watch flag would run status on a configurable interval (default 30s) until the sprint completes (sprint.json status returns to idle) or Ctrl-C is pressed. The output should clear the terminal between refreshes (like watch(1)) and show a countdown to next refresh.",
-    "sourceBacklog": "backlog.json",
+    "id": "BUG-030",
+    "title": "resolve_backlog_file returns wrong file for IDs that don't exist in expected file",
+    "intent": "Ensure resolve_backlog_file returns an error when an ID is not found in its expected file, not a stale filename",
+    "description": "resolve_backlog_file() uses a prefix case statement: FEAT-* maps to backlog.json, BUG-* maps to bugs.json. It returns the filename immediately without verifying the item actually exists in that file. If find_item then calls jq on the returned filename, it gets an error like 'null' rather than a clear 'item not found'. This is latent: when a FEAT-* item is present only in a custom file, or after backlog clean removes it, resolve_backlog_file returns a stale path and find_item produces a confusing error. The fix is to verify item existence in the resolved file before returning, or at minimum ensure find_item handles the null case gracefully.",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_status() and add --watch and --interval flags to the option parsing loop",
-      "Add local watch=false interval=30 before the loop; --watch sets watch=true; --interval sets interval=N",
-      "After existing status output logic, if watch is true: enter a loop that sleeps interval seconds, clears terminal (printf '\\033[2J\\033[H'), re-runs status output, prints 'Refreshing in Ns... (Ctrl-C to stop)'",
-      "In each loop iteration, check sprint.json status: if status is idle, print 'Sprint complete' and exit the loop",
-      "Verify: 'aishore status --watch' refreshes every 30s and exits when sprint completes; 'aishore status' without --watch works as before"
+      "In .aishore/aishore, find resolve_backlog_file() (around line 520)",
+      "For the FEAT-* and BUG-* prefix cases, add a jq existence check after resolving the filename: if jq -e --arg id \"$id\" '.items[] | select(.id == $id)' \"$BACKLOG_DIR/$file\" &>/dev/null; then echo \"$file\"; return 0; fi",
+      "Fall through to the generic search-both-files loop if the prefix-matched file doesn't contain the item",
+      "Verify: resolve_backlog_file BUG-999 (nonexistent) returns non-zero; resolve_backlog_file BUG-001 still returns bugs.json"
     ],
     "acceptanceCriteria": [
-      "aishore status --watch refreshes output every 30 seconds by default",
-      "aishore status --watch exits automatically when sprint.json status returns to idle",
-      "aishore status without --watch flag works identically to current behavior"
+      "resolve_backlog_file returns non-zero for an ID that doesn't exist in any file, even if the prefix matches",
+      "resolve_backlog_file still returns the correct file for existing FEAT-* and BUG-* items",
+      "find_item error message is 'Item not found: <ID>' not a jq null error when the item is absent"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T17:57:25-07:00",
+    "startedAt": "2026-03-20T18:00:33-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T18:00:32-07:00"
+    "completedAt": "2026-03-20T18:02:49-07:00"
   },
-  "completedAt": "2026-03-20T18:00:32-07:00",
+  "completedAt": "2026-03-20T18:02:49-07:00",
   "attempts": 1
 }
