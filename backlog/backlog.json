@@ -359,10 +359,17 @@
         "The document reads as a coherent narrative for a developer evaluating the project — not a copy-paste collage",
         "No content is duplicated verbatim from README.md — the README will link here instead"
       ],
-      "scope": ["docs/ARCHITECTURE.md"],
+      "scope": [
+        "docs/ARCHITECTURE.md"
+      ],
       "dependsOn": [],
       "status": "todo",
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "All ACs are clear and testable. Source files (README.md, CLAUDE.md, CONTRIBUTING.md, agent files, DEFINITIONS.md) are well-defined. No blockers. Priority must — this is a prerequisite for FEAT-019 and unblocks FEAT-021.",
+      "lastFailReason": "Validator agent rejected implementation",
+      "lastFailAt": "2026-03-20T17:26:57-07:00",
+      "failCount": 1
     },
     {
       "id": "FEAT-015",
@@ -386,10 +393,16 @@
         "Content is sourced from .aishore/README.md and README.md — not invented",
         "The document does not exceed 300 lines — it is a quickstart, not a manual"
       ],
-      "scope": ["docs/QUICKSTART.md"],
+      "scope": [
+        "docs/QUICKSTART.md"
+      ],
       "dependsOn": [],
-      "status": "todo",
-      "readyForSprint": false
+      "status": "done",
+      "readyForSprint": false,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "All ACs are clear and testable. Source files (.aishore/README.md, README.md Quick Start) are well-defined. Explicit length constraint (<300 lines) keeps scope tight. No blockers.",
+      "passes": true,
+      "completedAt": "2026-03-20T17:29:46-07:00"
     },
     {
       "id": "FEAT-016",
@@ -413,10 +426,14 @@
         "The Complete Flag Reference from README.md is fully represented here",
         "No undocumented options remain — every setting in config.yaml and every AISHORE_* env var has an entry"
       ],
-      "scope": ["docs/CONFIGURATION.md"],
+      "scope": [
+        "docs/CONFIGURATION.md"
+      ],
       "dependsOn": [],
       "status": "todo",
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "ACs are clear. Source files (README.md Configuration + Flag Reference, CLAUDE.md config precedence, .aishore/config.yaml) are all in-repo. Good scope — moves the Flag Reference out of README.md as a side effect. No blockers."
     },
     {
       "id": "FEAT-017",
@@ -440,17 +457,21 @@
         "The document does not read as marketing copy — it reads as honest problem documentation with concrete solutions",
         "Problems reference specific aishore features (maturity protocol, commander's intent, backlog system) not vague claims"
       ],
-      "scope": ["docs/PROBLEMS.md"],
+      "scope": [
+        "docs/PROBLEMS.md"
+      ],
       "dependsOn": [],
       "status": "todo",
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "ACs are clear. Structured problem/evidence/solution format is well-defined. 6+ problem minimum is testable. Seed content from README.md 'Why aishore?' is sufficient starting point. No blockers."
     },
     {
       "id": "FEAT-018",
       "title": "Create docs/ROADMAP.md — what's planned, what's missing, what's prioritized",
       "intent": "Contributors and evaluators must see where the project is going — a project with no visible roadmap looks abandoned or directionless.",
       "description": "No roadmap document exists. The trajectory can be inferred from CHANGELOG.md (15 releases, v0.1.0 through v0.3.2, showing evolution from basic sprint runner to autonomous mode with grooming, validation, and diagnostics) and from known limitations (single-repo only, bash-only CLI, Claude Code dependency, no multi-language agent support, no remote/CI execution mode, no plugin system for custom agents). The roadmap should be organized as Now (active work) / Next (committed direction) / Later (vision) / Known Limitations (honest about current constraints). This is a lightweight document — 50-100 lines, not a product spec.",
-      "priority": "could",
+      "priority": "should",
       "category": "documentation",
       "steps": [
         "Read CHANGELOG.md to understand the project trajectory and what has shipped (v0.1.0 through v0.3.2)",
@@ -465,10 +486,14 @@
         "The document is under 100 lines",
         "Each roadmap item is a clear statement, not a vague aspiration"
       ],
-      "scope": ["docs/ROADMAP.md"],
+      "scope": [
+        "docs/ROADMAP.md"
+      ],
       "dependsOn": [],
       "status": "todo",
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Raised from could to should — FEAT-018 is a hard dependency of FEAT-021 (must). A must item cannot be blocked by a could item. ROADMAP.md must exist before README can link to it in the Links section."
     },
     {
       "id": "FEAT-019",
@@ -491,8 +516,14 @@
         "An Agent Prompt Authoring section exists explaining how to modify agent files",
         "All references to CONTRIBUTING.md across the repo point to docs/CONTRIBUTING.md"
       ],
-      "scope": ["CONTRIBUTING.md", "docs/CONTRIBUTING.md", "README.md"],
-      "dependsOn": ["FEAT-014"],
+      "scope": [
+        "CONTRIBUTING.md",
+        "docs/CONTRIBUTING.md",
+        "README.md"
+      ],
+      "dependsOn": [
+        "FEAT-014"
+      ],
       "status": "todo",
       "readyForSprint": false
     },
@@ -501,7 +532,7 @@
       "title": "Move CHANGELOG.md to docs/CHANGELOG.md and update references",
       "intent": "All documentation must live in docs/ for consistency — changelog is documentation, not a build artifact.",
       "description": "CHANGELOG.md exists at repo root with 15 well-structured releases (v0.1.0 through v0.3.2) using Added/Changed/Fixed/Removed/Documentation sections. This is a pure file move. Update any references to CHANGELOG.md in README.md, CONTRIBUTING.md, and other files to point to docs/CHANGELOG.md. Consider leaving a symlink at the root for tools that expect CHANGELOG.md at the repo root, but only if a concrete tool dependency is identified.",
-      "priority": "could",
+      "priority": "should",
       "category": "documentation",
       "steps": [
         "Move CHANGELOG.md to docs/CHANGELOG.md",
@@ -515,10 +546,16 @@
         "All references across the repo point to docs/CHANGELOG.md",
         "CI workflows (if any reference CHANGELOG.md) still work"
       ],
-      "scope": ["CHANGELOG.md", "docs/CHANGELOG.md", "README.md"],
+      "scope": [
+        "CHANGELOG.md",
+        "docs/CHANGELOG.md",
+        "README.md"
+      ],
       "dependsOn": [],
       "status": "todo",
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Raised from could to should — FEAT-020 is a hard dependency of FEAT-021 (must). A must item cannot be blocked by a could item. docs/CHANGELOG.md must exist before README can link to it in the Links section."
     },
     {
       "id": "FEAT-021",
@@ -545,8 +582,18 @@
         "No content is lost — everything is either in README.md or linked from it via docs/",
         "README.md links section includes: Architecture, Quickstart, Configuration, Problems, Roadmap, Contributing, Changelog"
       ],
-      "scope": ["README.md"],
-      "dependsOn": ["FEAT-014", "FEAT-015", "FEAT-016", "FEAT-017", "FEAT-018", "FEAT-019", "FEAT-020"],
+      "scope": [
+        "README.md"
+      ],
+      "dependsOn": [
+        "FEAT-014",
+        "FEAT-015",
+        "FEAT-016",
+        "FEAT-017",
+        "FEAT-018",
+        "FEAT-019",
+        "FEAT-020"
+      ],
       "status": "todo",
       "readyForSprint": false
     },
@@ -572,8 +619,12 @@
         "required_files list matches the actual docs/ file structure created by FEAT-014 through FEAT-020",
         "Portfolio section lists ClawHQ, Easy-Markdown, and GigOS with correct GitHub URLs"
       ],
-      "scope": [".doc-standard.yaml"],
-      "dependsOn": ["FEAT-021"],
+      "scope": [
+        ".doc-standard.yaml"
+      ],
+      "dependsOn": [
+        "FEAT-021"
+      ],
       "status": "todo",
       "readyForSprint": false
     }
