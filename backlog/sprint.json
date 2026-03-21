@@ -1,33 +1,37 @@
 {
-  "sprintId": "sprint-1774065035",
-  "startedAt": "2026-03-20T20:50:35-07:00",
+  "sprintId": "sprint-1774065300",
+  "startedAt": "2026-03-20T20:55:00-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-069",
-    "title": "Deduplicate backlog populate with cmd_groom flow",
-    "intent": "backlog populate reuses the groom infrastructure instead of duplicating it. The cmd_backlog_populate function shrinks from 83 to ~40 lines by calling shared helpers.",
-    "description": "cmd_backlog_populate (83 lines) duplicates the pattern from cmd_groom: acquire lock, load config, find context files, snapshot backlogs, run agent, protect items, enforce limits, print diff. Extract the shared groom/populate flow into a helper that both call with different agent name and context.",
+    "id": "BUG-070",
+    "title": "Consolidate three merge strategies into parameterized flow",
+    "intent": "The merge/squash/no-merge paths in _handle_sprint_success share one code flow with a branch only on the merge command itself. Saves ~40 lines of duplicated checkout/push/pull logic.",
+    "description": "_handle_sprint_success has three near-identical code blocks for merge, squash, and no-merge. The remote sync block (push + pull + warning) is duplicated verbatim between squash (lines 2132-2138) and no-ff (lines 2162-2168). The merge_msg if/else (lines 2146-2150) is collapsible to one expression. Safety-commit message pattern is also repeated. Parameterize into: (1) no-merge early return with push and optional PR, (2) single merge path that branches only on the git merge command, (3) shared _sync_remote helper for push+pull.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Extract the common flow (lock, config, snapshot, run agent, protect, enforce limits, diff) into a shared helper function",
-      "cmd_groom calls the helper with agent=tech-lead or product-owner and standard context",
-      "cmd_backlog_populate calls the helper with agent=product-owner and PRODUCT.md context",
-      "Keep populate-specific logic: PRD file discovery, empty template guard",
-      "Verify: both groom and populate produce identical behavior"
+      "Extract _sync_remote helper: git push + git pull with warnings — used by both merge paths",
+      "Collapse merge_msg if/else to: merge_msg=merge: ITEM_ID dollar{merge_summary:-sprint branch}",
+      "Parameterize merge: single path that runs git merge --no-ff or git merge --squash based on MERGE_STRATEGY",
+      "Handle squash-specific explicit commit after merge --squash",
+      "Keep no-merge as early return with push and optional PR creation",
+      "Verify: all three strategies produce identical git history as before"
     ],
     "acceptanceCriteria": [
-      "No duplicated snapshot/protect/enforce/diff code between groom and populate",
-      "cmd_groom works identically to before",
-      "cmd_backlog_populate works identically to before",
+      "A _sync_remote helper exists and is called by both merge paths",
+      "No duplicated push/pull/cleanup code between merge strategies",
+      "merge_msg construction is a single expression, not an if/else block",
+      "MERGE_STRATEGY=merge produces --no-ff merge commit",
+      "MERGE_STRATEGY=squash produces squash commit",
+      "no-merge flag pushes branch and skips merge",
       "shellcheck passes"
     ],
     "scope": [
       ".aishore/**"
     ],
-    "startedAt": "2026-03-20T20:50:35-07:00",
+    "startedAt": "2026-03-20T20:55:00-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T20:54:59-07:00"
+    "completedAt": "2026-03-20T20:58:05-07:00"
   },
-  "completedAt": "2026-03-20T20:54:59-07:00",
+  "completedAt": "2026-03-20T20:58:05-07:00",
   "attempts": 1
 }
