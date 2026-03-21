@@ -1,34 +1,30 @@
 {
-  "sprintId": "sprint-1774054082",
-  "startedAt": "2026-03-20T17:48:02-07:00",
+  "sprintId": "sprint-1774054199",
+  "startedAt": "2026-03-20T17:49:59-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-020",
-    "title": "Move CHANGELOG.md to docs/CHANGELOG.md and update references",
-    "intent": "All documentation must live in docs/ for consistency — changelog is documentation, not a build artifact.",
-    "description": "CHANGELOG.md exists at repo root with 15 well-structured releases (v0.1.0 through v0.3.2) using Added/Changed/Fixed/Removed/Documentation sections. This is a pure file move. Update any references to CHANGELOG.md in README.md, CONTRIBUTING.md, and other files to point to docs/CHANGELOG.md. Consider leaving a symlink at the root for tools that expect CHANGELOG.md at the repo root, but only if a concrete tool dependency is identified.",
+    "id": "FEAT-023",
+    "title": "backlog history row limit flag to cap output",
+    "intent": "Users must be able to see just the most recent N sprint completions without piping through head — a limit flag makes history browsable at any archive size.",
+    "description": "cmd_backlog_history() reads the full sprints.jsonl and prints all matching rows. For projects with many sprints, the output can be hundreds of rows. The command has no way to cap the output to N most recent entries. Adding a --limit N flag would print only the last N entries (after applying any --since or --failed filters). This is analogous to git log -n.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Move CHANGELOG.md to docs/CHANGELOG.md",
-      "Search all files for references to CHANGELOG.md and update paths to docs/CHANGELOG.md",
-      "Verify README.md links to docs/CHANGELOG.md",
-      "Verify no build scripts or CI workflows reference CHANGELOG.md at the root"
+      "In .aishore/aishore, find cmd_backlog_history() and add --limit to the flag parsing loop; add local limit=0 before the loop",
+      "In the --limit case: validate_arg then set limit=$2; shift 2; validate that the value is a positive integer",
+      "After filtering and collecting results, if limit > 0, pipe through tail -n $limit to keep only the last N entries",
+      "Add --limit to the usage message in cmd_backlog_history and cmd_help",
+      "Verify: 'backlog history' with limit 5 prints at most 5 rows; without limit flag prints all rows"
     ],
     "acceptanceCriteria": [
-      "docs/CHANGELOG.md exists with all original content preserved",
-      "CHANGELOG.md no longer exists at repo root",
-      "All references across the repo point to docs/CHANGELOG.md",
-      "CI workflows (if any reference CHANGELOG.md) still work"
+      "backlog history with a limit flag prints only the N most recent matching entries",
+      "backlog history with both --since and a limit flag applies date filter first then limits rows",
+      "backlog history with no limit flag still prints all entries unchanged"
     ],
-    "scope": [
-      "CHANGELOG.md",
-      "docs/CHANGELOG.md",
-      "README.md"
-    ],
-    "startedAt": "2026-03-20T17:48:02-07:00",
+    "scope": [],
+    "startedAt": "2026-03-20T17:49:59-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T17:49:58-07:00"
+    "completedAt": "2026-03-20T17:52:58-07:00"
   },
-  "completedAt": "2026-03-20T17:49:58-07:00",
+  "completedAt": "2026-03-20T17:52:58-07:00",
   "attempts": 1
 }
