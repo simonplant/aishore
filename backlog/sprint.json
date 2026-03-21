@@ -1,30 +1,38 @@
 {
-  "sprintId": "sprint-1774107267",
-  "startedAt": "2026-03-21T08:34:27-07:00",
+  "sprintId": "sprint-1774107873",
+  "startedAt": "2026-03-21T08:44:33-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-081",
-    "title": "backlog history title column always shows '-' — title not stored in archive",
-    "intent": "backlog history shows real item titles. mark_complete archives the title field so history output is human-readable.",
-    "description": "cmd_backlog_history displays a TITLE column and reads .title from sprints.jsonl, but mark_complete never writes a title field to the archive. Every row shows '-'. BUG-037 added the title column to the history output but missed adding title to the archive write in mark_complete.",
+    "id": "BUG-083",
+    "title": "context_args passed as word-split string — should be an array",
+    "intent": "context_args is an array everywhere it flows: no word-splitting on unquoted variable, SC2086 warning is gone, filenames with spaces are safe.",
+    "description": "context_args is built as a space-delimited string (e.g. '@file1 @file2 @file3') and then word-split at the call site via unquoted $context_args to pass multiple @file arguments to build_context. This pattern breaks on paths with spaces, triggers SC2086 from shellcheck, and is fragile. The fix is to use a Bash array (local -a context_args=()) throughout: build the array with += , pass it as \"${context_args[@]}\", and update run_agent() and run_groom_flow() signatures accordingly.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In mark_complete(), fetch the item title from the source backlog file alongside priority and category (extend the single jq call at line 1180 to also extract .title)",
-      "Pass title as --arg to the jq -cn archive write block and include title in the output JSON object",
-      "Verify: run a sprint, then run backlog history and confirm the title column shows the item title"
+      "Change context_args from a string to a local -a (array) in cmd_groom, cmd_review, and cmd_backlog_populate",
+      "Use context_args+=(...) to append elements instead of string concatenation",
+      "Update run_groom_flow() signature: accept context_args as a named array (via nameref or by shifting args)",
+      "Update run_agent() call site to pass \"${context_args[@]}\" instead of $context_args",
+      "Update run_agent() parameter 4 to accept variadic args or an array for context_files",
+      "Remove the shellcheck disable=SC2086 comment at line 1494 if it was added to suppress this",
+      "Run shellcheck — no SC2086 findings on context_args",
+      "Run: aishore groom, aishore review, aishore backlog populate — each must complete without error",
+      "Also convert groom_context string in run_sprint_loop (auto-groom path) to an array"
     ],
     "acceptanceCriteria": [
-      "mark_complete writes a title field to sprints.jsonl",
-      "backlog history title column shows item titles instead of '-'",
-      "shellcheck passes"
+      "context_args is declared as a Bash array (local -a) wherever it is used",
+      "No unquoted $context_args expansion exists in the codebase",
+      "SC2086 finding at line 1494 is gone from shellcheck output",
+      "aishore groom and aishore review still invoke agents with the correct context files",
+      "shellcheck passes with no new findings"
     ],
     "scope": [
       ".aishore/aishore"
     ],
-    "startedAt": "2026-03-21T08:34:27-07:00",
+    "startedAt": "2026-03-21T08:44:33-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T08:37:09-07:00"
+    "completedAt": "2026-03-21T08:49:06-07:00"
   },
-  "completedAt": "2026-03-21T08:37:09-07:00",
+  "completedAt": "2026-03-21T08:49:06-07:00",
   "attempts": 1
 }

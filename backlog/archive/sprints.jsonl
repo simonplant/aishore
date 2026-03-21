@@ -209,3 +209,4 @@
 {"date":"2026-03-21","sprintId":"sprint-1774105867","itemId":"FEAT-021","status":"complete","attempts":1,"filesChanged":1,"linesAdded":6,"linesRemoved":1,"duration":183,"priority":"must","category":"documentation"}
 {"date":"2026-03-21","sprintId":"sprint-1774106051","itemId":"BUG-067","status":"complete","attempts":1,"filesChanged":2,"linesAdded":0,"linesRemoved":3,"duration":172,"priority":"should","category":null}
 {"date":"2026-03-21","sprintId":"sprint-1774107267","itemId":"BUG-081","status":"complete","attempts":1,"filesChanged":2,"linesAdded":7,"linesRemoved":5,"duration":162,"priority":"should","category":null}
+{"date":"2026-03-21","sprintId":"sprint-1774107873","itemId":"BUG-083","status":"complete","attempts":1,"filesChanged":2,"linesAdded":1,"linesRemoved":0,"duration":273,"priority":"should","category":null}

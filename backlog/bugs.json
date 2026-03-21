@@ -2259,34 +2259,8 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
-      "groomedAt": null,
-      "groomedNotes": null
-    },
-    {
-      "id": "BUG-080",
-      "title": "Consolidate 6 separate jq calls in cmd_diagnose into one",
-      "intent": "cmd_diagnose makes 6 separate jq -r calls on the same JSON file to extract individual fields. Combine into a single jq invocation to reduce forks and lines.",
-      "description": "",
-      "priority": "could",
-      "category": null,
-      "steps": [
-        "Replace the 6 individual jq -r calls in cmd_diagnose with a single jq call that extracts all fields at once",
-        "Verify diagnose output is unchanged"
-      ],
-      "acceptanceCriteria": [
-        "cmd_diagnose has at most 1 jq call to extract fields from the diagnostics file",
-        "Output format is unchanged",
-        "shellcheck passes"
-      ],
-      "scope": [
-        ".aishore/**"
-      ],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": false,
-      "groomedAt": null,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-21",
       "groomedNotes": null
     },
     {
@@ -2314,7 +2288,8 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T08:37:09-07:00"
+      "completedAt": "2026-03-21T08:37:09-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-082",
@@ -2350,7 +2325,96 @@
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-21",
-      "groomingNotes": "Version bump should run after BUG-067, BUG-072, and BUG-081 complete so the changelog covers all work in this release cycle. Updated dependsOn accordingly. BUG-082 itself will not be readyForSprint until those three are done."
+      "groomingNotes": "Version bump should run after BUG-067, BUG-072, and BUG-081 complete so the changelog covers all work in this release cycle. Updated dependsOn accordingly. BUG-082 itself will not be readyForSprint until those three are done.",
+      "groomedNotes": null
+    },
+    {
+      "id": "BUG-083",
+      "title": "context_args passed as word-split string — should be an array",
+      "intent": "context_args is an array everywhere it flows: no word-splitting on unquoted variable, SC2086 warning is gone, filenames with spaces are safe.",
+      "description": "context_args is built as a space-delimited string (e.g. '@file1 @file2 @file3') and then word-split at the call site via unquoted $context_args to pass multiple @file arguments to build_context. This pattern breaks on paths with spaces, triggers SC2086 from shellcheck, and is fragile. The fix is to use a Bash array (local -a context_args=()) throughout: build the array with += , pass it as \"${context_args[@]}\", and update run_agent() and run_groom_flow() signatures accordingly.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Change context_args from a string to a local -a (array) in cmd_groom, cmd_review, and cmd_backlog_populate",
+        "Use context_args+=(...) to append elements instead of string concatenation",
+        "Update run_groom_flow() signature: accept context_args as a named array (via nameref or by shifting args)",
+        "Update run_agent() call site to pass \"${context_args[@]}\" instead of $context_args",
+        "Update run_agent() parameter 4 to accept variadic args or an array for context_files",
+        "Remove the shellcheck disable=SC2086 comment at line 1494 if it was added to suppress this",
+        "Run shellcheck — no SC2086 findings on context_args",
+        "Run: aishore groom, aishore review, aishore backlog populate — each must complete without error",
+        "Also convert groom_context string in run_sprint_loop (auto-groom path) to an array"
+      ],
+      "acceptanceCriteria": [
+        "context_args is declared as a Bash array (local -a) wherever it is used",
+        "No unquoted $context_args expansion exists in the codebase",
+        "SC2086 finding at line 1494 is gone from shellcheck output",
+        "aishore groom and aishore review still invoke agents with the correct context files",
+        "shellcheck passes with no new findings"
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-21T08:49:06-07:00"
+    },
+    {
+      "id": "BUG-084",
+      "title": "_status_output calls count_by_status 6 times — consolidate to one jq pass per file",
+      "intent": "_status_output extracts all item counts from each backlog file in a single jq call per file; no redundant file parses.",
+      "description": "_status_output (called by cmd_status and cmd_status --watch loop) calls count_by_status three times per backlog file — once each for 'todo', 'in-progress', and 'done' — yielding 6 jq subprocess forks total. All three counts can be extracted in a single jq call per file using group_by or select, then stored in local variables. This saves 4 subprocess forks per status refresh and is especially noticeable in --watch mode.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Replace the three count_by_status calls for backlog_file with a single jq invocation that extracts todo/in-progress/done counts in one pass",
+        "Replace the three count_by_status calls for bugs_file with a single jq invocation in the same manner",
+        "Store counts in local variables and format the output string from those variables",
+        "Verify: aishore status shows correct counts for each status",
+        "Verify: shellcheck passes with no new findings"
+      ],
+      "acceptanceCriteria": [
+        "backlog_file counts are extracted in a single jq call (not three)",
+        "bugs_file counts are extracted in a single jq call (not three)",
+        "aishore status output format is unchanged",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-080",
+      "title": "Consolidate 6 separate jq calls in cmd_diagnose into one",
+      "intent": "cmd_diagnose makes 6 separate jq -r calls on the same JSON file to extract individual fields. Combine into a single jq invocation to reduce forks and lines.",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Replace the 6 individual jq -r calls in cmd_diagnose with a single jq call that extracts all fields at once",
+        "Verify diagnose output is unchanged"
+      ],
+      "acceptanceCriteria": [
+        "cmd_diagnose has at most 1 jq call to extract fields from the diagnostics file",
+        "Output format is unchanged",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false,
+      "groomedAt": null,
+      "groomedNotes": null
     }
   ]
 }

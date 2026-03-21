@@ -787,6 +787,63 @@
       "completedAt": "2026-03-20T19:11:10-07:00",
       "groomedAt": null,
       "groomedNotes": null
+    },
+    {
+      "id": "FEAT-027",
+      "title": "Multi-backlog support — run sprints across multiple backlog files in one session",
+      "intent": "aishore reads from all declared backlog files in a single session; items are picked by priority across all files with no manual pre-sorting required.",
+      "description": "Users working on large projects split work across component-specific backlog files. Currently aishore only reads from backlog.json and bugs.json. Multi-backlog support lets users declare additional backlog files (e.g. backlog/infra.json, backlog/api.json) in config.yaml, and the auto and run commands pick items from all declared files, respecting priority ordering across files. This removes the need to manually shuttle items between files before running sprints.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Add a backlog_files config key (list of paths) to config.yaml, defaulting to the current two-file set",
+        "Update all backlog-reading functions (pick_item, list_pickable_ids, count_by_status, etc.) to iterate over the configured file list",
+        "Update resolve_backlog_file to search all declared files when resolving an item ID",
+        "Validate declared paths exist and are readable at startup; warn on missing files, don't abort",
+        "Update cmd_status to show counts per declared file",
+        "Update docs/CONFIGURATION.md with backlog_files knob",
+        "Verify: run auto done across two backlog files with items in each — both are picked and completed"
+      ],
+      "acceptanceCriteria": [
+        "config.yaml accepts a backlog_files list; omitting it defaults to current behaviour",
+        "Items are picked from all declared files in priority order across files",
+        "backlog list shows items from all declared files",
+        "resolve_backlog_file finds items in any declared file",
+        "Missing declared files produce a warning, not an abort"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-028",
+      "title": "Retry intelligence — carry prior failure context into retry developer cycles",
+      "intent": "On retry, the developer agent receives a structured summary of the prior failure — what was done and why it failed — and must acknowledge it before proceeding.",
+      "description": "When a sprint item fails validation and retries, the developer agent currently gets the same prompt as the first attempt with no memory of what was tried. If the first attempt made a mistake (wrong approach, missed edge case), the retry is likely to repeat it. Retry intelligence captures the validation failure output and a brief summary of what was changed in the failed attempt, then injects this as 'prior failure context' into the retry developer prompt. This reduces repeat mistakes and helps the agent course-correct.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "After each failed validation, capture: (a) the validation output, (b) a git diff summary of what the developer changed",
+        "Accumulate failure context across retries into a structured block (attempt N: summary + failure reason)",
+        "Inject the accumulated failure context into the developer agent prompt on retry, before the item spec",
+        "The developer prompt must instruct the agent to read the failure context section and address each failure before coding",
+        "Cap injected failure context at 2000 chars to avoid prompt bloat (truncate oldest first)",
+        "Verify: run --retries 2 on an item that will fail the first validation; confirm retry prompt contains prior failure context"
+      ],
+      "acceptanceCriteria": [
+        "On retry, developer prompt contains a 'Prior failure context' section with attempt number, git diff summary, and validation failure output",
+        "Failure context is capped at 2000 chars and truncated gracefully",
+        "First-attempt prompt is unchanged (no failure context section)",
+        "auto mode with --retries passes failure context across all retry cycles",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
     }
   ]
 }
