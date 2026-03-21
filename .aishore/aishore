@@ -2173,24 +2173,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
     return 0
 }
 
-cmd_run() {
-    require_tool jq
-    require_tool git
-
-    local count=1
-    local dry_run=false
-    local specific_id=""
-    local retries=0
-    local no_merge=false
-    local create_pr=false
-    local refine_on_exhaust=false
-    local quick_mode=false
-    local auto_mode=false
-    local auto_scope=""
-    local auto_priorities=""
-    local auto_review=false
-    local max_consecutive_failures=""
-
+# Parse command-line arguments for cmd_run.
+# Sets outer-scope locals: count, dry_run, specific_id, retries, no_merge,
+#   create_pr, refine_on_exhaust, quick_mode, auto_mode, auto_scope,
+#   auto_review, max_consecutive_failures
+cmd_run_parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --dry-run) dry_run=true; shift ;;
@@ -2233,12 +2220,14 @@ cmd_run() {
                 shift ;;
         esac
     done
+}
 
-    if [[ "$dry_run" == "true" ]]; then
-        _run_dry_run
-        return $?
-    fi
-
+# Acquire lock, load config, stash changes, resolve settings, print header,
+# initialize tracking variables, and build the item queue.
+# Sets outer-scope locals: did_stash, scope_label, auto_priorities, base_branch,
+#   passed, failed, batch_start, consecutive_failures, groom_exhausted,
+#   sprint_results, sprint_items, sprint_times, session_failures, queued_ids, skipped_ids
+setup_sprint_environment() {
     acquire_lock
     load_config
     cd "$PROJECT_ROOT"
@@ -2268,7 +2257,7 @@ cmd_run() {
 
     # Stash pre-existing uncommitted changes so sprints don't destroy them
     # (skipped in worktree mode — uncommitted changes stay untouched in original tree)
-    local did_stash=false
+    did_stash=false
     if [[ "$ISOLATION_MODE" == "stash" ]]; then
         if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
             log_warning "Stashing pre-existing uncommitted changes"
@@ -2284,7 +2273,7 @@ cmd_run() {
     [[ -z "$max_consecutive_failures" ]] && max_consecutive_failures="$AUTO_MAX_FAILURES"
 
     # Auto mode setup
-    local scope_label=""
+    scope_label=""
     if [[ "$auto_mode" == "true" ]]; then
         count=9999
         case "$auto_scope" in
@@ -2313,24 +2302,32 @@ cmd_run() {
     [[ "$retries" -gt 0 ]] && echo "Retries: $retries"
     echo ""
 
-    local base_branch
     base_branch=$(git rev-parse --abbrev-ref HEAD)
     AISHORE_BASE_BRANCH="$base_branch"
 
-    local passed=0 failed=0
-    declare -A FAILED_IDS
-    local batch_start
+    passed=0
+    failed=0
     batch_start=$(date +%s)
-    local sprint_results=()
-    local sprint_items=()
-    local sprint_times=()
+    sprint_results=()
+    sprint_items=()
+    sprint_times=()
+    consecutive_failures=0
+    groom_exhausted=false
+    session_failures=()
+    queued_ids=()
+    skipped_ids=()
 
-    local consecutive_failures=0
-    local groom_exhausted=false
-    local -a session_failures=()
-    local -a queued_ids=()
-    local -a skipped_ids=()
+    # Pre-build ordered list of all items that could be attempted in this batch
+    if [[ -n "$specific_id" ]]; then
+        queued_ids=("$specific_id")
+    else
+        mapfile -t queued_ids < <(list_pickable_ids "" "$auto_priorities")
+    fi
+}
 
+# Execute the core pick-implement-validate-merge cycle.
+# Uses and modifies outer-scope locals from cmd_run and setup_sprint_environment.
+run_sprint_loop() {
     _count_total_ready() {
         local _total=0
         for _bf in "${BACKLOG_FILES[@]}"; do
@@ -2356,13 +2353,6 @@ cmd_run() {
         send_notification "fail" "$ITEM_ID"
         handle_sprint_failure
     }
-
-    # Pre-build ordered list of all items that could be attempted in this batch
-    if [[ -n "$specific_id" ]]; then
-        queued_ids=("$specific_id")
-    else
-        mapfile -t queued_ids < <(list_pickable_ids "" "$auto_priorities")
-    fi
 
     for ((i=1; i<=count; i++)); do
         if [[ "$auto_mode" == "true" && "$consecutive_failures" -ge "$max_consecutive_failures" ]]; then
@@ -2555,7 +2545,11 @@ cmd_run() {
 
         [[ "$auto_mode" == "true" ]] && log_info "Progress: $passed passed, $failed failed, $(_count_total_ready) remaining ready"
     done
+}
 
+# Print batch summary, restore stash, offer architecture review, and print final status.
+# Uses outer-scope locals from cmd_run and setup_sprint_environment.
+print_sprint_summary() {
     # Print batch summary for auto mode or multi-sprint runs
     if [[ "$auto_mode" == "true" || $count -gt 1 ]]; then
         print_batch_summary "$batch_start" sprint_results sprint_items sprint_times FAILED_IDS skipped_ids
@@ -2650,6 +2644,37 @@ Read-only review. Do not modify files."
         log_header "Results: $passed passed, $failed failed"
     fi
     [[ $failed -gt 0 || $passed -eq 0 ]] && exit 1 || exit 0
+}
+
+cmd_run() {
+    require_tool jq
+    require_tool git
+
+    local count=1 dry_run=false specific_id="" retries=0
+    local no_merge=false create_pr=false
+    local refine_on_exhaust=false quick_mode=false
+    local auto_mode=false auto_scope="" auto_priorities=""
+    local auto_review=false max_consecutive_failures=""
+
+    cmd_run_parse_args "$@" || return $?
+
+    if [[ "$dry_run" == "true" ]]; then
+        _run_dry_run
+        return $?
+    fi
+
+    local did_stash=false scope_label="" base_branch
+    local passed=0 failed=0
+    declare -A FAILED_IDS
+    local batch_start sprint_results=() sprint_items=() sprint_times=()
+    local consecutive_failures=0 groom_exhausted=false
+    local -a session_failures=() queued_ids=() skipped_ids=()
+
+    setup_sprint_environment || return $?
+
+    run_sprint_loop
+
+    print_sprint_summary
 }
 
 cmd_groom() {
