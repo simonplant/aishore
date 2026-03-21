@@ -1,29 +1,33 @@
 {
-  "sprintId": "sprint-1774113114",
-  "startedAt": "2026-03-21T10:11:54-07:00",
+  "sprintId": "sprint-1774113531",
+  "startedAt": "2026-03-21T10:18:51-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-092",
-    "title": "Auto-groom in sprint loop missing GROOM_MONITOR=true — no live progress output",
-    "intent": "Auto-groom sessions during auto done must show the same real-time backlog change updates as manual groom sessions — silent grooming during a long auto run leaves users wondering if the agent is working.",
-    "description": "In run_sprint_loop(), the auto-groom block calls run_agent 'tech-lead' 'groom' and run_agent 'product-owner' 'groom' without GROOM_MONITOR=true. The run_agent_process poll loop has logic to check backlog file hashes and log progress updates every 10 seconds when GROOM_MONITOR=true (used by run_groom_flow). Without it, auto-groom sessions show only generic 'Waiting for agent...' messages, not the 'backlog.json updated — 5 items (3 ready)' updates that make manual groom sessions informative.",
-    "sourceBacklog": "bugs.json",
+    "id": "FEAT-032",
+    "title": "Stream developer agent output to terminal in real-time",
+    "intent": "During a sprint, the developer agent's output streams to the terminal live — users can see what the agent is writing rather than watching a spinner for 5-10 minutes with no feedback.",
+    "description": "The current polling loop shows 'Waiting for agent...' with no visibility into what the developer agent is doing. For a 5-10 minute sprint, users are completely blind. run_agent_process() writes agent output to a temp log; reading that log live (via tail -f or a poll loop printing new lines) gives real-time feedback with zero changes to agent behavior. This is the 'agent output streaming' item from the roadmap Next section.",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "In run_sprint_loop(), change the two run_agent calls in the auto-groom block to prefix GROOM_MONITOR=true",
-      "Verify: auto done with low ready items triggers auto-groom and shows backlog update messages during groom",
+      "In run_agent_process(), capture claude output to a temp log file (already done for result.json detection); read and print new lines from that log in the poll loop alongside the 'waiting' status",
+      "Rate-limit output printing to avoid overwhelming the terminal — print at most N new lines per poll interval (e.g., every 2 seconds)",
+      "Add streaming.enabled config key (default: true) and AISHORE_STREAMING env var override",
+      "When streaming.enabled is false, fall back to current 'Waiting for agent...' behavior",
+      "Streaming must not interfere with result.json detection or timeout behavior",
       "shellcheck passes"
     ],
     "acceptanceCriteria": [
-      "Auto-groom during auto done shows live backlog change updates matching run_groom_flow behavior",
+      "During a sprint, developer agent output lines appear in the terminal as the agent writes them",
+      "Sprint orchestration (validation, commit, merge) still works correctly with streaming enabled",
+      "AISHORE_STREAMING=false disables streaming and reverts to spinner behavior",
+      "Timeout still fires correctly when streaming is enabled",
       "shellcheck passes"
     ],
-    "scope": [
-      ".aishore/aishore"
-    ],
-    "startedAt": "2026-03-21T10:11:54-07:00",
+    "scope": [],
+    "startedAt": "2026-03-21T10:18:51-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T10:14:16-07:00"
+    "completedAt": "2026-03-21T10:23:29-07:00"
   },
-  "completedAt": "2026-03-21T10:14:16-07:00",
+  "completedAt": "2026-03-21T10:23:29-07:00",
   "attempts": 1
 }

@@ -907,7 +907,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomedAt": "2026-03-21",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-031",
@@ -936,14 +938,16 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomedAt": "2026-03-21",
+      "groomedNotes": null
     },
     {
       "id": "FEAT-032",
       "title": "Stream developer agent output to terminal in real-time",
       "intent": "During a sprint, the developer agent's output streams to the terminal live — users can see what the agent is writing rather than watching a spinner for 5-10 minutes with no feedback.",
       "description": "The current polling loop shows 'Waiting for agent...' with no visibility into what the developer agent is doing. For a 5-10 minute sprint, users are completely blind. run_agent_process() writes agent output to a temp log; reading that log live (via tail -f or a poll loop printing new lines) gives real-time feedback with zero changes to agent behavior. This is the 'agent output streaming' item from the roadmap Next section.",
-      "priority": "should",
+      "priority": "must",
       "category": null,
       "steps": [
         "In run_agent_process(), capture claude output to a temp log file (already done for result.json detection); read and print new lines from that log in the poll loop alongside the 'waiting' status",
@@ -958,6 +962,63 @@
         "Sprint orchestration (validation, commit, merge) still works correctly with streaming enabled",
         "AISHORE_STREAMING=false disables streaming and reverts to spinner behavior",
         "Timeout still fires correctly when streaming is enabled",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomedAt": "2026-03-21",
+      "groomedNotes": null,
+      "completedAt": "2026-03-21T10:23:29-07:00"
+    },
+    {
+      "id": "FEAT-033",
+      "title": "Live progress counter during auto sessions",
+      "intent": "During any auto session, users can see at a glance how many items have completed, how many failed, and how long the session has been running — they are never left wondering if the tool is still working or how far through the backlog it is.",
+      "description": "auto sessions can run for 30-60+ minutes processing many items. The current output shows per-sprint status but gives no session-level view: users cannot tell if they are 2 items in or 18 items in, how many have failed so far, or how long the session has been running. A persistent status line printed at the start of each new sprint gives users a live session view without requiring them to scroll back. This complements FEAT-030 (bell notification) and FEAT-031 (--limit N) to make auto sessions fully transparent.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Track session start time in run_sprint_loop using date +%s at session open",
+        "Increment items_completed counter on each sprint success; items_failed on each failure",
+        "At start of each sprint iteration, compute elapsed minutes and print: 'Sprint session: N complete | M failed | Xm elapsed'",
+        "When ready-item count is known before the loop, show 'N/total' format; otherwise show 'N complete'",
+        "shellcheck passes; no new warnings"
+      ],
+      "acceptanceCriteria": [
+        "Each new sprint in an auto session prints a session progress line before per-sprint output",
+        "Line shows items completed, items failed, and elapsed time in minutes",
+        "Format: 'Sprint session: N complete | M failed | Xm elapsed'",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-034",
+      "title": "End-of-session summary table for auto runs",
+      "intent": "When an auto session ends — by draining the backlog, hitting --limit, or tripping the circuit breaker — users receive a formatted summary showing exactly what happened: items attempted, passed, failed, total duration, and lines changed.",
+      "description": "auto done ends with a single log line ('N items complete') that discards all the session data already being tracked. A formatted summary table — printed just before the terminal bell (FEAT-030) — gives users an at-a-glance record of the session without needing to scroll sprint logs. Data is already in-scope: items_completed, items_failed, session start time, and cumulative lines changed from result.json. This table is also the natural anchor for future --json output.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "At session end (drain, --limit, or circuit-breaker), collect: items_completed, items_failed, elapsed seconds, cumulative linesAdded and linesRemoved from each result.json",
+        "Print a formatted summary block: header line, then tabular rows for each stat, then a footer line",
+        "Include: Items attempted, Items passed, Items failed, Total duration (Xm Ys), Lines added, Lines removed",
+        "Summary fires on all exit paths: clean drain, --limit cap, and circuit-breaker failure",
+        "Add --no-summary flag to suppress the table for scripted/CI use",
+        "shellcheck passes; no new warnings"
+      ],
+      "acceptanceCriteria": [
+        "After auto done drains the backlog, a summary table prints showing counts, duration, and lines changed",
+        "Summary fires on --limit exit and circuit-breaker exit with appropriate header text",
+        "auto done --no-summary suppresses the table but does not suppress the completion message",
+        "All numeric totals are accurate (tested with a 2-item auto run)",
         "shellcheck passes"
       ],
       "scope": [],
