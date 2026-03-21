@@ -2822,72 +2822,38 @@ print_groom_summary() {
 # Restores any items that were modified or deleted by the groomer.
 # Only groomer-added NEW items (IDs not in the snapshot) are kept.
 protect_items_from_groom() {
-    local snap_dir="$1"
-    local restored=0 deleted_restored=0
+    local snap_dir="$1" restored=0 deleted_restored=0
 
     _protect_one_file() {
         local f="$1"
-        local snap_file="$snap_dir/$f"
-        local live_file="$BACKLOG_DIR/$f"
-        [[ -f "$snap_file" ]] || return 0
-        [[ -f "$live_file" ]] || return 0
+        local snap_file="$snap_dir/$f" live_file="$BACKLOG_DIR/$f"
+        [[ -f "$snap_file" && -f "$live_file" ]] || return 0
 
-        # Get list of IDs that existed before grooming
-        local old_ids
-        old_ids=$(jq -r '.items[].id' "$snap_file" 2>/dev/null)
-        [[ -z "$old_ids" ]] && return 0
-
-        # For each pre-existing ID, check if it was modified or deleted
-        local id
-        while IFS= read -r id; do
-            [[ -z "$id" ]] && continue
-
-            # Get the original item
-            local original
-            original=$(jq -c --arg id "$id" '.items[] | select(.id == $id)' "$snap_file" 2>/dev/null)
-            [[ -z "$original" ]] && continue
-
-            # Check if this item still exists in the live file
-            local current
-            current=$(jq -c --arg id "$id" '.items[] | select(.id == $id)' "$live_file" 2>/dev/null)
-
-            if [[ -z "$current" ]]; then
-                # Item was deleted by groomer — restore it
-                local tmp
-                tmp=$(jq --argjson item "$original" '.items += [$item]' "$live_file")
-                printf '%s\n' "$tmp" > "$live_file"
-                deleted_restored=$((deleted_restored + 1))
-            elif [[ "$current" != "$original" ]]; then
-                # Item was modified by groomer — only allow safe field changes
-                # Safe: readyForSprint, groomedAt, groomedNotes, priority
-                # Unsafe: title, intent, description, steps, acceptanceCriteria, id
-                local was_modified
-                was_modified=$(jq -n --argjson old "$original" --argjson new "$current" '
-                    ($old.title != $new.title) or
-                    ($old.intent != $new.intent) or
-                    ($old.description != $new.description) or
-                    ($old.steps != $new.steps) or
-                    ($old.acceptanceCriteria != $new.acceptanceCriteria)
-                ')
-                if [[ "$was_modified" == "true" ]]; then
-                    # Restore original item content but keep groomer's safe fields
-                    local merged
-                    merged=$(jq -n --argjson old "$original" --argjson new "$current" '
-                        $old
-                        | .readyForSprint = ($new.readyForSprint // $old.readyForSprint)
-                        | .groomedAt = ($new.groomedAt // $old.groomedAt)
-                        | .groomedNotes = ($new.groomedNotes // $old.groomedNotes)
-                        | .priority = ($new.priority // $old.priority)
-                    ')
-                    local tmp
-                    tmp=$(jq --arg id "$id" --argjson item "$merged" '
-                        .items = [.items[] | if .id == $id then $item else . end]
-                    ' "$live_file")
-                    printf '%s\n' "$tmp" > "$live_file"
-                    restored=$((restored + 1))
-                fi
-            fi
-        done <<< "$old_ids"
+        # Single jq pass: protect pre-existing items and output "deleted modified" counts on last line
+        local output
+        output=$(jq --slurpfile snap "$snap_file" '
+            ($snap[0].items | map({(.id): .}) | add // {}) as $orig |
+            (.items | map(.id)) as $live_ids |
+            ([$orig | keys[] | select(. as $id | $live_ids | index($id) | not)] | length) as $del |
+            ([.items[] | select($orig[.id] != null) | select(. as $c |
+                $orig[.id] | {title,intent,description,steps,acceptanceCriteria}
+                != ($c | {title,intent,description,steps,acceptanceCriteria}))] | length) as $mod |
+            .items = ([.items[] |
+                if $orig[.id] then $orig[.id] + {
+                    readyForSprint: (.readyForSprint // $orig[.id].readyForSprint),
+                    groomedAt:      (.groomedAt      // $orig[.id].groomedAt),
+                    groomedNotes:   (.groomedNotes   // $orig[.id].groomedNotes),
+                    priority:       (.priority       // $orig[.id].priority)
+                } else . end
+            ] + [$orig | to_entries[] | select(.key as $id | $live_ids | index($id) | not) | .value]) |
+            ., "\($del) \($mod)"
+        ' "$live_file")
+        # Last line is "del mod" counts; everything before is the protected JSON
+        local counts
+        counts=$(tail -n1 <<< "$output" | tr -d '"')
+        head -n -1 <<< "$output" > "$live_file"
+        local d m; read -r d m <<< "$counts"
+        deleted_restored=$((deleted_restored + d)); restored=$((restored + m))
     }
     map_backlog_files _protect_one_file
 
@@ -2911,81 +2877,52 @@ snapshot_backlogs() {
 # Removes new items that exceed the cap or fall below the priority threshold.
 # Outputs "ADDED SKIPPED" counts to stdout for caller to capture.
 enforce_groom_limits() {
-    local snap_dir="$1"
-    local max_items="$GROOM_MAX_ITEMS"
-    local min_priority="$GROOM_MIN_PRIORITY"
-    local _groom_items_skipped=0
-
-    # Priority rank: must=0, should=1, could=2, future=3
+    local snap_dir="$1" max_items="$GROOM_MAX_ITEMS" min_priority="$GROOM_MIN_PRIORITY"
     local -A prio_rank=([must]=0 [should]=1 [could]=2 [future]=3)
-    local min_rank="${prio_rank[$min_priority]:-1}"
-
-    # Global kept counter — max_items applies across all files
-    local global_kept=0
+    local min_rank="${prio_rank[$min_priority]:-1}" global_kept=0 total_skipped=0
 
     _enforce_limits_one() {
         local f="$1"
-        local snap_file="$snap_dir/$f"
-        local live_file="$BACKLOG_DIR/$f"
-        [[ -f "$snap_file" ]] || return 0
-        [[ -f "$live_file" ]] || return 0
+        local snap_file="$snap_dir/$f" live_file="$BACKLOG_DIR/$f"
+        [[ -f "$snap_file" && -f "$live_file" ]] || return 0
 
-        # Get IDs that existed before grooming
-        local old_ids
-        old_ids=$(jq -r '.items[].id' "$snap_file" 2>/dev/null || true)
+        # jq extracts new items (not in snapshot) with their priority
+        local new_ids_with_prio
+        new_ids_with_prio=$(jq -r --slurpfile snap "$snap_file" '
+            ($snap[0].items | map(.id)) as $old |
+            [.items[] | select(.id as $id | $old | index($id) | not)] |
+            .[] | "\(.id) \(.priority // "could")"
+        ' "$live_file" 2>/dev/null || true)
+        [[ -z "$new_ids_with_prio" ]] && return 0
 
-        # Get new items (IDs not in the snapshot)
-        local new_items_json
-        if [[ -n "$old_ids" ]]; then
-            local old_ids_array
-            old_ids_array=$(printf '%s\n' "$old_ids" | jq -R . | jq -s .)
-            new_items_json=$(jq --argjson old "$old_ids_array" \
-                '[.items[] | select(.id as $id | $old | index($id) | not)]' "$live_file" 2>/dev/null)
-        else
-            new_items_json=$(jq '.items' "$live_file" 2>/dev/null)
-        fi
-
-        local new_count
-        new_count=$(printf '%s' "$new_items_json" | jq 'length' 2>/dev/null || echo 0)
-        [[ "$new_count" -eq 0 ]] && return 0
-
-        # Filter out items below min priority
-        local removed_ids=()
-        local i
-        for ((i = 0; i < new_count; i++)); do
-            local item_id item_prio
-            item_id=$(printf '%s' "$new_items_json" | jq -r ".[$i].id")
-            item_prio=$(printf '%s' "$new_items_json" | jq -r ".[$i].priority // \"could\"")
-            local item_rank="${prio_rank[$item_prio]:-2}"
-
-            if [[ "$item_rank" -gt "$min_rank" ]]; then
-                # Below threshold — remove
-                removed_ids+=("$item_id")
-                log_info "Groom limit: skipped $item_id (priority: $item_prio, below $min_priority threshold)" >&2
+        local removed_ids=() id prio
+        while read -r id prio; do
+            [[ -z "$id" ]] && continue
+            local rank="${prio_rank[$prio]:-2}"
+            if [[ "$rank" -gt "$min_rank" ]]; then
+                removed_ids+=("$id")
+                log_info "Groom limit: skipped $id (priority: $prio, below $min_priority threshold)" >&2
             elif [[ "$global_kept" -ge "$max_items" ]]; then
-                # Over global cap — remove
-                removed_ids+=("$item_id")
-                log_info "Groom limit: skipped $item_id (exceeded max $max_items items)" >&2
+                removed_ids+=("$id")
+                log_info "Groom limit: skipped $id (exceeded max $max_items items)" >&2
             else
                 global_kept=$((global_kept + 1))
             fi
-        done
+        done <<< "$new_ids_with_prio"
 
-        _groom_items_skipped=$((_groom_items_skipped + ${#removed_ids[@]}))
-
-        # Remove filtered items from the live file
+        total_skipped=$((total_skipped + ${#removed_ids[@]}))
         if [[ ${#removed_ids[@]} -gt 0 ]]; then
-            local ids_to_remove
-            ids_to_remove=$(printf '%s\n' "${removed_ids[@]}" | jq -R . | jq -s .)
+            local ids_json
+            ids_json=$(printf '%s\n' "${removed_ids[@]}" | jq -R . | jq -s .)
             local tmp
-            tmp=$(jq --argjson rm "$ids_to_remove" \
+            tmp=$(jq --argjson rm "$ids_json" \
                 '.items = [.items[] | select(.id as $id | $rm | index($id) | not)]' "$live_file")
             printf '%s\n' "$tmp" > "$live_file"
         fi
     }
     map_backlog_files _enforce_limits_one
 
-    echo "$global_kept $_groom_items_skipped"
+    echo "$global_kept $total_skipped"
 }
 
 # Show what changed after grooming
