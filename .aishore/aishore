@@ -3477,35 +3477,9 @@ _init_scaffold_files() {
 
     # Write config.yaml
     if [[ ! -f "$CONFIG_FILE" || "$reinit" == true ]]; then
-        cat > "$CONFIG_FILE" << EOF
-# aishore configuration
-
-project:
-  name: "$project_name"
-
-validation:
-  command: "$validate_cmd"
-  timeout: 120
-
-# models:
-#   primary: "claude-opus-4-6"
-#   fast: "claude-sonnet-4-6"
-
-# agent:
-#   timeout: 3600
-
-# Maturity protocol: developer runs implement → critique → harden phases.
-# Disable with --quick flag or set to false here.
-# maturity:
-#   enabled: true
-
-# notifications:
-#   on_complete: "notify-send 'aishore' \"Sprint \$1: \$2\""
-#   # Examples:
-#   #   Linux:  notify-send 'aishore' "Sprint \$1: \$2"
-#   #   macOS:  osascript -e "display notification \"Sprint \$1: \$2\" with title \"aishore\""
-#   #   Webhook: curl -s -X POST https://example.com/hook -d "{\"status\":\"\$1\",\"item\":\"\$2\"}"
-EOF
+        sed -e "s|\\\$PROJECT_NAME|$project_name|g" \
+            -e "s|\\\$VALIDATE_CMD|$validate_cmd|g" \
+            "$AISHORE_ROOT/templates/config.yaml.tmpl" > "$CONFIG_FILE"
         log_success "Wrote .aishore/config.yaml"
     else
         log_info "Kept existing .aishore/config.yaml"
@@ -3513,25 +3487,14 @@ EOF
 
     # Create backlogs (never overwrite existing)
     if [[ ! -f "$BACKLOG_DIR/backlog.json" ]]; then
-        cat > "$BACKLOG_DIR/backlog.json" << 'EOF'
-{
-  "description": "Feature backlog",
-  "items": [],
-  "_dependsOn_docs": "Items may include an optional 'dependsOn' array of item ID strings (e.g. \"dependsOn\": [\"FEAT-001\"]). Auto-pick skips items whose dependencies are not yet done."
-}
-EOF
+        cp "$AISHORE_ROOT/templates/backlog.json" "$BACKLOG_DIR/backlog.json"
         log_success "Created backlog/backlog.json"
     else
         log_info "Kept existing backlog/backlog.json ($(count_items "$BACKLOG_DIR/backlog.json") items)"
     fi
 
     if [[ ! -f "$BACKLOG_DIR/bugs.json" ]]; then
-        cat > "$BACKLOG_DIR/bugs.json" << 'EOF'
-{
-  "description": "Bugs and tech debt",
-  "items": []
-}
-EOF
+        cp "$AISHORE_ROOT/templates/bugs.json" "$BACKLOG_DIR/bugs.json"
         log_success "Created backlog/bugs.json"
     else
         log_info "Kept existing backlog/bugs.json"
@@ -3545,82 +3508,7 @@ EOF
     fi
 
     if [[ ! -f "$BACKLOG_DIR/DEFINITIONS.md" ]]; then
-        cat > "$BACKLOG_DIR/DEFINITIONS.md" << 'DEOF'
-# Sprint Definitions
-
-## Definition of Ready (DoR)
-
-An item is ready for sprint when:
-
-| # | Criteria              | Description                                        |
-|---|-----------------------|----------------------------------------------------|
-| 1 | **Commander's Intent** | The `intent` field states what must be true when done |
-| 2 | **Actionable Steps**  | Steps are clear enough for implementation          |
-| 3 | **Testable AC**       | Acceptance criteria can be verified                |
-| 4 | **No Blockers**       | Dependencies are resolved                          |
-| 5 | **Right Size**        | Can be completed in one sprint                     |
-| 6 | **readyForSprint**    | Tech Lead has marked it ready                      |
-
-## Definition of Done (DoD)
-
-An item is done when:
-
-| # | Criteria              | Description                                        |
-|---|-----------------------|----------------------------------------------------|
-| 1 | **Code Complete**     | Implementation matches acceptance criteria         |
-| 2 | **Tests Pass**        | All tests pass (existing + new)                   |
-| 3 | **Validation Pass**   | Type-check, lint, tests all pass                  |
-| 4 | **AC Verified**       | Each acceptance criterion is met                  |
-| 5 | **No Regressions**    | Existing functionality still works                |
-
-## Priority Levels
-
-| Priority | Code | Description                   |
-|----------|------|-------------------------------|
-| Must     | P0   | Critical, blocking other work |
-| Should   | P1   | Important, not blocking       |
-| Could    | P2   | Nice to have                  |
-| Future   | P3   | Long-term consideration       |
-
-## Size Estimates
-
-| Size | Typical Scope                               |
-|------|---------------------------------------------|
-| XS   | Single file change, < 50 lines              |
-| S    | Few files, < 200 lines, straightforward     |
-| M    | Multiple files, new patterns, 200-500 lines |
-| L    | Significant feature, multiple components    |
-| XL   | Large feature, consider splitting           |
-
-## Writing Commander's Intent
-
-Intent is a non-negotiable directive — what must be true when the work is done.
-Write it like an order, not a description. State the outcome, not the implementation.
-
-Good: "Webhooks must deliver or tell the user why not. Silent failure is not acceptable."
-Bad:  "Improve webhook reliability" (vague, no bar, no consequence)
-
-See the full examples in this file after updating via groom or manually.
-
-## Backlog Item Structure
-
-```json
-{
-  "id": "FEAT-001",
-  "title": "Short title",
-  "intent": "Users must get X or know exactly why not. Silent failure is not acceptable.",
-  "description": "Full description — what to build, context, scope boundaries",
-  "priority": "should",
-  "category": "core",
-  "steps": ["Step 1", "Step 2"],
-  "acceptanceCriteria": ["AC 1", "AC 2"],
-  "scope": ["src/**", "tests/**"],
-  "status": "todo",
-  "passes": false,
-  "readyForSprint": false
-}
-```
-DEOF
+        cp "$AISHORE_ROOT/templates/DEFINITIONS.md" "$BACKLOG_DIR/DEFINITIONS.md"
         log_success "Created backlog/DEFINITIONS.md"
     else
         log_info "Kept existing backlog/DEFINITIONS.md"
@@ -3640,31 +3528,8 @@ DEOF
     done
     if [[ "$product_found" == "false" ]]; then
         mkdir -p "$docs_dir"
-        cat > "$docs_dir/PRODUCT.md" << PEOF
-# Product Requirements — $project_name
-
-<!-- TODO: Fill in the sections below to give aishore agents context about what you're building -->
-
-## Vision
-
-What is this product and why does it exist?
-
-## Target Users
-
-Who are you building this for?
-
-## Core Features
-
-What are the key capabilities?
-
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
-
-## Non-Goals
-
-What is explicitly out of scope?
-PEOF
+        sed "s|\\\$PROJECT_NAME|$project_name|g" \
+            "$AISHORE_ROOT/templates/PRODUCT.md.tmpl" > "$docs_dir/PRODUCT.md"
         log_success "Created docs/PRODUCT.md (fill in to help agents understand your product)"
     else
         log_info "Found existing product doc: $p"
@@ -3676,27 +3541,8 @@ PEOF
     done
     if [[ "$arch_found" == "false" ]]; then
         mkdir -p "$docs_dir"
-        cat > "$docs_dir/ARCHITECTURE.md" << AEOF
-# Architecture — $project_name
-
-<!-- TODO: Fill in the sections below to guide implementation decisions -->
-
-## Tech Stack
-
-What languages, frameworks, and tools does this project use?
-
-## Project Structure
-
-Describe the key directories and their purpose.
-
-## Key Design Decisions
-
-Document important architectural choices and their rationale.
-
-## Conventions
-
-Code style, naming conventions, patterns to follow.
-AEOF
+        sed "s|\\\$PROJECT_NAME|$project_name|g" \
+            "$AISHORE_ROOT/templates/ARCHITECTURE.md.tmpl" > "$docs_dir/ARCHITECTURE.md"
         log_success "Created docs/ARCHITECTURE.md (fill in to guide agent implementation)"
     else
         log_info "Found existing architecture doc: $p"
@@ -4067,6 +3913,9 @@ cmd_checksums() {
     )
     for f in "$AGENTS_DIR"/*.md; do
         [[ -f "$f" ]] && distributable+=(".aishore/agents/$(basename "$f")")
+    done
+    for f in "$AISHORE_ROOT"/templates/*; do
+        [[ -f "$f" ]] && distributable+=(".aishore/templates/$(basename "$f")")
     done
     for f in "${distributable[@]}"; do
         [[ -f "$f" ]] && files+=("$f")
