@@ -114,6 +114,23 @@ else
     TIMEOUT_CMD=""
 fi
 
+# Portable date helpers (GNU date uses -Iseconds / -d; BSD date does not)
+portable_date_iso() {
+    date -Iseconds 2>/dev/null || {
+        local ts
+        ts=$(date +%Y-%m-%dT%H:%M:%S%z)
+        # Insert colon in timezone offset: +0700 -> +07:00
+        printf '%s:%s\n' "${ts%??}" "${ts: -2}"
+    }
+}
+
+portable_date_epoch() {
+    local input="$1"
+    date -d "$input" +%s 2>/dev/null || \
+        date -j -f "%Y-%m-%dT%H:%M:%S" "${input:0:19}" +%s 2>/dev/null || \
+        echo 0
+}
+
 # Default permission sets per agent role
 PERMS_DEVELOPER="Bash,Edit,Write,Read,Glob,Grep"
 PERMS_VALIDATOR="Bash,Read,Write,Glob,Grep"
@@ -1044,7 +1061,7 @@ create_sprint() {
     local item_json="$1"
     local source="$2"
     local now
-    now=$(date -Iseconds)
+    now=$(portable_date_iso)
 
     local tmp_sprint
     tmp_sprint="$(ensure_tmpdir)/sprint_create.json"
@@ -1080,7 +1097,7 @@ mark_complete() {
     local source="$2"
     local attempts="${3:-1}"
     local now
-    now=$(date -Iseconds)
+    now=$(portable_date_iso)
 
     [[ -z "$source" ]] && { log_error "Cannot mark complete: source backlog is empty"; return 1; }
 
@@ -1126,7 +1143,7 @@ mark_complete() {
     started_at=$(jq -r '.startedAt // ""' "$BACKLOG_DIR/sprint.json" 2>/dev/null || true)
     if [[ -n "$started_at" ]]; then
         local start_epoch
-        start_epoch=$(date -d "$started_at" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "${started_at%%+*}" +%s 2>/dev/null || echo 0)
+        start_epoch=$(portable_date_epoch "$started_at")
         [[ "$start_epoch" -gt 0 ]] && duration=$(( $(date +%s) - start_epoch ))
     fi
 
@@ -1336,7 +1353,7 @@ run_agent_process() {
     log_agent "$agent_label" "Completed in ${duration}s"
 
     append_log "$LOGS_DIR/agent-runs.log" \
-        "$(date -Iseconds)|$agent_label|${AGENT_MODE:-unknown}|${duration}s|$model"
+        "$(portable_date_iso)|$agent_label|${AGENT_MODE:-unknown}|${duration}s|$model"
 }
 
 build_agent_prompt() {
@@ -1660,7 +1677,7 @@ mark_item_failed() {
         return 0
     fi
     local now
-    now=$(date -Iseconds)
+    now=$(portable_date_iso)
     if ! update_item "$source" "$item_id" \
         '| . + {lastFailReason: $reason, lastFailAt: $ts, failCount: ((.failCount // 0) + 1)}' \
         --arg reason "$reason" --arg ts "$now" 2>/dev/null; then
@@ -1700,7 +1717,7 @@ _store_failure_context() {
         --arg item_id "$item_id" \
         --arg reason "$reason" \
         --arg detail "$detail" \
-        --arg timestamp "$(date -Iseconds)" \
+        --arg timestamp "$(portable_date_iso)" \
         --arg agent_log "$agent_log_path" \
         --argjson result "$result_content" \
         --arg log_tail "$agent_stderr" \
@@ -3127,7 +3144,7 @@ _compute_metrics_json() {
 
     cat <<EOF
 {
-  "timestamp": "$(date -Iseconds)",
+  "timestamp": "$(portable_date_iso)",
   "sprints": {"completed": $completed},
   "backlog": {"total": $backlog_total, "ready": $ready_backlog},
   "bugs": {"total": $bugs_total, "ready": $ready_bugs},

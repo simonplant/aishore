@@ -1,26 +1,27 @@
 {
-  "sprintId": "sprint-1774071211",
-  "startedAt": "2026-03-20T22:33:31-07:00",
+  "sprintId": "sprint-1774071308",
+  "startedAt": "2026-03-20T22:35:08-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-057",
-    "title": "resolve_backlog_file re-checks expected file in fallback loop — skip it",
-    "intent": "When resolve_backlog_file() fails the fast-path check on the expected file, the fallback loop iterates all BACKLOG_FILES including the one already checked, wasting a jq parse — skip it",
+    "id": "BUG-058",
+    "title": "Inconsistent date portability — some date calls lack BSD fallback",
+    "intent": "Add consistent BSD/GNU date handling throughout the script — some calls have macOS fallback (date -j) while others assume GNU date, which will break on macOS without coreutils",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In resolve_backlog_file(), add a continue condition in the fallback loop when f equals expected",
-      "Verify item resolution still works for all edge cases"
+      "Audit all date command invocations for BSD compatibility",
+      "Extract a portable_date() helper that handles both GNU and BSD date",
+      "Replace direct date calls with the helper where format conversion is needed"
     ],
     "acceptanceCriteria": [
-      "The fallback loop skips the already-checked expected file",
+      "All date calls either use the portable helper or only use universally supported formats like +%s",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T22:33:31-07:00",
+    "startedAt": "2026-03-20T22:35:08-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T22:35:07-07:00"
+    "completedAt": "2026-03-20T22:38:52-07:00"
   },
-  "completedAt": "2026-03-20T22:35:07-07:00",
+  "completedAt": "2026-03-20T22:38:52-07:00",
   "attempts": 1
 }
