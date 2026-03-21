@@ -3428,11 +3428,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Trivial fix — already done correctly in _status_output, just needs the same jq filter applied to cmd_backlog_history. One-line change in the jq expression, applies to both the --all branch and the default branch (two occurrences).",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T13:28:22-07:00"
     },
     {
       "id": "BUG-120",
