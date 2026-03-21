@@ -1,29 +1,35 @@
 {
-  "sprintId": "sprint-1774047769",
-  "startedAt": "2026-03-20T16:02:49-07:00",
+  "sprintId": "sprint-1774052817",
+  "startedAt": "2026-03-20T17:26:57-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-005",
-    "title": "config.yaml silently ignored when yq unavailable and no warning shown",
-    "intent": "Users must be clearly warned when their config.yaml changes are being silently ignored due to missing yq",
-    "description": "load_config() falls back to grep-based parsing when yq is not installed. This fallback is much less reliable and can silently ignore valid configuration. The warning is only triggered if uncommented settings are detected by grep. A config file that uses valid YAML but is structured in a way grep misses will be silently ignored, leaving the user thinking their overrides are active when they are not.",
-    "sourceBacklog": "bugs.json",
+    "id": "FEAT-015",
+    "title": "Create docs/QUICKSTART.md — zero to first completed sprint",
+    "intent": "A new user must go from git clone to a completed sprint in under 10 minutes using a single document — if they have to jump between files they will abandon the tool.",
+    "description": "The quickstart content exists but is split between README.md (Quick Start: install + first sprint commands) and .aishore/README.md (Setup, The Intent-Driven Model, Create Backlog Items, What Makes an Item Sprint-Ready, Groom, Run Sprints, Troubleshooting). The .aishore/README.md is essentially already a quickstart guide but is hidden inside a dotfolder where no one will find it. The unified quickstart must walk through: prerequisites check, installation (curl or manual), init wizard, writing your first intent and backlog item, grooming, running a sprint, and what success looks like at each step. Include expected terminal output so users know they're on the right track. Source from .aishore/README.md as primary content, README.md Quick Start for the install path.",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "In .aishore/aishore, find load_config() where yq availability is checked (around line 267)",
-      "Add an early check: if config.yaml exists and has non-empty content, and yq is not available, always emit a warning",
-      "Warning should name the config file, explain what is being ignored, and give install instructions for yq",
-      "Ensure the warning is shown regardless of whether grep finds any settings",
-      "Test by creating a config.yaml with a setting and running aishore without yq installed"
+      "Read .aishore/README.md sections: Setup (init commands, config.yaml validation), The Intent-Driven Model (how to write intent — good/bad examples), Create Backlog Items (add command, flags, testable AC examples), What Makes an Item Sprint-Ready (5 readiness gates), Groom (what grooming does), Run Sprints (what happens during a sprint), Troubleshooting (common failures and fixes)",
+      "Read README.md Quick Start section (install via curl, manual install, first sprint 3-step block)",
+      "Read backlog/DEFINITIONS.md Commander's Intent section for good/bad intent examples",
+      "Compose docs/QUICKSTART.md with these sections: Prerequisites (bash 4.4+, Claude Code CLI, jq, git), Install (curl one-liner + manual option), Initialize (init wizard walkthrough with expected output), Write Your First Intent (from .aishore/README.md intent model + DEFINITIONS.md examples), Add a Backlog Item (from .aishore/README.md create items), Groom (what it does, expected output), Run Your First Sprint (command + what to expect at each pipeline stage), Verify Success (how to confirm the sprint completed correctly), Troubleshooting (from .aishore/README.md troubleshooting section)",
+      "Add expected terminal output blocks after each command so users can verify they are on track",
+      "Verify the end-to-end flow works: a user following only this document should reach a completed sprint"
     ],
     "acceptanceCriteria": [
-      "When yq is absent and config.yaml exists with content, a clear warning is always shown regardless of grep detection",
-      "Warning text explains what yq is and how to install it"
+      "docs/QUICKSTART.md exists and covers: prerequisites, install, init, first intent, first backlog item, groom, run sprint, verify success, troubleshooting",
+      "Each step includes the exact command to run and expected terminal output",
+      "A user following only this document (without reading any other file) can go from zero to a completed sprint",
+      "Content is sourced from .aishore/README.md and README.md — not invented",
+      "The document does not exceed 300 lines — it is a quickstart, not a manual"
     ],
-    "scope": [],
-    "startedAt": "2026-03-20T16:02:49-07:00",
+    "scope": [
+      "docs/QUICKSTART.md"
+    ],
+    "startedAt": "2026-03-20T17:26:57-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T16:04:47-07:00"
+    "completedAt": "2026-03-20T17:29:46-07:00"
   },
-  "completedAt": "2026-03-20T16:04:47-07:00",
+  "completedAt": "2026-03-20T17:29:46-07:00",
   "attempts": 1
 }
