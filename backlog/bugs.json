@@ -2555,11 +2555,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Confirmed: when mark_complete fails at line 1179, _handle_sprint_success returns 0 early without switching back to base_branch. Next sprint branches off the failed feature branch. Edge case but correctness-critical.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T09:47:50-07:00"
     },
     {
       "id": "BUG-090",
