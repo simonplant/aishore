@@ -4266,8 +4266,8 @@ cmd_backlog_populate() {
 }
 
 cmd_backlog_list() {
-    local filter_status="" filter_type="" filter_ready=false filter_no_ready=false
-    parse_opts "val:filter_status:--status" "val:filter_type:--type" "bool:filter_ready:--ready" "bool:filter_no_ready:--no-ready" -- "$@" || return 1
+    local filter_status="" filter_type="" filter_priority="" filter_ready=false filter_no_ready=false
+    parse_opts "val:filter_status:--status" "val:filter_type:--type" "val:filter_priority:--priority" "bool:filter_ready:--ready" "bool:filter_no_ready:--no-ready" -- "$@" || return 1
 
     # Determine which files to scan
     local files=()
@@ -4283,6 +4283,10 @@ cmd_backlog_list() {
     if [[ -n "$filter_status" ]]; then
         validate_status "$filter_status" || return 1
         jq_filter="$jq_filter | select((.status // \"todo\") == \"$filter_status\")"
+    fi
+    if [[ -n "$filter_priority" ]]; then
+        validate_priority "$filter_priority" || return 1
+        jq_filter="$jq_filter | select((.priority // \"should\") == \"$filter_priority\")"
     fi
     if [[ "$filter_ready" == "true" ]]; then
         jq_filter="$jq_filter | select(.readyForSprint == true)"
