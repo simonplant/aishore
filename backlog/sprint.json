@@ -1,35 +1,35 @@
 {
-  "sprintId": "sprint-1774126172",
-  "startedAt": "2026-03-21T13:49:32-07:00",
+  "sprintId": "sprint-1774126572",
+  "startedAt": "2026-03-21T13:56:12-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-037",
-    "title": "aishore config check — validate config.yaml and print effective values",
-    "intent": "Users must be able to run 'aishore config check' and see every effective configuration value with its source (default/config/env), and any validation errors in config.yaml must be reported explicitly.",
-    "description": "Users who edit config.yaml have no way to validate it before running a sprint. Unknown keys are silently ignored (load_config falls back to defaults), type errors produce cryptic runtime failures, and there's no way to see what the effective configuration actually is. A 'config check' command would: parse config.yaml (warn if missing), validate known keys and value types, flag unknown keys, and print a table of all effective values (merged from config.yaml + env vars). This removes a class of 'why isn't my config working' support issues and makes the configuration surface visible.",
+    "id": "FEAT-022",
+    "title": "Add .doc-standard.yaml schema file for doc structure enforcement",
+    "intent": "The repo must declare its doc standard version and structure so automated checks can validate compliance — undeclared standards are unenforceable.",
+    "description": "This is part of a cross-repo documentation standard (see repo-docs-system.md in the std-docs repo). The .doc-standard.yaml file declares: schema version, project metadata (name, tagline, category), required files list, cross-repo links to sibling projects (ClawHQ, Easy-Markdown, GigOS), and author info for consistency enforcement. This file enables a future GitHub Action (doc-check.yml) to validate that all required docs exist and the README follows the template structure. The schema is lightweight — under 30 lines of YAML.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Add cmd_config_check() function: read config.yaml via yq (if available) or fallback parser",
-      "Validate each key against the known config schema (agent_model, timeout, maturity.enabled, scope.mode, permissions.*, etc.) — log_warn on unknown keys",
-      "For each known config key, determine effective value: env var > config.yaml > default, and note source",
-      "Print a table: KEY | EFFECTIVE VALUE | SOURCE (env/config/default)",
-      "Exit 1 if config.yaml exists but cannot be parsed; exit 0 if config is valid or missing",
-      "Wire 'config check' as a top-level command in main dispatch and add to help text",
-      "Run shellcheck — zero new warnings"
+      "Create .doc-standard.yaml at repo root",
+      "Set schema_version to '1.0'",
+      "Set project name to 'aishore', tagline to 'Autonomous sprint orchestration for Claude Code', category to 'tool'",
+      "List required_files matching the docs/ structure: README.md, docs/ARCHITECTURE.md, docs/QUICKSTART.md, docs/CONFIGURATION.md, docs/PROBLEMS.md, docs/ROADMAP.md, docs/CONTRIBUTING.md, docs/CHANGELOG.md",
+      "Add portfolio section with sibling repos: ClawHQ (complementary), Easy-Markdown (related), GigOS (related)",
+      "Add author section: name Simon Plant, location Santa Barbara CA, status 'Building AI infrastructure tools. Open to roles.'",
+      "Verify the file is valid YAML"
     ],
     "acceptanceCriteria": [
-      "Running 'aishore config check' with no config.yaml prints all defaults with source=default",
-      "Running 'aishore config check' with a valid config.yaml shows overridden keys with source=config",
-      "Running 'aishore config check' with an env var set shows that key with source=env",
-      "Unknown keys in config.yaml produce a warning line in output",
-      "A malformed config.yaml (invalid YAML) exits 1 with a clear error",
-      "shellcheck passes with zero new warnings"
+      ".doc-standard.yaml exists at repo root and is valid YAML",
+      "File declares schema_version, project metadata, required_files list, portfolio sibling repos, and author info",
+      "required_files list matches the actual docs/ file structure created by FEAT-014 through FEAT-020",
+      "Portfolio section lists ClawHQ, Easy-Markdown, and GigOS with correct GitHub URLs"
     ],
-    "scope": [],
-    "startedAt": "2026-03-21T13:49:32-07:00",
+    "scope": [
+      ".doc-standard.yaml"
+    ],
+    "startedAt": "2026-03-21T13:56:12-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T13:56:11-07:00"
+    "completedAt": "2026-03-21T13:57:31-07:00"
   },
-  "completedAt": "2026-03-21T13:56:11-07:00",
+  "completedAt": "2026-03-21T13:57:31-07:00",
   "attempts": 1
 }
