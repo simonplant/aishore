@@ -1,30 +1,31 @@
 {
-  "sprintId": "sprint-1774120508",
-  "startedAt": "2026-03-21T12:15:08-07:00",
+  "sprintId": "sprint-1774120991",
+  "startedAt": "2026-03-21T12:23:11-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-108",
-    "title": "enforce_groom_limits removes new items in file order — high-priority items after cap fills get discarded",
-    "intent": "When the groom cap is reached, the highest-priority new items must be kept and the lowest-priority ones removed, so a must item is never discarded to make room for a should item.",
-    "description": "enforce_groom_limits processes new items in the order they appear in the JSON file. If the grooming agent adds 12 items (cap=10) and the last 2 happen to be 'must' while earlier items are 'should', the 'must' items are removed because the cap was already filled. The cap enforcement should sort new items by priority rank and remove the lowest-priority ones when the limit is exceeded.",
+    "id": "BUG-106",
+    "title": "backlog list has no --ready filter — users cannot quickly see sprint candidates",
+    "intent": "Users must be able to run 'backlog list --ready' and see only items that pass readiness gates, so they can decide what to run next without scanning the full table.",
+    "description": "cmd_backlog_list() supports --status, --type, and --priority filters but has no --ready flag. Users preparing for a sprint must scan the full READY column to find actionable items. A --ready flag would filter the output to only items where readyForSprint is true, consistent with the existing filter pattern. The complementary --no-ready flag (items where readyForSprint is false) is useful for grooming triage.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In enforce_groom_limits, after collecting new_ids_with_prio, sort the list by priority rank (must=0, should=1, could=2, future=3) before applying the max_items cap",
-      "Keep the priority-threshold check first (remove items below min_priority regardless), then apply the sorted cap so high-priority items are always preferred",
-      "Test: add 12 items where items 11-12 are 'must' and items 1-10 are 'should' — confirm 'must' items are kept and 2 'should' items are removed",
+      "In cmd_backlog_list(), add local ready_filter='' before the flag loop; add --ready case setting ready_filter=true and --no-ready setting ready_filter=false",
+      "After the existing --status and --type filter conditions, add ready_filter to the jq select expression: if ready_filter is set, add 'and (.readyForSprint == (env.READY_FILTER == \"true\"))' using --arg",
+      "Pass the ready_filter value as a jq --arg or env var into the jq pipeline",
+      "Add --ready and --no-ready to the usage message and cmd_help output",
       "Run shellcheck — confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "When cap is exceeded, must items are always kept over should items regardless of insertion order",
-      "Priority threshold still rejects items below GROOM_MIN_PRIORITY",
-      "Existing items (in snapshot) are never removed",
-      "shellcheck passes with zero new warnings"
+      "aishore backlog list --ready shows only items where readyForSprint is true",
+      "aishore backlog list --no-ready shows only items where readyForSprint is false",
+      "aishore backlog list with no ready filter still shows all items (backwards compatible)",
+      "shellcheck reports no new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T12:15:08-07:00",
+    "startedAt": "2026-03-21T12:23:11-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T12:23:10-07:00"
+    "completedAt": "2026-03-21T12:26:44-07:00"
   },
-  "completedAt": "2026-03-21T12:23:10-07:00",
+  "completedAt": "2026-03-21T12:26:44-07:00",
   "attempts": 1
 }

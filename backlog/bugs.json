@@ -3051,12 +3051,13 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Core workflow gap: the most common pre-sprint question is 'what can I run right now?' Currently answered only by scanning the READY column. A --ready flag gives a one-command answer. Implementation is additive and low-risk: follows the established --status/--type filter pattern. --no-ready is the natural complement for grooming triage ('what still needs grooming?'). No deps.",
       "groomedAt": "2026-03-21",
-      "groomedNotes": null
+      "groomedNotes": null,
+      "completedAt": "2026-03-21T12:26:44-07:00"
     },
     {
       "id": "BUG-107",
