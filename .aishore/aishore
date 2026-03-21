@@ -743,6 +743,7 @@ resolve_backlog_file() {
     # Fall through: search all files
     _try_resolve() {
         local f="$1" id="$2"
+        [[ "$f" == "$expected" ]] && return 1
         if [[ -f "$BACKLOG_DIR/$f" ]] && jq -e --arg id "$id" '.items[] | select(.id == $id)' "$BACKLOG_DIR/$f" &>/dev/null; then
             printf '%s\n' "$f"
             return 0
