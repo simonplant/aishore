@@ -1,12 +1,12 @@
 {
-  "itemId": "BUG-067",
+  "itemId": "BUG-072",
   "reason": "Validator failed",
   "detail": "Validator agent rejected implementation",
-  "timestamp": "2026-03-20T20:43:30-07:00",
-  "agentLog": "/home/simon/dev/aishore/.aishore/data/logs/validator-20260320T204205.log",
+  "timestamp": "2026-03-20T21:18:26-07:00",
+  "agentLog": "/home/simon/dev/aishore/.aishore/data/logs/validator-20260320T211428.log",
   "result": {
     "status": "fail",
-    "reason": "AC2: print_groom_diff is exactly 12 lines, not under 12. AC4: shellcheck reports 4 SC2034 warnings — tf_b, tb_b, tf_a, tb_a are read from snapshot in print_groom_diff but never used. Fix: drop the unused variables from the read command (use _ or remove), which also brings the function under 12 lines."
+    "reason": "AC2 not met: line 1664 in cmd_auto() contains a 122-char command example in log_error, exceeding the 60-char limit. AC3 not met: line 714 in check_readiness_gates() ends with a redundant return 0 after an if-fi construct that already exits with status 0 when no condition is true."
   },
-  "logTail": ""
+  "logTail": "**Overall: FAIL**\n\nTwo ACs are not met:\n\n**AC2 (NOT MET)** — Line 1664, `cmd_auto()`:\n```bash\nlog_error \"Usage: auto {done|p0|p1|p2} [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--auto-review] [--dry-run]\"\n```\nThe command example is 122 characters, well over the 60-char limit. This is exactly the pattern the intent targeted — verbose usage text in an error message that belongs in help text.\n\n**AC3 (NOT MET)** — Line 714, end of `check_readiness_gates()`:\n```bash\n    fi\n    return 0   ← redundant\n}\n```\nAfter an `if-fi` whose condition is false, bash returns 0 (\"zero if no condition tested true\"). The `return 0` is redundant. Confirmed by test.\n\nACs 1, 4, 5, 6, 7, 8 all pass."
 }
