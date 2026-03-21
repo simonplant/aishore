@@ -1041,12 +1041,12 @@ count_by_status() {
 
 count_ready_items() {
     local file="$1"
-    jq '[.items[] | select(.readyForSprint == true and (.passes == false or .passes == null))] | length' "$file" 2>/dev/null || echo 0
+    jq '[.items[] | select(.readyForSprint == true and (.passes == false or .passes == null)) | select(.intent != null and .intent != "" and (.intent | length) >= 20)] | length' "$file" 2>/dev/null || echo 0
 }
 
 list_ready_items() {
     local file="$1"
-    jq -r '.items[] | select(.readyForSprint == true and (.passes == false or .passes == null)) | "  \(.id): \(.title)"' "$file" 2>/dev/null
+    jq -r '.items[] | select(.readyForSprint == true and (.passes == false or .passes == null)) | select(.intent != null and .intent != "" and (.intent | length) >= 20) | "  \(.id): \(.title)"' "$file" 2>/dev/null
 }
 
 # List all auto-pickable item IDs in priority order (same filter as pick_item but returns all)
