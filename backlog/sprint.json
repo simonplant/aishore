@@ -1,33 +1,34 @@
 {
-  "sprintId": "sprint-1774053468",
-  "startedAt": "2026-03-20T17:37:48-07:00",
+  "sprintId": "sprint-1774054082",
+  "startedAt": "2026-03-20T17:48:02-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-018",
-    "title": "Create docs/ROADMAP.md — what's planned, what's missing, what's prioritized",
-    "intent": "Contributors and evaluators must see where the project is going — a project with no visible roadmap looks abandoned or directionless.",
-    "description": "No roadmap document exists. The trajectory can be inferred from CHANGELOG.md (15 releases, v0.1.0 through v0.3.2, showing evolution from basic sprint runner to autonomous mode with grooming, validation, and diagnostics) and from known limitations (single-repo only, bash-only CLI, Claude Code dependency, no multi-language agent support, no remote/CI execution mode, no plugin system for custom agents). The roadmap should be organized as Now (active work) / Next (committed direction) / Later (vision) / Known Limitations (honest about current constraints). This is a lightweight document — 50-100 lines, not a product spec.",
+    "id": "FEAT-020",
+    "title": "Move CHANGELOG.md to docs/CHANGELOG.md and update references",
+    "intent": "All documentation must live in docs/ for consistency — changelog is documentation, not a build artifact.",
+    "description": "CHANGELOG.md exists at repo root with 15 well-structured releases (v0.1.0 through v0.3.2) using Added/Changed/Fixed/Removed/Documentation sections. This is a pure file move. Update any references to CHANGELOG.md in README.md, CONTRIBUTING.md, and other files to point to docs/CHANGELOG.md. Consider leaving a symlink at the root for tools that expect CHANGELOG.md at the repo root, but only if a concrete tool dependency is identified.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Read CHANGELOG.md to understand the project trajectory and what has shipped (v0.1.0 through v0.3.2)",
-      "Review backlog/backlog.json and backlog/bugs.json for any remaining todo items that indicate planned work",
-      "Compose docs/ROADMAP.md with sections: Current Version (what v0.3.x delivers — summarize from CHANGELOG), Now (any active backlog items), Next (committed direction based on trajectory: what the next releases will focus on), Later (vision items: multi-repo support, CI/CD integration, plugin system, non-Claude agent support), Known Limitations (honest list: bash-only, single-repo, Claude Code dependency, macOS/Linux only)",
-      "Keep the document under 100 lines — this is a signpost, not a spec",
-      "Include a 'Want to help?' line at the bottom linking to docs/CONTRIBUTING.md"
+      "Move CHANGELOG.md to docs/CHANGELOG.md",
+      "Search all files for references to CHANGELOG.md and update paths to docs/CHANGELOG.md",
+      "Verify README.md links to docs/CHANGELOG.md",
+      "Verify no build scripts or CI workflows reference CHANGELOG.md at the root"
     ],
     "acceptanceCriteria": [
-      "docs/ROADMAP.md exists with sections: Current Version, Now, Next, Later, Known Limitations",
-      "Known Limitations is honest about real constraints (bash-only, single-repo, Claude Code dependency)",
-      "The document is under 100 lines",
-      "Each roadmap item is a clear statement, not a vague aspiration"
+      "docs/CHANGELOG.md exists with all original content preserved",
+      "CHANGELOG.md no longer exists at repo root",
+      "All references across the repo point to docs/CHANGELOG.md",
+      "CI workflows (if any reference CHANGELOG.md) still work"
     ],
     "scope": [
-      "docs/ROADMAP.md"
+      "CHANGELOG.md",
+      "docs/CHANGELOG.md",
+      "README.md"
     ],
-    "startedAt": "2026-03-20T17:37:48-07:00",
+    "startedAt": "2026-03-20T17:48:02-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T17:39:22-07:00"
+    "completedAt": "2026-03-20T17:49:58-07:00"
   },
-  "completedAt": "2026-03-20T17:39:22-07:00",
+  "completedAt": "2026-03-20T17:49:58-07:00",
   "attempts": 1
 }

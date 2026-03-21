@@ -744,6 +744,133 @@
       "passes": true,
       "readyForSprint": false,
       "completedAt": "2026-03-20T15:49:26-07:00"
+    },
+    {
+      "id": "BUG-030",
+      "title": "resolve_backlog_file returns wrong file for IDs that don't exist in expected file",
+      "intent": "Ensure resolve_backlog_file returns an error when an ID is not found in its expected file, not a stale filename",
+      "description": "resolve_backlog_file() uses a prefix case statement: FEAT-* maps to backlog.json, BUG-* maps to bugs.json. It returns the filename immediately without verifying the item actually exists in that file. If find_item then calls jq on the returned filename, it gets an error like 'null' rather than a clear 'item not found'. This is latent: when a FEAT-* item is present only in a custom file, or after backlog clean removes it, resolve_backlog_file returns a stale path and find_item produces a confusing error. The fix is to verify item existence in the resolved file before returning, or at minimum ensure find_item handles the null case gracefully.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find resolve_backlog_file() (around line 520)",
+        "For the FEAT-* and BUG-* prefix cases, add a jq existence check after resolving the filename: if jq -e --arg id \"$id\" '.items[] | select(.id == $id)' \"$BACKLOG_DIR/$file\" &>/dev/null; then echo \"$file\"; return 0; fi",
+        "Fall through to the generic search-both-files loop if the prefix-matched file doesn't contain the item",
+        "Verify: resolve_backlog_file BUG-999 (nonexistent) returns non-zero; resolve_backlog_file BUG-001 still returns bugs.json"
+      ],
+      "acceptanceCriteria": [
+        "resolve_backlog_file returns non-zero for an ID that doesn't exist in any file, even if the prefix matches",
+        "resolve_backlog_file still returns the correct file for existing FEAT-* and BUG-* items",
+        "find_item error message is 'Item not found: <ID>' not a jq null error when the item is absent"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Latent correctness bug: FEAT-*/BUG-* prefix routing skips existence check. If item was cleaned from backlog, resolve_backlog_file still returns the old filename, causing find_item to fail with a confusing jq error instead of 'item not found'. Fix is additive: add existence check in the prefix case branches before returning, falling through to full search if not found. Low risk, clear scope."
+    },
+    {
+      "id": "BUG-031",
+      "title": "cmd_status silently omits in-progress items from sprint readiness display",
+      "intent": "cmd_status must show in-progress items clearly so users know a sprint is running and what is being worked on",
+      "description": "cmd_status() calls list_ready_items() which filters by readyForSprint: true. Items currently in-progress have readyForSprint set to false by mark_item_failed and related logic, and sprint.json tracks the active sprint separately. But the status output never shows what is currently running — a user who runs 'aishore status' during a sprint sees the item missing from the ready list with no explanation. The status command should query sprint.json and display the active sprint item ID and title if a sprint is in progress.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find cmd_status() (around line 3114)",
+        "After the 'Ready for sprint' section, add a block that reads BACKLOG_DIR/sprint.json",
+        "If sprint.json has status \\!= 'idle' and item is non-null, print a 'Currently running' section with item ID and title",
+        "Verify: running 'aishore status' during a sprint shows 'Currently running: FEAT-001 — My Feature'; running it with no sprint shows nothing for that section"
+      ],
+      "acceptanceCriteria": [
+        "aishore status shows 'Currently running: <ID> — <title>' when a sprint is active (sprint.json status \\!= idle)",
+        "aishore status shows no 'Currently running' section when no sprint is active",
+        "In-progress display does not interfere with the Ready for sprint section"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "UX gap: 'aishore status' is the go-to command for checking system state, but it shows nothing about an actively running sprint. Users running status mid-sprint see an empty ready list with no explanation — they can't tell if a sprint is running or if something is wrong. sprint.json already tracks the active item; this is a display-only change in cmd_status(). Low risk, additive."
+    },
+    {
+      "id": "BUG-032",
+      "title": "backlog history output omits duration column when duration is 0",
+      "intent": "backlog history must display duration consistently — missing duration for items completed outside normal sprint flow is confusing and breaks column alignment",
+      "description": "cmd_backlog_history() formats the output table with ID, date, status, and duration columns. The duration field in sprints.jsonl is stored as an integer (seconds). When an item is archived without a valid startedAt timestamp (e.g. manually marked done, or archive written before sprint started), duration is 0. The display logic should show '0s' or '-' for zero-duration entries rather than silently omitting the column or showing raw '0', which breaks column alignment for scripting.",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find cmd_backlog_history() (around line 4550)",
+        "Locate the jq format expression that renders the duration column",
+        "Change the duration display: if duration is 0 or null, show '-'; otherwise format as minutes and seconds (e.g. '2m 34s' for 154)",
+        "Verify: 'backlog history' shows '-' for items with duration 0 and formatted time for items with duration > 0"
+      ],
+      "acceptanceCriteria": [
+        "backlog history shows '-' for items where duration is 0 or null",
+        "backlog history formats non-zero duration as human-readable time (e.g. '2m 34s')",
+        "Column alignment is consistent across all rows"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Display bug in backlog history: duration=0 produces '0' in the table which looks wrong and breaks column alignment. Items manually marked done or archived before sprint started all have duration=0. Fix is display-only: show '-' for zero/null, format seconds as Xm Ys for non-zero. Low risk."
+    },
+    {
+      "id": "BUG-033",
+      "title": "backlog add --scope flag missing in cmd_backlog_add — scope can only be set via edit",
+      "intent": "Users must be able to set scope constraints at item creation time — requiring an extra edit command after add is an unnecessary workflow friction that will be missed.",
+      "description": "cmd_backlog_add() does not have a --scope flag. The scope array (glob patterns constraining where the developer agent may create or modify files) can only be set by running 'backlog edit <ID> --scope' after the item is created. This is inconsistent with --ac and --step which are both supported at add-time. The fix follows the same pattern as --ac and --step: add --scope and --clear-scope flags to cmd_backlog_add that accumulate scope patterns into a local array and write them as the scope field.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find cmd_backlog_add() and locate the --ac and --step flag handling as reference (around line 3617-3660)",
+        "Add a local scope_entries=() array before the flag parsing loop",
+        "Add a --scope flag case: validate_arg \"$1\" \"${2:-}\" || return 1; scope_entries+=(\"$2\"); shift 2",
+        "After the flag loop, build scope_json from scope_entries array: scope_json='['; for e in \"${scope_entries[@]:-}\"; do scope_json+=\"\\\"$e\\\",\"; done; scope_json='${scope_json%,}]'",
+        "Pass --argjson scope_arr \"$scope_json\" to the add_item jq call and include .scope: $scope_arr in the item structure",
+        "Verify: 'backlog add --title X --scope \"src/**\" --scope \"tests/**\"' creates item with scope: [\"src/**\",\"tests/**\"]"
+      ],
+      "acceptanceCriteria": [
+        "backlog add --scope 'src/**' creates an item with scope: [\"src/**\"]",
+        "backlog add --scope 'src/**' --scope 'tests/**' creates scope with both patterns in order",
+        "backlog add with no --scope flag creates item with scope: [] (unchanged default)"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Missing --scope flag at add-time is a workflow gap — users must run two commands (add + edit) to create a scope-constrained item. The pattern already exists: --ac and --step both follow the accumulate-to-array then write-as-json approach. Scope follows the same pattern. Low risk, additive only."
+    },
+    {
+      "id": "BUG-034",
+      "title": "next_id scans sprints.jsonl with per-line jq — slow on large archives",
+      "intent": "ID generation must remain fast as the sprint archive grows — per-line jq invocations in a shell loop are O(n) and will become noticeable at hundreds of entries.",
+      "description": "In next_id(), the archive max-ID computation uses 'jq -r ... archive_file | sort -rn | head -1'. This invokes jq once on the whole JSONL file, which is correct. However the BACKLOG_FILES loop calls jq once per file, and the archive jq reads all lines just to get the max numeric suffix. For large archives (hundreds of sprint entries), this is still fast, but the JSONL slurp approach (jq -r '[...] | max') is more robust than relying on sort -rn with potentially non-numeric values. The real risk is that if a non-numeric suffix appears in itemId (e.g. 'FEAT-new'), jq tonumber throws an error that is silently swallowed by 2>/dev/null, hiding ID conflicts. Fix: add error handling and filter to numeric-only suffixes before max.",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "In .aishore/aishore, find next_id() (around line 652)",
+        "In the archive scan, change the jq pipeline to filter to numeric IDs only: jq -r --arg pfx \"$prefix-\" '[.itemId | select(startswith($pfx)) | ltrimstr($pfx) | select(test(\"^[0-9]+$\")) | tonumber] | max // 0'",
+        "Apply the same numeric-only filter in the BACKLOG_FILES loop: add | select(test(\"^[0-9]+$\")) before tonumber",
+        "Verify: next_id FEAT still returns FEAT-023 (or correct next ID) with numeric items; non-numeric IDs in archive are silently skipped"
+      ],
+      "acceptanceCriteria": [
+        "next_id correctly skips non-numeric ID suffixes without crashing",
+        "next_id still returns the correct next sequential ID for FEAT and BUG prefixes",
+        "No regression in ID generation for existing items"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-20",
+      "groomingNotes": "Correctness issue: non-numeric ID suffixes cause tonumber to throw in jq, silently swallowed by 2>/dev/null, potentially causing ID conflicts. Fix is additive: add select(test(\"^[0-9]+$\")) before tonumber in both the BACKLOG_FILES loop and archive scan. Low risk, small scope."
     }
   ]
 }
