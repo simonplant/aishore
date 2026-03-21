@@ -2456,32 +2456,6 @@
       "groomedNotes": null
     },
     {
-      "id": "BUG-080",
-      "title": "Consolidate 6 separate jq calls in cmd_diagnose into one",
-      "intent": "cmd_diagnose makes 6 separate jq -r calls on the same JSON file to extract individual fields. Combine into a single jq invocation to reduce forks and lines.",
-      "description": "",
-      "priority": "could",
-      "category": null,
-      "steps": [
-        "Replace the 6 individual jq -r calls in cmd_diagnose with a single jq call that extracts all fields at once",
-        "Verify diagnose output is unchanged"
-      ],
-      "acceptanceCriteria": [
-        "cmd_diagnose has at most 1 jq call to extract fields from the diagnostics file",
-        "Output format is unchanged",
-        "shellcheck passes"
-      ],
-      "scope": [
-        ".aishore/**"
-      ],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
-      "groomedAt": "2026-03-21",
-      "groomedNotes": null
-    },
-    {
       "id": "BUG-087",
       "title": "refine refinement context lost — retry_extra_prompt cleared by _run_retry_loop",
       "intent": "Ensure developer agent on a --refine pass receives the refinement hint so it pays attention to the updated spec",
@@ -2621,7 +2595,8 @@
       "readyForSprint": false,
       "groomingNotes": "Clear single-function bug: pick_item logs error on normal empty-backlog exit, sprint loop then prints success. Confusing UX. Fix: remove the log_error from pick_item — callers provide context messages. Scope: .aishore/aishore only. Tiny change, high UX value in auto mode.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T10:11:53-07:00"
+      "completedAt": "2026-03-21T10:11:53-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-092",
@@ -2648,7 +2623,34 @@
       "readyForSprint": false,
       "groomingNotes": "Bumping from could to should: silent auto-groom during a long auto session is actively confusing — user has no signal that grooming is happening. Two-line fix, high UX value.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T10:14:16-07:00"
+      "completedAt": "2026-03-21T10:14:16-07:00",
+      "groomedNotes": null
+    },
+    {
+      "id": "BUG-080",
+      "title": "Consolidate 6 separate jq calls in cmd_diagnose into one",
+      "intent": "cmd_diagnose makes 6 separate jq -r calls on the same JSON file to extract individual fields. Combine into a single jq invocation to reduce forks and lines.",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Replace the 6 individual jq -r calls in cmd_diagnose with a single jq call that extracts all fields at once",
+        "Verify diagnose output is unchanged"
+      ],
+      "acceptanceCriteria": [
+        "cmd_diagnose has at most 1 jq call to extract fields from the diagnostics file",
+        "Output format is unchanged",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-21",
+      "groomedNotes": null
     }
   ]
 }
