@@ -3164,11 +3164,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Atomic write pattern (temp + mv) is already established in the codebase. Simple one-liner fix. BUG-103 addressed the same issue elsewhere; this is the missed instance.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T12:53:59-07:00"
     },
     {
       "id": "BUG-111",
