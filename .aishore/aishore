@@ -1855,6 +1855,148 @@ Output ONLY the JSON object, no markdown fences, no explanation."
     fi
 }
 
+# Pre-flight: run validation command on the baseline before developer touches anything.
+# Returns 0 if preflight passes (or no VALIDATE_CMD configured), 1 on failure.
+_run_preflight() {
+    [[ -z "$VALIDATE_CMD" ]] && return 0
+    log_info "Pre-flight: running validation on baseline"
+    local preflight_tmpfile
+    preflight_tmpfile="$(ensure_tmpdir)/preflight_output.txt"
+    if run_validated_command "$VALIDATE_CMD" "$preflight_tmpfile"; then
+        rm -f "$preflight_tmpfile"
+        log_success "Pre-flight passed"
+        return 0
+    fi
+    local preflight_output
+    preflight_output=$(truncate_output "$preflight_tmpfile")
+    rm -f "$preflight_tmpfile"
+    log_error "Pre-flight validation failed — baseline is broken"
+    log_error "Output (truncated): $preflight_output"
+    return 1
+}
+
+# Run developer agent for one attempt: build failure context, run fix_cmd on retry,
+# invoke developer, run fix_cmd after.
+# Uses outer-scope: retry_extra_prompt, auto_mode, session_failures, attempt, FIX_CMD
+# Returns 0 on success, 1 on failure (sets retry_extra_prompt with failure context).
+_run_developer_cycle() {
+    # Build failure context for auto mode (last 5 failures only)
+    local dev_extra_prompt="$retry_extra_prompt"
+    if [[ "$auto_mode" == "true" && ${#session_failures[@]} -gt 0 ]]; then
+        local failure_ctx=$'\n## Recent Failure Patterns\nAvoid similar mistakes:'
+        local sf_start=$(( ${#session_failures[@]} > 5 ? ${#session_failures[@]} - 5 : 0 ))
+        for ((sf_i=sf_start; sf_i<${#session_failures[@]}; sf_i++)); do
+            failure_ctx="$failure_ctx"$'\n'"- ${session_failures[$sf_i]}"
+        done
+        dev_extra_prompt="${dev_extra_prompt}${failure_ctx}"
+    fi
+
+    # On retry, run fix_cmd before developer re-attempts
+    if [[ $attempt -gt 0 && -n "$FIX_CMD" ]]; then
+        log_info "Running fix command before retry: $FIX_CMD"
+        if ! bash -c "$FIX_CMD" 2>&1; then
+            log_warning "Fix command failed before retry (continuing anyway)"
+        fi
+    fi
+
+    # Run developer agent
+    run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
+    if ! check_result; then
+        log_error "Implementation failed"
+        local fail_reason=""
+        [[ -f "$STATUS_DIR/result.json" ]] && fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
+        retry_extra_prompt="Previous attempt failed during implementation. Failure reason: ${fail_reason}. Fix the issues and ensure all acceptance criteria pass."
+        return 1
+    fi
+
+    # Run fix_cmd after developer agent completes (e.g., auto-format, lint --fix)
+    if [[ -n "$FIX_CMD" ]]; then
+        log_info "Running fix command: $FIX_CMD"
+        if ! bash -c "$FIX_CMD" 2>&1; then
+            log_warning "Fix command failed (continuing anyway)"
+        fi
+    fi
+    return 0
+}
+
+# Run validation cycle: scope check, validation command, AC verification, validator agent.
+# Uses outer-scope: retry_extra_prompt, VALIDATE_CMD, SCOPE_VIOLATION_REPORT, AC_VERIFY_REPORT
+# Sets: _validation_failure (short label for _record_sprint_failure)
+# Returns 0 if all validations pass, 1 on failure (sets retry_extra_prompt with context).
+_run_validation_cycle() {
+    _validation_failure=""
+    local validate_output=""
+
+    # Check scope violations
+    if ! check_scope_violations; then
+        retry_extra_prompt="Previous attempt modified files outside the declared scope. Scope violations:
+${SCOPE_VIOLATION_REPORT}
+Only modify files matching the declared scope globs. Fix the issues."
+        _validation_failure="Scope violation"
+        return 1
+    fi
+
+    # Run validation command (if configured)
+    if [[ -n "$VALIDATE_CMD" ]]; then
+        log_info "Running validation: $VALIDATE_CMD"
+        local validate_tmpfile
+        validate_tmpfile="$(ensure_tmpdir)/validate_output.txt"
+        if run_validated_command "$VALIDATE_CMD" "$validate_tmpfile"; then
+            validate_output=$(truncate_output "$validate_tmpfile")
+            rm -f "$validate_tmpfile"
+            log_success "Validation passed"
+        else
+            validate_output=$(truncate_output "$validate_tmpfile")
+            rm -f "$validate_tmpfile"
+            log_error "Validation command failed"
+            retry_extra_prompt="Previous attempt failed validation command ($VALIDATE_CMD). Validation output:
+${validate_output}
+Fix the issues and ensure all acceptance criteria pass."
+            _validation_failure="Validation failed"
+            return 1
+        fi
+    fi
+
+    # Run AC verification commands (if any AC have .verify)
+    if ! run_ac_verification; then
+        retry_extra_prompt="Previous attempt failed acceptance criteria verification:
+${AC_VERIFY_REPORT}
+Fix the issues and ensure all acceptance criteria pass."
+        _validation_failure="AC verification failed"
+        return 1
+    fi
+
+    # Run validator agent (pass AC report as extra context if available)
+    local validator_extra=""
+    [[ -n "$AC_VERIFY_REPORT" ]] && validator_extra="
+## AC Verification Results
+${AC_VERIFY_REPORT}"
+    run_agent "validator" "validate" "$MODEL_FAST" "" "" "$validator_extra"
+    if ! check_result; then
+        log_error "Validation failed"
+        local agent_fail_reason=""
+        [[ -f "$STATUS_DIR/result.json" ]] && agent_fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
+        retry_extra_prompt="Previous attempt failed validator agent review. Failure reason: ${agent_fail_reason}."
+        [[ -n "$validate_output" ]] && retry_extra_prompt="${retry_extra_prompt} Validation command output: ${validate_output}."
+        retry_extra_prompt="${retry_extra_prompt} Fix the issues and ensure all acceptance criteria pass."
+        _validation_failure="Validator failed"
+        return 1
+    fi
+
+    return 0
+}
+
+# Failure-reason labels for _record_sprint_failure, keyed by _validation_failure value.
+_validation_failure_reason() {
+    case "$1" in
+        "Scope violation")          echo "Files modified outside declared scope" ;;
+        "Validation failed")        echo "Validation command failed" ;;
+        "AC verification failed")   echo "Acceptance criteria verification commands failed" ;;
+        "Validator failed")         echo "Validator agent rejected implementation" ;;
+        *)                          echo "$1" ;;
+    esac
+}
+
 # Developer → validation cmd → validator agent retry loop.
 # Uses outer-scope locals: retries, auto_mode, session_failures, sprint_passed,
 #   retry_extra_prompt, item_source, sprint_start, ITEM_ID
@@ -1863,58 +2005,16 @@ _run_retry_loop() {
     sprint_passed=false
     retry_extra_prompt=""
 
-    # Pre-flight: run validation command on the baseline (before developer touches anything)
-    if [[ -n "$VALIDATE_CMD" ]]; then
-        log_info "Pre-flight: running validation on baseline"
-        local preflight_ok=true
-        local preflight_tmpfile
-        preflight_tmpfile="$(ensure_tmpdir)/preflight_output.txt"
-        run_validated_command "$VALIDATE_CMD" "$preflight_tmpfile" || preflight_ok=false
-        if [[ "$preflight_ok" != "true" ]]; then
-            local preflight_output
-            preflight_output=$(truncate_output "$preflight_tmpfile")
-            rm -f "$preflight_tmpfile"
-            log_error "Pre-flight validation failed — baseline is broken"
-            log_error "Output (truncated): $preflight_output"
-            _record_sprint_failure "Pre-flight failed" "Baseline validation failed before developer ran"
-            return
-        fi
-        rm -f "$preflight_tmpfile"
-        log_success "Pre-flight passed"
+    if ! _run_preflight; then
+        _record_sprint_failure "Pre-flight failed" "Baseline validation failed before developer ran"
+        return
     fi
 
     for ((attempt=0; attempt<=retries; attempt++)); do
-        if [[ $attempt -gt 0 ]]; then
-            log_info "Retry attempt $attempt/$retries"
-        fi
+        [[ $attempt -gt 0 ]] && log_info "Retry attempt $attempt/$retries"
 
-        # Build failure context for auto mode (last 5 failures only)
-        local dev_extra_prompt="$retry_extra_prompt"
-        if [[ "$auto_mode" == "true" && ${#session_failures[@]} -gt 0 ]]; then
-            local failure_ctx=$'\n## Recent Failure Patterns\nAvoid similar mistakes:'
-            local sf_start=$(( ${#session_failures[@]} > 5 ? ${#session_failures[@]} - 5 : 0 ))
-            for ((sf_i=sf_start; sf_i<${#session_failures[@]}; sf_i++)); do
-                failure_ctx="$failure_ctx"$'\n'"- ${session_failures[$sf_i]}"
-            done
-            dev_extra_prompt="${dev_extra_prompt}${failure_ctx}"
-        fi
-
-        # On retry, run fix_cmd before developer re-attempts
-        if [[ $attempt -gt 0 && -n "$FIX_CMD" ]]; then
-            log_info "Running fix command before retry: $FIX_CMD"
-            if ! bash -c "$FIX_CMD" 2>&1; then
-                log_warning "Fix command failed before retry (continuing anyway)"
-            fi
-        fi
-
-        # Run developer agent
-        run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
-        if ! check_result; then
-            log_error "Implementation failed"
+        if ! _run_developer_cycle; then
             if [[ $attempt -lt $retries ]]; then
-                local fail_reason=""
-                [[ -f "$STATUS_DIR/result.json" ]] && fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
-                retry_extra_prompt="Previous attempt failed during implementation. Failure reason: ${fail_reason}. Fix the issues and ensure all acceptance criteria pass."
                 log_info "Will retry with failure context"
                 continue
             fi
@@ -1922,99 +2022,19 @@ _run_retry_loop() {
             break
         fi
 
-        # Run fix_cmd after developer agent completes (e.g., auto-format, lint --fix)
-        if [[ -n "$FIX_CMD" ]]; then
-            log_info "Running fix command: $FIX_CMD"
-            if ! bash -c "$FIX_CMD" 2>&1; then
-                log_warning "Fix command failed (continuing anyway)"
-            fi
-        fi
-
-        # Check scope violations (after developer, before validation)
-        if ! check_scope_violations; then
-            # strict mode failure
+        if ! _run_validation_cycle; then
             if [[ $attempt -lt $retries ]]; then
-                retry_extra_prompt="Previous attempt modified files outside the declared scope. Scope violations:
-${SCOPE_VIOLATION_REPORT}
-Only modify files matching the declared scope globs. Fix the issues."
-                log_info "Will retry with scope violation context"
-                continue
-            fi
-            _record_sprint_failure "Scope violation" "Files modified outside declared scope"
-            break
-        fi
-
-        # Run validation command (if configured)
-        local validate_failed=false
-        local validate_output=""
-        if [[ -n "$VALIDATE_CMD" ]]; then
-            log_info "Running validation: $VALIDATE_CMD"
-            local validate_ok=true
-            local validate_tmpfile
-            validate_tmpfile="$(ensure_tmpdir)/validate_output.txt"
-            run_validated_command "$VALIDATE_CMD" "$validate_tmpfile" || validate_ok=false
-            validate_output=$(truncate_output "$validate_tmpfile")
-            rm -f "$validate_tmpfile"
-            if [[ "$validate_ok" != "true" ]]; then
-                log_error "Validation command failed"
-                validate_failed=true
-            else
-                log_success "Validation passed"
-            fi
-        fi
-
-        if [[ "$validate_failed" == "true" ]]; then
-            if [[ $attempt -lt $retries ]]; then
-                retry_extra_prompt="Previous attempt failed validation command ($VALIDATE_CMD). Validation output:
-${validate_output}
-Fix the issues and ensure all acceptance criteria pass."
                 log_info "Will retry with failure context"
                 continue
             fi
-            _record_sprint_failure "Validation failed" "Validation command failed"
+            _record_sprint_failure "$_validation_failure" "$(_validation_failure_reason "$_validation_failure")"
             break
         fi
 
-        # Run AC verification commands (if any AC have .verify)
-        if ! run_ac_verification; then
-            if [[ $attempt -lt $retries ]]; then
-                retry_extra_prompt="Previous attempt failed acceptance criteria verification:
-${AC_VERIFY_REPORT}
-Fix the issues and ensure all acceptance criteria pass."
-                log_info "Will retry with AC failure context"
-                continue
-            fi
-            _record_sprint_failure "AC verification failed" "Acceptance criteria verification commands failed"
-            break
-        fi
-
-        # Run validator agent (pass AC report as extra context if available)
-        local validator_extra=""
-        [[ -n "$AC_VERIFY_REPORT" ]] && validator_extra="
-## AC Verification Results
-${AC_VERIFY_REPORT}"
-        run_agent "validator" "validate" "$MODEL_FAST" "" "" "$validator_extra"
-        if ! check_result; then
-            log_error "Validation failed"
-            if [[ $attempt -lt $retries ]]; then
-                local agent_fail_reason=""
-                [[ -f "$STATUS_DIR/result.json" ]] && agent_fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
-                retry_extra_prompt="Previous attempt failed validator agent review. Failure reason: ${agent_fail_reason}."
-                [[ -n "$validate_output" ]] && retry_extra_prompt="${retry_extra_prompt} Validation command output: ${validate_output}."
-                retry_extra_prompt="${retry_extra_prompt} Fix the issues and ensure all acceptance criteria pass."
-                log_info "Will retry with failure context"
-                continue
-            fi
-            _record_sprint_failure "Validator failed" "Validator agent rejected implementation"
-            break
-        fi
-
-        # All validations passed
         sprint_passed=true
         break
     done
 
-    # Export total attempts for caller
     total_attempts=$((attempt + 1))
 }
 
