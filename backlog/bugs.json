@@ -3169,7 +3169,8 @@
       "readyForSprint": false,
       "groomingNotes": "Atomic write pattern (temp + mv) is already established in the codebase. Simple one-liner fix. BUG-103 addressed the same issue elsewhere; this is the missed instance.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T12:53:59-07:00"
+      "completedAt": "2026-03-21T12:53:59-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-111",
@@ -3195,7 +3196,8 @@
       "readyForSprint": false,
       "groomingNotes": "Must priority: empty checksums.sha256 silently breaks the update integrity check system. Fix is a single guard line. High blast radius for a small code change.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T12:46:49-07:00"
+      "completedAt": "2026-03-21T12:46:49-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-112",
@@ -3222,7 +3224,8 @@
       "readyForSprint": false,
       "groomingNotes": "Clear UX expectation mismatch. tac/tail-r is a standard pattern already used elsewhere in the codebase. Both branches need the fix.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T12:56:26-07:00"
+      "completedAt": "2026-03-21T12:56:26-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-113",
@@ -3249,7 +3252,8 @@
       "readyForSprint": false,
       "groomingNotes": "Confirmed by reading list_pickable_ids: map_backlog_files processes files sequentially with per-file sort. A global merge-sort is needed. Affects auto session queue display accuracy.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T12:59:43-07:00"
+      "completedAt": "2026-03-21T12:59:43-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-114",
@@ -3276,7 +3280,8 @@
       "readyForSprint": false,
       "groomingNotes": "Many changes shipped since v0.3.5 with no changelog update. Docs-only change with no logic risk.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T12:52:08-07:00"
+      "completedAt": "2026-03-21T12:52:08-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-115",
@@ -3308,7 +3313,8 @@
       "readyForSprint": false,
       "groomingNotes": "Step CRUD is incomplete: add exists, clear-all exists, but remove-one does not. Users editing specs regularly need this. jq del() makes it a small change.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T13:05:14-07:00"
+      "completedAt": "2026-03-21T13:05:14-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-116",
@@ -3340,7 +3346,8 @@
       "readyForSprint": false,
       "groomingNotes": "AC CRUD is incomplete: same gap as BUG-115 for steps. Users need granular control. jq del() handles both string and object AC entries.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T13:09:58-07:00"
+      "completedAt": "2026-03-21T13:09:58-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-117",
@@ -3368,7 +3375,147 @@
       "readyForSprint": false,
       "groomingNotes": "UX gap: users launching auto have no idea of session scope before waiting. Single log line costs nothing and helps users decide to narrow scope with --priority or --category.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T13:14:04-07:00"
+      "completedAt": "2026-03-21T13:14:04-07:00",
+      "groomedNotes": null
+    },
+    {
+      "id": "BUG-118",
+      "title": "backlog history and status read full JSONL archive to show last N items",
+      "intent": "Both 'backlog history' and 'status' commands read the entire sprints.jsonl archive through jq before applying tail, causing O(n) work when only O(k) is needed. Archive reads must be bounded by the display limit, not file size.",
+      "description": "Two commands process the entire sprints.jsonl archive unnecessarily before taking the last few records. In 'backlog history' (default --limit 20), jq processes all N records then 'tail -n 20' discards all but the last 20. In '_status_output', jq processes all N records then 'tail -5' keeps only 5. Since sprints.jsonl is JSONL (one JSON object per line), 'tail -n N file | jq ...' gives the same result with O(k) file I/O instead of O(n). The archive grows by one line per sprint, so this gets progressively worse.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In cmd_backlog_history (lines ~4797-4802): replace 'jq -r ... \"$sprints_file\" | tail -n \"$limit\"' with 'tail -n \"$limit\" \"$sprints_file\" | jq -r ...'",
+        "In _status_output (line ~3603): replace 'jq -r ... \"$sprints_file\" ... | tail -5' with 'tail -5 \"$sprints_file\" | jq -r ...'",
+        "Verify both changes produce the same output as before when archive has <limit items",
+        "Verify output is correct when archive has exactly limit items and more than limit items",
+        "Run shellcheck and confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "backlog history output is identical to before when total records <= limit",
+        "backlog history shows last N records in reverse-chronological order when total > limit",
+        "status recent sprints shows last 5 records correctly",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomingNotes": "O(n) archive scan for O(k) display. Simple swap of tail position in the pipeline. No semantic change — JSONL is line-oriented so tail on the file gives the same last-N records as tail on the jq output.",
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T13:25:27-07:00"
+    },
+    {
+      "id": "BUG-119",
+      "title": "backlog history table misaligns on long titles — no truncation applied",
+      "intent": "The 'backlog history' table must truncate titles to 40 characters with an ellipsis, matching the truncation already applied in 'status' recent sprints, so the table columns stay aligned regardless of title length.",
+      "description": "cmd_backlog_history renders title using '%s' with no truncation (lines ~4794, 4801). Any title longer than ~30 chars pushes all subsequent columns right, misaligning ID, date, status, and duration. _status_output at line 3603 already does this correctly: '(.title // \"-\") | if length > 40 then .[:40] + \"…\" else . end'. The history command needs the same treatment.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In the jq filter inside cmd_backlog_history (both the --all path and the default path), replace '.title // \"-\"' with '((.title // \"-\") | if length > 40 then .[:40] + \"…\" else . end)'",
+        "Verify the table renders correctly with a long title (>40 chars)",
+        "Verify the table renders correctly with a short title (<40 chars)",
+        "Run shellcheck and confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "A title longer than 40 characters is truncated to 40 chars + ellipsis in history output",
+        "A title of 40 characters or fewer is displayed unchanged",
+        "Table columns (ID, DATE, STATUS, DURATION) stay aligned regardless of title length",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Trivial fix — already done correctly in _status_output, just needs the same jq filter applied to cmd_backlog_history. One-line change in the jq expression, applies to both the --all branch and the default branch (two occurrences).",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-120",
+      "title": "print_sprint_summary read prompt exits script via set -e when stdin is not a terminal",
+      "intent": "The architecture review prompt in print_sprint_summary must not cause the script to exit when stdin is closed or non-interactive. The read call must be guarded so a non-tty or piped stdin produces a graceful skip, not a set -e triggered exit.",
+      "description": "In print_sprint_summary (line ~3090), a bare 'read -r -p \"...\" _review_answer' runs when auto_review is not set. Bash 'read' returns exit code 1 when stdin is at EOF (CI, pipes, or non-interactive shells). Because the script uses 'set -euo pipefail', a failing read propagates as an unhandled error and exits the script mid-session. The fix is to append '|| true' to the read call, or to guard the entire block with '[[ -t 0 ]]' so the prompt is only shown in interactive sessions. The '|| true' approach is sufficient and minimal.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Locate the 'read -r -p \"  Run architecture review? [y/N] \" _review_answer' call in print_sprint_summary (line ~3090)",
+        "Append '|| true' to make it: 'read -r -p \"  Run architecture review? [y/N] \" _review_answer || true'",
+        "Verify that in a non-interactive context (piped stdin), the function completes without error and skips the review",
+        "Verify that in an interactive context, the prompt still works correctly",
+        "Run shellcheck and confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "Running 'echo \"\" | .aishore/aishore auto done' (piped stdin) does not exit with an error from the review prompt",
+        "In an interactive session with valid 'y' input, the architecture review is still triggered",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "set -euo pipefail makes any failing read a script exit. This hits in CI and any piped invocation. Fix is '|| true' — one token change. The review prompt is already guarded by auto_mode and auto_review checks, so the only missing guard is read's own exit code.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-121",
+      "title": "auto progress counter shows wrong denominator when --limit is set",
+      "intent": "When --limit N is set, the per-sprint progress line must show N as the denominator, not the total pickable item count. The denominator must reflect how many items the session will actually attempt.",
+      "description": "In run_sprint_loop (line ~2844), the progress line is built as '$passed/${#queued_ids[@]} complete'. When 'auto done --limit 3' is run against a 20-item backlog, queued_ids has 20 entries but the session will stop after 3 successes. The user sees '1/20 complete' instead of '1/3 complete', which is misleading. The fix is to compute a display_total as min(session_limit, queued_count) when session_limit is set, and use that as the denominator.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In run_sprint_loop where progress_count is built (line ~2844), compute display_total as: if [[ -n \"$session_limit\" && \"$session_limit\" -lt \"${#queued_ids[@]}\" ]]; then display_total=$session_limit; else display_total=${#queued_ids[@]}; fi",
+        "Replace '${#queued_ids[@]}' with '$display_total' in the progress_count assignment",
+        "Verify that without --limit, the full backlog count is still shown",
+        "Verify that with --limit 3 and 20 queued items, the denominator shows 3",
+        "Run shellcheck and confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "Running 'auto done --limit 3' with 20 pickable items shows progress as '1/3 complete', '2/3 complete', etc.",
+        "Running 'auto done' (no limit) with 20 pickable items still shows '1/20 complete'",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Minor but confusing UX. When a user explicitly sets --limit 3 they are telling the system to stop after 3 items. Showing /20 implies 17 more items will run, which is wrong.",
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-122",
+      "title": "Update CHANGELOG.md and bump version to v0.3.7",
+      "intent": "CHANGELOG.md must document BUG-116 (--remove-ac flag) and BUG-117 (auto start queued item count log) under a new [0.3.7] entry, and VERSION must be updated to 0.3.7.",
+      "description": "BUG-116 (--remove-ac N flag for backlog edit) and BUG-117 (queued item count with priority breakdown logged on auto start) were implemented after the 0.3.6 release but are not reflected in CHANGELOG.md or VERSION. Standard release hygiene: any merged feature or fix batch should result in a documented version increment.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In docs/CHANGELOG.md, add a new ## [0.3.7] - 2026-03-21 section above [0.3.6]",
+        "Under ### Added, document BUG-117: 'Queued item count with per-priority breakdown logged at auto session start (BUG-117)'",
+        "Under ### Added, document BUG-116: '--remove-ac N flag for backlog edit to remove a specific acceptance criterion by 1-based index (BUG-116)'",
+        "Update .aishore/VERSION from 0.3.6 to 0.3.7",
+        "Run .aishore/aishore version to confirm it now reports 0.3.7",
+        "Run .aishore/aishore checksums to regenerate checksums after editing .aishore/VERSION"
+      ],
+      "acceptanceCriteria": [
+        "'aishore version' outputs '0.3.7'",
+        "CHANGELOG.md has a [0.3.7] section with BUG-116 and BUG-117 entries",
+        ".aishore/checksums.sha256 is regenerated and up to date",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Straightforward maintenance item. VERSION change triggers checksums regeneration. Changelog entries follow the established format in [0.3.6].",
+      "groomedAt": "2026-03-21"
     }
   ]
 }
