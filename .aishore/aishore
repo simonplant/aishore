@@ -2698,9 +2698,9 @@ run_sprint_loop() {
                 local auto_groom_snap
                 auto_groom_snap=$(mktemp -d)
                 snapshot_backlog_files "$auto_groom_snap"
-                run_agent "tech-lead" "groom" "$MODEL_FAST" groom_context || true
+                GROOM_MONITOR=true run_agent "tech-lead" "groom" "$MODEL_FAST" groom_context || true
                 check_result || log_warning "Tech-lead groom did not pass — continuing"
-                run_agent "product-owner" "groom" "$MODEL_FAST" groom_context || true
+                GROOM_MONITOR=true run_agent "product-owner" "groom" "$MODEL_FAST" groom_context || true
                 check_result || log_warning "Product-owner groom did not pass — continuing"
                 # Protect existing items from groomer rewrites, then enforce limits
                 protect_items_from_groom "$auto_groom_snap"
