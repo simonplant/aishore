@@ -153,6 +153,19 @@ truncate_output() {
     printf '%s' "$output"
 }
 
+# Run a command with optional timeout, capturing output to a file.
+# Usage: run_validated_command <command_string> <output_file>
+# Returns: 0 on success, 1 on failure. Output is written to output_file.
+run_validated_command() {
+    local cmd="$1"
+    local outfile="$2"
+    if command -v timeout &>/dev/null; then
+        timeout "$VALIDATE_TIMEOUT" bash -c "$cmd" >"$outfile" 2>&1
+    else
+        bash -c "$cmd" >"$outfile" 2>&1
+    fi
+}
+
 restore_stash() {
     local pop_output
     if pop_output=$(git stash pop 2>&1); then
@@ -1442,11 +1455,7 @@ run_ac_verification() {
         local ac_ok=true
         local ac_tmpfile
         ac_tmpfile="$(ensure_tmpdir)/ac_verify_${idx}.txt"
-        if command -v timeout &>/dev/null; then
-            timeout "$VALIDATE_TIMEOUT" bash -c "$ac_cmd" >"$ac_tmpfile" 2>&1 || ac_ok=false
-        else
-            bash -c "$ac_cmd" >"$ac_tmpfile" 2>&1 || ac_ok=false
-        fi
+        run_validated_command "$ac_cmd" "$ac_tmpfile" || ac_ok=false
         local ac_output
         ac_output=$(truncate_output "$ac_tmpfile")
         rm -f "$ac_tmpfile"
@@ -1860,11 +1869,7 @@ _run_retry_loop() {
         local preflight_ok=true
         local preflight_tmpfile
         preflight_tmpfile="$(ensure_tmpdir)/preflight_output.txt"
-        if command -v timeout &>/dev/null; then
-            timeout "$VALIDATE_TIMEOUT" bash -c "$VALIDATE_CMD" >"$preflight_tmpfile" 2>&1 || preflight_ok=false
-        else
-            bash -c "$VALIDATE_CMD" >"$preflight_tmpfile" 2>&1 || preflight_ok=false
-        fi
+        run_validated_command "$VALIDATE_CMD" "$preflight_tmpfile" || preflight_ok=false
         if [[ "$preflight_ok" != "true" ]]; then
             local preflight_output
             preflight_output=$(truncate_output "$preflight_tmpfile")
@@ -1947,11 +1952,7 @@ Only modify files matching the declared scope globs. Fix the issues."
             local validate_ok=true
             local validate_tmpfile
             validate_tmpfile="$(ensure_tmpdir)/validate_output.txt"
-            if command -v timeout &>/dev/null; then
-                timeout "$VALIDATE_TIMEOUT" bash -c "$VALIDATE_CMD" >"$validate_tmpfile" 2>&1 || validate_ok=false
-            else
-                bash -c "$VALIDATE_CMD" >"$validate_tmpfile" 2>&1 || validate_ok=false
-            fi
+            run_validated_command "$VALIDATE_CMD" "$validate_tmpfile" || validate_ok=false
             validate_output=$(truncate_output "$validate_tmpfile")
             rm -f "$validate_tmpfile"
             if [[ "$validate_ok" != "true" ]]; then
