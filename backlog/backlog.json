@@ -1034,6 +1034,35 @@
       "groomedAt": "2026-03-21",
       "groomedNotes": null,
       "completedAt": "2026-03-21T10:50:19-07:00"
+    },
+    {
+      "id": "FEAT-035",
+      "title": "backlog populate --preview mode — show AI-generated items before committing",
+      "intent": "Users must be able to preview what backlog populate will add before it modifies backlog.json, so AI-generated noise cannot silently pollute the backlog.",
+      "description": "cmd_backlog_populate runs the AI agent and writes items directly to backlog.json with no preview step. A --preview flag should run the agent, print proposed items in a readable format, and exit without writing.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Add --preview flag to cmd_backlog_populate() via parse_opts",
+        "When --preview is active, run agent but capture output to temp file instead of writing to backlog.json",
+        "Print proposed items in same table format as backlog list (id, priority, title)",
+        "Exit 0 after preview without modifying backlog.json",
+        "Add --preview to usage message and help output",
+        "Run shellcheck — confirm zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "Running backlog populate --preview prints proposed items and exits without modifying backlog.json",
+        "Running backlog populate without --preview still writes to backlog.json as before",
+        "Preview output includes id, priority, and title for each proposed item",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false,
+      "groomingNotes": "Closes the only fire-and-forget hole in backlog management. Without preview, AI-generated items land with no review step. On an established backlog this introduces noise requiring manual cleanup. Direct user value: confidence before committing.",
+      "groomedAt": "2026-03-21"
     }
   ]
 }
