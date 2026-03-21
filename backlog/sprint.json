@@ -1,34 +1,31 @@
 {
-  "sprintId": "sprint-1774114120",
-  "startedAt": "2026-03-21T10:28:40-07:00",
+  "sprintId": "sprint-1774114839",
+  "startedAt": "2026-03-21T10:40:39-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-031",
-    "title": "auto --limit N flag to cap items processed per session",
-    "intent": "Users must be able to cap an auto session at N items — auto done --limit 3 processes exactly 3 items then stops cleanly, regardless of how many ready items remain. Clean exit, not a circuit-breaker failure.",
-    "description": "Users running auto done on a large backlog sometimes want to run a bounded session: test a new config on 2 items, manage API budget, or batch work into controlled chunks. The current auto command runs until the backlog drains or circuit-breaker fires. A --limit N flag adds an explicit session cap that exits cleanly (not as a failure) after N items complete. Distinct from --max-failures (circuit breaker) and priority scope (p0/p1/p2) — this is a pure count cap.",
+    "id": "FEAT-033",
+    "title": "Live progress counter during auto sessions",
+    "intent": "During any auto session, users can see at a glance how many items have completed, how many failed, and how long the session has been running — they are never left wondering if the tool is still working or how far through the backlog it is.",
+    "description": "auto sessions can run for 30-60+ minutes processing many items. The current output shows per-sprint status but gives no session-level view: users cannot tell if they are 2 items in or 18 items in, how many have failed so far, or how long the session has been running. A persistent status line printed at the start of each new sprint gives users a live session view without requiring them to scroll back. This complements FEAT-030 (bell notification) and FEAT-031 (--limit N) to make auto sessions fully transparent.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Add --limit <N> flag to cmd_auto option parsing with validate_arg for non-empty positive integer",
-      "Pass limit through to run_sprint_loop; track items_completed counter incremented on each sprint success",
-      "When items_completed reaches limit, exit sprint loop cleanly with log_success 'Session limit reached: N items completed'",
-      "Limit exit is not counted as a failure — circuit breaker consecutive_failures counter is not incremented",
-      "Update help text for auto command to document --limit flag",
-      "shellcheck passes"
+      "Track session start time in run_sprint_loop using date +%s at session open",
+      "Increment items_completed counter on each sprint success; items_failed on each failure",
+      "At start of each sprint iteration, compute elapsed minutes and print: 'Sprint session: N complete | M failed | Xm elapsed'",
+      "When ready-item count is known before the loop, show 'N/total' format; otherwise show 'N complete'",
+      "shellcheck passes; no new warnings"
     ],
     "acceptanceCriteria": [
-      "auto done --limit 2 processes exactly 2 items then exits with a clean success message",
-      "The remaining backlog items are untouched after a --limit exit",
-      "auto done --limit 0 exits immediately with a clear 'limit must be a positive integer' error",
-      "Circuit-breaker consecutive_failures counter is not affected by a limit exit",
-      "help text shows --limit flag under auto command",
+      "Each new sprint in an auto session prints a session progress line before per-sprint output",
+      "Line shows items completed, items failed, and elapsed time in minutes",
+      "Format: 'Sprint session: N complete | M failed | Xm elapsed'",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T10:28:40-07:00",
+    "startedAt": "2026-03-21T10:40:39-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T10:34:22-07:00"
+    "completedAt": "2026-03-21T10:43:13-07:00"
   },
-  "completedAt": "2026-03-21T10:34:22-07:00",
+  "completedAt": "2026-03-21T10:43:13-07:00",
   "attempts": 1
 }
