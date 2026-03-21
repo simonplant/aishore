@@ -1,20 +1,35 @@
 {
-  "sprintId": "sprint-1774125893",
-  "startedAt": "2026-03-21T13:44:53-07:00",
+  "sprintId": "sprint-1774126172",
+  "startedAt": "2026-03-21T13:49:32-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-036",
-    "title": "backlog check --all audits every item for readiness gates in one pass",
-    "intent": "Users must be able to run 'backlog check --all' and see a table of every non-done item with its readiness gate status and failure reasons, so they can fix the whole backlog in one pass instead of checking item by item.",
-    "description": "backlog check validates one item at a time. Users with large backlogs have no way to audit all items at once — they must loop manually. A --all flag on backlog check should iterate every non-done item, run the same gate checks, and print a summary table: item ID, PASS/FAIL, and which gates failed. This directly complements BUG-100: once auto warns about skipped items, users need a fast way to find and fix all broken items without running check N times.",
+    "id": "FEAT-037",
+    "title": "aishore config check — validate config.yaml and print effective values",
+    "intent": "Users must be able to run 'aishore config check' and see every effective configuration value with its source (default/config/env), and any validation errors in config.yaml must be reported explicitly.",
+    "description": "Users who edit config.yaml have no way to validate it before running a sprint. Unknown keys are silently ignored (load_config falls back to defaults), type errors produce cryptic runtime failures, and there's no way to see what the effective configuration actually is. A 'config check' command would: parse config.yaml (warn if missing), validate known keys and value types, flag unknown keys, and print a table of all effective values (merged from config.yaml + env vars). This removes a class of 'why isn't my config working' support issues and makes the configuration surface visible.",
     "sourceBacklog": "backlog.json",
-    "steps": [],
-    "acceptanceCriteria": [],
+    "steps": [
+      "Add cmd_config_check() function: read config.yaml via yq (if available) or fallback parser",
+      "Validate each key against the known config schema (agent_model, timeout, maturity.enabled, scope.mode, permissions.*, etc.) — log_warn on unknown keys",
+      "For each known config key, determine effective value: env var > config.yaml > default, and note source",
+      "Print a table: KEY | EFFECTIVE VALUE | SOURCE (env/config/default)",
+      "Exit 1 if config.yaml exists but cannot be parsed; exit 0 if config is valid or missing",
+      "Wire 'config check' as a top-level command in main dispatch and add to help text",
+      "Run shellcheck — zero new warnings"
+    ],
+    "acceptanceCriteria": [
+      "Running 'aishore config check' with no config.yaml prints all defaults with source=default",
+      "Running 'aishore config check' with a valid config.yaml shows overridden keys with source=config",
+      "Running 'aishore config check' with an env var set shows that key with source=env",
+      "Unknown keys in config.yaml produce a warning line in output",
+      "A malformed config.yaml (invalid YAML) exits 1 with a clear error",
+      "shellcheck passes with zero new warnings"
+    ],
     "scope": [],
-    "startedAt": "2026-03-21T13:44:53-07:00",
+    "startedAt": "2026-03-21T13:49:32-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T13:49:31-07:00"
+    "completedAt": "2026-03-21T13:56:11-07:00"
   },
-  "completedAt": "2026-03-21T13:49:31-07:00",
+  "completedAt": "2026-03-21T13:56:11-07:00",
   "attempts": 1
 }
