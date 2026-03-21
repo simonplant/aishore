@@ -2992,6 +2992,52 @@ $([[ "$update_docs" == "true" ]] && echo "You may update documentation and add b
     fi
 }
 
+_compute_metrics_json() {
+    local sprints_file="$ARCHIVE_DIR/sprints.jsonl"
+    local backlog_file="$BACKLOG_DIR/backlog.json"
+    local bugs_file="$BACKLOG_DIR/bugs.json"
+
+    local ready_backlog ready_bugs backlog_total bugs_total completed
+    ready_backlog=$(count_ready_items "$backlog_file")
+    ready_bugs=$(count_ready_items "$bugs_file")
+    backlog_total=$(count_items "$backlog_file")
+    bugs_total=$(count_items "$bugs_file")
+    completed=$([[ -f "$sprints_file" ]] && jq -s 'length' "$sprints_file" 2>/dev/null || echo 0)
+
+    local trends="{}"
+    if [[ -f "$sprints_file" && -s "$sprints_file" ]]; then
+        trends=$(jq -s '
+            def safe_div(a; b): if b == 0 then 0 else (a / b * 100 | round) / 100 end;
+            . as $all |
+            {
+                avgAttempts: safe_div([$all[] | .attempts // 1] | add; $all | length),
+                itemsPerDay: safe_div($all | length; [$all[] | .date] | unique | length),
+                byPriority: ([$all[] | {priority: (.priority // "unknown")}] | group_by(.priority) | map({key: .[0].priority, value: length}) | from_entries),
+                byCategory: ([$all[] | {category: (.category // "uncategorized")}] | group_by(.category) | map({key: .[0].category, value: length}) | from_entries)
+            } + (
+                if ($all | length) > 10 then
+                    ($all | [.[length-10:][]] ) as $recent |
+                    {
+                        recentAvgAttempts: safe_div([$recent[] | .attempts // 1] | add; $recent | length),
+                        recentAvgDuration: safe_div([$recent[] | .duration // 0] | add; $recent | length),
+                        overallAvgDuration: safe_div([$all[] | .duration // 0] | add; $all | length)
+                    }
+                else {} end
+            )
+        ' "$sprints_file" 2>/dev/null || echo "{}")
+    fi
+
+    cat <<EOF
+{
+  "timestamp": "$(date -Iseconds)",
+  "sprints": {"completed": $completed},
+  "backlog": {"total": $backlog_total, "ready": $ready_backlog},
+  "bugs": {"total": $bugs_total, "ready": $ready_bugs},
+  "trends": $trends
+}
+EOF
+}
+
 cmd_metrics() {
     require_tool jq
 
@@ -3005,102 +3051,53 @@ cmd_metrics() {
 
     load_config
 
-    local sprints_file="$ARCHIVE_DIR/sprints.jsonl"
-    local backlog_file="$BACKLOG_DIR/backlog.json"
-    local bugs_file="$BACKLOG_DIR/bugs.json"
-
-    local ready_backlog
-    ready_backlog=$(count_ready_items "$backlog_file")
-    local ready_bugs
-    ready_bugs=$(count_ready_items "$bugs_file")
-
-    local backlog_total
-    backlog_total=$(count_items "$backlog_file")
-    local bugs_total
-    bugs_total=$(count_items "$bugs_file")
+    local metrics_json
+    metrics_json=$(_compute_metrics_json)
 
     if [[ "$json_output" == "true" ]]; then
-        local completed
-        completed=$([[ -f "$sprints_file" ]] && jq -s 'length' "$sprints_file" 2>/dev/null || echo 0)
-
-        # Build trends object if archive exists
-        local trends="{}"
-        if [[ -f "$sprints_file" && -s "$sprints_file" ]]; then
-            trends=$(jq -s '
-                def safe_div(a; b): if b == 0 then 0 else (a / b * 100 | round) / 100 end;
-                . as $all |
-                {
-                    avgAttempts: safe_div([$all[] | .attempts // 1] | add; $all | length),
-                    itemsPerDay: safe_div($all | length; [$all[] | .date] | unique | length),
-                    byPriority: ([$all[] | {priority: (.priority // "unknown")}] | group_by(.priority) | map({key: .[0].priority, value: length}) | from_entries),
-                    byCategory: ([$all[] | {category: (.category // "uncategorized")}] | group_by(.category) | map({key: .[0].category, value: length}) | from_entries)
-                } + (
-                    if ($all | length) > 10 then
-                        ($all | [.[length-10:][]] ) as $recent |
-                        {
-                            recentAvgAttempts: safe_div([$recent[] | .attempts // 1] | add; $recent | length),
-                            recentAvgDuration: safe_div([$recent[] | .duration // 0] | add; $recent | length)
-                        }
-                    else {} end
-                )
-            ' "$sprints_file" 2>/dev/null || echo "{}")
-        fi
-
-        cat <<EOF
-{
-  "timestamp": "$(date -Iseconds)",
-  "sprints": {"completed": $completed},
-  "backlog": {"total": $backlog_total, "ready": $ready_backlog},
-  "bugs": {"total": $bugs_total, "ready": $ready_bugs},
-  "trends": $trends
-}
-EOF
+        echo "$metrics_json"
     else
         log_header "aishore Metrics"
         echo ""
-        echo "Completed Sprints: $([[ -f "$sprints_file" ]] && jq -s 'length' "$sprints_file" 2>/dev/null || echo 0)"
+        echo "Completed Sprints: $(echo "$metrics_json" | jq -r '.sprints.completed')"
         echo ""
         echo "Backlog:"
-        echo "  Total items: $backlog_total"
-        echo "  Ready for sprint: $ready_backlog"
+        echo "  Total items: $(echo "$metrics_json" | jq -r '.backlog.total')"
+        echo "  Ready for sprint: $(echo "$metrics_json" | jq -r '.backlog.ready')"
         echo ""
         echo "Bugs/Tech Debt:"
-        echo "  Total items: $bugs_total"
-        echo "  Ready for sprint: $ready_bugs"
+        echo "  Total items: $(echo "$metrics_json" | jq -r '.bugs.total')"
+        echo "  Ready for sprint: $(echo "$metrics_json" | jq -r '.bugs.ready')"
 
         # Trends section
-        if [[ -f "$sprints_file" && -s "$sprints_file" ]]; then
+        local trends_empty
+        trends_empty=$(echo "$metrics_json" | jq -r '.trends == {}')
+        if [[ "$trends_empty" != "true" ]]; then
             echo ""
             log_subheader "Trends"
-            local trend_count
-            trend_count=$(jq -s 'length' "$sprints_file" 2>/dev/null || echo 0)
+            echo "  Avg attempts/item: $(echo "$metrics_json" | jq -r '.trends.avgAttempts')"
+            echo "  Items/day: $(echo "$metrics_json" | jq -r '.trends.itemsPerDay')"
 
-            local avg_attempts items_per_day
-            avg_attempts=$(jq -s 'if length == 0 then 0 else ([.[] | .attempts // 1] | add / length * 100 | round) / 100 end' "$sprints_file" 2>/dev/null || echo 0)
-            items_per_day=$(jq -s 'if length == 0 then 0 else (length / ([.[] | .date] | unique | length) * 100 | round) / 100 end' "$sprints_file" 2>/dev/null || echo 0)
-            echo "  Avg attempts/item: $avg_attempts"
-            echo "  Items/day: $items_per_day"
-
-            # By priority
             local by_priority
-            by_priority=$(jq -sr '[.[] | .priority // "unknown"] | group_by(.) | map("\(.[0]): \(length)") | join(", ")' "$sprints_file" 2>/dev/null || true)
+            by_priority=$(echo "$metrics_json" | jq -r '.trends.byPriority | to_entries | map("\(.key): \(.value)") | join(", ")')
             [[ -n "$by_priority" ]] && echo "  By priority: $by_priority"
 
-            # By category
             local by_category
-            by_category=$(jq -sr '[.[] | .category // "uncategorized"] | group_by(.) | map("\(.[0]): \(length)") | join(", ")' "$sprints_file" 2>/dev/null || true)
+            by_category=$(echo "$metrics_json" | jq -r '.trends.byCategory | to_entries | map("\(.key): \(.value)") | join(", ")')
             [[ -n "$by_category" ]] && echo "  By category: $by_category"
 
             # Recent trend (last 10 vs overall)
-            if [[ "$trend_count" -gt 10 ]]; then
+            local has_recent
+            has_recent=$(echo "$metrics_json" | jq -r '.trends | has("recentAvgAttempts")')
+            if [[ "$has_recent" == "true" ]]; then
                 local recent_avg_attempts overall_avg_attempts
-                recent_avg_attempts=$(jq -s '([.[length-10:][]] | [.[] | .attempts // 1] | add / length * 100 | round) / 100' "$sprints_file" 2>/dev/null || echo 0)
-                overall_avg_attempts="$avg_attempts"
+                recent_avg_attempts=$(echo "$metrics_json" | jq -r '.trends.recentAvgAttempts')
+                overall_avg_attempts=$(echo "$metrics_json" | jq -r '.trends.avgAttempts')
                 echo "  Recent trend (last 10): avg attempts $recent_avg_attempts (overall: $overall_avg_attempts)"
 
                 local recent_avg_duration overall_avg_duration
-                recent_avg_duration=$(jq -s '([.[length-10:][]] | [.[] | .duration // 0] | add / length | round)' "$sprints_file" 2>/dev/null || echo 0)
-                overall_avg_duration=$(jq -s '([.[] | .duration // 0] | add / length | round)' "$sprints_file" 2>/dev/null || echo 0)
+                recent_avg_duration=$(echo "$metrics_json" | jq -r '.trends.recentAvgDuration | round')
+                overall_avg_duration=$(echo "$metrics_json" | jq -r '.trends.overallAvgDuration | round')
                 echo "  Recent trend (last 10): avg duration ${recent_avg_duration}s (overall: ${overall_avg_duration}s)"
             fi
         fi
