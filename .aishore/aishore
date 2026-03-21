@@ -100,6 +100,8 @@ GROOM_MIN_PRIORITY="should"
 readonly GROOM_SAFE_FIELDS=(title intent description steps acceptanceCriteria)
 SCOPE_MODE="warn"
 MATURITY_ENABLED="true"
+STREAMING_ENABLED="true"
+STREAMING_MAX_LINES="20"
 OUTPUT_TRUNCATE_LINES="50"
 MERGE_STRATEGY="merge"
 CREATE_PR="false"
@@ -506,6 +508,8 @@ load_config() {
             ".groom.min_priority    GROOM_MIN_PRIORITY"
             ".scope.mode            SCOPE_MODE"
             ".maturity.enabled      MATURITY_ENABLED"
+            ".streaming.enabled    STREAMING_ENABLED"
+            ".streaming.max_lines  STREAMING_MAX_LINES"
             ".output.truncate_lines OUTPUT_TRUNCATE_LINES"
             ".merge.strategy        MERGE_STRATEGY"
             ".pr.create             CREATE_PR"
@@ -568,6 +572,8 @@ _apply_env_overrides() {
         "AISHORE_GROOM_MIN_PRIORITY GROOM_MIN_PRIORITY"
         "AISHORE_SCOPE_MODE        SCOPE_MODE"
         "AISHORE_MATURITY          MATURITY_ENABLED"
+        "AISHORE_STREAMING         STREAMING_ENABLED"
+        "AISHORE_STREAMING_MAX_LINES STREAMING_MAX_LINES"
         "AISHORE_OUTPUT_TRUNCATE_LINES OUTPUT_TRUNCATE_LINES"
         "AISHORE_MERGE_STRATEGY    MERGE_STRATEGY"
         "AISHORE_CREATE_PR         CREATE_PR"
@@ -1378,6 +1384,12 @@ run_agent_process() {
     local elapsed=0
     local got_result=false
 
+    # Streaming: track how many lines of agent output we've already printed
+    local _stream_lines_seen=0
+    local _stream_log_file="${AGENT_OUTPUT_FILE:-$agent_log}"
+    local _stream_enabled="$STREAMING_ENABLED"
+    local _stream_max="$STREAMING_MAX_LINES"
+
     # Progress monitoring: track backlog file changes during grooming
     local monitor_backlogs="${GROOM_MONITOR:-false}"
     if [[ "$monitor_backlogs" == "true" ]]; then
@@ -1393,6 +1405,15 @@ run_agent_process() {
 
     while [[ $elapsed -lt $AGENT_TIMEOUT ]]; do
         if ! kill -0 "$agent_pid" 2>/dev/null; then
+            # Process exited — stream any remaining lines before breaking
+            if [[ "$_stream_enabled" == "true" && -f "$_stream_log_file" ]]; then
+                local _final_lines
+                _final_lines=$(tail -n +"$((_stream_lines_seen + 1))" "$_stream_log_file" 2>/dev/null | head -n "$_stream_max") || true
+                if [[ -n "$_final_lines" ]]; then
+                    printf '%s\n' "$_final_lines"
+                    _stream_lines_seen=$(wc -l < "$_stream_log_file" 2>/dev/null || echo "$_stream_lines_seen")
+                fi
+            fi
             break
         fi
         if [[ -f "$STATUS_DIR/result.json" ]]; then
@@ -1403,10 +1424,22 @@ run_agent_process() {
         sleep 5
         elapsed=$((elapsed + 5))
 
+        # Stream new agent output lines (rate-limited)
+        if [[ "$_stream_enabled" == "true" && -f "$_stream_log_file" ]]; then
+            local _new_lines
+            _new_lines=$(tail -n +"$((_stream_lines_seen + 1))" "$_stream_log_file" 2>/dev/null | head -n "$_stream_max") || true
+            if [[ -n "$_new_lines" ]]; then
+                printf '%s\n' "$_new_lines"
+                local _printed
+                _printed=$(printf '%s\n' "$_new_lines" | wc -l)
+                _stream_lines_seen=$((_stream_lines_seen + _printed))
+            fi
+        fi
+
         # Check for backlog changes and report progress
         if [[ "$monitor_backlogs" == "true" && $((elapsed % 10)) -eq 0 ]]; then
             _check_groom_progress "$agent_label"
-        elif [[ $((elapsed % 30)) -eq 0 ]]; then
+        elif [[ "$_stream_enabled" != "true" && $((elapsed % 30)) -eq 0 ]]; then
             log_agent "$agent_label" "Waiting for agent... (${elapsed}s elapsed)"
         fi
     done
