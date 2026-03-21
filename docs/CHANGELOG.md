@@ -5,6 +5,42 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2026-03-21
+
+### Added
+
+- **Multi-backlog support**: `config.yaml` accepts a `backlog_files` list; `pick_item`, `list_pickable_ids`, and related helpers scan all declared backlog files (FEAT-027)
+- **Retry intelligence**: `_capture_retry_failure` captures git diff and failure context, carried into subsequent developer retry cycles (FEAT-028)
+- **`--category` flag**: Filter items by category in `run` and `auto` commands (FEAT-029)
+- **Completion notification**: Terminal bell fires on all auto session exit paths — drain complete, circuit-breaker, and `--limit` reached (FEAT-030)
+- **`--limit N` flag**: Cap the number of items processed per auto/run session (FEAT-031)
+- **Real-time streaming**: Developer agent output streams to terminal during sprint execution (FEAT-032)
+- **Live session progress counter**: Auto mode prints item count at start of each sprint (FEAT-033)
+- **End-of-session summary table**: Auto runs print a summary table on all exit paths with `--no-summary` opt-out (FEAT-034)
+
+### Fixed
+
+- `collect_done_ids` now scans `sprints.jsonl` for archived items — cleaned items no longer cause false unmet-dependency warnings (BUG-035)
+- Trimmed `print_groom_summary` and `print_groom_diff` to bare essentials (BUG-067)
+- Removed unused `update_desc` variable from `cmd_backlog_edit` (BUG-079)
+- `mark_complete` now archives item title alongside priority/category for `backlog history` (BUG-081)
+- Converted `context_args` and `groom_context` from word-split strings to Bash arrays (BUG-083)
+- Consolidated `_status_output` to one `jq` pass per file (BUG-084)
+- `cmd_review` resolves architect permissions from `--update-docs` flag directly, not `output_file` proxy (BUG-085)
+- `mark_complete` uses `AISHORE_BASE_BRANCH` for diff stats instead of `HEAD~1` (BUG-086)
+- Preserved refinement hint through `_run_retry_loop` so developer agent receives it on retry (BUG-087)
+- Replaced GNU-only `head -n -1` with portable `sed '$d'` in `protect_items_from_groom` (BUG-088)
+- Return to base branch when `mark_complete` fails in `_handle_sprint_success` (BUG-089)
+- Accumulate `total_attempts` across both retry loops in `--refine` path (BUG-090)
+- Removed spurious `log_error` from `pick_item` when no eligible item found — auto-mode exits cleanly (BUG-091)
+- Added `GROOM_MONITOR=true` to auto-groom `run_agent` calls in sprint loop (BUG-092)
+- Removed undefined `release_lock` call from `setup_sprint_environment` early-exit path (BUG-093)
+- `run_ac_verification` now catches jq failures explicitly — `2>/dev/null` suppression removed (BUG-094)
+
+### Changed
+
+- Slimmed `README.md` from ~500 lines to storefront format (FEAT-021)
+
 ## [0.3.4] - 2026-03-20
 
 ### Added
