@@ -981,15 +981,7 @@ update_item() {
 _build_ac_json() {
     # Convert ac_entries array (passed as args) to a JSON array string.
     # Each entry is already a JSON value (quoted string or {text,verify} object).
-    local ac_json="["
-    local first=true
-    local entry
-    for entry in "$@"; do
-        [[ "$first" == "true" ]] && first=false || ac_json="$ac_json,"
-        ac_json="$ac_json$entry"
-    done
-    ac_json="$ac_json]"
-    printf '%s' "$ac_json"
+    printf '%s\n' "$@" | jq -s .
 }
 
 _append_array_field() {

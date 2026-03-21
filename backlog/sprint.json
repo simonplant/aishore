@@ -1,29 +1,28 @@
 {
-  "sprintId": "sprint-1774068211",
-  "startedAt": "2026-03-20T21:43:31-07:00",
+  "sprintId": "sprint-1774069286",
+  "startedAt": "2026-03-20T22:01:26-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-049",
-    "title": "Extract shared option parser to reduce duplication across cmd_* functions",
-    "intent": "Replace the duplicated while/case/shift option parsing in every cmd_* function with a shared parse_opts() helper or standardized pattern, eliminating ~100 lines of boilerplate",
+    "id": "BUG-050",
+    "title": "Replace JSON array string concatenation with jq -s in backlog add",
+    "intent": "Replace the manual JSON array construction via string concatenation in a loop (ac_json building) with proper jq -s array construction to avoid potential escaping issues",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Catalog all cmd_* functions and their option parsing patterns",
-      "Design a shared parse_opts() helper or declare-based pattern",
-      "Refactor cmd_run, cmd_backlog_add, cmd_backlog_edit, cmd_backlog_list and others to use it",
-      "Ensure unknown option rejection still works per-command"
+      "Find the string concatenation pattern that builds ac_json with manual comma insertion",
+      "Replace with printf and jq -s . to build the array safely",
+      "Verify AC entries with special characters (quotes, newlines) are handled correctly"
     ],
     "acceptanceCriteria": [
-      "Option parsing boilerplate is reduced by at least 50%",
-      "All commands still correctly parse their flags and reject unknown options",
+      "No manual JSON array construction via string concatenation exists in the codebase",
+      "AC entries with quotes and special characters round-trip correctly",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T21:43:31-07:00",
+    "startedAt": "2026-03-20T22:01:26-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T22:01:25-07:00"
+    "completedAt": "2026-03-20T22:03:50-07:00"
   },
-  "completedAt": "2026-03-20T22:01:25-07:00",
+  "completedAt": "2026-03-20T22:03:50-07:00",
   "attempts": 1
 }
