@@ -1,36 +1,36 @@
 {
-  "sprintId": "sprint-1774058485",
-  "startedAt": "2026-03-20T19:01:25-07:00",
+  "sprintId": "sprint-1774058761",
+  "startedAt": "2026-03-20T19:06:01-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-014",
-    "title": "Create docs/ARCHITECTURE.md — unified system architecture document",
-    "intent": "A developer evaluating aishore must understand how the system works from a single document — not by reading six files and piecing it together.",
-    "description": "Architecture content is fragmented across README.md (How It Works, The Workflow, Agent Roles, Item Schema, Project Structure), CLAUDE.md (Architecture section: sprint execution flow, maturity protocol, git branching, directory structure, completion contract, context auto-detection, agent invocation, concurrency, safe failure recovery, scope checking, testable AC, readiness gates, baseline pre-flight, spec refinement), CONTRIBUTING.md (Architecture section, Key Design Decisions), .aishore/agents/*.md (5 agent role files defining review focus areas and process), and backlog/DEFINITIONS.md (Definition of Ready, Definition of Done, Commander's Intent). The unified document must cover: system overview with pipeline diagram, the maturity protocol (implement-critique-harden) and why it exists, agent roles and data flow between them, git branching model, directory structure, design decisions with rationale, and the completion contract. Source from existing content — do not invent claims.",
+    "id": "FEAT-019",
+    "title": "Move CONTRIBUTING.md to docs/CONTRIBUTING.md and update references",
+    "intent": "All documentation must live in docs/ for consistency — a contributor looking in docs/ must find contribution guidelines there, not hunt at the repo root.",
+    "description": "CONTRIBUTING.md exists at repo root with complete content: Development Setup, Requirements, Code Style (bash conventions + naming table), Linting and Testing (shellcheck, syntax check, smoke test, JSON validation, checksums), Pull Request Process, Commit Convention table, Architecture section, and CLA. The move is straightforward: relocate the file, replace the inline Architecture section with a link to docs/ARCHITECTURE.md (FEAT-014), and add a section on agent prompt authoring (how to modify files in .aishore/agents/ and test prompt changes). Update any references to CONTRIBUTING.md in README.md and other files to point to the new location. GitHub will still find CONTRIBUTING.md via the docs/ path for its contributing prompt.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Create docs/ directory if it does not exist",
-      "Read README.md sections: How It Works (pipeline diagram + 7-step flow), The Workflow (populate/groom/run/review), Agent Roles (table), Item Schema, Project Structure",
-      "Read CLAUDE.md Architecture section: sprint execution flow, maturity protocol, git branching model, directory structure, completion contract, context auto-detection, agent invocation, concurrency, safe failure recovery, scope checking, testable AC, readiness gates, baseline pre-flight, spec refinement, update integrity, version management",
-      "Read CONTRIBUTING.md: Architecture section, Key Design Decisions subsection, Version Management subsection",
-      "Read .aishore/agents/architect.md, developer.md, product-owner.md, tech-lead.md, validator.md for role definitions and process descriptions",
-      "Read backlog/DEFINITIONS.md for Definition of Ready, Definition of Done, Commander's Intent",
-      "Compose docs/ARCHITECTURE.md with these sections: Overview (pipeline diagram from README), The Maturity Protocol (from CLAUDE.md — why implement-critique-harden exists), Agent System (roles table from README + data flow from agent files), Git Branching Model (from CLAUDE.md), Directory Structure (from README Project Structure + CLAUDE.md), Design Decisions (from CONTRIBUTING.md Key Design Decisions, expanded with rationale), Quality Gates (from DEFINITIONS.md DoR/DoD + CLAUDE.md readiness gates/completion contract)",
-      "Verify all claims in the document are sourced from existing files — flag any gaps as TODO rather than inventing content"
+      "Move CONTRIBUTING.md to docs/CONTRIBUTING.md",
+      "In docs/CONTRIBUTING.md, replace the inline Architecture section with a link: 'See [ARCHITECTURE.md](ARCHITECTURE.md) for system architecture and design decisions'",
+      "Add a new section 'Agent Prompt Authoring' explaining how to modify .aishore/agents/*.md files, what each agent file controls, and how to test prompt changes",
+      "Search all files for references to CONTRIBUTING.md and update paths to docs/CONTRIBUTING.md",
+      "Verify README.md Contributing section links to docs/CONTRIBUTING.md"
     ],
     "acceptanceCriteria": [
-      "docs/ARCHITECTURE.md exists and covers: system overview with pipeline diagram, maturity protocol with rationale, agent roles and responsibilities, git branching model, directory structure, design decisions with rationale, quality gates (DoR/DoD/completion contract)",
-      "Every substantive claim in the document can be traced to an existing source file (README.md, CLAUDE.md, CONTRIBUTING.md, agent files, or DEFINITIONS.md)",
-      "The document reads as a coherent narrative for a developer evaluating the project — not a copy-paste collage",
-      "No content is duplicated verbatim from README.md — the README will link here instead"
+      "docs/CONTRIBUTING.md exists with all original content preserved",
+      "CONTRIBUTING.md no longer exists at repo root",
+      "The inline Architecture section is replaced with a link to docs/ARCHITECTURE.md",
+      "An Agent Prompt Authoring section exists explaining how to modify agent files",
+      "All references to CONTRIBUTING.md across the repo point to docs/CONTRIBUTING.md"
     ],
     "scope": [
-      "docs/ARCHITECTURE.md"
+      "CONTRIBUTING.md",
+      "docs/CONTRIBUTING.md",
+      "README.md"
     ],
-    "startedAt": "2026-03-20T19:01:25-07:00",
+    "startedAt": "2026-03-20T19:06:01-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T19:05:59-07:00"
+    "completedAt": "2026-03-20T19:08:52-07:00"
   },
-  "completedAt": "2026-03-20T19:05:59-07:00",
+  "completedAt": "2026-03-20T19:08:52-07:00",
   "attempts": 1
 }

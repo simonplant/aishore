@@ -532,10 +532,12 @@
       "dependsOn": [
         "FEAT-014"
       ],
-      "status": "todo",
-      "readyForSprint": true,
+      "status": "done",
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Elevated from should to must: FEAT-019 is a direct blocker for FEAT-021 (must). Running p0-only would skip FEAT-019 and leave FEAT-021 permanently blocked. Both must complete in the same priority pass to deliver the doc chain."
+      "groomingNotes": "Elevated from should to must: FEAT-019 is a direct blocker for FEAT-021 (must). Running p0-only would skip FEAT-019 and leave FEAT-021 permanently blocked. Both must complete in the same priority pass to deliver the doc chain.",
+      "passes": true,
+      "completedAt": "2026-03-20T19:08:52-07:00"
     },
     {
       "id": "FEAT-020",
