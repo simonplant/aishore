@@ -1066,17 +1066,20 @@ list_pickable_ids() {
     fi
     local done_ids_json
     done_ids_json=$(collect_done_ids)
+    local _lpi_tmp
+    _lpi_tmp="$(ensure_tmpdir)/pickable_ids.txt"
+    : > "$_lpi_tmp"
     _list_pickable_one() {
         local backlog="$1"
         jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --argjson prios "$prio_json" --arg catf "$cat_filter" '
             '"$PICKABLE_ITEMS_FILTER"' |
             [.[] | select($catf == "" or (.category // "") == $catf)] |
             [.[] | select(($prios | length) == 0 or (.priority // "should") as $p | $prios | index($p) != null)] |
-            sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end) |
-            .[].id
-        ' "$BACKLOG_DIR/$backlog" 2>/dev/null || true
+            .[] | (if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end | tostring) + "\t" + .id
+        ' "$BACKLOG_DIR/$backlog" 2>/dev/null >> "$_lpi_tmp" || true
     }
     map_backlog_files _list_pickable_one
+    sort -t$'\t' -k1,1n -s "$_lpi_tmp" | cut -f2
 }
 
 collect_done_ids() {
