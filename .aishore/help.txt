@@ -35,6 +35,7 @@ Commands:
     --ac "text", --ac-verify "cmd"  Append testable acceptance criteria, --clear-ac to reset,
     --depends-on ID  Add dependency (repeatable), --clear-depends-on to reset
   backlog check <ID> Check readiness gates (title, intent, steps, AC, step length)
+    --all           Audit every non-done item and print a summary table
   backlog rm <ID>   Remove an item (with confirmation)
     --force         Skip confirmation
   backlog history   List recent completed sprint items (last 20)
