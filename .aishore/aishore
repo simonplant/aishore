@@ -2058,6 +2058,19 @@ _run_retry_loop() {
     total_attempts=$((attempt + 1))
 }
 
+# Push base branch to origin and pull latest. No-op if no remote.
+# Args: $1 = branch name
+_sync_remote() {
+    local branch="$1"
+    if git remote get-url origin &>/dev/null; then
+        log_info "Syncing with remote"
+        git push origin "$branch" 2>/dev/null || \
+            log_warning "Failed to push — continuing offline"
+        git pull --rebase origin "$branch" 2>/dev/null || \
+            log_warning "Failed to pull — continuing with local state"
+    fi
+}
+
 # Handle post-sprint success: mark complete, safety commit, merge/push.
 # Uses outer-scope locals: ITEM_ID, item_source, total_attempts, sprint_start,
 #   passed, failed, consecutive_failures, groom_exhausted, no_merge, base_branch,
@@ -2111,6 +2124,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
     fi
 
     # Merge feature branch back to base, push, and pull before next item
+    # no-merge: push branch for review, optionally create PR, then return
     if [[ "$no_merge" == "true" ]]; then
         log_info "Branch $AISHORE_FEATURE_BRANCH kept for review"
         if git remote get-url origin &>/dev/null; then
@@ -2133,61 +2147,43 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
         fi
 
         git checkout "$base_branch"
-    elif [[ "$MERGE_STRATEGY" == "squash" ]]; then
-        log_info "Squash-merging $AISHORE_FEATURE_BRANCH → $base_branch"
-        git checkout "$base_branch"
-        if git merge --squash "$AISHORE_FEATURE_BRANCH"; then
-            local dev_summary
-            dev_summary=$(jq -r '.summary // "implement sprint item"' "$STATUS_DIR/result.json" 2>/dev/null || echo "implement sprint item")
-            dev_summary="${dev_summary:0:500}"
-            git commit -m "feat($ITEM_ID): $dev_summary
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-            git branch -D "$AISHORE_FEATURE_BRANCH" 2>/dev/null || true
-            log_success "Squash-merged and cleaned up $AISHORE_FEATURE_BRANCH"
-        else
-            log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
-            AISHORE_FEATURE_BRANCH=""
-            return 1
-        fi
-
-        if git remote get-url origin &>/dev/null; then
-            log_info "Syncing with remote"
-            git push origin "$base_branch" 2>/dev/null || \
-                log_warning "Failed to push — continuing offline"
-            git pull --rebase origin "$base_branch" 2>/dev/null || \
-                log_warning "Failed to pull — continuing with local state"
-        fi
     else
-        log_info "Merging $AISHORE_FEATURE_BRANCH → $base_branch"
-        git checkout "$base_branch"
+        # Shared merge path: squash or no-ff, branching only on the git merge command
         local merge_summary
         merge_summary=$(jq -r '.summary // ""' "$STATUS_DIR/result.json" 2>/dev/null || echo "")
         merge_summary="${merge_summary:0:500}"
-        local merge_msg
-        if [[ -n "$merge_summary" ]]; then
-            merge_msg="merge: $ITEM_ID $merge_summary"
+        local merge_msg="merge: $ITEM_ID ${merge_summary:-sprint branch}"
+
+        git checkout "$base_branch"
+
+        if [[ "$MERGE_STRATEGY" == "squash" ]]; then
+            log_info "Squash-merging $AISHORE_FEATURE_BRANCH → $base_branch"
+            if git merge --squash "$AISHORE_FEATURE_BRANCH"; then
+                git commit -m "feat($ITEM_ID): ${merge_summary:-implement sprint item}
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+            else
+                log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
+                AISHORE_FEATURE_BRANCH=""
+                return 1
+            fi
         else
-            merge_msg="merge: $ITEM_ID sprint branch"
-        fi
-        if git merge --no-ff "$AISHORE_FEATURE_BRANCH" -m "$merge_msg
+            log_info "Merging $AISHORE_FEATURE_BRANCH → $base_branch"
+            if ! git merge --no-ff "$AISHORE_FEATURE_BRANCH" -m "$merge_msg
 
 Co-Authored-By: Claude <noreply@anthropic.com>"; then
-            git branch -d "$AISHORE_FEATURE_BRANCH" 2>/dev/null || true
-            log_success "Merged and cleaned up $AISHORE_FEATURE_BRANCH"
-        else
-            log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
-            AISHORE_FEATURE_BRANCH=""
-            return 1
+                log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
+                AISHORE_FEATURE_BRANCH=""
+                return 1
+            fi
         fi
 
-        if git remote get-url origin &>/dev/null; then
-            log_info "Syncing with remote"
-            git push origin "$base_branch" 2>/dev/null || \
-                log_warning "Failed to push — continuing offline"
-            git pull --rebase origin "$base_branch" 2>/dev/null || \
-                log_warning "Failed to pull — continuing with local state"
-        fi
+        # -D for squash (git can't detect merge), -d for no-ff
+        local delete_flag="-d"
+        [[ "$MERGE_STRATEGY" == "squash" ]] && delete_flag="-D"
+        git branch "$delete_flag" "$AISHORE_FEATURE_BRANCH" 2>/dev/null || true
+        log_success "Merged and cleaned up $AISHORE_FEATURE_BRANCH"
+        _sync_remote "$base_branch"
     fi
     AISHORE_FEATURE_BRANCH=""
     return 0
