@@ -1,29 +1,34 @@
 {
-  "sprintId": "sprint-1774122987",
-  "startedAt": "2026-03-21T12:56:27-07:00",
+  "sprintId": "sprint-1774123185",
+  "startedAt": "2026-03-21T12:59:45-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-113",
-    "title": "list_pickable_ids sorts within each backlog file independently — must bugs appear after should feats",
-    "intent": "list_pickable_ids must return all pickable IDs in a single globally-sorted list so must-priority bugs are always listed before should-priority features regardless of which file they come from.",
-    "description": "list_pickable_ids calls _list_pickable_one via map_backlog_files, which sorts items per-file and emits them. The outputs are concatenated in BACKLOG_FILES order (backlog.json first, then bugs.json). A 'should' feature in backlog.json therefore appears before a 'must' bug in bugs.json in the queued_ids array used by auto sessions. This causes the displayed queue order in session headers to misrepresent priority, and could cause issues if this list is ever used for selection.",
+    "id": "BUG-115",
+    "title": "backlog edit has no --remove-step N flag — individual steps cannot be removed",
+    "intent": "Users must be able to remove a specific step by 1-based index via backlog edit <ID> --remove-step N without clearing all steps.",
+    "description": "backlog edit supports --step to append steps and --clear-steps to wipe all steps, but has no way to remove a single step by index. Users who add a step in error or need to prune the list must clear all steps and re-add them manually. The steps array is JSON so jq del() can remove an element by index.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Change _list_pickable_one to collect items into a shared array instead of printing sorted per-file",
-      "After map_backlog_files completes, sort the combined list globally by priority (must=0, should=1, could=2) and print IDs",
-      "Alternative: collect all items via jq --slurp across files, then sort once",
-      "Run shellcheck — confirm zero new warnings"
+      "Add --remove-step flag to cmd_backlog_edit() option parser",
+      "Validate the argument is a positive integer",
+      "After loading the item, use jq to remove the (N-1)th element from steps array (1-based input)",
+      "If N is out of range, exit non-zero with clear error: 'step N does not exist (item has M steps)'",
+      "Write back atomically using temp file + mv pattern",
+      "Add --remove-step to backlog edit usage message",
+      "Run shellcheck and confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "When backlog.json has a should item and bugs.json has a must item, list_pickable_ids returns the must item first",
-      "Existing single-file sort order is preserved",
+      "backlog edit ID --remove-step 2 removes the second step from the item",
+      "backlog edit ID --remove-step 99 exits non-zero with a clear error when index is out of range",
+      "backlog edit ID --remove-step 0 exits non-zero with a validation error",
+      "All other fields on the item are unchanged after removal",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T12:56:27-07:00",
+    "startedAt": "2026-03-21T12:59:45-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T12:59:43-07:00"
+    "completedAt": "2026-03-21T13:05:14-07:00"
   },
-  "completedAt": "2026-03-21T12:59:43-07:00",
+  "completedAt": "2026-03-21T13:05:14-07:00",
   "attempts": 1
 }
