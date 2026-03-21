@@ -3268,11 +3268,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Many changes shipped since v0.3.5 with no changelog update. Docs-only change with no logic risk.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T12:52:08-07:00"
     },
     {
       "id": "BUG-115",
