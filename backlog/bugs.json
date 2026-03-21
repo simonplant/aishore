@@ -24,7 +24,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Confirmed: bash '\\n' in double-quoted strings does not produce newlines. Fix is straightforward — change to $'\\n' or printf. Low risk, small scope.",
-      "completedAt": "2026-03-20T11:07:18-07:00"
+      "completedAt": "2026-03-20T11:07:18-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-002",
@@ -50,7 +51,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Real UX gap: users lose track of which items were skipped after a merge conflict abort. Needs pre-loop item list and post-abort diff reporting.",
-      "completedAt": "2026-03-20T11:14:54-07:00"
+      "completedAt": "2026-03-20T11:14:54-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-003",
@@ -76,7 +78,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Tech debt: dead if/else branches mislead future developers. Trivial fix — remove the conditional.",
-      "completedAt": "2026-03-20T12:14:19-07:00"
+      "completedAt": "2026-03-20T12:14:19-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-004",
@@ -101,7 +104,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "PO review: bumped to should. Truncated error output directly hurts sprint recovery — the AI has less signal to fix failures. More failures = less value delivered. 1000 byte limit is too small for real test output and the byte-split-char bug is a correctness issue.",
-      "completedAt": "2026-03-20T11:17:40-07:00"
+      "completedAt": "2026-03-20T11:17:40-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-005",
@@ -129,7 +133,8 @@
       "lastFailReason": "Validator agent rejected implementation",
       "lastFailAt": "2026-03-20T15:33:03-07:00",
       "failCount": 4,
-      "completedAt": "2026-03-20T16:04:47-07:00"
+      "completedAt": "2026-03-20T16:04:47-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-006",
@@ -150,7 +155,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "New item added during groom session. Implementation pattern mirrors --ac/--scope: local steps array, --step appends one entry per flag call, --clear-steps resets. In cmd_backlog_add(): add local steps_entries=() array, --step flag appends to it, build steps_json from the array, pass --argjson steps_arr to add_item, set steps: $steps_arr (replacing the hardcoded steps: []). In cmd_backlog_edit(): add --step flag that accumulates entries same as --ac, build steps JSON, use jq_updates += '| .steps = ((.steps // []) + $newsteps)'. Add --clear-steps: jq_updates += '| .steps = []'. --ready flag warning about no steps is expected (bootstrapping issue).",
-      "completedAt": "2026-03-20T11:58:36-07:00"
+      "completedAt": "2026-03-20T11:58:36-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-007",
@@ -170,7 +176,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Fix location: cmd_backlog_show() jq expression around line 3720. Current: (.acceptanceCriteria // [] | .[] | \"  - \\(.)\"). Fix: (.acceptanceCriteria // [] | .[] | \"  - \\(if type == \"object\" then .text + (if .verify then \" [verify: \\(.verify)]\" else \"\" end) else . end)\"). Run: backlog add with --ac 'plain' --ac 'text' --ac-verify 'cmd' then backlog show to confirm. This is a display-only fix — no data changes.",
-      "completedAt": "2026-03-20T12:00:45-07:00"
+      "completedAt": "2026-03-20T12:00:45-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-008",
@@ -196,7 +203,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Same pattern as BUG-004 (AC verify truncation) but missed for the VALIDATE_CMD retry path. Fix is additive — apply OUTPUT_TRUNCATE_LINES truncation at one spot in _run_retry_loop(). Low risk, clear scope.",
-      "completedAt": "2026-03-20T12:08:42-07:00"
+      "completedAt": "2026-03-20T12:08:42-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-009",
@@ -222,7 +230,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Clear pattern mismatch — --clear-steps and --clear-scope both exist, --clear-ac does not. Fix is additive, one case block in cmd_backlog_edit plus help text update. Low risk.",
-      "completedAt": "2026-03-20T12:11:16-07:00"
+      "completedAt": "2026-03-20T12:11:16-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-010",
@@ -248,7 +257,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Tech debt: path convention inconsistency between remove_items_by_status and the other CRUD helpers. Small refactor with one call site to update. Low risk — only one caller exists today (cmd_clean).",
-      "completedAt": "2026-03-20T12:27:27-07:00"
+      "completedAt": "2026-03-20T12:27:27-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-011",
@@ -274,7 +284,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Confirmed at line 2414: catch-all '* ) shift' drops unknown flags silently. Pattern inconsistency vs cmd_clean, cmd_backlog_add and others which all use log_error + return 1. One-line fix. Low risk — additive error handling only.",
-      "completedAt": "2026-03-20T12:25:52-07:00"
+      "completedAt": "2026-03-20T12:25:52-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-012",
@@ -300,7 +311,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Bumped to must: a mistyped --dry-run (e.g. --dryrun or --dry_run) silently executes a live update — the user explicitly tried to preview and got destructive action with no warning. This is the same class of failure as BUG-005 (silent config ignore). update is a state-changing, potentially irreversible operation; the --dry-run flag is a safety net that must be reliable. One-line fix, but high consequence if missed.",
-      "completedAt": "2026-03-20T12:23:47-07:00"
+      "completedAt": "2026-03-20T12:23:47-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-013",
@@ -327,7 +339,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Both cmd_groom (line 2262) and cmd_metrics (line 2470) use single-check pattern instead of proper while/case loop. Lower severity than BUG-011/012 since these commands have fewer dangerous flags, but still violates CLI consistency. Two functions to fix, same pattern each. Low risk.",
-      "completedAt": "2026-03-20T12:43:00-07:00"
+      "completedAt": "2026-03-20T12:43:00-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-014",
@@ -353,7 +366,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "No option parsing at all in cmd_backlog_populate. Fix is additive — add a while/case loop with a catch-all that rejects all arguments since populate takes no flags. Low risk, same pattern as BUG-011/012/013.",
-      "completedAt": "2026-03-20T12:35:08-07:00"
+      "completedAt": "2026-03-20T12:35:08-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-015",
@@ -379,7 +393,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Catch-all in cmd_run interprets --flag-typos as item IDs. Fix is a single guard in the catch-all: check if arg starts with '--' and reject it. Low risk — only changes error behavior, not normal paths.",
-      "completedAt": "2026-03-20T12:37:09-07:00"
+      "completedAt": "2026-03-20T12:37:09-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-016",
@@ -405,7 +420,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "PO bump to should: flags like --step, --clear-steps, --ac, --ac-verify, --clear-ac were added specifically to enable CLI-first grooming without JSON editing. Hiding 9 of 18 flags in the early usage message undermines the discoverability of that entire investment. Users who type 'backlog edit' to learn the options will think those features don't exist. This is a documentation debt that defeats the purpose of BUG-006, BUG-007, and BUG-009.",
-      "completedAt": "2026-03-20T12:39:01-07:00"
+      "completedAt": "2026-03-20T12:39:01-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-017",
@@ -432,7 +448,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "cmd_backlog_edit already validates all flags with validate_arg; cmd_backlog_add inconsistently skips it for most flags. Additive fix — add validate_arg calls. Low risk, small scope.",
-      "completedAt": "2026-03-20T12:41:01-07:00"
+      "completedAt": "2026-03-20T12:41:01-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-018",
@@ -458,7 +475,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Both cmd_backlog_show and cmd_backlog_check silently drop extra positional args. Additive check: if $# > 1 after extracting ID, error out. Low risk, two functions to fix.",
-      "completedAt": "2026-03-20T12:55:35-07:00"
+      "completedAt": "2026-03-20T12:55:35-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-019",
@@ -483,7 +501,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Clear behavioral bug: gates failing but exit 0 is wrong. One-line fix — add return 1 in else branch. Low risk, high value for automation users.",
-      "completedAt": "2026-03-20T12:54:00-07:00"
+      "completedAt": "2026-03-20T12:54:00-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-020",
@@ -508,7 +527,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "PO bump to must: silent JSON corruption of backlog data when AC text contains quotes/backslash is in the same class as BUG-005 — user does the right thing, gets wrong behavior, no signal. A corrupted item fails at sprint time with a cryptic error, not at edit time where the fix is obvious. The mid-loop flush is the single broken path; final-flush is correct. One-line fix with high consequence if left unresolved.",
-      "completedAt": "2026-03-20T12:52:08-07:00"
+      "completedAt": "2026-03-20T12:52:08-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-021",
@@ -535,7 +555,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Same pattern as BUG-017 (cmd_backlog_add missing validate_arg) but for cmd_backlog_list. Two flag cases need validate_arg added. Low risk, additive only.",
-      "completedAt": "2026-03-20T13:33:11-07:00"
+      "completedAt": "2026-03-20T13:33:11-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-022",
@@ -561,7 +582,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Silent success on write failure is the same class as BUG-005 (user does right thing, gets wrong behavior, no signal). The return code is not checked after remove_items_by_status — add || return 1 guard on both calls. Low risk, additive error handling only.",
-      "completedAt": "2026-03-20T13:12:54-07:00"
+      "completedAt": "2026-03-20T13:12:54-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-023",
@@ -588,7 +610,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "|| true suppresses all errors including legitimate write failures. Best-effort semantics should still apply (don't abort sprint on metadata write failure), but we should warn. Split: empty source_file case (item not found = expected, keep silent) vs write failure case (unexpected = log_warn). Low risk, additive warning only.",
-      "completedAt": "2026-03-20T13:15:00-07:00"
+      "completedAt": "2026-03-20T13:15:00-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-024",
@@ -614,7 +637,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Missing validate_arg in --ac-verify in cmd_backlog_add is the last validate_arg gap after BUG-017 fixed the others. cmd_backlog_edit already has validate_arg for --ac-verify at line 3915 — add the same call one line before the pending_ac check in cmd_backlog_add. One-line fix, low risk. Steps and AC are concrete.",
-      "completedAt": "2026-03-20T13:28:32-07:00"
+      "completedAt": "2026-03-20T13:28:32-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-025",
@@ -640,7 +664,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Same class as BUG-021 (missing validate_arg for value-bearing flag). The cmd_review --since case is the only remaining value-bearing flag without validate_arg in cmd_review. One-line fix. Compare with cmd_backlog_history --since which correctly validates at lines 4019-4025. Low risk, additive only.",
-      "completedAt": "2026-03-20T13:31:07-07:00"
+      "completedAt": "2026-03-20T13:31:07-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-026",
@@ -667,7 +692,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Pattern inconsistency: cmd_backlog_history validates --since date format with ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ at lines 4022-4024; cmd_backlog_edit --groomed-at does no format check. Add the same regex validation in the shift-2 (user-provided value) path only — the default-to-today path is already correct. Low risk, additive. Note: --groomed-at accepts optional value so the validate_arg pattern doesn't apply — must validate after reading.",
-      "completedAt": "2026-03-20T13:58:39-07:00"
+      "completedAt": "2026-03-20T13:58:39-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-027",
@@ -692,7 +718,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T15:39:36-07:00"
+      "completedAt": "2026-03-20T15:39:36-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-028",
@@ -718,7 +746,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T15:35:57-07:00"
+      "completedAt": "2026-03-20T15:35:57-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-029",
@@ -743,7 +773,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T15:49:26-07:00"
+      "completedAt": "2026-03-20T15:49:26-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-030",
@@ -769,7 +801,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Latent correctness bug: FEAT-*/BUG-* prefix routing skips existence check. If item was cleaned from backlog, resolve_backlog_file still returns the old filename, causing find_item to fail with a confusing jq error instead of 'item not found'. Fix is additive: add existence check in the prefix case branches before returning, falling through to full search if not found. Low risk, clear scope.",
-      "completedAt": "2026-03-20T18:02:49-07:00"
+      "completedAt": "2026-03-20T18:02:49-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-031",
@@ -795,7 +828,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "UX gap: 'aishore status' is the go-to command for checking system state, but it shows nothing about an actively running sprint. Users running status mid-sprint see an empty ready list with no explanation — they can't tell if a sprint is running or if something is wrong. sprint.json already tracks the active item; this is a display-only change in cmd_status(). Low risk, additive.",
-      "completedAt": "2026-03-20T18:04:57-07:00"
+      "completedAt": "2026-03-20T18:04:57-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-032",
@@ -821,7 +855,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Display bug in backlog history: duration=0 produces '0' in the table which looks wrong and breaks column alignment. Items manually marked done or archived before sprint started all have duration=0. Fix is display-only: show '-' for zero/null, format seconds as Xm Ys for non-zero. Low risk.",
-      "completedAt": "2026-03-20T18:10:11-07:00"
+      "completedAt": "2026-03-20T18:10:11-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-033",
@@ -849,7 +884,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Missing --scope flag at add-time is a workflow gap — users must run two commands (add + edit) to create a scope-constrained item. The pattern already exists: --ac and --step both follow the accumulate-to-array then write-as-json approach. Scope follows the same pattern. Low risk, additive only.",
-      "completedAt": "2026-03-20T18:07:57-07:00"
+      "completedAt": "2026-03-20T18:07:57-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-034",
@@ -875,7 +911,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Correctness issue: non-numeric ID suffixes cause tonumber to throw in jq, silently swallowed by 2>/dev/null, potentially causing ID conflicts. Fix is additive: add select(test(\"^[0-9]+$\")) before tonumber in both the BACKLOG_FILES loop and archive scan. Low risk, small scope.",
-      "completedAt": "2026-03-20T18:13:09-07:00"
+      "completedAt": "2026-03-20T18:13:09-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-035",
@@ -909,7 +946,8 @@
       "lastFailReason": "Validator agent rejected implementation",
       "lastFailAt": "2026-03-20T19:14:01-07:00",
       "failCount": 2,
-      "completedAt": "2026-03-21T08:05:23-07:00"
+      "completedAt": "2026-03-21T08:05:23-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-036",
@@ -941,7 +979,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Real bug: sed '/^\\{/,/^\\}/p' pattern only matches JSON starting at column 0. Claude commonly outputs JSON inside markdown code blocks or with leading spaces. The fix uses jq itself for extraction which is far more robust. Priority should — refine is a recovery path, failures here mean no spec recovery on exhausted retries.",
-      "completedAt": "2026-03-20T18:24:22-07:00"
+      "completedAt": "2026-03-20T18:24:22-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-037",
@@ -973,7 +1012,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "UX bug: backlog history is barely readable without titles. The archive doesn't store titles so we need to look them up from active backlogs, with fallback for cleaned items. Title lookup is a join on two small JSON files — cheap. Priority should.",
-      "completedAt": "2026-03-20T18:27:25-07:00"
+      "completedAt": "2026-03-20T18:27:25-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-038",
@@ -1004,7 +1044,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "Real portability bug: md5sum is GNU-only. macOS users get silent failure in the groom progress monitor. The fix is the same portability pattern already used in verify_checksum(). Priority should — macOS is a primary development platform for Claude Code users.",
-      "completedAt": "2026-03-20T18:29:45-07:00"
+      "completedAt": "2026-03-20T18:29:45-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-039",
@@ -1035,7 +1076,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
       "groomingNotes": "API inconsistency: --step and --ac append, but --depends-on replaces. Fix is straightforward jq change. Adding --clear-depends-on completes the pattern. Priority could — less common operation than steps/AC but inconsistency is a footgun.",
-      "completedAt": "2026-03-20T18:34:11-07:00"
+      "completedAt": "2026-03-20T18:34:11-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-040",
@@ -1060,7 +1102,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T19:17:00-07:00"
+      "completedAt": "2026-03-20T19:17:00-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-041",
@@ -1083,7 +1127,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T21:41:19-07:00"
+      "completedAt": "2026-03-20T21:41:19-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-042",
@@ -1106,7 +1152,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T21:43:29-07:00"
+      "completedAt": "2026-03-20T21:43:29-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-043",
@@ -1132,7 +1180,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T19:20:20-07:00"
+      "completedAt": "2026-03-20T19:20:20-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-044",
@@ -1161,7 +1211,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T19:27:20-07:00"
+      "completedAt": "2026-03-20T19:27:20-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-045",
@@ -1186,7 +1238,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T19:31:13-07:00"
+      "completedAt": "2026-03-20T19:31:13-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-046",
@@ -1212,7 +1266,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T20:03:58-07:00"
+      "completedAt": "2026-03-20T20:03:58-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-047",
@@ -1237,7 +1293,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T20:17:38-07:00"
+      "completedAt": "2026-03-20T20:17:38-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-048",
@@ -1262,7 +1320,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T20:27:13-07:00"
+      "completedAt": "2026-03-20T20:27:13-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-049",
@@ -1287,7 +1347,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T22:01:25-07:00"
+      "completedAt": "2026-03-20T22:01:25-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-050",
@@ -1311,7 +1373,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T22:03:50-07:00"
+      "completedAt": "2026-03-20T22:03:50-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-051",
@@ -1334,7 +1398,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T22:13:46-07:00"
+      "completedAt": "2026-03-20T22:13:46-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-052",
@@ -1359,7 +1425,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T22:18:03-07:00"
+      "completedAt": "2026-03-20T22:18:03-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-053",
@@ -1382,7 +1450,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T22:28:44-07:00"
+      "completedAt": "2026-03-20T22:28:44-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-054",
@@ -1405,7 +1475,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T22:30:49-07:00"
+      "completedAt": "2026-03-20T22:30:49-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-055",
@@ -1428,7 +1500,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T22:33:29-07:00"
+      "completedAt": "2026-03-20T22:33:29-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-056",
@@ -1451,7 +1525,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T20:31:10-07:00"
+      "completedAt": "2026-03-20T20:31:10-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-057",
@@ -1473,7 +1549,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T22:35:07-07:00"
+      "completedAt": "2026-03-20T22:35:07-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-058",
@@ -1496,7 +1574,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T22:38:52-07:00"
+      "completedAt": "2026-03-20T22:38:52-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-059",
@@ -1518,7 +1598,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T22:40:15-07:00"
+      "completedAt": "2026-03-20T22:40:15-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-060",
@@ -1553,7 +1635,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T19:37:39-07:00"
+      "completedAt": "2026-03-20T19:37:39-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-061",
@@ -1583,7 +1667,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T19:42:24-07:00"
+      "completedAt": "2026-03-20T19:42:24-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-062",
@@ -1614,7 +1700,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T19:49:23-07:00"
+      "completedAt": "2026-03-20T19:49:23-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-063",
@@ -1644,7 +1732,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T19:52:23-07:00"
+      "completedAt": "2026-03-20T19:52:23-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-064",
@@ -1679,7 +1769,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T20:36:23-07:00"
+      "completedAt": "2026-03-20T20:36:23-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-065",
@@ -1707,7 +1799,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T19:55:45-07:00"
+      "completedAt": "2026-03-20T19:55:45-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-066",
@@ -1735,7 +1829,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T20:40:35-07:00"
+      "completedAt": "2026-03-20T20:40:35-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-067",
@@ -1765,7 +1861,9 @@
       "readyForSprint": true,
       "lastFailReason": "Validator agent rejected implementation",
       "lastFailAt": "2026-03-20T20:43:30-07:00",
-      "failCount": 1
+      "failCount": 1,
+      "groomedAt": "2026-03-21",
+      "groomedNotes": null
     },
     {
       "id": "BUG-068",
@@ -1795,7 +1893,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T20:50:34-07:00"
+      "completedAt": "2026-03-20T20:50:34-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-069",
@@ -1824,7 +1924,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T20:54:59-07:00"
+      "completedAt": "2026-03-20T20:54:59-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-070",
@@ -1857,7 +1959,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T20:58:05-07:00"
+      "completedAt": "2026-03-20T20:58:05-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-071",
@@ -1891,7 +1995,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T21:04:03-07:00"
+      "completedAt": "2026-03-20T21:04:03-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-072",
@@ -1931,7 +2037,9 @@
       "readyForSprint": true,
       "lastFailReason": "Validator agent rejected implementation",
       "lastFailAt": "2026-03-20T21:18:26-07:00",
-      "failCount": 1
+      "failCount": 1,
+      "groomedAt": "2026-03-21",
+      "groomedNotes": null
     },
     {
       "id": "BUG-073",
@@ -1966,7 +2074,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T21:26:39-07:00"
+      "completedAt": "2026-03-20T21:26:39-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-074",
@@ -1996,7 +2106,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T21:35:48-07:00"
+      "completedAt": "2026-03-20T21:35:48-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-075",
@@ -2026,7 +2138,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T21:38:54-07:00"
+      "completedAt": "2026-03-20T21:38:54-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-076",
@@ -2054,7 +2168,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T22:42:41-07:00"
+      "completedAt": "2026-03-20T22:42:41-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-077",
@@ -2085,7 +2201,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T22:44:56-07:00"
+      "completedAt": "2026-03-20T22:44:56-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-078",
@@ -2113,7 +2231,9 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-20T22:49:36-07:00"
+      "completedAt": "2026-03-20T22:49:36-07:00",
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-079",
@@ -2138,7 +2258,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": false,
+      "groomedAt": null,
+      "groomedNotes": null
     },
     {
       "id": "BUG-080",
@@ -2162,7 +2284,71 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": false,
+      "groomedAt": null,
+      "groomedNotes": null
+    },
+    {
+      "id": "BUG-081",
+      "title": "backlog history title column always shows '-' — title not stored in archive",
+      "intent": "backlog history shows real item titles. mark_complete archives the title field so history output is human-readable.",
+      "description": "cmd_backlog_history displays a TITLE column and reads .title from sprints.jsonl, but mark_complete never writes a title field to the archive. Every row shows '-'. BUG-037 added the title column to the history output but missed adding title to the archive write in mark_complete.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In mark_complete(), fetch the item title from the source backlog file alongside priority and category (extend the single jq call at line 1180 to also extract .title)",
+        "Pass title as --arg to the jq -cn archive write block and include title in the output JSON object",
+        "Verify: run a sprint, then run backlog history and confirm the title column shows the item title"
+      ],
+      "acceptanceCriteria": [
+        "mark_complete writes a title field to sprints.jsonl",
+        "backlog history title column shows item titles instead of '-'",
+        "shellcheck passes"
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-21"
+    },
+    {
+      "id": "BUG-082",
+      "title": "Update CHANGELOG.md and bump version to v0.3.5",
+      "intent": "CHANGELOG.md reflects all work completed since v0.3.4 and VERSION reads 0.3.5. Users and contributors can see exactly what changed.",
+      "description": "VERSION is 0.3.4 and CHANGELOG.md documents up to v0.3.4 (2026-03-20). Since then, 20+ items were completed: BUG-035 through BUG-078 (refactoring, simplification, readiness gate fixes, dependency tracking fixes). These changes constitute a patch release (v0.3.5) — no new user-facing features, only internal improvements and bug fixes.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Bump .aishore/VERSION from 0.3.4 to 0.3.5",
+        "Add a [0.3.5] - 2026-03-21 section to docs/CHANGELOG.md with Fixed and Changed subsections covering the work done: collect_done_ids now scans archive for dependency resolution, check_readiness_gates hardened (advisory hints extracted), groom output slimmed, refactored internal helpers (mark_complete, cmd_metrics, cmd_run, cmd_update, merge flow, backlog history, backlog add/edit, cmd_groom, populate), verbose defensive coding removed",
+        "Run .aishore/aishore checksums to regenerate checksums after version bump",
+        "Verify: .aishore/aishore version outputs 0.3.5"
+      ],
+      "acceptanceCriteria": [
+        "VERSION file contains 0.3.5",
+        "docs/CHANGELOG.md has a [0.3.5] section dated 2026-03-21",
+        "[0.3.5] section covers the 20+ bug/refactor items completed since v0.3.4",
+        ".aishore/aishore version outputs 0.3.5",
+        "checksums.sha256 is updated (aishore checksums exits 0)"
+      ],
+      "scope": [
+        ".aishore/VERSION",
+        "docs/CHANGELOG.md",
+        ".aishore/checksums.sha256"
+      ],
+      "dependsOn": [
+        "BUG-067",
+        "BUG-072",
+        "BUG-081"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-03-21",
+      "groomingNotes": "Version bump should run after BUG-067, BUG-072, and BUG-081 complete so the changelog covers all work in this release cycle. Updated dependsOn accordingly. BUG-082 itself will not be readyForSprint until those three are done."
     }
   ]
 }
