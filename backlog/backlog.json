@@ -724,6 +724,28 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "New user onboarding gap: users who type 'backlog add' with no flags get a minimal item with empty steps/AC that fails readiness gates. Interactive mode closes this by guiding them through all required fields. Pattern exists: init already does interactive prompts. TTY check ensures scripted use is unaffected. No external deps.",
       "completedAt": "2026-03-20T17:57:24-07:00"
+    },
+    {
+      "id": "FEAT-026",
+      "title": "Add intent semantics to base developer and validator agent prompts",
+      "intent": "Add a one-sentence explanation of intent as the north-star tie-breaker directly in developer.md and validator.md so agent prompts are self-contained even without orchestrator injection",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Add to developer.md: when implementation and AC conflict, intent wins",
+        "Add to validator.md: verify intent fulfillment, not just mechanical AC pass",
+        "Keep additions minimal — one sentence each, not duplicating the orchestrator injection"
+      ],
+      "acceptanceCriteria": [
+        "developer.md contains guidance about intent being the north star",
+        "validator.md contains guidance about verifying intent beyond AC"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
     }
   ]
 }

@@ -1035,6 +1035,469 @@
       "groomedAt": "2026-03-20",
       "groomingNotes": "API inconsistency: --step and --ac append, but --depends-on replaces. Fix is straightforward jq change. Adding --clear-depends-on completes the pattern. Priority could — less common operation than steps/AC but inconsistency is a footgun.",
       "completedAt": "2026-03-20T18:34:11-07:00"
+    },
+    {
+      "id": "BUG-040",
+      "title": "Extract run_validated_command() helper — validation execution duplicated 3 times",
+      "intent": "Eliminate the 3 copies of timeout-aware validation command execution (pre-flight, main validation, AC verification) by extracting a single run_validated_command() helper function",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Find all 3 instances of the timeout/bash -c VALIDATE_CMD pattern (pre-flight, main validation, AC verification)",
+        "Extract a run_validated_command() function that takes a label and output file, handles timeout vs gtimeout detection, and runs the command",
+        "Replace all 3 call sites with calls to the new helper",
+        "Run shellcheck and verify no regressions"
+      ],
+      "acceptanceCriteria": [
+        "Only one function contains the timeout-aware bash -c VALIDATE_CMD pattern",
+        "All 3 original call sites use the new helper",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-041",
+      "title": "Cache timeout command detection at startup instead of repeated runtime checks",
+      "intent": "Detect timeout vs gtimeout once at startup and store in TIMEOUT_CMD variable, eliminating repeated command -v checks scattered through the script",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Add TIMEOUT_CMD detection near other startup constants after set -euo pipefail",
+        "Replace all inline command -v timeout and command -v gtimeout checks with usage of TIMEOUT_CMD",
+        "Verify gtimeout fallback still works on macOS"
+      ],
+      "acceptanceCriteria": [
+        "No command -v timeout or command -v gtimeout checks remain outside the single detection point",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-042",
+      "title": "Extract require_numeric_arg() helper — numeric validation duplicated for multiple flags",
+      "intent": "Replace the 3+ copies of numeric argument validation (regex check, log error, return 1) with a single require_numeric_arg() helper function",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Identify all places that validate numeric CLI arguments with the same if/regex/error pattern",
+        "Extract require_numeric_arg() that takes flag name and value, validates, and errors",
+        "Replace all call sites"
+      ],
+      "acceptanceCriteria": [
+        "Only one function contains the numeric argument validation logic",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-043",
+      "title": "Decompose _run_retry_loop() into focused sub-functions",
+      "intent": "Break the 167-line _run_retry_loop() into 3-4 focused functions (run_preflight, run_developer_cycle, run_validation_cycle) so each does one thing and is independently testable",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Extract run_preflight_validation() — baseline validation before developer runs",
+        "Extract run_developer_cycle() — developer agent invocation with fix command",
+        "Extract run_validation_cycle() — scope check, validation cmd, AC verify, validator agent",
+        "Refactor _run_retry_loop to orchestrate the extracted functions",
+        "Verify sprint execution still works end-to-end"
+      ],
+      "acceptanceCriteria": [
+        "_run_retry_loop is under 60 lines",
+        "Each extracted function has a single clear responsibility",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-044",
+      "title": "Decompose cmd_run() into focused sub-functions",
+      "intent": "Break the 477-line cmd_run() into 5-6 focused functions separating arg parsing, git operations, sprint loop, auto-groom logic, and summary reporting",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Extract cmd_run_parse_args() for option parsing",
+        "Extract setup_sprint_environment() for lock, stash, worktree, config loading",
+        "Extract run_sprint_loop() for the core pick-implement-validate-merge cycle",
+        "Extract print_sprint_summary() for end-of-run reporting",
+        "Refactor cmd_run to orchestrate the extracted functions",
+        "Verify sprint execution still works end-to-end"
+      ],
+      "acceptanceCriteria": [
+        "cmd_run is under 80 lines",
+        "Each extracted function has a single clear responsibility",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [
+        "BUG-043"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-045",
+      "title": "Consolidate duplicate item filtering logic between pick_item() and list_pickable_ids()",
+      "intent": "Eliminate the 95% overlapping jq filters in pick_item() and list_pickable_ids() by extracting a shared pickable-items jq filter or helper function",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Compare the jq filters in pick_item() and list_pickable_ids() to identify exact overlap",
+        "Extract a shared jq filter variable or helper function for pickable item selection",
+        "Refactor both functions to use the shared filter",
+        "Verify item picking still works correctly with dependencies and priority ordering"
+      ],
+      "acceptanceCriteria": [
+        "The core filtering logic (ready, intent, dependencies, skip list) exists in exactly one place",
+        "Both pick_item and list_pickable_ids produce identical results to before",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-046",
+      "title": "Replace global side-effect variables with explicit function returns",
+      "intent": "Eliminate CHECK_GATES_WARNINGS, SCOPE_VIOLATION_REPORT, AC_VERIFY_REPORT, and GROOM_ITEMS_ADDED/SKIPPED globals by having functions return results via stdout capture instead of global mutation",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Refactor check_readiness_gates() to output warnings to stdout instead of setting CHECK_GATES_WARNINGS",
+        "Refactor check_scope_violations() to output report to stdout instead of setting SCOPE_VIOLATION_REPORT",
+        "Refactor run_ac_verification() to output report to stdout instead of setting AC_VERIFY_REPORT",
+        "Refactor enforce_groom_limits() to return counts via stdout instead of global GROOM_ITEMS_ADDED/SKIPPED",
+        "Update all callers to capture output instead of reading globals"
+      ],
+      "acceptanceCriteria": [
+        "No CHECK_GATES_WARNINGS, SCOPE_VIOLATION_REPORT, AC_VERIFY_REPORT, GROOM_ITEMS_ADDED, or GROOM_ITEMS_SKIPPED global variables exist",
+        "All callers capture function output explicitly",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-047",
+      "title": "Standardize error handling — functions log+return, only main exits",
+      "intent": "Establish and enforce a consistent error handling convention: all functions use log_error + return 1 (never exit 1), only the main entry point and truly fatal pre-flight checks may call exit",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Audit all exit 1 calls in functions (not main) and determine which should be return 1",
+        "Convert inappropriate exit 1 calls to return 1 with proper log_error",
+        "Add log_error to any bare return 1 calls that silently fail",
+        "Document the convention in a comment near the error handling functions"
+      ],
+      "acceptanceCriteria": [
+        "No function other than main entry point or pre-flight checks uses exit 1",
+        "Every return 1 is preceded by a log_error call",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-048",
+      "title": "Extract shared backlog iteration helper — for-loop-over-BACKLOG_FILES pattern repeated 10+ times",
+      "intent": "Replace the 10+ copies of the for f in BACKLOG_FILES / jq operation pattern with reusable helpers like map_backlog_files() and sum_backlog_field()",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Identify all instances of the for f in BACKLOG_FILES iteration pattern",
+        "Categorize by usage: summing counts, finding items, transforming items",
+        "Extract sum_backlog_field() for count aggregation across files",
+        "Extract find_in_backlogs() for item lookup across files",
+        "Replace all call sites with the appropriate helper"
+      ],
+      "acceptanceCriteria": [
+        "The raw for f in BACKLOG_FILES pattern appears in at most 2 places (the helpers themselves)",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-049",
+      "title": "Extract shared option parser to reduce duplication across cmd_* functions",
+      "intent": "Replace the duplicated while/case/shift option parsing in every cmd_* function with a shared parse_opts() helper or standardized pattern, eliminating ~100 lines of boilerplate",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Catalog all cmd_* functions and their option parsing patterns",
+        "Design a shared parse_opts() helper or declare-based pattern",
+        "Refactor cmd_run, cmd_backlog_add, cmd_backlog_edit, cmd_backlog_list and others to use it",
+        "Ensure unknown option rejection still works per-command"
+      ],
+      "acceptanceCriteria": [
+        "Option parsing boilerplate is reduced by at least 50%",
+        "All commands still correctly parse their flags and reject unknown options",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-050",
+      "title": "Replace JSON array string concatenation with jq -s in backlog add",
+      "intent": "Replace the manual JSON array construction via string concatenation in a loop (ac_json building) with proper jq -s array construction to avoid potential escaping issues",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Find the string concatenation pattern that builds ac_json with manual comma insertion",
+        "Replace with printf and jq -s . to build the array safely",
+        "Verify AC entries with special characters (quotes, newlines) are handled correctly"
+      ],
+      "acceptanceCriteria": [
+        "No manual JSON array construction via string concatenation exists in the codebase",
+        "AC entries with quotes and special characters round-trip correctly",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-051",
+      "title": "Reduce double jq parsing — extract all needed fields in one pass",
+      "intent": "Eliminate the pattern of extracting a jq projection then re-parsing the result for individual fields, by extracting all needed fields in a single jq pass using @base64 or multi-output",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Identify all places where jq output is captured then re-parsed with another jq call",
+        "Consolidate into single jq calls that extract all needed fields at once",
+        "Use read or IFS-based splitting for multiple field extraction"
+      ],
+      "acceptanceCriteria": [
+        "No instance of echo item_json pipe jq for single field extraction after a prior jq projection",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-052",
+      "title": "Clean up unused and redundant variable declarations",
+      "intent": "Remove or properly scope variables that are declared globally but used locally (LAST_AGENT_LOG, GROOM_ITEMS_ADDED/SKIPPED init), fix the file_count/line_count naming bug, and clean up mid-file global declarations",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Move LAST_AGENT_LOG to local scope in the functions that use it",
+        "Remove redundant global initialization of GROOM_ITEMS_ADDED/SKIPPED (already reset inside function)",
+        "Fix variable named file_count that should be line_count in truncate_sprints_jsonl",
+        "Consolidate all remaining global variable declarations to the top of the script"
+      ],
+      "acceptanceCriteria": [
+        "No global variables are declared mid-file (all at top or inside functions as local)",
+        "The file_count/line_count naming mismatch is fixed",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-053",
+      "title": "Use printf instead of echo for variable output throughout the script",
+      "intent": "Replace ~20 instances of echo with variable arguments with printf to avoid issues when variables start with dash or contain escape sequences, following POSIX best practices",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Find all echo calls that output variable content (not static strings)",
+        "Replace with printf '%s\\n' for simple variable output",
+        "Leave echo for static string literals which are safe"
+      ],
+      "acceptanceCriteria": [
+        "No echo call outputs an unquoted or potentially-dash-prefixed variable",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-054",
+      "title": "Hardcoded safe fields in protect_items_from_groom() should be a declared constant",
+      "intent": "Extract the hardcoded safe fields list in protect_items_from_groom() into a named constant array so the merge logic is transparent and maintainable",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Find the hardcoded safe fields comparison in protect_items_from_groom()",
+        "Extract to a GROOM_SAFE_FIELDS constant array declared with other constants",
+        "Update the jq filter to reference the constant"
+      ],
+      "acceptanceCriteria": [
+        "Safe fields are declared as a named constant, not inline in the jq filter",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-055",
+      "title": "Duplicate CLI commands section in groom agent prompts — factor out shared preamble",
+      "intent": "Eliminate the ~8 lines of duplicated CLI command reference between product-owner.md and tech-lead.md by extracting a shared section or having the orchestrator inject it",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Compare the CLI commands sections in product-owner.md and tech-lead.md",
+        "Extract shared content to a common block injected by build_agent_prompt() in the orchestrator",
+        "Keep role-specific differences (--type feat vs --type bug) in the individual prompts"
+      ],
+      "acceptanceCriteria": [
+        "No duplicated CLI command text exists across agent prompt files",
+        "Both groom agents still receive full CLI command guidance"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-056",
+      "title": "Update CHANGELOG.md with v0.3.3 release notes",
+      "intent": "Document all changes since v0.3.2 in CHANGELOG.md so the version file and changelog are in sync",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Review git log from v0.3.2 tag to HEAD to identify all changes",
+        "Write a v0.3.3 section in CHANGELOG.md following the existing format",
+        "Verify VERSION file matches the new CHANGELOG entry"
+      ],
+      "acceptanceCriteria": [
+        "CHANGELOG.md has a v0.3.3 section",
+        "All commits since v0.3.2 are represented in the changelog"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-057",
+      "title": "resolve_backlog_file re-checks expected file in fallback loop — skip it",
+      "intent": "When resolve_backlog_file() fails the fast-path check on the expected file, the fallback loop iterates all BACKLOG_FILES including the one already checked, wasting a jq parse — skip it",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "In resolve_backlog_file(), add a continue condition in the fallback loop when f equals expected",
+        "Verify item resolution still works for all edge cases"
+      ],
+      "acceptanceCriteria": [
+        "The fallback loop skips the already-checked expected file",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-058",
+      "title": "Inconsistent date portability — some date calls lack BSD fallback",
+      "intent": "Add consistent BSD/GNU date handling throughout the script — some calls have macOS fallback (date -j) while others assume GNU date, which will break on macOS without coreutils",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Audit all date command invocations for BSD compatibility",
+        "Extract a portable_date() helper that handles both GNU and BSD date",
+        "Replace direct date calls with the helper where format conversion is needed"
+      ],
+      "acceptanceCriteria": [
+        "All date calls either use the portable helper or only use universally supported formats like +%s",
+        "shellcheck passes"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-059",
+      "title": "Remove TODO placeholder links from docs/PROBLEMS.md",
+      "intent": "Either fill in the evidence links (TODO: Link forum posts, TODO: Link articles) in PROBLEMS.md or remove the placeholder text so the document looks complete",
+      "description": "",
+      "priority": "could",
+      "category": null,
+      "steps": [
+        "Review all TODO placeholders in PROBLEMS.md",
+        "Search for relevant evidence links or remove the placeholders",
+        "Ensure the document reads cleanly without dangling TODOs"
+      ],
+      "acceptanceCriteria": [
+        "No TODO placeholders remain in PROBLEMS.md"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
     }
   ]
 }
