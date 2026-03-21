@@ -4220,6 +4220,7 @@ cmd_backlog_add() {
     local -a ac_entries=()
     local pending_ac=""
     local -a step_entries=()
+    local -a scope_entries=()
 
     local interactive=false
 
@@ -4268,6 +4269,10 @@ cmd_backlog_add() {
             --step)
                 validate_arg "$1" "${2:-}" || return 1
                 step_entries+=("$2")
+                shift 2 ;;
+            --scope)
+                validate_arg "$1" "${2:-}" || return 1
+                scope_entries+=("$2")
                 shift 2 ;;
             *) log_error "Unknown option: $1"; return 1 ;;
         esac
@@ -4424,6 +4429,12 @@ cmd_backlog_add() {
         steps_json=$(printf '%s\n' "${step_entries[@]}" | jq -R . | jq -s .)
     fi
 
+    # Build scope array
+    local scope_json="[]"
+    if [[ ${#scope_entries[@]} -gt 0 ]]; then
+        scope_json=$(printf '%s\n' "${scope_entries[@]}" | jq -R . | jq -s .)
+    fi
+
     # Build dependsOn array
     local depends_json="[]"
     if [[ -n "$depends_on" ]]; then
@@ -4442,6 +4453,7 @@ cmd_backlog_add() {
         --argjson ac_arr "$ac_json" \
         --argjson deps "$depends_json" \
         --argjson steps_arr "$steps_json" \
+        --argjson scope_arr "$scope_json" \
         '.items += [{
             id: $id,
             title: $title,
@@ -4451,6 +4463,7 @@ cmd_backlog_add() {
             category: (if $category == "" then null else $category end),
             steps: $steps_arr,
             acceptanceCriteria: $ac_arr,
+            scope: $scope_arr,
             dependsOn: (if ($deps | length) > 0 then $deps else [] end),
             status: "todo",
             passes: false,
@@ -5122,6 +5135,7 @@ Commands:
     --ac "text"     Add acceptance criterion (repeatable)
     --ac-verify "cmd"  Attach verify command to preceding --ac
     --step "text"   Add implementation step (repeatable, ordered)
+    --scope "glob"  Add scope glob (repeatable)
     --depends-on ID Add dependency on another item (repeatable)
     --interactive   Force interactive mode (prompted for all fields)
   backlog show <ID> Show full detail of one item
