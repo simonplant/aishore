@@ -30,6 +30,7 @@ Commands:
     --title, --intent, --desc, --priority, --status, --category, --ready, --no-ready,
     --groomed-at [date], --groomed-notes "...",
     --step "text"   Append implementation step (repeatable), --clear-steps to reset,
+    --remove-step N Remove step by 1-based index,
     --scope "glob"  Add scope glob (repeatable), --clear-scope to reset,
     --ac "text", --ac-verify "cmd"  Append testable acceptance criteria, --clear-ac to reset,
     --depends-on ID  Add dependency (repeatable), --clear-depends-on to reset

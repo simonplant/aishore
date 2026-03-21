@@ -4552,7 +4552,7 @@ cmd_backlog_show() {
 
 cmd_backlog_edit() {
     local id="${1:-}"
-    [[ -z "$id" ]] && { log_error "Usage: backlog edit <ID> [--title ...] [--intent ...] [--priority ...] [--status ...] [--desc ...] [--category ...] [--depends-on ...] [--clear-depends-on] [--ready] [--no-ready] [--step ...] [--clear-steps] [--scope ...] [--clear-scope] [--ac ...] [--ac-verify ...] [--clear-ac] [--groomed-at ...] [--groomed-notes ...]"; return 1; }
+    [[ -z "$id" ]] && { log_error "Usage: backlog edit <ID> [--title ...] [--intent ...] [--priority ...] [--status ...] [--desc ...] [--category ...] [--depends-on ...] [--clear-depends-on] [--ready] [--no-ready] [--step ...] [--clear-steps] [--remove-step N] [--scope ...] [--clear-scope] [--ac ...] [--ac-verify ...] [--clear-ac] [--groomed-at ...] [--groomed-notes ...]"; return 1; }
     shift
 
     # Verify item exists
@@ -4563,14 +4563,14 @@ cmd_backlog_edit() {
 
     # Parse update flags
     local _e_title="" _e_intent="" _e_desc="" _e_priority="" _e_status="" _e_category="" _e_gnotes=""
-    local _e_ready=false _e_no_ready=false
+    local _e_ready=false _e_no_ready=false _e_remove_step=""
     local _e_clear_scope=false _e_clear_steps=false _e_clear_deps=false _e_clear_ac=false
     local -a scope_vals=() step_vals=() ac_entries=()
 
     parse_opts \
         "val:_e_title:--title" "val:_e_intent:--intent" "val:_e_desc:--desc" \
         "val:_e_priority:--priority" "val:_e_status:--status" "val:_e_category:--category" \
-        "val:_e_gnotes:--groomed-notes" \
+        "val:_e_gnotes:--groomed-notes" "val:_e_remove_step:--remove-step" \
         "bool:_e_ready:--ready" "bool:_e_no_ready:--no-ready" \
         "bool:_e_clear_scope:--clear-scope" "bool:_e_clear_steps:--clear-steps" \
         "bool:_e_clear_deps:--clear-depends-on" "bool:_e_clear_ac:--clear-ac" \
@@ -4599,6 +4599,25 @@ cmd_backlog_edit() {
     [[ "$_e_clear_steps" == "true" ]] && jq_updates+=" | .steps = []"
     [[ "$_e_clear_deps" == "true" ]] && jq_updates+=" | .dependsOn = []"
     [[ "$_e_clear_ac" == "true" ]] && jq_updates+=" | .acceptanceCriteria = []"
+
+    # --remove-step N: validate and remove a single step by 1-based index
+    if [[ -n "$_e_remove_step" ]]; then
+        if ! [[ "$_e_remove_step" =~ ^[0-9]+$ ]] || [[ "$_e_remove_step" -lt 1 ]]; then
+            log_error "--remove-step requires a positive integer (got '$_e_remove_step')"
+            return 1
+        fi
+        local step_count
+        step_count=$(jq --arg id "$id" \
+            '[.items[] | select(.id == $id)][0].steps | length' \
+            "$BACKLOG_DIR/$file") || { log_error "Failed to read steps for $id"; return 1; }
+        if [[ "$_e_remove_step" -gt "$step_count" ]]; then
+            log_error "step $_e_remove_step does not exist ($id has $step_count steps)"
+            return 1
+        fi
+        local rm_idx=$(( _e_remove_step - 1 ))
+        jq_updates+=" | .steps |= del(.[\$rm_idx])"
+        updates+=("--argjson" "rm_idx" "$rm_idx")
+    fi
 
     # Process custom flags from _PARSE_REMAINING (order-dependent)
     local -a deps_vals=()
@@ -4661,7 +4680,7 @@ cmd_backlog_edit() {
     fi
 
     if [[ -z "$jq_updates" ]]; then
-        log_error "No updates specified. Use --title, --intent, --priority, --status, --desc, --category, --depends-on, --clear-depends-on, --ready, --no-ready, --step, --clear-steps, --scope, --clear-scope, --ac, --ac-verify, --clear-ac, --groomed-at, --groomed-notes"
+        log_error "No updates specified. Use --title, --intent, --priority, --status, --desc, --category, --depends-on, --clear-depends-on, --ready, --no-ready, --step, --clear-steps, --remove-step, --scope, --clear-scope, --ac, --ac-verify, --clear-ac, --groomed-at, --groomed-notes"
         return 1
     fi
 
