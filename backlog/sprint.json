@@ -1,35 +1,33 @@
 {
-  "sprintId": "sprint-1774053308",
-  "startedAt": "2026-03-20T17:35:08-07:00",
+  "sprintId": "sprint-1774053468",
+  "startedAt": "2026-03-20T17:37:48-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-017",
-    "title": "Create docs/PROBLEMS.md — the pain points aishore solves, with evidence",
-    "intent": "People search for problems, not solutions — this document must rank for the frustrations that drive users to aishore.",
-    "description": "This is the weakest content area. The only existing source is README.md's 'Why aishore?' section (two paragraphs: vibe coding breaks at scale, no memory between sessions, no quality gate, no batch work). The document needs to articulate specific, googleable failure modes: context loss between AI coding sessions, no regression detection in AI-generated code, no audit trail for AI development decisions, one-shot prompting fails for multi-feature work, no quality gate between AI implementation and merge, AI agents don't self-critique without structure. For each problem, describe the pain as the user experiences it, link evidence where possible (forum posts, tweets, articles about vibe coding limitations), and explain concretely how aishore addresses it. This is part documentation, part SEO, part positioning.",
+    "id": "FEAT-018",
+    "title": "Create docs/ROADMAP.md — what's planned, what's missing, what's prioritized",
+    "intent": "Contributors and evaluators must see where the project is going — a project with no visible roadmap looks abandoned or directionless.",
+    "description": "No roadmap document exists. The trajectory can be inferred from CHANGELOG.md (15 releases, v0.1.0 through v0.3.2, showing evolution from basic sprint runner to autonomous mode with grooming, validation, and diagnostics) and from known limitations (single-repo only, bash-only CLI, Claude Code dependency, no multi-language agent support, no remote/CI execution mode, no plugin system for custom agents). The roadmap should be organized as Now (active work) / Next (committed direction) / Later (vision) / Known Limitations (honest about current constraints). This is a lightweight document — 50-100 lines, not a product spec.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Read README.md 'Why aishore?' section for the seed content (vibe coding limitations, no memory, no quality gate, no batch work)",
-      "Read README.md opening paragraphs for the positioning statement (structured intent-based batch development with inline critic loops)",
-      "Read .aishore/README.md 'The Intent-Driven Model' section for implicit problem statements (why intent-driven is needed vs ad-hoc)",
-      "Compose docs/PROBLEMS.md with one section per problem, each structured as: Problem heading (stated as user would search for it), Description of the pain (2-3 sentences, concrete), Evidence section (link to real discussions — GitHub issues, forum posts, articles about AI coding limitations — or mark as TODO if evidence needs gathering), How aishore addresses this (concrete explanation referencing specific aishore features)",
-      "Cover at minimum these problems: AI coding context loss between sessions, No quality gates on AI-generated code, One-shot prompting fails at project scale, No audit trail for AI development decisions, AI agents don't self-critique without structure, No way to batch AI development work",
-      "Write problem headings as search queries: e.g. 'AI-generated code has no quality gate before merge' not 'Quality Gates'"
+      "Read CHANGELOG.md to understand the project trajectory and what has shipped (v0.1.0 through v0.3.2)",
+      "Review backlog/backlog.json and backlog/bugs.json for any remaining todo items that indicate planned work",
+      "Compose docs/ROADMAP.md with sections: Current Version (what v0.3.x delivers — summarize from CHANGELOG), Now (any active backlog items), Next (committed direction based on trajectory: what the next releases will focus on), Later (vision items: multi-repo support, CI/CD integration, plugin system, non-Claude agent support), Known Limitations (honest list: bash-only, single-repo, Claude Code dependency, macOS/Linux only)",
+      "Keep the document under 100 lines — this is a signpost, not a spec",
+      "Include a 'Want to help?' line at the bottom linking to docs/CONTRIBUTING.md"
     ],
     "acceptanceCriteria": [
-      "docs/PROBLEMS.md exists with at least 6 distinct problem sections",
-      "Each problem is stated as a user would search for it (search-friendly heading)",
-      "Each problem section includes: pain description, evidence or TODO placeholder for evidence, and how aishore addresses it",
-      "The document does not read as marketing copy — it reads as honest problem documentation with concrete solutions",
-      "Problems reference specific aishore features (maturity protocol, commander's intent, backlog system) not vague claims"
+      "docs/ROADMAP.md exists with sections: Current Version, Now, Next, Later, Known Limitations",
+      "Known Limitations is honest about real constraints (bash-only, single-repo, Claude Code dependency)",
+      "The document is under 100 lines",
+      "Each roadmap item is a clear statement, not a vague aspiration"
     ],
     "scope": [
-      "docs/PROBLEMS.md"
+      "docs/ROADMAP.md"
     ],
-    "startedAt": "2026-03-20T17:35:08-07:00",
+    "startedAt": "2026-03-20T17:37:48-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T17:37:47-07:00"
+    "completedAt": "2026-03-20T17:39:22-07:00"
   },
-  "completedAt": "2026-03-20T17:37:47-07:00",
+  "completedAt": "2026-03-20T17:39:22-07:00",
   "attempts": 1
 }

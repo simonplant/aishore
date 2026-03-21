@@ -494,10 +494,12 @@
         "docs/ROADMAP.md"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "readyForSprint": true,
+      "status": "done",
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Raised from could to should — FEAT-018 is a hard dependency of FEAT-021 (must). A must item cannot be blocked by a could item. ROADMAP.md must exist before README can link to it in the Links section."
+      "groomingNotes": "Raised from could to should — FEAT-018 is a hard dependency of FEAT-021 (must). A must item cannot be blocked by a could item. ROADMAP.md must exist before README can link to it in the Links section.",
+      "passes": true,
+      "completedAt": "2026-03-20T17:39:22-07:00"
     },
     {
       "id": "FEAT-019",
