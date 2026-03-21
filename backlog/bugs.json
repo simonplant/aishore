@@ -3456,11 +3456,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "set -euo pipefail makes any failing read a script exit. This hits in CI and any piped invocation. Fix is '|| true' — one token change. The review prompt is already guarded by auto_mode and auto_review checks, so the only missing guard is read's own exit code.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T13:30:28-07:00"
     },
     {
       "id": "BUG-121",

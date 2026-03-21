@@ -1,30 +1,30 @@
 {
-  "sprintId": "sprint-1774124728",
-  "startedAt": "2026-03-21T13:25:28-07:00",
+  "sprintId": "sprint-1774124904",
+  "startedAt": "2026-03-21T13:28:24-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-119",
-    "title": "backlog history table misaligns on long titles — no truncation applied",
-    "intent": "The 'backlog history' table must truncate titles to 40 characters with an ellipsis, matching the truncation already applied in 'status' recent sprints, so the table columns stay aligned regardless of title length.",
-    "description": "cmd_backlog_history renders title using '%s' with no truncation (lines ~4794, 4801). Any title longer than ~30 chars pushes all subsequent columns right, misaligning ID, date, status, and duration. _status_output at line 3603 already does this correctly: '(.title // \"-\") | if length > 40 then .[:40] + \"…\" else . end'. The history command needs the same treatment.",
+    "id": "BUG-120",
+    "title": "print_sprint_summary read prompt exits script via set -e when stdin is not a terminal",
+    "intent": "The architecture review prompt in print_sprint_summary must not cause the script to exit when stdin is closed or non-interactive. The read call must be guarded so a non-tty or piped stdin produces a graceful skip, not a set -e triggered exit.",
+    "description": "In print_sprint_summary (line ~3090), a bare 'read -r -p \"...\" _review_answer' runs when auto_review is not set. Bash 'read' returns exit code 1 when stdin is at EOF (CI, pipes, or non-interactive shells). Because the script uses 'set -euo pipefail', a failing read propagates as an unhandled error and exits the script mid-session. The fix is to append '|| true' to the read call, or to guard the entire block with '[[ -t 0 ]]' so the prompt is only shown in interactive sessions. The '|| true' approach is sufficient and minimal.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In the jq filter inside cmd_backlog_history (both the --all path and the default path), replace '.title // \"-\"' with '((.title // \"-\") | if length > 40 then .[:40] + \"…\" else . end)'",
-      "Verify the table renders correctly with a long title (>40 chars)",
-      "Verify the table renders correctly with a short title (<40 chars)",
+      "Locate the 'read -r -p \"  Run architecture review? [y/N] \" _review_answer' call in print_sprint_summary (line ~3090)",
+      "Append '|| true' to make it: 'read -r -p \"  Run architecture review? [y/N] \" _review_answer || true'",
+      "Verify that in a non-interactive context (piped stdin), the function completes without error and skips the review",
+      "Verify that in an interactive context, the prompt still works correctly",
       "Run shellcheck and confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "A title longer than 40 characters is truncated to 40 chars + ellipsis in history output",
-      "A title of 40 characters or fewer is displayed unchanged",
-      "Table columns (ID, DATE, STATUS, DURATION) stay aligned regardless of title length",
+      "Running 'echo \"\" | .aishore/aishore auto done' (piped stdin) does not exit with an error from the review prompt",
+      "In an interactive session with valid 'y' input, the architecture review is still triggered",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T13:25:28-07:00",
+    "startedAt": "2026-03-21T13:28:24-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T13:28:22-07:00"
+    "completedAt": "2026-03-21T13:30:28-07:00"
   },
-  "completedAt": "2026-03-21T13:28:22-07:00",
+  "completedAt": "2026-03-21T13:30:28-07:00",
   "attempts": 1
 }
