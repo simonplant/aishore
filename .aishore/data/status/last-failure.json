@@ -1,0 +1,12 @@
+{
+  "itemId": "BUG-035",
+  "reason": "Validator failed",
+  "detail": "Validator agent rejected implementation",
+  "timestamp": "2026-03-20T19:14:01-07:00",
+  "agentLog": "/home/simon/dev/aishore/.aishore/data/logs/validator-20260320T191246.log",
+  "result": {
+    "status": "fail",
+    "reason": "AC2 not met: check_readiness_gates() has its own dependency-checking logic (lines 606-629) that searches only active backlog files directly and does not call collect_done_ids(). When a dependency was completed and then cleaned (archived), dep_item is empty and the function emits 'Dependency <ID>: not found in any backlog' — the exact false warning the bug describes. The fix only updated collect_done_ids() and its callers (pick_item, list_pickable_ids), but left check_readiness_gates() unchanged. AC1, AC3, and AC4 are met."
+  },
+  "logTail": "**FAIL** — AC2 is not met.\n\n`check_readiness_gates()` (lines 606–629) has its own dependency-checking logic independent of `collect_done_ids()`. It searches active backlog files directly, and if a dependency isn't found there (because it was archived via `clean`), it emits:\n\n```\n- Dependency <ID>: not found in any backlog\n```\n\nThe fix patched `collect_done_ids()` and the callers that use it (`pick_item`, `list_pickable_ids`), but `check_readiness_gates()` was not updated to consult the archive. It needs to check `collect_done_ids()` (or `sprints.jsonl` directly) before reporting a dependency as missing."
+}

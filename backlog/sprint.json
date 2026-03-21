@@ -1,27 +1,29 @@
 {
-  "sprintId": "sprint-1774058933",
-  "startedAt": "2026-03-20T19:08:53-07:00",
+  "sprintId": "sprint-1774059241",
+  "startedAt": "2026-03-20T19:14:01-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-026",
-    "title": "Add intent semantics to base developer and validator agent prompts",
-    "intent": "Add a one-sentence explanation of intent as the north-star tie-breaker directly in developer.md and validator.md so agent prompts are self-contained even without orchestrator injection",
+    "id": "BUG-040",
+    "title": "Extract run_validated_command() helper — validation execution duplicated 3 times",
+    "intent": "Eliminate the 3 copies of timeout-aware validation command execution (pre-flight, main validation, AC verification) by extracting a single run_validated_command() helper function",
     "description": "",
-    "sourceBacklog": "backlog.json",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "Add to developer.md: when implementation and AC conflict, intent wins",
-      "Add to validator.md: verify intent fulfillment, not just mechanical AC pass",
-      "Keep additions minimal — one sentence each, not duplicating the orchestrator injection"
+      "Find all 3 instances of the timeout/bash -c VALIDATE_CMD pattern (pre-flight, main validation, AC verification)",
+      "Extract a run_validated_command() function that takes a label and output file, handles timeout vs gtimeout detection, and runs the command",
+      "Replace all 3 call sites with calls to the new helper",
+      "Run shellcheck and verify no regressions"
     ],
     "acceptanceCriteria": [
-      "developer.md contains guidance about intent being the north star",
-      "validator.md contains guidance about verifying intent beyond AC"
+      "Only one function contains the timeout-aware bash -c VALIDATE_CMD pattern",
+      "All 3 original call sites use the new helper",
+      "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T19:08:53-07:00",
+    "startedAt": "2026-03-20T19:14:01-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T19:11:10-07:00"
+    "completedAt": "2026-03-20T19:17:00-07:00"
   },
-  "completedAt": "2026-03-20T19:11:10-07:00",
+  "completedAt": "2026-03-20T19:17:00-07:00",
   "attempts": 1
 }
