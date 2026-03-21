@@ -3189,11 +3189,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Must priority: empty checksums.sha256 silently breaks the update integrity check system. Fix is a single guard line. High blast radius for a small code change.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T12:46:49-07:00"
     },
     {
       "id": "BUG-112",
