@@ -1,29 +1,30 @@
 {
-  "sprintId": "sprint-1774119225",
-  "startedAt": "2026-03-21T11:53:45-07:00",
+  "sprintId": "sprint-1774119349",
+  "startedAt": "2026-03-21T11:55:49-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-101",
-    "title": "GROOM_MONITOR=true run_agent sets global shell var — bleeds into developer agents",
-    "intent": "GROOM_MONITOR must not persist beyond groom agents; developer and validator must run with GROOM_MONITOR unset",
+    "id": "BUG-102",
+    "title": "check_scope_violations embeds literal \\n in developer retry prompt — file list garbled",
+    "intent": "Developer retry_extra_prompt must contain real newlines in the scope violations file list, not literal backslash-n sequences",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Understand that VAR=val shell_function sets VAR globally in current bash shell (unlike external commands)",
-      "Confirm: after auto-groom in run_sprint_loop (lines 2804/2806), GROOM_MONITOR=true persists into subsequent run_agent calls for developer and validator",
-      "Fix by adding an explicit reset after each groom run_agent call: add GROOM_MONITOR= on the line immediately after each GROOM_MONITOR=true run_agent invocation (lines 2804, 2806, 3271)",
-      "Confirm run_groom_flow (line 3271) has the same issue and apply the same fix there",
-      "Run shellcheck on .aishore/aishore — confirm zero new warnings"
+      "Locate violations string accumulation in check_scope_violations: violations=\"${violations}  - $file\\n\" (literal backslash-n)",
+      "Confirm that scope_report=$(check_scope_violations) captures this garbled output in _run_validation_cycle",
+      "Confirm that scope_report is embedded directly into retry_extra_prompt string without printf %b interpretation",
+      "Fix: change violations accumulation from literal \\n to real newline using violations+=\"  - $file\"$'\\n'",
+      "Verify the non-strict path in check_scope_violations also benefits (stdout to terminal now displays correctly)",
+      "Run shellcheck — confirm zero new warnings"
     ],
     "acceptanceCriteria": [
-      "After auto-groom runs in a multi-sprint session, developer and validator agent log output contains no backlog monitoring progress messages (no 'updated — N items' lines from _check_groom_progress)",
+      "In strict scope mode with 2+ violated files, the developer retry_extra_prompt contains each violated filename on its own separate line (no literal \\n sequences visible)",
       "shellcheck reports no new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T11:53:45-07:00",
+    "startedAt": "2026-03-21T11:55:49-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T11:55:48-07:00"
+    "completedAt": "2026-03-21T11:57:47-07:00"
   },
-  "completedAt": "2026-03-21T11:55:48-07:00",
+  "completedAt": "2026-03-21T11:57:47-07:00",
   "attempts": 1
 }
