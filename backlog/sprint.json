@@ -1,32 +1,30 @@
 {
-  "sprintId": "sprint-1774061544",
-  "startedAt": "2026-03-20T19:52:24-07:00",
+  "sprintId": "sprint-1774061747",
+  "startedAt": "2026-03-20T19:55:47-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-065",
-    "title": "Remove backlog sync command",
-    "intent": "The backlog sync command is removed entirely. It is a 152-line niche feature that detects manually-completed items by matching scope globs against git history. Nobody uses it and it adds significant weight.",
-    "description": "cmd_backlog_sync (152 lines) cross-references item scope globs against git diff to guess which items were completed outside aishore. This is speculative, rarely accurate, and never used in practice. Remove the function, its router entry in cmd_backlog, and its help text entries.",
+    "id": "BUG-046",
+    "title": "Replace global side-effect variables with explicit function returns",
+    "intent": "Eliminate CHECK_GATES_WARNINGS, SCOPE_VIOLATION_REPORT, AC_VERIFY_REPORT, and GROOM_ITEMS_ADDED/SKIPPED globals by having functions return results via stdout capture instead of global mutation",
+    "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Delete cmd_backlog_sync function",
-      "Remove sync entry from cmd_backlog router",
-      "Remove sync from help text and usage docs",
-      "Verify: all other backlog subcommands still work"
+      "Refactor check_readiness_gates() to output warnings to stdout instead of setting CHECK_GATES_WARNINGS",
+      "Refactor check_scope_violations() to output report to stdout instead of setting SCOPE_VIOLATION_REPORT",
+      "Refactor run_ac_verification() to output report to stdout instead of setting AC_VERIFY_REPORT",
+      "Refactor enforce_groom_limits() to return counts via stdout instead of global GROOM_ITEMS_ADDED/SKIPPED",
+      "Update all callers to capture output instead of reading globals"
     ],
     "acceptanceCriteria": [
-      "cmd_backlog_sync function does not exist in the script",
-      "Running .aishore/aishore backlog sync prints unknown command error",
-      "All other backlog subcommands work: list, add, show, edit, check, rm, history, populate",
+      "No CHECK_GATES_WARNINGS, SCOPE_VIOLATION_REPORT, AC_VERIFY_REPORT, GROOM_ITEMS_ADDED, or GROOM_ITEMS_SKIPPED global variables exist",
+      "All callers capture function output explicitly",
       "shellcheck passes"
     ],
-    "scope": [
-      ".aishore/**"
-    ],
-    "startedAt": "2026-03-20T19:52:24-07:00",
+    "scope": [],
+    "startedAt": "2026-03-20T19:55:47-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T19:55:45-07:00"
+    "completedAt": "2026-03-20T20:03:58-07:00"
   },
-  "completedAt": "2026-03-20T19:55:45-07:00",
+  "completedAt": "2026-03-20T20:03:58-07:00",
   "attempts": 1
 }
