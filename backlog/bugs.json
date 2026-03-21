@@ -764,11 +764,12 @@
         "find_item error message is 'Item not found: <ID>' not a jq null error when the item is absent"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Latent correctness bug: FEAT-*/BUG-* prefix routing skips existence check. If item was cleaned from backlog, resolve_backlog_file still returns the old filename, causing find_item to fail with a confusing jq error instead of 'item not found'. Fix is additive: add existence check in the prefix case branches before returning, falling through to full search if not found. Low risk, clear scope."
+      "groomingNotes": "Latent correctness bug: FEAT-*/BUG-* prefix routing skips existence check. If item was cleaned from backlog, resolve_backlog_file still returns the old filename, causing find_item to fail with a confusing jq error instead of 'item not found'. Fix is additive: add existence check in the prefix case branches before returning, falling through to full search if not found. Low risk, clear scope.",
+      "completedAt": "2026-03-20T18:02:49-07:00"
     },
     {
       "id": "BUG-031",
