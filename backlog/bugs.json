@@ -843,11 +843,12 @@
         "backlog add with no --scope flag creates item with scope: [] (unchanged default)"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Missing --scope flag at add-time is a workflow gap — users must run two commands (add + edit) to create a scope-constrained item. The pattern already exists: --ac and --step both follow the accumulate-to-array then write-as-json approach. Scope follows the same pattern. Low risk, additive only."
+      "groomingNotes": "Missing --scope flag at add-time is a workflow gap — users must run two commands (add + edit) to create a scope-constrained item. The pattern already exists: --ac and --step both follow the accumulate-to-array then write-as-json approach. Scope follows the same pattern. Low risk, additive only.",
+      "completedAt": "2026-03-20T18:07:57-07:00"
     },
     {
       "id": "BUG-034",

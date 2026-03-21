@@ -1,29 +1,31 @@
 {
-  "sprintId": "sprint-1774054971",
-  "startedAt": "2026-03-20T18:02:51-07:00",
+  "sprintId": "sprint-1774055098",
+  "startedAt": "2026-03-20T18:04:58-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-031",
-    "title": "cmd_status silently omits in-progress items from sprint readiness display",
-    "intent": "cmd_status must show in-progress items clearly so users know a sprint is running and what is being worked on",
-    "description": "cmd_status() calls list_ready_items() which filters by readyForSprint: true. Items currently in-progress have readyForSprint set to false by mark_item_failed and related logic, and sprint.json tracks the active sprint separately. But the status output never shows what is currently running — a user who runs 'aishore status' during a sprint sees the item missing from the ready list with no explanation. The status command should query sprint.json and display the active sprint item ID and title if a sprint is in progress.",
+    "id": "BUG-033",
+    "title": "backlog add --scope flag missing in cmd_backlog_add — scope can only be set via edit",
+    "intent": "Users must be able to set scope constraints at item creation time — requiring an extra edit command after add is an unnecessary workflow friction that will be missed.",
+    "description": "cmd_backlog_add() does not have a --scope flag. The scope array (glob patterns constraining where the developer agent may create or modify files) can only be set by running 'backlog edit <ID> --scope' after the item is created. This is inconsistent with --ac and --step which are both supported at add-time. The fix follows the same pattern as --ac and --step: add --scope and --clear-scope flags to cmd_backlog_add that accumulate scope patterns into a local array and write them as the scope field.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In .aishore/aishore, find cmd_status() (around line 3114)",
-      "After the 'Ready for sprint' section, add a block that reads BACKLOG_DIR/sprint.json",
-      "If sprint.json has status \\!= 'idle' and item is non-null, print a 'Currently running' section with item ID and title",
-      "Verify: running 'aishore status' during a sprint shows 'Currently running: FEAT-001 — My Feature'; running it with no sprint shows nothing for that section"
+      "In .aishore/aishore, find cmd_backlog_add() and locate the --ac and --step flag handling as reference (around line 3617-3660)",
+      "Add a local scope_entries=() array before the flag parsing loop",
+      "Add a --scope flag case: validate_arg \"$1\" \"${2:-}\" || return 1; scope_entries+=(\"$2\"); shift 2",
+      "After the flag loop, build scope_json from scope_entries array: scope_json='['; for e in \"${scope_entries[@]:-}\"; do scope_json+=\"\\\"$e\\\",\"; done; scope_json='${scope_json%,}]'",
+      "Pass --argjson scope_arr \"$scope_json\" to the add_item jq call and include .scope: $scope_arr in the item structure",
+      "Verify: 'backlog add --title X --scope \"src/**\" --scope \"tests/**\"' creates item with scope: [\"src/**\",\"tests/**\"]"
     ],
     "acceptanceCriteria": [
-      "aishore status shows 'Currently running: <ID> — <title>' when a sprint is active (sprint.json status \\!= idle)",
-      "aishore status shows no 'Currently running' section when no sprint is active",
-      "In-progress display does not interfere with the Ready for sprint section"
+      "backlog add --scope 'src/**' creates an item with scope: [\"src/**\"]",
+      "backlog add --scope 'src/**' --scope 'tests/**' creates scope with both patterns in order",
+      "backlog add with no --scope flag creates item with scope: [] (unchanged default)"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T18:02:51-07:00",
+    "startedAt": "2026-03-20T18:04:58-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T18:04:57-07:00"
+    "completedAt": "2026-03-20T18:07:57-07:00"
   },
-  "completedAt": "2026-03-20T18:04:57-07:00",
+  "completedAt": "2026-03-20T18:07:57-07:00",
   "attempts": 1
 }
