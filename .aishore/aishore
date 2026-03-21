@@ -1551,11 +1551,7 @@ run_agent() {
         validator)
             agent_perms="${CFG_PERMS_VALIDATOR:-$PERMS_VALIDATOR}" ;;
         architect)
-            if [[ -n "$output_file" ]]; then
-                agent_perms="${CFG_PERMS_REVIEWER:-$PERMS_REVIEWER_DOCS}"
-            else
-                agent_perms="${CFG_PERMS_REVIEWER:-$PERMS_REVIEWER}"
-            fi ;;
+            agent_perms="${CFG_PERMS_REVIEWER:-$PERMS_REVIEWER}" ;;
         tech-lead|product-owner)
             # Groom agents need full permissions to update backlog files
             agent_perms="${CFG_PERMS_DEVELOPER:-$PERMS_DEVELOPER}" ;;
@@ -3125,6 +3121,13 @@ cmd_review() {
     extra_prompt="## Additional Context
 $([[ -n "$since" ]] && echo "Review changes since commit: $since")
 $([[ "$update_docs" == "true" ]] && echo "You may update documentation and add backlog items." || echo "Read-only review. Do not modify files.")"
+
+    # Resolve permissions based on --update-docs flag, not output_file
+    if [[ "$update_docs" == "true" ]]; then
+        CFG_PERMS_REVIEWER="$PERMS_REVIEWER_DOCS"
+    else
+        CFG_PERMS_REVIEWER="$PERMS_REVIEWER"
+    fi
 
     local output_file
     output_file="$(ensure_tmpdir)/review_output.txt"
