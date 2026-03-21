@@ -2127,11 +2127,16 @@ _run_preflight() {
 
 # Run developer agent for one attempt: build failure context, run fix_cmd on retry,
 # invoke developer, run fix_cmd after.
-# Uses outer-scope: retry_extra_prompt, auto_mode, session_failures, attempt, FIX_CMD
+# Uses outer-scope: retry_failure_history, retry_extra_prompt, auto_mode, session_failures, attempt, FIX_CMD
 # Returns 0 on success, 1 on failure (sets retry_extra_prompt with failure context).
 _run_developer_cycle() {
-    # Build failure context for auto mode (last 5 failures only)
-    local dev_extra_prompt="$retry_extra_prompt"
+    # Build prior failure context for retries (structured, capped at 2000 chars)
+    local dev_extra_prompt=""
+    if [[ $attempt -gt 0 ]]; then
+        dev_extra_prompt=$(_build_prior_failure_context)
+    fi
+
+    # Append session failure patterns for auto mode (last 5 failures only)
     if [[ "$auto_mode" == "true" && ${#session_failures[@]} -gt 0 ]]; then
         local failure_ctx=$'\n## Recent Failure Patterns\nAvoid similar mistakes:'
         local sf_start=$(( ${#session_failures[@]} > 5 ? ${#session_failures[@]} - 5 : 0 ))
@@ -2255,13 +2260,64 @@ _validation_failure_reason() {
     esac
 }
 
+# Capture failure context after a failed attempt for retry intelligence.
+# Grabs git diff summary + failure reason and appends to retry_failure_history.
+# Uses outer-scope: retry_failure_history, retry_extra_prompt, attempt, AISHORE_BASE_BRANCH
+_capture_retry_failure() {
+    local diff_summary=""
+    diff_summary=$(git diff --stat "$AISHORE_BASE_BRANCH" 2>/dev/null | tail -n 20 || true)
+    [[ -z "$diff_summary" ]] && diff_summary="(no changes detected)"
+
+    local entry="### Attempt $((attempt + 1))
+**Changes:** \`\`\`
+${diff_summary}
+\`\`\`
+**Failure:** ${retry_extra_prompt}"
+    retry_failure_history+=("$entry")
+}
+
+# Build a structured "Prior failure context" section from retry_failure_history.
+# Caps total output at 2000 chars, truncating oldest entries first.
+# Returns empty string if history is empty.
+_build_prior_failure_context() {
+    local count=${#retry_failure_history[@]}
+    [[ $count -eq 0 ]] && return
+
+    local header="## Prior Failure Context
+**Read each prior attempt below and address the failures before coding.**
+"
+    local max_body_chars=$(( 2000 - ${#header} ))
+    [[ $max_body_chars -lt 100 ]] && max_body_chars=100
+
+    # Build body from newest to oldest, prepending each entry
+    local body="" entry_text
+    for ((i=count-1; i>=0; i--)); do
+        entry_text="${retry_failure_history[$i]}"
+        if [[ $(( ${#body} + ${#entry_text} + 2 )) -gt $max_body_chars && -n "$body" ]]; then
+            # Would exceed cap — prepend truncation notice and stop
+            body="(earlier attempts truncated)
+${body}"
+            break
+        fi
+        if [[ -n "$body" ]]; then
+            body="${entry_text}
+${body}"
+        else
+            body="$entry_text"
+        fi
+    done
+
+    printf '%s%s' "$header" "$body"
+}
+
 # Developer → validation cmd → validator agent retry loop.
 # Uses outer-scope locals: retries, auto_mode, session_failures, sprint_passed,
-#   retry_extra_prompt, item_source, sprint_start, ITEM_ID
+#   retry_extra_prompt, retry_failure_history, item_source, sprint_start, ITEM_ID
 _run_retry_loop() {
     local attempt=0
     sprint_passed=false
     retry_extra_prompt=""
+    retry_failure_history=()
 
     if ! _run_preflight; then
         _record_sprint_failure "Pre-flight failed" "Baseline validation failed before developer ran"
@@ -2273,6 +2329,7 @@ _run_retry_loop() {
 
         if ! _run_developer_cycle; then
             if [[ $attempt -lt $retries ]]; then
+                _capture_retry_failure
                 log_info "Will retry with failure context"
                 continue
             fi
@@ -2282,6 +2339,7 @@ _run_retry_loop() {
 
         if ! _run_validation_cycle; then
             if [[ $attempt -lt $retries ]]; then
+                _capture_retry_failure
                 log_info "Will retry with failure context"
                 continue
             fi
