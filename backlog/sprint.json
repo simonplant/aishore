@@ -1,27 +1,29 @@
 {
-  "sprintId": "sprint-1774069432",
-  "startedAt": "2026-03-20T22:03:52-07:00",
+  "sprintId": "sprint-1774070027",
+  "startedAt": "2026-03-20T22:13:47-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-051",
-    "title": "Reduce double jq parsing — extract all needed fields in one pass",
-    "intent": "Eliminate the pattern of extracting a jq projection then re-parsing the result for individual fields, by extracting all needed fields in a single jq pass using @base64 or multi-output",
+    "id": "BUG-052",
+    "title": "Clean up unused and redundant variable declarations",
+    "intent": "Remove or properly scope variables that are declared globally but used locally (LAST_AGENT_LOG, GROOM_ITEMS_ADDED/SKIPPED init), fix the file_count/line_count naming bug, and clean up mid-file global declarations",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Identify all places where jq output is captured then re-parsed with another jq call",
-      "Consolidate into single jq calls that extract all needed fields at once",
-      "Use read or IFS-based splitting for multiple field extraction"
+      "Move LAST_AGENT_LOG to local scope in the functions that use it",
+      "Remove redundant global initialization of GROOM_ITEMS_ADDED/SKIPPED (already reset inside function)",
+      "Fix variable named file_count that should be line_count in truncate_sprints_jsonl",
+      "Consolidate all remaining global variable declarations to the top of the script"
     ],
     "acceptanceCriteria": [
-      "No instance of echo item_json pipe jq for single field extraction after a prior jq projection",
+      "No global variables are declared mid-file (all at top or inside functions as local)",
+      "The file_count/line_count naming mismatch is fixed",
       "shellcheck passes"
     ],
     "scope": [],
-    "startedAt": "2026-03-20T22:03:52-07:00",
+    "startedAt": "2026-03-20T22:13:47-07:00",
     "status": "passed",
-    "completedAt": "2026-03-20T22:13:46-07:00"
+    "completedAt": "2026-03-20T22:18:03-07:00"
   },
-  "completedAt": "2026-03-20T22:13:46-07:00",
+  "completedAt": "2026-03-20T22:18:03-07:00",
   "attempts": 1
 }
