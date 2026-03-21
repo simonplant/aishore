@@ -23,7 +23,7 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Confirmed: bash '\\n' in double-quoted strings does not produce newlines. Fix is straightforward — change to $'\\n' or printf. Low risk, small scope.",
+      "groomingNotes": "Confirmed: bash '\\n' in double-quoted strings does not produce newlines. Fix is straightforward \u2014 change to $'\\n' or printf. Low risk, small scope.",
       "completedAt": "2026-03-20T11:07:18-07:00",
       "groomedNotes": null
     },
@@ -63,7 +63,7 @@
       "category": null,
       "steps": [
         "In .aishore/aishore, find the AC JSON construction block in cmd_backlog_edit() (around line 3688)",
-        "Identify the if/else that checks whether an entry starts with \"{\" — both branches do the same thing",
+        "Identify the if/else that checks whether an entry starts with \"{\" \u2014 both branches do the same thing",
         "Remove the if/else and keep just the single statement: ac_json=\"$ac_json$entry\"",
         "Verify that backlog edit --ac and --ac-verify still produce valid JSON items",
         "Run .aishore/aishore backlog check on an item with AC entries to confirm no regression"
@@ -77,7 +77,7 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Tech debt: dead if/else branches mislead future developers. Trivial fix — remove the conditional.",
+      "groomingNotes": "Tech debt: dead if/else branches mislead future developers. Trivial fix \u2014 remove the conditional.",
       "completedAt": "2026-03-20T12:14:19-07:00",
       "groomedNotes": null
     },
@@ -103,7 +103,7 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "PO review: bumped to should. Truncated error output directly hurts sprint recovery — the AI has less signal to fix failures. More failures = less value delivered. 1000 byte limit is too small for real test output and the byte-split-char bug is a correctness issue.",
+      "groomingNotes": "PO review: bumped to should. Truncated error output directly hurts sprint recovery \u2014 the AI has less signal to fix failures. More failures = less value delivered. 1000 byte limit is too small for real test output and the byte-split-char bug is a correctness issue.",
       "completedAt": "2026-03-20T11:17:40-07:00",
       "groomedNotes": null
     },
@@ -129,7 +129,7 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "PO re-review (failCount: 2): Two sprint attempts rejected. The validator has confirmed: the warning must fire unconditionally when config.yaml exists with non-empty content and yq is absent. The grep-detection fallback MUST NOT gate the warning — this was the failure mode in both attempts. Implementation checklist: (1) check if yq is absent, (2) check if config.yaml exists and is non-empty, (3) if both true, print warning immediately before any grep fallback logic runs. Do not mix the warning into the grep-detection branch. The warning is unconditional; grep-based fallback is optional and may still run after warning. Must fix before new-user onboarding can be considered reliable.",
+      "groomingNotes": "PO re-review (failCount: 2): Two sprint attempts rejected. The validator has confirmed: the warning must fire unconditionally when config.yaml exists with non-empty content and yq is absent. The grep-detection fallback MUST NOT gate the warning \u2014 this was the failure mode in both attempts. Implementation checklist: (1) check if yq is absent, (2) check if config.yaml exists and is non-empty, (3) if both true, print warning immediately before any grep fallback logic runs. Do not mix the warning into the grep-detection branch. The warning is unconditional; grep-based fallback is optional and may still run after warning. Must fix before new-user onboarding can be considered reliable.",
       "lastFailReason": "Validator agent rejected implementation",
       "lastFailAt": "2026-03-20T15:33:03-07:00",
       "failCount": 4,
@@ -139,7 +139,7 @@
     {
       "id": "BUG-006",
       "title": "backlog add and edit have no --step flag for setting implementation steps",
-      "intent": "Users must be able to add and replace implementation steps via CLI without hand-editing JSON — steps are required for sprint readiness and a missing flag forces a manual workaround.",
+      "intent": "Users must be able to add and replace implementation steps via CLI without hand-editing JSON \u2014 steps are required for sprint readiness and a missing flag forces a manual workaround.",
       "description": "backlog add creates items with steps: [] and backlog edit has no flag to append or replace steps. The only way to populate the steps array is to edit the backlog JSON directly, which violates the CLI-first design. Both commands already follow a consistent flag pattern (--ac for AC entries, --scope for scope patterns). Steps should follow the same pattern: --step adds one step (repeatable), --clear-steps resets the array. This unblocks grooming items without requiring JSON editing.",
       "priority": "should",
       "category": null,
@@ -161,7 +161,7 @@
     {
       "id": "BUG-007",
       "title": "backlog show renders AC {text, verify} objects as raw JSON instead of plain text",
-      "intent": "backlog show must display acceptance criteria as readable text — when entries are {text, verify} objects, only the text should be shown, not the JSON structure.",
+      "intent": "backlog show must display acceptance criteria as readable text \u2014 when entries are {text, verify} objects, only the text should be shown, not the JSON structure.",
       "description": "When backlog edit --ac 'Some check' --ac-verify 'make test' is used, the AC entry is stored as a JSON object {\"text\": \"Some check\", \"verify\": \"make test\"}. In cmd_backlog_show(), the jq display expression at line ~3720 uses (.acceptanceCriteria // [] | .[] | \"  - \\(.)\"), which calls tojson on the entire object, producing output like: '  - {\"text\":\"Some check\",\"verify\":\"make test\"}'. The fix is to check entry type: if it's a string, show it as-is; if it's an object, extract .text (and optionally show the verify command in a shorter form).",
       "priority": "should",
       "category": null,
@@ -175,14 +175,14 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Fix location: cmd_backlog_show() jq expression around line 3720. Current: (.acceptanceCriteria // [] | .[] | \"  - \\(.)\"). Fix: (.acceptanceCriteria // [] | .[] | \"  - \\(if type == \"object\" then .text + (if .verify then \" [verify: \\(.verify)]\" else \"\" end) else . end)\"). Run: backlog add with --ac 'plain' --ac 'text' --ac-verify 'cmd' then backlog show to confirm. This is a display-only fix — no data changes.",
+      "groomingNotes": "Fix location: cmd_backlog_show() jq expression around line 3720. Current: (.acceptanceCriteria // [] | .[] | \"  - \\(.)\"). Fix: (.acceptanceCriteria // [] | .[] | \"  - \\(if type == \"object\" then .text + (if .verify then \" [verify: \\(.verify)]\" else \"\" end) else . end)\"). Run: backlog add with --ac 'plain' --ac 'text' --ac-verify 'cmd' then backlog show to confirm. This is a display-only fix \u2014 no data changes.",
       "completedAt": "2026-03-20T12:00:45-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-008",
       "title": "VALIDATE_CMD output injected untruncated into retry prompts",
-      "intent": "Retry prompts must not contain unbounded validation output — token bloat degrades AI fix quality and can push critical context out of attention.",
+      "intent": "Retry prompts must not contain unbounded validation output \u2014 token bloat degrades AI fix quality and can push critical context out of attention.",
       "description": "In _run_retry_loop(), validate_output is captured with 'cat $validate_tmpfile' (no truncation limit) and injected raw into retry_extra_prompt. run_ac_verification() and the pre-flight check both apply OUTPUT_TRUNCATE_LINES truncation, but the VALIDATE_CMD retry path does not. For verbose test suites (cargo test, pytest, mocha), this produces thousands of lines in the retry prompt, degrading AI quality. The validator-agent retry path at line ~1769 has the same issue.",
       "priority": "should",
       "category": null,
@@ -202,14 +202,14 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Same pattern as BUG-004 (AC verify truncation) but missed for the VALIDATE_CMD retry path. Fix is additive — apply OUTPUT_TRUNCATE_LINES truncation at one spot in _run_retry_loop(). Low risk, clear scope.",
+      "groomingNotes": "Same pattern as BUG-004 (AC verify truncation) but missed for the VALIDATE_CMD retry path. Fix is additive \u2014 apply OUTPUT_TRUNCATE_LINES truncation at one spot in _run_retry_loop(). Low risk, clear scope.",
       "completedAt": "2026-03-20T12:08:42-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-009",
       "title": "backlog edit has no --clear-ac flag to reset acceptance criteria",
-      "intent": "Users must be able to reset AC via CLI — without --clear-ac, wrong AC entries require hand-editing JSON, violating the CLI-first design principle.",
+      "intent": "Users must be able to reset AC via CLI \u2014 without --clear-ac, wrong AC entries require hand-editing JSON, violating the CLI-first design principle.",
       "description": "backlog edit --step has a companion --clear-steps flag; backlog edit --scope has a companion --clear-scope flag. But --ac has no --clear-ac. Once AC entries are added, the only way to remove them is to hand-edit the backlog JSON. This is inconsistent with the established pattern and violates CLI-first design. Fix: add --clear-ac to cmd_backlog_edit() that resets acceptanceCriteria to [], following the same pattern as --clear-steps.",
       "priority": "should",
       "category": null,
@@ -229,14 +229,14 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Clear pattern mismatch — --clear-steps and --clear-scope both exist, --clear-ac does not. Fix is additive, one case block in cmd_backlog_edit plus help text update. Low risk.",
+      "groomingNotes": "Clear pattern mismatch \u2014 --clear-steps and --clear-scope both exist, --clear-ac does not. Fix is additive, one case block in cmd_backlog_edit plus help text update. Low risk.",
       "completedAt": "2026-03-20T12:11:16-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-010",
       "title": "remove_items_by_status takes full path while other CRUD helpers take relative filename",
-      "intent": "Backlog CRUD helpers must use a consistent path convention — the current asymmetry is a latent footgun that will cause silent wrong-file operations when new callers are added.",
+      "intent": "Backlog CRUD helpers must use a consistent path convention \u2014 the current asymmetry is a latent footgun that will cause silent wrong-file operations when new callers are added.",
       "description": "update_item() and remove_item() accept a relative filename (e.g. 'backlog.json') and prepend BACKLOG_DIR internally. remove_items_by_status() takes a full path directly. Callers today are consistent, but the asymmetry is not documented and will cause bugs when someone adds a new call site with the wrong convention. Fix: change remove_items_by_status to accept a relative filename and prepend BACKLOG_DIR internally, matching the established pattern.",
       "priority": "could",
       "category": null,
@@ -256,15 +256,15 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Tech debt: path convention inconsistency between remove_items_by_status and the other CRUD helpers. Small refactor with one call site to update. Low risk — only one caller exists today (cmd_clean).",
+      "groomingNotes": "Tech debt: path convention inconsistency between remove_items_by_status and the other CRUD helpers. Small refactor with one call site to update. Low risk \u2014 only one caller exists today (cmd_clean).",
       "completedAt": "2026-03-20T12:27:27-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-011",
       "title": "cmd_review silently ignores unknown options",
-      "intent": "cmd_review must reject unknown flags immediately — silently discarding options lets typos pass undetected and erodes user trust in the CLI",
-      "description": "cmd_review() parses --update-docs and --since but its catch-all branch is '* ) shift ;;' at line 2414, silently discarding any unrecognized flag. Most other commands (cmd_clean, cmd_backlog_add, etc.) reject unknown options with log_error and return 1. A user who mistypes '--update_docs' or '--since-commit' will get no error — the command runs silently in the wrong mode. Fix: replace the silent '* ) shift' with '* ) log_error \"Unknown option: $1\"; return 1' to match the established pattern.",
+      "intent": "cmd_review must reject unknown flags immediately \u2014 silently discarding options lets typos pass undetected and erodes user trust in the CLI",
+      "description": "cmd_review() parses --update-docs and --since but its catch-all branch is '* ) shift ;;' at line 2414, silently discarding any unrecognized flag. Most other commands (cmd_clean, cmd_backlog_add, etc.) reject unknown options with log_error and return 1. A user who mistypes '--update_docs' or '--since-commit' will get no error \u2014 the command runs silently in the wrong mode. Fix: replace the silent '* ) shift' with '* ) log_error \"Unknown option: $1\"; return 1' to match the established pattern.",
       "priority": "should",
       "category": null,
       "steps": [
@@ -283,15 +283,15 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Confirmed at line 2414: catch-all '* ) shift' drops unknown flags silently. Pattern inconsistency vs cmd_clean, cmd_backlog_add and others which all use log_error + return 1. One-line fix. Low risk — additive error handling only.",
+      "groomingNotes": "Confirmed at line 2414: catch-all '* ) shift' drops unknown flags silently. Pattern inconsistency vs cmd_clean, cmd_backlog_add and others which all use log_error + return 1. One-line fix. Low risk \u2014 additive error handling only.",
       "completedAt": "2026-03-20T12:25:52-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-012",
       "title": "cmd_update silently ignores unknown options",
-      "intent": "cmd_update must reject unknown flags — silently discarding options can make users believe a flag like --force or --dry-run took effect when it did not, potentially causing unintended updates",
-      "description": "cmd_update() parses --dry-run, --check, --force, and --no-verify but its catch-all is '* ) shift ;;' at line 3174, silently discarding unknown flags. This is especially dangerous here: a user who mistypes '--dry-run' (e.g., '--dryrun' or '--dry_run') will get no error and the update will proceed as a live update — exactly the behavior they were trying to avoid. Fix: replace '* ) shift' with '* ) log_error \"Unknown option: $1\"; return 1' to match the established pattern in cmd_clean, cmd_backlog_add, etc.",
+      "intent": "cmd_update must reject unknown flags \u2014 silently discarding options can make users believe a flag like --force or --dry-run took effect when it did not, potentially causing unintended updates",
+      "description": "cmd_update() parses --dry-run, --check, --force, and --no-verify but its catch-all is '* ) shift ;;' at line 3174, silently discarding unknown flags. This is especially dangerous here: a user who mistypes '--dry-run' (e.g., '--dryrun' or '--dry_run') will get no error and the update will proceed as a live update \u2014 exactly the behavior they were trying to avoid. Fix: replace '* ) shift' with '* ) log_error \"Unknown option: $1\"; return 1' to match the established pattern in cmd_clean, cmd_backlog_add, etc.",
       "priority": "must",
       "category": null,
       "steps": [
@@ -310,14 +310,14 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Bumped to must: a mistyped --dry-run (e.g. --dryrun or --dry_run) silently executes a live update — the user explicitly tried to preview and got destructive action with no warning. This is the same class of failure as BUG-005 (silent config ignore). update is a state-changing, potentially irreversible operation; the --dry-run flag is a safety net that must be reliable. One-line fix, but high consequence if missed.",
+      "groomingNotes": "Bumped to must: a mistyped --dry-run (e.g. --dryrun or --dry_run) silently executes a live update \u2014 the user explicitly tried to preview and got destructive action with no warning. This is the same class of failure as BUG-005 (silent config ignore). update is a state-changing, potentially irreversible operation; the --dry-run flag is a safety net that must be reliable. One-line fix, but high consequence if missed.",
       "completedAt": "2026-03-20T12:23:47-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-013",
       "title": "cmd_groom and cmd_metrics silently accept unknown options",
-      "intent": "All CLI commands must reject unknown flags — silent acceptance of garbage input makes the CLI unpredictable and violates the established error-handling pattern",
+      "intent": "All CLI commands must reject unknown flags \u2014 silent acceptance of garbage input makes the CLI unpredictable and violates the established error-handling pattern",
       "description": "cmd_groom() at line 2262 checks only '${1:-}' == '--backlog' without a proper arg-parsing loop, so any extra argument after --backlog is silently ignored. cmd_metrics() at line 2470 does the same: checks only '${1:-}' == '--json'. Neither reports an error for unknown flags like '--bogus'. Both should use a proper while/case loop with a catch-all that calls log_error and returns 1, consistent with cmd_clean, cmd_backlog_add, and other commands in the same script.",
       "priority": "could",
       "category": null,
@@ -345,8 +345,8 @@
     {
       "id": "BUG-014",
       "title": "cmd_backlog_populate silently ignores unknown options",
-      "intent": "cmd_backlog_populate must reject unknown flags — silently discarding options is inconsistent with the established error-handling pattern and hides user mistakes",
-      "description": "cmd_backlog_populate() (around line 3457) performs no option parsing at all. Any flag passed to 'backlog populate' is silently ignored. Most other commands use a while/case loop with a catch-all that calls log_error and returns 1. Fix: add a proper option parsing loop. populate currently takes no flags, so any argument is an error — the loop body should be just the catch-all that rejects everything.",
+      "intent": "cmd_backlog_populate must reject unknown flags \u2014 silently discarding options is inconsistent with the established error-handling pattern and hides user mistakes",
+      "description": "cmd_backlog_populate() (around line 3457) performs no option parsing at all. Any flag passed to 'backlog populate' is silently ignored. Most other commands use a while/case loop with a catch-all that calls log_error and returns 1. Fix: add a proper option parsing loop. populate currently takes no flags, so any argument is an error \u2014 the loop body should be just the catch-all that rejects everything.",
       "priority": "should",
       "category": null,
       "steps": [
@@ -365,14 +365,14 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "No option parsing at all in cmd_backlog_populate. Fix is additive — add a while/case loop with a catch-all that rejects all arguments since populate takes no flags. Low risk, same pattern as BUG-011/012/013.",
+      "groomingNotes": "No option parsing at all in cmd_backlog_populate. Fix is additive \u2014 add a while/case loop with a catch-all that rejects all arguments since populate takes no flags. Low risk, same pattern as BUG-011/012/013.",
       "completedAt": "2026-03-20T12:35:08-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-015",
       "title": "cmd_run treats unknown flags as item IDs instead of erroring",
-      "intent": "cmd_run must reject unrecognized flags — silently accepting unknown options as item IDs causes confusing behavior where typos like --dry_run are interpreted as sprint IDs and silently do nothing",
+      "intent": "cmd_run must reject unrecognized flags \u2014 silently accepting unknown options as item IDs causes confusing behavior where typos like --dry_run are interpreted as sprint IDs and silently do nothing",
       "description": "cmd_run() has a catch-all in its option parsing loop (around line 1905) that accepts any non-flag positional argument as either a count or a specific item ID. This means unknown flags like '--dry_run' (intended as --dry-run) or '--retries' (missing value) are silently interpreted as item IDs, producing a 'no item found' error rather than 'unknown option'. The fix is to detect that an argument starts with '--' in the catch-all and reject it as an unknown option before treating it as a positional.",
       "priority": "should",
       "category": null,
@@ -392,14 +392,14 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Catch-all in cmd_run interprets --flag-typos as item IDs. Fix is a single guard in the catch-all: check if arg starts with '--' and reject it. Low risk — only changes error behavior, not normal paths.",
+      "groomingNotes": "Catch-all in cmd_run interprets --flag-typos as item IDs. Fix is a single guard in the catch-all: check if arg starts with '--' and reject it. Low risk \u2014 only changes error behavior, not normal paths.",
       "completedAt": "2026-03-20T12:37:09-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-016",
       "title": "cmd_backlog_edit usage message omits most supported flags",
-      "intent": "The backlog edit help text must list all supported flags — a usage message that omits 9 of 18 flags is misleading and makes the CLI appear less capable than it is",
+      "intent": "The backlog edit help text must list all supported flags \u2014 a usage message that omits 9 of 18 flags is misleading and makes the CLI appear less capable than it is",
       "description": "cmd_backlog_edit() has two help text locations that list supported flags: the early usage error message (around line 3767) and the catch-all error at the end (around line 3941). The early message lists only: --title, --intent, --priority, --status, --desc, --category, --depends-on, --ready, --no-ready. It omits: --step, --clear-steps, --scope, --clear-scope, --ac, --ac-verify, --clear-ac, --groomed-at, --groomed-notes. The catch-all message at line 3941 is complete. Fix: update the early usage message to match the complete list in the catch-all.",
       "priority": "should",
       "category": null,
@@ -412,7 +412,7 @@
       "acceptanceCriteria": [
         "Running 'backlog edit' with no arguments shows a usage message that includes --step, --clear-steps, --ac, --ac-verify, --clear-ac, --scope, --clear-scope, --groomed-at, --groomed-notes",
         "The complete flag list in the catch-all error message is unchanged",
-        "No functional behavior changes — this is display only"
+        "No functional behavior changes \u2014 this is display only"
       ],
       "dependsOn": [],
       "status": "done",
@@ -426,7 +426,7 @@
     {
       "id": "BUG-017",
       "title": "cmd_backlog_add missing validate_arg calls for most flags",
-      "intent": "backlog add must validate that flag arguments are non-empty — silently accepting empty values creates malformed backlog items that fail sprint readiness checks without a clear error message",
+      "intent": "backlog add must validate that flag arguments are non-empty \u2014 silently accepting empty values creates malformed backlog items that fail sprint readiness checks without a clear error message",
       "description": "cmd_backlog_add() calls validate_arg for --step (line 3617) but not for --type, --title, --intent, --desc, --priority, --category, or --depends-on (lines 3592-3600). This means 'backlog add --title' (with no value) silently sets title to an empty string, producing a malformed item. By contrast, cmd_backlog_edit() consistently calls validate_arg for all value-bearing flags. Fix: add validate_arg calls in cmd_backlog_add() to match the pattern already established in cmd_backlog_edit().",
       "priority": "should",
       "category": null,
@@ -447,20 +447,20 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "cmd_backlog_edit already validates all flags with validate_arg; cmd_backlog_add inconsistently skips it for most flags. Additive fix — add validate_arg calls. Low risk, small scope.",
+      "groomingNotes": "cmd_backlog_edit already validates all flags with validate_arg; cmd_backlog_add inconsistently skips it for most flags. Additive fix \u2014 add validate_arg calls. Low risk, small scope.",
       "completedAt": "2026-03-20T12:41:01-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-018",
       "title": "cmd_backlog_show and cmd_backlog_check silently accept extra positional arguments",
-      "intent": "backlog show and backlog check must reject extra arguments — silently ignoring them makes 'backlog show FEAT-001 FEAT-002' appear to succeed while only processing the first ID, giving users false confidence",
+      "intent": "backlog show and backlog check must reject extra arguments \u2014 silently ignoring them makes 'backlog show FEAT-001 FEAT-002' appear to succeed while only processing the first ID, giving users false confidence",
       "description": "cmd_backlog_show() extracts $1 as the item ID and ignores anything after it. cmd_backlog_check() does the same. Both commands silently accept extra arguments: 'backlog show FEAT-001 FEAT-002' processes only FEAT-001 without any error, which is misleading. The fix for each is to check that exactly one positional argument was given and reject anything extra with log_error.",
       "priority": "could",
       "category": null,
       "steps": [
         "In .aishore/aishore, find cmd_backlog_show() and after extracting the ID from $1, check if $# -gt 1 and emit log_error 'Unexpected argument: ${2}' and return 1",
-        "In .aishore/aishore, find cmd_backlog_check() and apply the same fix — after extracting the ID, check for extra arguments and error",
+        "In .aishore/aishore, find cmd_backlog_check() and apply the same fix \u2014 after extracting the ID, check for extra arguments and error",
         "Verify that 'backlog show FEAT-001' and 'backlog check FEAT-001' still work correctly",
         "Verify that 'backlog show FEAT-001 FEAT-002' and 'backlog check FEAT-001 --typo' now print an error and exit non-zero"
       ],
@@ -481,7 +481,7 @@
     {
       "id": "BUG-019",
       "title": "cmd_backlog_check returns 0 when readiness gates fail",
-      "intent": "backlog check must return non-zero when gates fail — callers and scripts must be able to rely on exit status to detect unready items.",
+      "intent": "backlog check must return non-zero when gates fail \u2014 callers and scripts must be able to rely on exit status to detect unready items.",
       "description": "cmd_backlog_check() calls check_readiness_gates() and logs warnings on failure, but does not return 1. The function exits 0 regardless of gate outcome. Any script using 'backlog check $ID && do_something' will proceed even when gates fail, undermining the purpose of the check command. Fix: add 'return 1' in the else branch after printing gate warnings.",
       "priority": "should",
       "category": null,
@@ -493,22 +493,22 @@
       "acceptanceCriteria": [
         "backlog check <ID> exits non-zero when any readiness gate fails",
         "backlog check <ID> exits 0 when all readiness gates pass",
-        "Exit status matches the log output — if warnings are printed, exit is non-zero"
+        "Exit status matches the log output \u2014 if warnings are printed, exit is non-zero"
       ],
       "dependsOn": [],
       "status": "done",
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Clear behavioral bug: gates failing but exit 0 is wrong. One-line fix — add return 1 in else branch. Low risk, high value for automation users.",
+      "groomingNotes": "Clear behavioral bug: gates failing but exit 0 is wrong. One-line fix \u2014 add return 1 in else branch. Low risk, high value for automation users.",
       "completedAt": "2026-03-20T12:54:00-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-020",
       "title": "cmd_backlog_edit flushes pending AC entry without JSON encoding",
-      "intent": "AC entries appended via --ac must be correctly JSON-encoded — unencoded special characters silently produce invalid JSON and corrupt the backlog.",
-      "description": "In cmd_backlog_edit(), when a second --ac flag is encountered, the pending AC entry from the prior --ac is flushed to ac_entries with 'ac_entries+=(\"$pending_ac\")' (line ~3898) — no JSON encoding. cmd_backlog_add() correctly uses 'ac_entries+=(\"\"\\\"$pending_ac\\\"\"\")' in the same flush path. If the AC text contains '\"', backslash, or other JSON metacharacters, the constructed JSON will be invalid, silently corrupting the item's acceptanceCriteria. The final-flush path at line ~3942 IS correctly encoded — only the mid-loop flush is broken.",
+      "intent": "AC entries appended via --ac must be correctly JSON-encoded \u2014 unencoded special characters silently produce invalid JSON and corrupt the backlog.",
+      "description": "In cmd_backlog_edit(), when a second --ac flag is encountered, the pending AC entry from the prior --ac is flushed to ac_entries with 'ac_entries+=(\"$pending_ac\")' (line ~3898) \u2014 no JSON encoding. cmd_backlog_add() correctly uses 'ac_entries+=(\"\"\\\"$pending_ac\\\"\"\")' in the same flush path. If the AC text contains '\"', backslash, or other JSON metacharacters, the constructed JSON will be invalid, silently corrupting the item's acceptanceCriteria. The final-flush path at line ~3942 IS correctly encoded \u2014 only the mid-loop flush is broken.",
       "priority": "must",
       "category": null,
       "steps": [
@@ -526,14 +526,14 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "PO bump to must: silent JSON corruption of backlog data when AC text contains quotes/backslash is in the same class as BUG-005 — user does the right thing, gets wrong behavior, no signal. A corrupted item fails at sprint time with a cryptic error, not at edit time where the fix is obvious. The mid-loop flush is the single broken path; final-flush is correct. One-line fix with high consequence if left unresolved.",
+      "groomingNotes": "PO bump to must: silent JSON corruption of backlog data when AC text contains quotes/backslash is in the same class as BUG-005 \u2014 user does the right thing, gets wrong behavior, no signal. A corrupted item fails at sprint time with a cryptic error, not at edit time where the fix is obvious. The mid-loop flush is the single broken path; final-flush is correct. One-line fix with high consequence if left unresolved.",
       "completedAt": "2026-03-20T12:52:08-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-021",
       "title": "backlog list --status and --type flags missing validate_arg for empty values",
-      "intent": "backlog list must reject flag calls with missing values — silently accepting an empty filter silently changes which items are shown, leading to misleading output.",
+      "intent": "backlog list must reject flag calls with missing values \u2014 silently accepting an empty filter silently changes which items are shown, leading to misleading output.",
       "description": "In cmd_backlog_list(), the --status and --type flag cases do 'filter_status=\"$2\"; shift 2' without calling validate_arg first. If a user runs 'backlog list --status' without a value, $2 is empty, filter_status gets set to empty string, and the subsequent jq filter produces unexpected results. cmd_backlog_add and cmd_backlog_edit consistently call validate_arg for all value-bearing flags. The fix is to add validate_arg calls in the --status and --type cases, consistent with the established pattern.",
       "priority": "could",
       "category": null,
@@ -561,7 +561,7 @@
     {
       "id": "BUG-022",
       "title": "cmd_clean prints success even when remove_items_by_status fails",
-      "intent": "cmd_clean must not report successful cleanup if the backlog file was not actually updated — silent data loss on I/O error is worse than a visible failure.",
+      "intent": "cmd_clean must not report successful cleanup if the backlog file was not actually updated \u2014 silent data loss on I/O error is worse than a visible failure.",
       "description": "In cmd_clean(), remove_items_by_status() is called but its return code is not checked. If jq fails (malformed JSON, disk full) or the mv that replaces the file fails, the command continues and prints 'Cleaned N features/bugs' as though it succeeded. The user believes the backlog was cleaned when it was not. Fix: check return code of both remove_items_by_status calls and exit non-zero with a clear error if either fails.",
       "priority": "should",
       "category": null,
@@ -581,22 +581,22 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Silent success on write failure is the same class as BUG-005 (user does right thing, gets wrong behavior, no signal). The return code is not checked after remove_items_by_status — add || return 1 guard on both calls. Low risk, additive error handling only.",
+      "groomingNotes": "Silent success on write failure is the same class as BUG-005 (user does right thing, gets wrong behavior, no signal). The return code is not checked after remove_items_by_status \u2014 add || return 1 guard on both calls. Low risk, additive error handling only.",
       "completedAt": "2026-03-20T13:12:54-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-023",
       "title": "mark_item_failed silently swallows update errors with || true",
-      "intent": "Sprint failure context must be recorded reliably — if mark_item_failed silently does nothing, subsequent retries and auto mode have no failure history to work from.",
-      "description": "In mark_item_failed(), the call to update_item() is followed by '2>/dev/null || true', which suppresses all errors and always succeeds. If the backlog file write fails (bad JSON, permissions, missing file), the item is never marked failed and no error is surfaced. Auto mode and retry logic read failCount and lastFailReason from the item — if mark_item_failed silently no-ops, those fields are never set, degrading sprint recovery. Fix: remove || true, keep stderr suppression only when source_file is empty (item lookup already failed), and log a warning if update_item returns non-zero.",
+      "intent": "Sprint failure context must be recorded reliably \u2014 if mark_item_failed silently does nothing, subsequent retries and auto mode have no failure history to work from.",
+      "description": "In mark_item_failed(), the call to update_item() is followed by '2>/dev/null || true', which suppresses all errors and always succeeds. If the backlog file write fails (bad JSON, permissions, missing file), the item is never marked failed and no error is surfaced. Auto mode and retry logic read failCount and lastFailReason from the item \u2014 if mark_item_failed silently no-ops, those fields are never set, degrading sprint recovery. Fix: remove || true, keep stderr suppression only when source_file is empty (item lookup already failed), and log a warning if update_item returns non-zero.",
       "priority": "should",
       "category": null,
       "steps": [
         "In .aishore/aishore, find mark_item_failed() (around line 1355)",
         "Locate the update_item call with '2>/dev/null || true'",
-        "Split the logic: if source_file is empty (item not found), it is expected to fail — log_warn and return 0",
-        "Otherwise, call update_item without || true; on failure, emit log_warn 'Failed to record sprint failure for $item_id' but still return 0 (best-effort — do not abort the sprint just because the metadata write failed)",
+        "Split the logic: if source_file is empty (item not found), it is expected to fail \u2014 log_warn and return 0",
+        "Otherwise, call update_item without || true; on failure, emit log_warn 'Failed to record sprint failure for $item_id' but still return 0 (best-effort \u2014 do not abort the sprint just because the metadata write failed)",
         "Verify: mark_item_failed on a known item updates failCount; mark_item_failed on an unknown ID logs a warning"
       ],
       "acceptanceCriteria": [
@@ -616,7 +616,7 @@
     {
       "id": "BUG-024",
       "title": "backlog add --ac-verify missing validate_arg allows empty verify command",
-      "intent": "backlog add must reject --ac-verify without a value — an empty verify command silently creates a broken AC entry that fails at sprint verification time with no clear error.",
+      "intent": "backlog add must reject --ac-verify without a value \u2014 an empty verify command silently creates a broken AC entry that fails at sprint verification time with no clear error.",
       "description": "In cmd_backlog_add(), all value-bearing flags call validate_arg except --ac-verify (lines 3652-3659). The companion cmd_backlog_edit() correctly calls validate_arg for --ac-verify at line 3915. Without the guard, 'backlog add --ac \"check it\" --ac-verify' (no value) either causes an unbound variable crash under set -u or silently creates {\"text\":\"check it\",\"verify\":\"\"} with an empty verify command. At sprint time, the empty verify command fails with a confusing error rather than at edit time where the fix is obvious.",
       "priority": "should",
       "category": null,
@@ -636,14 +636,14 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Missing validate_arg in --ac-verify in cmd_backlog_add is the last validate_arg gap after BUG-017 fixed the others. cmd_backlog_edit already has validate_arg for --ac-verify at line 3915 — add the same call one line before the pending_ac check in cmd_backlog_add. One-line fix, low risk. Steps and AC are concrete.",
+      "groomingNotes": "Missing validate_arg in --ac-verify in cmd_backlog_add is the last validate_arg gap after BUG-017 fixed the others. cmd_backlog_edit already has validate_arg for --ac-verify at line 3915 \u2014 add the same call one line before the pending_ac check in cmd_backlog_add. One-line fix, low risk. Steps and AC are concrete.",
       "completedAt": "2026-03-20T13:28:32-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-025",
       "title": "cmd_review --since flag missing validate_arg for empty value",
-      "intent": "cmd_review must reject --since without a value — silently consuming the next flag as a commit hash causes the review to run with wrong scope, giving users false confidence the review covered the intended range.",
+      "intent": "cmd_review must reject --since without a value \u2014 silently consuming the next flag as a commit hash causes the review to run with wrong scope, giving users false confidence the review covered the intended range.",
       "description": "In cmd_review(), the --since flag case at line 2428 does 'since=\"$2\"; shift 2' with no validate_arg call. If the user runs 'aishore review --since' without a commit hash, $2 is either empty or the next flag (e.g. --update-docs). Under set -u, an empty $2 accessed as a positional parameter would cause an unbound variable error; but since $2 is accessed inside a case branch where shift already happened, it just silently sets since to \"\" or the wrong value. All other value-bearing flags across the codebase call validate_arg first. Compare with cmd_backlog_history --since at lines 4019-4025, which correctly validates the value before using it.",
       "priority": "should",
       "category": null,
@@ -670,7 +670,7 @@
     {
       "id": "BUG-026",
       "title": "backlog edit --groomed-at accepts invalid date values without validation",
-      "intent": "backlog edit --groomed-at must reject non-date values — silently storing garbage in groomedAt corrupts item metadata and is inconsistent with backlog history --since which validates the same YYYY-MM-DD format.",
+      "intent": "backlog edit --groomed-at must reject non-date values \u2014 silently storing garbage in groomedAt corrupts item metadata and is inconsistent with backlog history --since which validates the same YYYY-MM-DD format.",
       "description": "In cmd_backlog_edit(), the --groomed-at case at lines 3934-3945 accepts any non-empty value that doesn't start with '--' as a valid date. There is no format check. Running 'backlog edit FEAT-001 --groomed-at notadate' silently stores 'notadate' in groomedAt. In contrast, cmd_backlog_history() validates its --since date argument against ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ before using it (lines 4022-4024). The groomedAt field is displayed in backlog show and used for tracking grooming activity, so invalid values undermine tooling built on this field. Fix: add the same regex validation used in cmd_backlog_history() --since.",
       "priority": "could",
       "category": null,
@@ -691,7 +691,7 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Pattern inconsistency: cmd_backlog_history validates --since date format with ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ at lines 4022-4024; cmd_backlog_edit --groomed-at does no format check. Add the same regex validation in the shift-2 (user-provided value) path only — the default-to-today path is already correct. Low risk, additive. Note: --groomed-at accepts optional value so the validate_arg pattern doesn't apply — must validate after reading.",
+      "groomingNotes": "Pattern inconsistency: cmd_backlog_history validates --since date format with ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ at lines 4022-4024; cmd_backlog_edit --groomed-at does no format check. Add the same regex validation in the shift-2 (user-provided value) path only \u2014 the default-to-today path is already correct. Low risk, additive. Note: --groomed-at accepts optional value so the validate_arg pattern doesn't apply \u2014 must validate after reading.",
       "completedAt": "2026-03-20T13:58:39-07:00",
       "groomedNotes": null
     },
@@ -724,7 +724,7 @@
     },
     {
       "id": "BUG-028",
-      "title": "Commit messages are generic — agent summaries discarded",
+      "title": "Commit messages are generic \u2014 agent summaries discarded",
       "intent": "Every commit message must describe what changed and why. Generic messages make git log useless.",
       "description": "",
       "priority": "must",
@@ -808,17 +808,17 @@
       "id": "BUG-031",
       "title": "cmd_status silently omits in-progress items from sprint readiness display",
       "intent": "cmd_status must show in-progress items clearly so users know a sprint is running and what is being worked on",
-      "description": "cmd_status() calls list_ready_items() which filters by readyForSprint: true. Items currently in-progress have readyForSprint set to false by mark_item_failed and related logic, and sprint.json tracks the active sprint separately. But the status output never shows what is currently running — a user who runs 'aishore status' during a sprint sees the item missing from the ready list with no explanation. The status command should query sprint.json and display the active sprint item ID and title if a sprint is in progress.",
+      "description": "cmd_status() calls list_ready_items() which filters by readyForSprint: true. Items currently in-progress have readyForSprint set to false by mark_item_failed and related logic, and sprint.json tracks the active sprint separately. But the status output never shows what is currently running \u2014 a user who runs 'aishore status' during a sprint sees the item missing from the ready list with no explanation. The status command should query sprint.json and display the active sprint item ID and title if a sprint is in progress.",
       "priority": "should",
       "category": null,
       "steps": [
         "In .aishore/aishore, find cmd_status() (around line 3114)",
         "After the 'Ready for sprint' section, add a block that reads BACKLOG_DIR/sprint.json",
         "If sprint.json has status \\!= 'idle' and item is non-null, print a 'Currently running' section with item ID and title",
-        "Verify: running 'aishore status' during a sprint shows 'Currently running: FEAT-001 — My Feature'; running it with no sprint shows nothing for that section"
+        "Verify: running 'aishore status' during a sprint shows 'Currently running: FEAT-001 \u2014 My Feature'; running it with no sprint shows nothing for that section"
       ],
       "acceptanceCriteria": [
-        "aishore status shows 'Currently running: <ID> — <title>' when a sprint is active (sprint.json status \\!= idle)",
+        "aishore status shows 'Currently running: <ID> \u2014 <title>' when a sprint is active (sprint.json status \\!= idle)",
         "aishore status shows no 'Currently running' section when no sprint is active",
         "In-progress display does not interfere with the Ready for sprint section"
       ],
@@ -827,14 +827,14 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "UX gap: 'aishore status' is the go-to command for checking system state, but it shows nothing about an actively running sprint. Users running status mid-sprint see an empty ready list with no explanation — they can't tell if a sprint is running or if something is wrong. sprint.json already tracks the active item; this is a display-only change in cmd_status(). Low risk, additive.",
+      "groomingNotes": "UX gap: 'aishore status' is the go-to command for checking system state, but it shows nothing about an actively running sprint. Users running status mid-sprint see an empty ready list with no explanation \u2014 they can't tell if a sprint is running or if something is wrong. sprint.json already tracks the active item; this is a display-only change in cmd_status(). Low risk, additive.",
       "completedAt": "2026-03-20T18:04:57-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-032",
       "title": "backlog history output omits duration column when duration is 0",
-      "intent": "backlog history must display duration consistently — missing duration for items completed outside normal sprint flow is confusing and breaks column alignment",
+      "intent": "backlog history must display duration consistently \u2014 missing duration for items completed outside normal sprint flow is confusing and breaks column alignment",
       "description": "cmd_backlog_history() formats the output table with ID, date, status, and duration columns. The duration field in sprints.jsonl is stored as an integer (seconds). When an item is archived without a valid startedAt timestamp (e.g. manually marked done, or archive written before sprint started), duration is 0. The display logic should show '0s' or '-' for zero-duration entries rather than silently omitting the column or showing raw '0', which breaks column alignment for scripting.",
       "priority": "could",
       "category": null,
@@ -860,8 +860,8 @@
     },
     {
       "id": "BUG-033",
-      "title": "backlog add --scope flag missing in cmd_backlog_add — scope can only be set via edit",
-      "intent": "Users must be able to set scope constraints at item creation time — requiring an extra edit command after add is an unnecessary workflow friction that will be missed.",
+      "title": "backlog add --scope flag missing in cmd_backlog_add \u2014 scope can only be set via edit",
+      "intent": "Users must be able to set scope constraints at item creation time \u2014 requiring an extra edit command after add is an unnecessary workflow friction that will be missed.",
       "description": "cmd_backlog_add() does not have a --scope flag. The scope array (glob patterns constraining where the developer agent may create or modify files) can only be set by running 'backlog edit <ID> --scope' after the item is created. This is inconsistent with --ac and --step which are both supported at add-time. The fix follows the same pattern as --ac and --step: add --scope and --clear-scope flags to cmd_backlog_add that accumulate scope patterns into a local array and write them as the scope field.",
       "priority": "should",
       "category": null,
@@ -883,14 +883,14 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Missing --scope flag at add-time is a workflow gap — users must run two commands (add + edit) to create a scope-constrained item. The pattern already exists: --ac and --step both follow the accumulate-to-array then write-as-json approach. Scope follows the same pattern. Low risk, additive only.",
+      "groomingNotes": "Missing --scope flag at add-time is a workflow gap \u2014 users must run two commands (add + edit) to create a scope-constrained item. The pattern already exists: --ac and --step both follow the accumulate-to-array then write-as-json approach. Scope follows the same pattern. Low risk, additive only.",
       "completedAt": "2026-03-20T18:07:57-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-034",
-      "title": "next_id scans sprints.jsonl with per-line jq — slow on large archives",
-      "intent": "ID generation must remain fast as the sprint archive grows — per-line jq invocations in a shell loop are O(n) and will become noticeable at hundreds of entries.",
+      "title": "next_id scans sprints.jsonl with per-line jq \u2014 slow on large archives",
+      "intent": "ID generation must remain fast as the sprint archive grows \u2014 per-line jq invocations in a shell loop are O(n) and will become noticeable at hundreds of entries.",
       "description": "In next_id(), the archive max-ID computation uses 'jq -r ... archive_file | sort -rn | head -1'. This invokes jq once on the whole JSONL file, which is correct. However the BACKLOG_FILES loop calls jq once per file, and the archive jq reads all lines just to get the max numeric suffix. For large archives (hundreds of sprint entries), this is still fast, but the JSONL slurp approach (jq -r '[...] | max') is more robust than relying on sort -rn with potentially non-numeric values. The real risk is that if a non-numeric suffix appears in itemId (e.g. 'FEAT-new'), jq tonumber throws an error that is silently swallowed by 2>/dev/null, hiding ID conflicts. Fix: add error handling and filter to numeric-only suffixes before max.",
       "priority": "could",
       "category": null,
@@ -916,8 +916,8 @@
     },
     {
       "id": "BUG-035",
-      "title": "collect_done_ids misses archived items — cleaned items cause false unmet-dependency warnings",
-      "intent": "Ensure dependency resolution accounts for items removed via 'clean' — a sprint item whose dependency was completed and then cleaned must not be blocked.",
+      "title": "collect_done_ids misses archived items \u2014 cleaned items cause false unmet-dependency warnings",
+      "intent": "Ensure dependency resolution accounts for items removed via 'clean' \u2014 a sprint item whose dependency was completed and then cleaned must not be blocked.",
       "description": "collect_done_ids() only scans the active backlog files (backlog.json and bugs.json) for items with status=done. When a completed item is removed via 'aishore clean' or 'backlog rm', its ID disappears from both backlogs. Any item that depends on the cleaned item will now show an unmet dependency warning during pick_item and check_readiness_gates, even though the dependency WAS completed. The archive (sprints.jsonl) contains all completed sprint IDs and is the correct source of truth for historical completions. collect_done_ids() should also scan sprints.jsonl to include archived item IDs in the done set.",
       "priority": "should",
       "category": null,
@@ -925,7 +925,7 @@
         "Identify the collect_done_ids() function in .aishore/aishore",
         "After collecting done IDs from active backlog files, also scan ARCHIVE_DIR/sprints.jsonl for all itemId values and add them to the done_ids set",
         "Use jq to extract itemId values from sprints.jsonl (one JSON object per line) and merge with the existing done_ids array, deduplicating",
-        "Verify the change does not break items that are both in the active backlog (status=done) and in the archive — deduplication handles this",
+        "Verify the change does not break items that are both in the active backlog (status=done) and in the archive \u2014 deduplication handles this",
         "Test: add item B that depends on item A, complete item A, run 'aishore clean', then pick_item should still treat A's dependency as satisfied for B"
       ],
       "acceptanceCriteria": [
@@ -960,7 +960,7 @@
         "Locate refine_item_spec() in .aishore/aishore, specifically the JSON extraction block that uses sed -n '/^\\{/,/^\\}/p'",
         "Replace the fragile sed-based extraction with a jq-based approach: strip markdown fences first, then use jq to find a valid JSON object containing .steps and .acceptanceCriteria",
         "Use: json_output=$(echo \"$raw_output\" | sed '/^```/d' | jq -s 'first(.[] | objects | select(.steps and .acceptanceCriteria))' 2>/dev/null) as the primary extraction",
-        "Keep the existing validation check: if ! echo \"$json_output\" | jq -e '.steps and .acceptanceCriteria' — but only if json_output is non-empty",
+        "Keep the existing validation check: if ! echo \"$json_output\" | jq -e '.steps and .acceptanceCriteria' \u2014 but only if json_output is non-empty",
         "Log a clear error if extraction still fails after the improved approach",
         "Test: verify refinement works when agent wraps JSON in a markdown code block (common output format)"
       ],
@@ -978,15 +978,15 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Real bug: sed '/^\\{/,/^\\}/p' pattern only matches JSON starting at column 0. Claude commonly outputs JSON inside markdown code blocks or with leading spaces. The fix uses jq itself for extraction which is far more robust. Priority should — refine is a recovery path, failures here mean no spec recovery on exhausted retries.",
+      "groomingNotes": "Real bug: sed '/^\\{/,/^\\}/p' pattern only matches JSON starting at column 0. Claude commonly outputs JSON inside markdown code blocks or with leading spaces. The fix uses jq itself for extraction which is far more robust. Priority should \u2014 refine is a recovery path, failures here mean no spec recovery on exhausted retries.",
       "completedAt": "2026-03-20T18:24:22-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-037",
-      "title": "backlog history output missing title column — makes history hard to read",
+      "title": "backlog history output missing title column \u2014 makes history hard to read",
       "intent": "Ensure backlog history output includes the item title so users can read the history without cross-referencing backlog list.",
-      "description": "cmd_backlog_history outputs a table with columns: ID, DATE, STATUS, DURATION. It does not include the item title. The archive (sprints.jsonl) does not store the title — it only stores itemId, date, status, duration, filesChanged, linesAdded, linesRemoved, priority, category. To show a title, the command would need to look it up in the active backlog. However, since items may have been cleaned out, the title may not always be available. The fix should: (1) attempt to look up the title from active backlogs, and (2) fall back to showing the itemId if the item has been cleaned. This makes history scannable without requiring a separate backlog list lookup.",
+      "description": "cmd_backlog_history outputs a table with columns: ID, DATE, STATUS, DURATION. It does not include the item title. The archive (sprints.jsonl) does not store the title \u2014 it only stores itemId, date, status, duration, filesChanged, linesAdded, linesRemoved, priority, category. To show a title, the command would need to look it up in the active backlog. However, since items may have been cleaned out, the title may not always be available. The fix should: (1) attempt to look up the title from active backlogs, and (2) fall back to showing the itemId if the item has been cleaned. This makes history scannable without requiring a separate backlog list lookup.",
       "priority": "should",
       "category": null,
       "steps": [
@@ -1011,7 +1011,7 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "UX bug: backlog history is barely readable without titles. The archive doesn't store titles so we need to look them up from active backlogs, with fallback for cleaned items. Title lookup is a join on two small JSON files — cheap. Priority should.",
+      "groomingNotes": "UX bug: backlog history is barely readable without titles. The archive doesn't store titles so we need to look them up from active backlogs, with fallback for cleaned items. Title lookup is a join on two small JSON files \u2014 cheap. Priority should.",
       "completedAt": "2026-03-20T18:27:25-07:00",
       "groomedNotes": null
     },
@@ -1019,7 +1019,7 @@
       "id": "BUG-038",
       "title": "_check_groom_progress uses md5sum which fails on macOS without coreutils",
       "intent": "Ensure groom progress monitoring works on macOS by using a portable hashing command, so backlog change detection during grooming is not broken for macOS users.",
-      "description": "In _check_groom_progress(), backlog file changes are detected using md5sum (lines 958 and 969 in the current codebase). md5sum is a GNU coreutils command that is not available on macOS by default. macOS provides 'md5' (different interface) or 'shasum'/'sha256sum' (different output format). When md5sum is missing, the command silently fails (cur_hash will be empty) and no changes are ever detected, so the progress monitor never reports backlog updates during groom sessions. The fix should use the same portability pattern as verify_checksum() — try sha256sum first, then shasum, then fall back to a simple wc-c checksum if neither is available.",
+      "description": "In _check_groom_progress(), backlog file changes are detected using md5sum (lines 958 and 969 in the current codebase). md5sum is a GNU coreutils command that is not available on macOS by default. macOS provides 'md5' (different interface) or 'shasum'/'sha256sum' (different output format). When md5sum is missing, the command silently fails (cur_hash will be empty) and no changes are ever detected, so the progress monitor never reports backlog updates during groom sessions. The fix should use the same portability pattern as verify_checksum() \u2014 try sha256sum first, then shasum, then fall back to a simple wc-c checksum if neither is available.",
       "priority": "should",
       "category": null,
       "steps": [
@@ -1043,7 +1043,7 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "Real portability bug: md5sum is GNU-only. macOS users get silent failure in the groom progress monitor. The fix is the same portability pattern already used in verify_checksum(). Priority should — macOS is a primary development platform for Claude Code users.",
+      "groomingNotes": "Real portability bug: md5sum is GNU-only. macOS users get silent failure in the groom progress monitor. The fix is the same portability pattern already used in verify_checksum(). Priority should \u2014 macOS is a primary development platform for Claude Code users.",
       "completedAt": "2026-03-20T18:29:45-07:00",
       "groomedNotes": null
     },
@@ -1051,7 +1051,7 @@
       "id": "BUG-039",
       "title": "backlog edit --depends-on replaces entire dependsOn array instead of appending like --step and --ac",
       "intent": "Ensure --depends-on on backlog edit is consistent with --step and --ac: multiple calls should append dependencies, not replace the entire list each time.",
-      "description": "In cmd_backlog_edit(), the --depends-on flag builds a deps_json array from the provided value and uses '.dependsOn = $deps' which replaces the entire dependsOn array. By contrast, --step uses '.steps = ((.steps // []) + $newsteps)' and --ac uses '.acceptanceCriteria = ((.acceptanceCriteria // []) + $newac)' — both append. This inconsistency means that if you add a dependency incrementally (e.g., two separate calls to add two dependencies), the second call wipes out the first. A user who wants to add one dependency at a time must always specify the full list. The fix should make --depends-on append to the existing dependsOn array, matching the behavior of --step and --ac. A separate --clear-depends-on flag should be added to allow full replacement when needed.",
+      "description": "In cmd_backlog_edit(), the --depends-on flag builds a deps_json array from the provided value and uses '.dependsOn = $deps' which replaces the entire dependsOn array. By contrast, --step uses '.steps = ((.steps // []) + $newsteps)' and --ac uses '.acceptanceCriteria = ((.acceptanceCriteria // []) + $newac)' \u2014 both append. This inconsistency means that if you add a dependency incrementally (e.g., two separate calls to add two dependencies), the second call wipes out the first. A user who wants to add one dependency at a time must always specify the full list. The fix should make --depends-on append to the existing dependsOn array, matching the behavior of --step and --ac. A separate --clear-depends-on flag should be added to allow full replacement when needed.",
       "priority": "could",
       "category": null,
       "steps": [
@@ -1075,13 +1075,13 @@
       "passes": true,
       "readyForSprint": false,
       "groomedAt": "2026-03-20",
-      "groomingNotes": "API inconsistency: --step and --ac append, but --depends-on replaces. Fix is straightforward jq change. Adding --clear-depends-on completes the pattern. Priority could — less common operation than steps/AC but inconsistency is a footgun.",
+      "groomingNotes": "API inconsistency: --step and --ac append, but --depends-on replaces. Fix is straightforward jq change. Adding --clear-depends-on completes the pattern. Priority could \u2014 less common operation than steps/AC but inconsistency is a footgun.",
       "completedAt": "2026-03-20T18:34:11-07:00",
       "groomedNotes": null
     },
     {
       "id": "BUG-040",
-      "title": "Extract run_validated_command() helper — validation execution duplicated 3 times",
+      "title": "Extract run_validated_command() helper \u2014 validation execution duplicated 3 times",
       "intent": "Eliminate the 3 copies of timeout-aware validation command execution (pre-flight, main validation, AC verification) by extracting a single run_validated_command() helper function",
       "description": "",
       "priority": "should",
@@ -1133,7 +1133,7 @@
     },
     {
       "id": "BUG-042",
-      "title": "Extract require_numeric_arg() helper — numeric validation duplicated for multiple flags",
+      "title": "Extract require_numeric_arg() helper \u2014 numeric validation duplicated for multiple flags",
       "intent": "Replace the 3+ copies of numeric argument validation (regex check, log error, return 1) with a single require_numeric_arg() helper function",
       "description": "",
       "priority": "could",
@@ -1164,9 +1164,9 @@
       "priority": "should",
       "category": null,
       "steps": [
-        "Extract run_preflight_validation() — baseline validation before developer runs",
-        "Extract run_developer_cycle() — developer agent invocation with fix command",
-        "Extract run_validation_cycle() — scope check, validation cmd, AC verify, validator agent",
+        "Extract run_preflight_validation() \u2014 baseline validation before developer runs",
+        "Extract run_developer_cycle() \u2014 developer agent invocation with fix command",
+        "Extract run_validation_cycle() \u2014 scope check, validation cmd, AC verify, validator agent",
         "Refactor _run_retry_loop to orchestrate the extracted functions",
         "Verify sprint execution still works end-to-end"
       ],
@@ -1272,7 +1272,7 @@
     },
     {
       "id": "BUG-047",
-      "title": "Standardize error handling — functions log+return, only main exits",
+      "title": "Standardize error handling \u2014 functions log+return, only main exits",
       "intent": "Establish and enforce a consistent error handling convention: all functions use log_error + return 1 (never exit 1), only the main entry point and truly fatal pre-flight checks may call exit",
       "description": "",
       "priority": "should",
@@ -1299,7 +1299,7 @@
     },
     {
       "id": "BUG-048",
-      "title": "Extract shared backlog iteration helper — for-loop-over-BACKLOG_FILES pattern repeated 10+ times",
+      "title": "Extract shared backlog iteration helper \u2014 for-loop-over-BACKLOG_FILES pattern repeated 10+ times",
       "intent": "Replace the 10+ copies of the for f in BACKLOG_FILES / jq operation pattern with reusable helpers like map_backlog_files() and sum_backlog_field()",
       "description": "",
       "priority": "should",
@@ -1379,7 +1379,7 @@
     },
     {
       "id": "BUG-051",
-      "title": "Reduce double jq parsing — extract all needed fields in one pass",
+      "title": "Reduce double jq parsing \u2014 extract all needed fields in one pass",
       "intent": "Eliminate the pattern of extracting a jq projection then re-parsing the result for individual fields, by extracting all needed fields in a single jq pass using @base64 or multi-output",
       "description": "",
       "priority": "could",
@@ -1481,7 +1481,7 @@
     },
     {
       "id": "BUG-055",
-      "title": "Duplicate CLI commands section in groom agent prompts — factor out shared preamble",
+      "title": "Duplicate CLI commands section in groom agent prompts \u2014 factor out shared preamble",
       "intent": "Eliminate the ~8 lines of duplicated CLI command reference between product-owner.md and tech-lead.md by extracting a shared section or having the orchestrator inject it",
       "description": "",
       "priority": "could",
@@ -1531,8 +1531,8 @@
     },
     {
       "id": "BUG-057",
-      "title": "resolve_backlog_file re-checks expected file in fallback loop — skip it",
-      "intent": "When resolve_backlog_file() fails the fast-path check on the expected file, the fallback loop iterates all BACKLOG_FILES including the one already checked, wasting a jq parse — skip it",
+      "title": "resolve_backlog_file re-checks expected file in fallback loop \u2014 skip it",
+      "intent": "When resolve_backlog_file() fails the fast-path check on the expected file, the fallback loop iterates all BACKLOG_FILES including the one already checked, wasting a jq parse \u2014 skip it",
       "description": "",
       "priority": "could",
       "category": null,
@@ -1555,8 +1555,8 @@
     },
     {
       "id": "BUG-058",
-      "title": "Inconsistent date portability — some date calls lack BSD fallback",
-      "intent": "Add consistent BSD/GNU date handling throughout the script — some calls have macOS fallback (date -j) while others assume GNU date, which will break on macOS without coreutils",
+      "title": "Inconsistent date portability \u2014 some date calls lack BSD fallback",
+      "intent": "Add consistent BSD/GNU date handling throughout the script \u2014 some calls have macOS fallback (date -j) while others assume GNU date, which will break on macOS without coreutils",
       "description": "",
       "priority": "could",
       "category": null,
@@ -1740,7 +1740,7 @@
       "id": "BUG-064",
       "title": "Simplify AC and step accumulation in backlog add and edit",
       "intent": "All array-building in backlog add and edit uses shared helpers. The pending_ac flush pattern, manual AC JSON string-cat, and triplicated scope/steps/deps append blocks are eliminated. Saves ~50 lines combined.",
-      "description": "Three patterns need fixing: (1) pending_ac/flush state machine for --ac/--ac-verify pairing — simplify to push-immediately-on-ac, modify-last-on-ac-verify. (2) AC JSON array built by manual string concatenation (10 identical lines in both add and edit) — extract _build_ac_json helper. (3) Three identical scope/steps/deps append blocks in edit (23 lines) each doing the same if-gt-0/printf/jq-R/jq-s/jq_updates pattern — extract _append_array_field helper. Also remove update_desc tracking from edit (14 lines of string concatenation for a cosmetic log message).",
+      "description": "Three patterns need fixing: (1) pending_ac/flush state machine for --ac/--ac-verify pairing \u2014 simplify to push-immediately-on-ac, modify-last-on-ac-verify. (2) AC JSON array built by manual string concatenation (10 identical lines in both add and edit) \u2014 extract _build_ac_json helper. (3) Three identical scope/steps/deps append blocks in edit (23 lines) each doing the same if-gt-0/printf/jq-R/jq-s/jq_updates pattern \u2014 extract _append_array_field helper. Also remove update_desc tracking from edit (14 lines of string concatenation for a cosmetic log message).",
       "priority": "should",
       "category": null,
       "steps": [
@@ -1870,7 +1870,7 @@
       "id": "BUG-068",
       "title": "Tighten enforce_groom_limits and protect_items_from_groom",
       "intent": "Groom protection and limit enforcement logic is tighter and less verbose. Combined size drops from 149 to ~100 lines while preserving all safety guarantees.",
-      "description": "enforce_groom_limits (76 lines) and protect_items_from_groom (73 lines) are correct but verbose. The protection function does per-field comparison with a 6-field jq check then a separate merge — this can be a single jq expression. The limits function iterates items one-by-one in bash when a single jq filter would suffice.",
+      "description": "enforce_groom_limits (76 lines) and protect_items_from_groom (73 lines) are correct but verbose. The protection function does per-field comparison with a 6-field jq check then a separate merge \u2014 this can be a single jq expression. The limits function iterates items one-by-one in bash when a single jq filter would suffice.",
       "priority": "should",
       "category": null,
       "steps": [
@@ -1937,7 +1937,7 @@
       "priority": "should",
       "category": null,
       "steps": [
-        "Extract _sync_remote helper: git push + git pull with warnings — used by both merge paths",
+        "Extract _sync_remote helper: git push + git pull with warnings \u2014 used by both merge paths",
         "Collapse merge_msg if/else to: merge_msg=merge: ITEM_ID dollar{merge_summary:-sprint branch}",
         "Parameterize merge: single path that runs git merge --no-ff or git merge --squash based on MERGE_STRATEGY",
         "Handle squash-specific explicit commit after merge --squash",
@@ -1968,7 +1968,7 @@
       "id": "BUG-071",
       "title": "Clean up cmd_run: extract auto-review and trim verbosity",
       "intent": "cmd_run is leaner and reads top-to-bottom. The inline auto-review block, verbose bash idioms in the sprint loop, and nested helper definitions are cleaned up. Saves ~65 lines.",
-      "description": "cmd_run (478 lines) has: (1) a 68-line auto-review block at the end duplicating cmd_review — replace with direct call. (2) A 4-line skip-list builder loop replaceable with IFS=,; echo. (3) A 13-line priority scope check loop replaceable with a single [[ string match ]]. (4) Verbose startup banner echoing every config value. (5) Nested _count_total_ready and _record_sprint_failure function defs that should be at file scope. (6) Duplicate [[ -s review_output ]] check in post-summary.",
+      "description": "cmd_run (478 lines) has: (1) a 68-line auto-review block at the end duplicating cmd_review \u2014 replace with direct call. (2) A 4-line skip-list builder loop replaceable with IFS=,; echo. (3) A 13-line priority scope check loop replaceable with a single [[ string match ]]. (4) Verbose startup banner echoing every config value. (5) Nested _count_total_ready and _record_sprint_failure function defs that should be at file scope. (6) Duplicate [[ -s review_output ]] check in post-summary.",
       "priority": "should",
       "category": null,
       "steps": [
@@ -1982,9 +1982,9 @@
         "Verify: auto done --auto-review, auto p1, run --dry-run all work correctly"
       ],
       "acceptanceCriteria": [
-        "No inline review agent invocation in cmd_run — it calls cmd_review",
-        "No skip-list builder loop — uses IFS one-liner",
-        "No priority scope for-loop — uses string match",
+        "No inline review agent invocation in cmd_run \u2014 it calls cmd_review",
+        "No skip-list builder loop \u2014 uses IFS one-liner",
+        "No priority scope for-loop \u2014 uses string match",
         "No nested function definitions inside cmd_run",
         "auto done --auto-review still runs architecture review after completion",
         "shellcheck passes"
@@ -2004,7 +2004,7 @@
       "id": "BUG-072",
       "title": "Trim verbose defensive coding across all functions",
       "intent": "Error handling is terse and consistent. Redundant null guards, verbose suggestions, unnecessary fallbacks, single-use variables, and redundant return 0 statements are removed. Saves ~200 lines spread across the entire script.",
-      "description": "Across 82 functions, the script has accumulated verbose patterns: (1) jq calls with 2>/dev/null || true on caller-guaranteed input. (2) Error messages with full command examples belonging in help text. (3) Existence checks on files just created or caller-validated. (4) Multi-line error blocks where single log_error suffices. (5) ~5 redundant return 0 at end of functions. (6) Per-item dual jq calls in enforce_groom_limits and mark_complete that can be combined into single calls. (7) Variables computed and used exactly once that should be inlined. (8) cmd_diagnose has 6 separate jq -r calls on the same file — consolidate to one.",
+      "description": "Across 82 functions, the script has accumulated verbose patterns: (1) jq calls with 2>/dev/null || true on caller-guaranteed input. (2) Error messages with full command examples belonging in help text. (3) Existence checks on files just created or caller-validated. (4) Multi-line error blocks where single log_error suffices. (5) ~5 redundant return 0 at end of functions. (6) Per-item dual jq calls in enforce_groom_limits and mark_complete that can be combined into single calls. (7) Variables computed and used exactly once that should be inlined. (8) cmd_diagnose has 6 separate jq -r calls on the same file \u2014 consolidate to one.",
       "priority": "should",
       "category": null,
       "steps": [
@@ -2115,7 +2115,7 @@
       "id": "BUG-075",
       "title": "Collapse sub-shell jq extractions in create_sprint and mark_complete",
       "intent": "Sprint state functions pass item JSON as a single --argjson argument instead of forking 5-7 sub-shells to extract individual fields. Saves ~13 lines and 7 process forks.",
-      "description": "create_sprint (44 lines) calls echo item_json | jq 5 separate times to extract intent, description, steps, AC, scope — then passes each as a --argjson to jq -n. Pass item_json as a single --argjson item and reference fields inline. mark_complete (78 lines) calls jq twice to get item_priority and item_category separately from the same backlog file — combine into one call.",
+      "description": "create_sprint (44 lines) calls echo item_json | jq 5 separate times to extract intent, description, steps, AC, scope \u2014 then passes each as a --argjson to jq -n. Pass item_json as a single --argjson item and reference fields inline. mark_complete (78 lines) calls jq twice to get item_priority and item_category separately from the same backlog file \u2014 combine into one call.",
       "priority": "should",
       "category": null,
       "steps": [
@@ -2209,8 +2209,8 @@
     {
       "id": "BUG-078",
       "title": "Move advisory complexity hints out of check_readiness_gates",
-      "intent": "check_readiness_gates is a pure gate function — it checks hard requirements only. Advisory hints (under-specified warnings) live in the caller. Saves ~10 lines from the gate function and improves separation of concerns.",
-      "description": "check_readiness_gates (98 lines) has 6 hard gate checks plus a 12-line advisory block (lines 648-660) that warns about under-specified items (few steps, no scope). The advisory block is not a gate — it never blocks anything. Move it to cmd_backlog_check (the primary caller) and the advisory check in cmd_run. This makes check_readiness_gates a clean pass/fail function.",
+      "intent": "check_readiness_gates is a pure gate function \u2014 it checks hard requirements only. Advisory hints (under-specified warnings) live in the caller. Saves ~10 lines from the gate function and improves separation of concerns.",
+      "description": "check_readiness_gates (98 lines) has 6 hard gate checks plus a 12-line advisory block (lines 648-660) that warns about under-specified items (few steps, no scope). The advisory block is not a gate \u2014 it never blocks anything. Move it to cmd_backlog_check (the primary caller) and the advisory check in cmd_run. This makes check_readiness_gates a clean pass/fail function.",
       "priority": "could",
       "category": null,
       "steps": [
@@ -2239,7 +2239,7 @@
     {
       "id": "BUG-079",
       "title": "Remove update_desc tracking from cmd_backlog_edit",
-      "intent": "Cut 14 lines of string concatenation that builds a cosmetic Updated FEAT-001 title priority ready log message — marginal UX value for the code weight.",
+      "intent": "Cut 14 lines of string concatenation that builds a cosmetic Updated FEAT-001 title priority ready log message \u2014 marginal UX value for the code weight.",
       "description": "",
       "priority": "could",
       "category": null,
@@ -2266,7 +2266,7 @@
     },
     {
       "id": "BUG-081",
-      "title": "backlog history title column always shows '-' — title not stored in archive",
+      "title": "backlog history title column always shows '-' \u2014 title not stored in archive",
       "intent": "backlog history shows real item titles. mark_complete archives the title field so history output is human-readable.",
       "description": "cmd_backlog_history displays a TITLE column and reads .title from sprints.jsonl, but mark_complete never writes a title field to the archive. Every row shows '-'. BUG-037 added the title column to the history output but missed adding title to the archive write in mark_complete.",
       "priority": "should",
@@ -2296,7 +2296,7 @@
       "id": "BUG-082",
       "title": "Update CHANGELOG.md and bump version to v0.3.5",
       "intent": "CHANGELOG.md reflects all work completed since v0.3.4 and VERSION reads 0.3.5. Users and contributors can see exactly what changed.",
-      "description": "VERSION is 0.3.4 and CHANGELOG.md documents up to v0.3.4 (2026-03-20). Since then, 20+ items were completed: BUG-035 through BUG-078 (refactoring, simplification, readiness gate fixes, dependency tracking fixes). These changes constitute a patch release (v0.3.5) — no new user-facing features, only internal improvements and bug fixes.",
+      "description": "VERSION is 0.3.4 and CHANGELOG.md documents up to v0.3.4 (2026-03-20). Since then, 20+ items were completed: BUG-035 through BUG-078 (refactoring, simplification, readiness gate fixes, dependency tracking fixes). These changes constitute a patch release (v0.3.5) \u2014 no new user-facing features, only internal improvements and bug fixes.",
       "priority": "should",
       "category": null,
       "steps": [
@@ -2322,16 +2322,16 @@
         "BUG-072",
         "BUG-081"
       ],
-      "status": "todo",
+      "status": "done",
       "passes": false,
-      "readyForSprint": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-21",
       "groomingNotes": "Version bump should run after BUG-067, BUG-072, and BUG-081 complete so the changelog covers all work in this release cycle. Updated dependsOn accordingly. BUG-082 itself will not be readyForSprint until those three are done.",
       "groomedNotes": null
     },
     {
       "id": "BUG-083",
-      "title": "context_args passed as word-split string — should be an array",
+      "title": "context_args passed as word-split string \u2014 should be an array",
       "intent": "context_args is an array everywhere it flows: no word-splitting on unquoted variable, SC2086 warning is gone, filenames with spaces are safe.",
       "description": "context_args is built as a space-delimited string (e.g. '@file1 @file2 @file3') and then word-split at the call site via unquoted $context_args to pass multiple @file arguments to build_context. This pattern breaks on paths with spaces, triggers SC2086 from shellcheck, and is fragile. The fix is to use a Bash array (local -a context_args=()) throughout: build the array with += , pass it as \"${context_args[@]}\", and update run_agent() and run_groom_flow() signatures accordingly.",
       "priority": "should",
@@ -2343,8 +2343,8 @@
         "Update run_agent() call site to pass \"${context_args[@]}\" instead of $context_args",
         "Update run_agent() parameter 4 to accept variadic args or an array for context_files",
         "Remove the shellcheck disable=SC2086 comment at line 1494 if it was added to suppress this",
-        "Run shellcheck — no SC2086 findings on context_args",
-        "Run: aishore groom, aishore review, aishore backlog populate — each must complete without error",
+        "Run shellcheck \u2014 no SC2086 findings on context_args",
+        "Run: aishore groom, aishore review, aishore backlog populate \u2014 each must complete without error",
         "Also convert groom_context string in run_sprint_loop (auto-groom path) to an array"
       ],
       "acceptanceCriteria": [
@@ -2367,9 +2367,9 @@
     },
     {
       "id": "BUG-084",
-      "title": "_status_output calls count_by_status 6 times — consolidate to one jq pass per file",
+      "title": "_status_output calls count_by_status 6 times \u2014 consolidate to one jq pass per file",
       "intent": "_status_output extracts all item counts from each backlog file in a single jq call per file; no redundant file parses.",
-      "description": "_status_output (called by cmd_status and cmd_status --watch loop) calls count_by_status three times per backlog file — once each for 'todo', 'in-progress', and 'done' — yielding 6 jq subprocess forks total. All three counts can be extracted in a single jq call per file using group_by or select, then stored in local variables. This saves 4 subprocess forks per status refresh and is especially noticeable in --watch mode.",
+      "description": "_status_output (called by cmd_status and cmd_status --watch loop) calls count_by_status three times per backlog file \u2014 once each for 'todo', 'in-progress', and 'done' \u2014 yielding 6 jq subprocess forks total. All three counts can be extracted in a single jq call per file using group_by or select, then stored in local variables. This saves 4 subprocess forks per status refresh and is especially noticeable in --watch mode.",
       "priority": "should",
       "category": null,
       "steps": [
@@ -2406,7 +2406,7 @@
       "steps": [
         "In cmd_review, after parsing --update-docs, set a local variable for the required permissions: PERMS_REVIEWER if read-only, PERMS_REVIEWER_DOCS if update-docs",
         "Pass the resolved permissions to run_agent, or temporarily override CFG_PERMS_REVIEWER before the run_agent call",
-        "In run_agent architect case, remove the output_file-based permission check — it was the wrong proxy",
+        "In run_agent architect case, remove the output_file-based permission check \u2014 it was the wrong proxy",
         "Verify: run .aishore/aishore review and confirm --allowedTools does not include Edit or Write",
         "Verify: run .aishore/aishore review --update-docs and confirm --allowedTools includes Edit,Write",
         "shellcheck passes with no errors"
@@ -2483,13 +2483,13 @@
     },
     {
       "id": "BUG-087",
-      "title": "refine refinement context lost — retry_extra_prompt cleared by _run_retry_loop",
+      "title": "refine refinement context lost \u2014 retry_extra_prompt cleared by _run_retry_loop",
       "intent": "Ensure developer agent on a --refine pass receives the refinement hint so it pays attention to the updated spec",
       "description": "",
       "priority": "should",
       "category": null,
       "steps": [
-        "In _run_retry_loop, do not reset retry_extra_prompt to empty — separate retry history clearing from initial context",
+        "In _run_retry_loop, do not reset retry_extra_prompt to empty \u2014 separate retry history clearing from initial context",
         "Introduce an initial_dev_context variable passed from the caller that is included in dev_extra_prompt regardless of attempt number",
         "In _run_developer_cycle, include initial_dev_context in dev_extra_prompt on attempt 0 (not just retries)",
         "Verify developer agent log shows refinement hint on the refinement pass"
@@ -2511,7 +2511,7 @@
     {
       "id": "BUG-088",
       "title": "head -n -1 in protect_items_from_groom is not portable on macOS BSD head",
-      "intent": "protect_items_from_groom must work correctly on macOS — replace GNU-only head -n -1 with a portable alternative",
+      "intent": "protect_items_from_groom must work correctly on macOS \u2014 replace GNU-only head -n -1 with a portable alternative",
       "description": "",
       "priority": "must",
       "category": null,
@@ -2531,7 +2531,7 @@
       "status": "done",
       "passes": true,
       "readyForSprint": false,
-      "groomingNotes": "Promoting to must: head -n -1 is GNU-only and protect_items_from_groom is silently broken for all macOS users. macOS is a primary development platform — this blocks grooming entirely on Mac. Must fix before v0.3.5.",
+      "groomingNotes": "Promoting to must: head -n -1 is GNU-only and protect_items_from_groom is silently broken for all macOS users. macOS is a primary development platform \u2014 this blocks grooming entirely on Mac. Must fix before v0.3.5.",
       "groomedAt": "2026-03-21",
       "completedAt": "2026-03-21T09:41:38-07:00"
     },
@@ -2564,7 +2564,7 @@
     },
     {
       "id": "BUG-090",
-      "title": "total_attempts undercounted in --refine path — second _run_retry_loop resets counter",
+      "title": "total_attempts undercounted in --refine path \u2014 second _run_retry_loop resets counter",
       "intent": "Archive metrics must accurately record total developer attempts including all retries before spec refinement",
       "description": "",
       "priority": "should",
