@@ -1058,11 +1058,13 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
+      "status": "done",
+      "passes": true,
       "readyForSprint": false,
       "groomingNotes": "Closes the only fire-and-forget hole in backlog management. Without preview, AI-generated items land with no review step. On an established backlog this introduces noise requiring manual cleanup. Direct user value: confidence before committing.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "groomedNotes": null,
+      "completedAt": "2026-03-21T12:44:30-07:00"
     }
   ]
 }

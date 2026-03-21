@@ -41,6 +41,7 @@ Commands:
     --dry-run       Show candidates only, make no changes
     --auto          Mark all flagged items done without prompting
   backlog populate  Use AI to populate backlog from PRODUCT.md (non-interactive)
+    --preview       Show proposed items without modifying backlog
 
   auto <scope>      Autonomous mode — drive backlog to completion
     done            Drain entire backlog

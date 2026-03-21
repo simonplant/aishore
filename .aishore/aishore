@@ -4220,7 +4220,8 @@ cmd_backlog_check() {
 }
 
 cmd_backlog_populate() {
-    parse_opts -- "$@" || return 1
+    local preview=false
+    parse_opts "bool:preview:--preview" -- "$@" || return 1
 
     if [[ ! -f "$BACKLOG_DIR/backlog.json" ]]; then
         log_error "aishore not initialized — run '.aishore/aishore init' first"
@@ -4261,6 +4262,55 @@ cmd_backlog_populate() {
         [[ -f "$BACKLOG_DIR/$_pop_f" ]] && context_args+=("@$BACKLOG_DIR/$_pop_f")
     done
     [[ -f "$BACKLOG_DIR/DEFINITIONS.md" ]] && context_args+=("@$BACKLOG_DIR/DEFINITIONS.md")
+
+    # Preview mode: snapshot before, run agent, show new items, restore original
+    if [[ "$preview" == "true" ]]; then
+        local preview_snap_dir
+        preview_snap_dir=$(mktemp -d)
+        snapshot_backlog_files "$preview_snap_dir"
+
+        local _preview_rc=0
+        run_groom_flow "product-owner" "populate" context_args || _preview_rc=$?
+
+        # Extract and display new items (even on partial failure, show what was added)
+        echo ""
+        echo "═══════════════════════════════════════════"
+        echo "  PREVIEW — Proposed Items"
+        echo "═══════════════════════════════════════════"
+        echo ""
+        printf "%-12s %-8s %s\n" "ID" "PRIORITY" "TITLE"
+        printf "%-12s %-8s %s\n" "────────────" "────────" "─────────────────────────────────────────"
+
+        local preview_count=0
+        local _ppf
+        for _ppf in "${BACKLOG_FILES[@]}"; do
+            local snap_file="$preview_snap_dir/$_ppf"
+            local live_file="$BACKLOG_DIR/$_ppf"
+            [[ -f "$snap_file" && -f "$live_file" ]] || continue
+            local new_items
+            new_items=$(jq -r --slurpfile snap "$snap_file" '
+                ($snap[0].items | map(.id)) as $old |
+                [.items[] | select(.id as $id | $old | index($id) | not)] |
+                .[] | [.id, .priority // "-", .title // "-"] | @tsv
+            ' "$live_file" 2>/dev/null || true)
+            if [[ -n "$new_items" ]]; then
+                while IFS=$'\t' read -r id pri title; do
+                    printf "%-12s %-8s %s\n" "$id" "$pri" "$title"
+                    ((preview_count++)) || true
+                done <<< "$new_items"
+            fi
+        done
+
+        echo ""
+        printf '%s proposed item(s)\n' "$preview_count"
+        echo ""
+        log_info "Preview only — no changes written to backlog."
+
+        # Restore original backlog files
+        restore_backlog_files "$preview_snap_dir"
+        rm -rf "$preview_snap_dir"
+        return "$_preview_rc"
+    fi
 
     run_groom_flow "product-owner" "populate" context_args
 }
