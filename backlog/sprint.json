@@ -1,30 +1,29 @@
 {
-  "sprintId": "sprint-1774117225",
-  "startedAt": "2026-03-21T11:20:25-07:00",
+  "sprintId": "sprint-1774117671",
+  "startedAt": "2026-03-21T11:27:51-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-099",
-    "title": "auto --no-merge re-picks already-completed items — base branch backlog not updated",
-    "intent": "Each item in an auto --no-merge session must be attempted exactly once, never re-picked in the same run.",
+    "id": "BUG-080",
+    "title": "Consolidate 6 separate jq calls in cmd_diagnose into one",
+    "intent": "cmd_diagnose makes 6 separate jq -r calls on the same JSON file to extract individual fields. Combine into a single jq invocation to reduce forks and lines.",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Understand why re-picking occurs: mark_complete updates the feature branch backlog but git checkout base_branch reverts it; base branch still shows item as readyForSprint: true",
-      "In run_sprint_loop, after a successful sprint, add the ITEM_ID to a 'completed_in_session' set (similar to FAILED_IDS)",
-      "In pick_item's skip list, include completed_in_session IDs alongside FAILED_IDS",
-      "Only needed when no_merge=true; stash/merge mode automatically prevents re-pick since item is marked done on the branch that becomes base",
-      "Run shellcheck and verify no new warnings"
+      "Replace the 6 individual jq -r calls in cmd_diagnose with a single jq call that extracts all fields at once",
+      "Verify diagnose output is unchanged"
     ],
     "acceptanceCriteria": [
-      "Running auto --no-merge with multiple ready items never attempts the same item twice in one session",
-      "Completed items are still picked correctly when starting a new session",
-      "shellcheck passes with zero new warnings"
+      "cmd_diagnose has at most 1 jq call to extract fields from the diagnostics file",
+      "Output format is unchanged",
+      "shellcheck passes"
     ],
-    "scope": [],
-    "startedAt": "2026-03-21T11:20:25-07:00",
+    "scope": [
+      ".aishore/**"
+    ],
+    "startedAt": "2026-03-21T11:27:51-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T11:24:43-07:00"
+    "completedAt": "2026-03-21T11:31:15-07:00"
   },
-  "completedAt": "2026-03-21T11:24:43-07:00",
+  "completedAt": "2026-03-21T11:31:15-07:00",
   "attempts": 1
 }

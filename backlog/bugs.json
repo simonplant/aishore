@@ -2845,7 +2845,10 @@
       "passes": false,
       "readyForSprint": true,
       "groomingNotes": "Core UX gap: the intent gate is a hard requirement but invisible when it fires. Users running auto sessions and seeing nothing processed have no way to diagnose why without reading source code. A single log_warn per bypassed item costs nothing and closes the feedback loop completely. Priority should is correct.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "lastFailReason": "Validator agent rejected implementation",
+      "lastFailAt": "2026-03-21T11:27:51-07:00",
+      "failCount": 1
     },
     {
       "id": "BUG-080",
@@ -2867,11 +2870,12 @@
         ".aishore/**"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-21",
-      "groomedNotes": null
+      "groomedNotes": null,
+      "completedAt": "2026-03-21T11:31:15-07:00"
     }
   ]
 }

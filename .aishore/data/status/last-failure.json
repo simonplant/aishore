@@ -1,12 +1,12 @@
 {
-  "itemId": "BUG-072",
+  "itemId": "BUG-100",
   "reason": "Validator failed",
   "detail": "Validator agent rejected implementation",
-  "timestamp": "2026-03-21T08:34:27-07:00",
-  "agentLog": "/home/simon/dev/aishore/.aishore/data/logs/validator-20260321T083033.log",
+  "timestamp": "2026-03-21T11:27:51-07:00",
+  "agentLog": "/home/simon/dev/aishore/.aishore/data/logs/validator-20260321T112634.log",
   "result": {
     "status": "fail",
-    "reason": "AC3 not met: four functions still end with redundant return 0 — _apply_env_overrides (line 564, explicitly named in sprint steps), find_claude_md (line 438), _find_prd (line 462), and cleanup_exit (line 51). Intent requires these to be removed."
+    "reason": "AC3 not met: one new SC2329 shellcheck warning introduced for _warn_intent_skips (false positive from indirect invocation via map_backlog_files, but new vs main). Fix: add # shellcheck disable=SC2329 above the function definition. AC1 and AC2 are met."
   },
-  "logTail": ""
+  "logTail": "**Overall: FAIL**\n\nAC1 and AC2 are solid — the warning fires correctly with the right format, and valid-intent items are unaffected. But AC3 fails: there's one new `SC2329` info warning for `_warn_intent_skips`. It's the same false-positive shellcheck produces for `_warn_self_refs` (indirect invocation through `map_backlog_files`), but it's new relative to main.\n\nMinimal fix: add `# shellcheck disable=SC2329` above the `_warn_intent_skips` function definition, matching the pattern used elsewhere in the codebase."
 }
