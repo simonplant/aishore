@@ -1,28 +1,29 @@
 {
-  "sprintId": "sprint-1774116854",
-  "startedAt": "2026-03-21T11:14:14-07:00",
+  "sprintId": "sprint-1774116952",
+  "startedAt": "2026-03-21T11:15:52-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-096",
-    "title": "cmd_status --watch loops forever after successful sprint — status is 'completed' not 'idle'",
-    "intent": "After a sprint succeeds, cmd_status --watch must exit cleanly without user intervention.",
+    "id": "BUG-097",
+    "title": "protect_items_from_groom uses wrong field name 'groomedNotes' — groomed notes silently discarded",
+    "intent": "Groomed notes written by groom agents must survive the protect_items_from_groom pass.",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Locate the terminal-state check in cmd_status watch loop (~line 3549)",
-      "Add 'completed' as a terminal state alongside 'idle': [[ $sprint_status == 'idle' || $sprint_status == 'completed' ]]",
+      "Locate the jq merge in protect_items_from_groom (~line 3149): 'groomedNotes: (.groomedNotes // $orig[.id].groomedNotes)'",
+      "Confirm actual field name: backlog edit --groomed-notes writes '.groomingNotes', backlog show reads '.groomingNotes'",
+      "Change the field reference in protect_items_from_groom from 'groomedNotes' to 'groomingNotes' (both sides of the //)",
       "Run shellcheck and verify no new warnings"
     ],
     "acceptanceCriteria": [
-      "Running cmd_status --watch exits automatically after a sprint completes with status 'completed' in sprint.json",
-      "Running cmd_status --watch still exits when sprint.json is absent or has status 'idle'",
+      "After a groom session writes --groomed-notes, the notes appear in backlog show output after protect_items_from_groom runs",
+      "No spurious 'groomedNotes: null' field is added to items during protect run",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T11:14:14-07:00",
+    "startedAt": "2026-03-21T11:15:52-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T11:15:51-07:00"
+    "completedAt": "2026-03-21T11:17:33-07:00"
   },
-  "completedAt": "2026-03-21T11:15:51-07:00",
+  "completedAt": "2026-03-21T11:17:33-07:00",
   "attempts": 1
 }
