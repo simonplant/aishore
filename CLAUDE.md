@@ -37,6 +37,7 @@ jq empty backlog/*.json
 .aishore/aishore auto p1 --refine            # Refine spec on failure and retry
 .aishore/aishore auto done --quick            # Skip maturity protocol
 .aishore/aishore auto done --auto-review     # Auto-run architecture review on completion
+.aishore/aishore auto done --no-summary       # Suppress end-of-session summary table
 .aishore/aishore auto done --dry-run          # Preview first item without running
 .aishore/aishore run [N]            # Run N sprints (branch, commit, merge, push per item)
 .aishore/aishore run <ID>           # Run specific item (e.g., FEAT-001)
