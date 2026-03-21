@@ -937,11 +937,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-21",
-      "groomedNotes": null
+      "groomedNotes": null,
+      "completedAt": "2026-03-21T10:34:22-07:00"
     },
     {
       "id": "FEAT-032",
