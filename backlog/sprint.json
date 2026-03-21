@@ -1,32 +1,20 @@
 {
-  "sprintId": "sprint-1774125149",
-  "startedAt": "2026-03-21T13:32:29-07:00",
+  "sprintId": "sprint-1774125893",
+  "startedAt": "2026-03-21T13:44:53-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-122",
-    "title": "Update CHANGELOG.md and bump version to v0.3.7",
-    "intent": "CHANGELOG.md must document BUG-116 (--remove-ac flag) and BUG-117 (auto start queued item count log) under a new [0.3.7] entry, and VERSION must be updated to 0.3.7.",
-    "description": "BUG-116 (--remove-ac N flag for backlog edit) and BUG-117 (queued item count with priority breakdown logged on auto start) were implemented after the 0.3.6 release but are not reflected in CHANGELOG.md or VERSION. Standard release hygiene: any merged feature or fix batch should result in a documented version increment.",
-    "sourceBacklog": "bugs.json",
-    "steps": [
-      "In docs/CHANGELOG.md, add a new ## [0.3.7] - 2026-03-21 section above [0.3.6]",
-      "Under ### Added, document BUG-117: 'Queued item count with per-priority breakdown logged at auto session start (BUG-117)'",
-      "Under ### Added, document BUG-116: '--remove-ac N flag for backlog edit to remove a specific acceptance criterion by 1-based index (BUG-116)'",
-      "Update .aishore/VERSION from 0.3.6 to 0.3.7",
-      "Run .aishore/aishore version to confirm it now reports 0.3.7",
-      "Run .aishore/aishore checksums to regenerate checksums after editing .aishore/VERSION"
-    ],
-    "acceptanceCriteria": [
-      "'aishore version' outputs '0.3.7'",
-      "CHANGELOG.md has a [0.3.7] section with BUG-116 and BUG-117 entries",
-      ".aishore/checksums.sha256 is regenerated and up to date",
-      "shellcheck passes with zero new warnings"
-    ],
+    "id": "FEAT-036",
+    "title": "backlog check --all audits every item for readiness gates in one pass",
+    "intent": "Users must be able to run 'backlog check --all' and see a table of every non-done item with its readiness gate status and failure reasons, so they can fix the whole backlog in one pass instead of checking item by item.",
+    "description": "backlog check validates one item at a time. Users with large backlogs have no way to audit all items at once — they must loop manually. A --all flag on backlog check should iterate every non-done item, run the same gate checks, and print a summary table: item ID, PASS/FAIL, and which gates failed. This directly complements BUG-100: once auto warns about skipped items, users need a fast way to find and fix all broken items without running check N times.",
+    "sourceBacklog": "backlog.json",
+    "steps": [],
+    "acceptanceCriteria": [],
     "scope": [],
-    "startedAt": "2026-03-21T13:32:29-07:00",
+    "startedAt": "2026-03-21T13:44:53-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T13:34:19-07:00"
+    "completedAt": "2026-03-21T13:49:31-07:00"
   },
-  "completedAt": "2026-03-21T13:34:19-07:00",
+  "completedAt": "2026-03-21T13:49:31-07:00",
   "attempts": 1
 }

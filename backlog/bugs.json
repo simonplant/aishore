@@ -3405,7 +3405,8 @@
       "readyForSprint": false,
       "groomingNotes": "O(n) archive scan for O(k) display. Simple swap of tail position in the pipeline. No semantic change — JSONL is line-oriented so tail on the file gives the same last-N records as tail on the jq output.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T13:25:27-07:00"
+      "completedAt": "2026-03-21T13:25:27-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-119",
@@ -3433,7 +3434,8 @@
       "readyForSprint": false,
       "groomingNotes": "Trivial fix — already done correctly in _status_output, just needs the same jq filter applied to cmd_backlog_history. One-line change in the jq expression, applies to both the --all branch and the default branch (two occurrences).",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T13:28:22-07:00"
+      "completedAt": "2026-03-21T13:28:22-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-120",
@@ -3461,7 +3463,8 @@
       "readyForSprint": false,
       "groomingNotes": "set -euo pipefail makes any failing read a script exit. This hits in CI and any piped invocation. Fix is '|| true' — one token change. The review prompt is already guarded by auto_mode and auto_review checks, so the only missing guard is read's own exit code.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T13:30:28-07:00"
+      "completedAt": "2026-03-21T13:30:28-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-121",
@@ -3489,7 +3492,8 @@
       "readyForSprint": false,
       "groomingNotes": "Minor but confusing UX. When a user explicitly sets --limit 3 they are telling the system to stop after 3 items. Showing /20 implies 17 more items will run, which is wrong.",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T13:32:28-07:00"
+      "completedAt": "2026-03-21T13:32:28-07:00",
+      "groomedNotes": null
     },
     {
       "id": "BUG-122",
@@ -3519,7 +3523,114 @@
       "readyForSprint": false,
       "groomingNotes": "Straightforward maintenance item. VERSION change triggers checksums regeneration. Changelog entries follow the established format in [0.3.6].",
       "groomedAt": "2026-03-21",
-      "completedAt": "2026-03-21T13:34:19-07:00"
+      "completedAt": "2026-03-21T13:34:19-07:00",
+      "groomedNotes": null
+    },
+    {
+      "id": "BUG-123",
+      "title": "status and list --ready report items as sprint-ready even when intent gate would block them",
+      "intent": "status 'Ready for sprint' section and 'backlog list --ready' must only show items that would actually be picked by auto — items missing or with too-short intent must be excluded.",
+      "description": "count_ready_items() and list_ready_items() check readyForSprint==true and passes==false but do not check the intent gate (intent != null, length >= 20). PICKABLE_ITEMS_FILTER — the actual picker — requires both. So 'status' shows an inflated ready count and 'backlog list --ready' shows items that auto/run would skip. After BUG-100 adds per-item warnings when items are skipped, this display gap becomes even more visible: users see an item listed as ready in status, then get a warning that it was skipped. Fix: add the intent filter to count_ready_items and list_ready_items so that ready counts and listings reflect what is actually pickable.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In count_ready_items(), add .intent != null and (.intent | length) >= 20 to the jq select filter",
+        "In list_ready_items(), add the same intent filter to the jq expression",
+        "Verify: create a test item with readyForSprint=true but no intent — confirm it is absent from 'status' ready section and 'backlog list --ready' output",
+        "Verify: items with valid intent still appear in ready sections",
+        "Run shellcheck — zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "An item with readyForSprint=true and no intent does not appear under 'Ready for sprint' in 'status' output",
+        "An item with readyForSprint=true and an intent shorter than 20 chars does not appear in 'backlog list --ready'",
+        "An item with readyForSprint=true and a valid intent (>=20 chars) still appears correctly",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-124",
+      "title": "backlog add --ready silently skips readiness gate warnings that backlog edit --ready runs",
+      "intent": "When creating an item with --ready, readiness gate warnings must be shown exactly as they are when using 'backlog edit <ID> --ready', so users get immediate feedback instead of a silent gotcha.",
+      "description": "cmd_backlog_edit runs check_readiness_gates after setting readyForSprint=true via --ready, printing warnings if gates fail (while still allowing the operation). cmd_backlog_add has no equivalent check. A user who adds an item with --ready and no steps, no AC, or no intent sees 'Created BUG-XXX' with no indication that the item will fail 'backlog check'. This is inconsistent with 'backlog edit' and BUG-100 behavior — once auto warns on skipped items, users need to know at add-time too.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "After log_success 'Created $new_id' in cmd_backlog_add, check if ready==true",
+        "If ready is true, call check_readiness_gates \"$new_id\" and capture warnings",
+        "If gates fail, print the same warning format as cmd_backlog_edit: 'log_warning \"Readiness warnings for $new_id:\"; printf '%b\\n' \"$gates_warnings\"'",
+        "Do not block item creation — warnings are advisory, matching edit behavior",
+        "Run shellcheck — zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "Running 'backlog add --title X --ready' with no steps or AC prints readiness warnings after the Created success message",
+        "Running 'backlog add --title X --ready' with valid steps, AC, and intent prints no readiness warnings",
+        "Item is still created in both cases — warnings do not block creation",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-125",
+      "title": "auto progress denominator goes stale after auto-groom adds new items mid-session",
+      "intent": "The progress counter denominator must reflect the actual number of items available for the session at the time of display, not a snapshot taken at session start that becomes wrong after auto-groom fires.",
+      "description": "setup_sprint_environment() builds queued_ids once before the sprint loop via list_pickable_ids(). The progress line 'X/${#queued_ids[@]} complete' uses this pre-session count as denominator. When auto-groom fires mid-session (ready < AUTO_GROOM_THRESHOLD), it can add new items to the backlog. These new items are picked by pick_item() in subsequent loops (since pick_item queries the live backlog), but they were never added to queued_ids. The denominator stays fixed, so passed can exceed it (e.g. '6/5 complete') or the denominator is just misleading. The fix is to recompute display_total from list_pickable_ids(skip_list) after groom completes, so the denominator always reflects current reality.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "After auto-groom runs in the sprint loop (the block around line 2870-2883), call list_pickable_ids with the current skip_list and priority filter to get updated_ids",
+        "Append any IDs in updated_ids that are not already in queued_ids (or not in skipped_ids/completed) to queued_ids",
+        "Recompute display_total from the updated queued_ids length (already capped by session_limit)",
+        "Verify: a session that auto-grooms shows accurate denominator after groom adds new items",
+        "Run shellcheck — zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "When auto-groom fires and adds 3 new items during a session, the progress denominator increases to include them",
+        "passed never exceeds display_total during a normal session",
+        "session_limit cap is still respected: display_total does not exceed session_limit when one is set",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "BUG-126",
+      "title": "auto exits silently when session processes zero items — no actionable guidance shown",
+      "intent": "When an auto session ends with zero items processed, a session-level message must be shown stating how many items were skipped and why, with a suggested remediation command.",
+      "description": "When all items in an auto session are skipped (intent gate, not ready, or dependencies unmet), the session exits with no session-level summary. After BUG-100 adds per-item skip warnings, users will see individual warning lines but no closing message directing them to fix the backlog. A user who runs 'auto done' and sees 0 items processed needs the session to close with: 'Session complete: 0 of N items processed. X items skipped for intent issues — run backlog check --all to audit readiness.' This closes the feedback loop that BUG-100 opens.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In cmd_auto (or the sprint loop exit path), after the loop ends, check if items_processed == 0",
+        "If zero items were processed, print: log_warn 'Session ended: 0 items processed. Check backlog readiness with: aishore backlog check --all'",
+        "Include the count of items that were available but skipped if that count is available from the loop state",
+        "If items_processed > 0 but less than queued, still show the normal summary (BUG-122 end-of-session table) — no change needed for the success path",
+        "Run shellcheck — zero new warnings"
+      ],
+      "acceptanceCriteria": [
+        "Running 'auto done' when all items lack intent shows per-item warnings (BUG-100) plus a session-level closing message with remediation hint",
+        "Running 'auto done' when some items succeed shows the normal summary table with no extra warning",
+        "Running 'auto done' with an empty backlog shows the existing 'no items' message unchanged",
+        "shellcheck passes with zero new warnings"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Closes the feedback loop after BUG-100. Zero-item sessions are a real UX failure mode — users see nothing and have no path forward. Simple fix: check items_processed after loop and emit remediation hint. Priority should is correct.",
+      "groomedAt": "2026-03-21"
     }
   ]
 }
