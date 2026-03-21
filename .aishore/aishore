@@ -2789,15 +2789,13 @@ run_sprint_loop() {
                     log_info "Running one more developer → validate → validator cycle with refined spec"
                     # Reset failure tracking for this single refinement attempt
                     local saved_retries=$retries
+                    local prior_attempts=$total_attempts
                     retries=0
                     retry_extra_prompt="This is a REFINED spec after previous failures. Pay close attention to the updated steps and acceptance criteria."
                     sprint_passed=false
                     _run_retry_loop
                     retries=$saved_retries
-
-                    if [[ "$sprint_passed" == "true" ]]; then
-                        total_attempts=$((total_attempts + 1))
-                    fi
+                    total_attempts=$((prior_attempts + total_attempts))
                 else
                     log_warning "Spec refinement failed — cannot retry"
                 fi
