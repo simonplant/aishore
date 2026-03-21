@@ -3629,11 +3629,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Closes the feedback loop after BUG-100. Zero-item sessions are a real UX failure mode — users see nothing and have no path forward. Simple fix: check items_processed after loop and emit remediation hint. Priority should is correct.",
-      "groomedAt": "2026-03-21"
+      "groomedAt": "2026-03-21",
+      "completedAt": "2026-03-21T14:13:22-07:00"
     }
   ]
 }
