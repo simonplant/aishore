@@ -85,7 +85,7 @@ Commands:
     --watch         Live refresh until sprint completes or Ctrl-C
     --interval N    Refresh interval in seconds (default: 30)
   update            Update from upstream (--dry-run to check, --force to override)
-  clean             Remove done items (--dry-run to preview)
+  clean             Archive and remove done items (--dry-run to preview, --no-archive to skip)
   config check      Validate config.yaml and print effective settings with sources
   diagnose          Show extended diagnostics from last sprint failure
   checksums         Regenerate checksums.sha256 for update verification

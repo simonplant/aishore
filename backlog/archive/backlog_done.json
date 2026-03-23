@@ -1,0 +1,1122 @@
+[
+  {
+    "id": "FEAT-001",
+    "title": "Enforce dependsOn ordering in sprint picker",
+    "intent": "Items with unmet dependencies must never be picked before their prerequisites are done — build order must be correct or autonomous mode is unsafe.",
+    "description": "The item schema has a dependsOn array (list of prerequisite IDs), but the sprint picker does not enforce it. In auto mode, if FEAT-002 depends on FEAT-001 but FEAT-001 isn't done yet, FEAT-002 can still be picked first, producing incorrect or incomplete implementations. The picker (find_next_item / auto-pick path) must skip any item whose dependsOn items are not all marked done before picking it. backlog check should also flag unmet dependencies as a readiness gate.",
+    "priority": "should",
+    "category": "sprint-execution",
+    "steps": [
+      "In .aishore/aishore, find find_next_item() and locate where candidate items are filtered by priority scope",
+      "For each candidate item, read its dependsOn array (default empty if missing)",
+      "For each dependency ID in dependsOn, search all backlog JSON files and verify that item has status=done",
+      "Skip the candidate if any dependency is not done; move to the next candidate",
+      "Verify that items with all dependencies met are still picked normally"
+    ],
+    "acceptanceCriteria": [
+      "Auto-pick never selects an item whose dependsOn items are not all status: done",
+      "Items with all dependencies satisfied are still selected normally",
+      "Items skipped due to unmet dependencies are not silently lost — they remain in the backlog and will be picked once deps are done"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "Steps and AC added. Picker enforcement is the runtime safety gate — companion to FEAT-003 (check-time gate). Scope: find_next_item() only.",
+    "completedAt": "2026-03-20T11:27:25-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-002",
+    "title": "Trigger architecture review after auto done drains backlog",
+    "intent": "When auto done finishes, the user must get an architecture review so accumulated changes are evaluated while context is still fresh — not days later.",
+    "description": "When auto done or auto p* fully drains all in-scope items (exit reason: all items complete, not circuit-breaker abort), aishore should offer to run an architecture review. This closes the loop on the autonomous workflow: populate → groom → auto → review. The review should be opt-in (prompt or --auto-review flag), not forced. The Architect agent already exists; this is about wiring the trigger. Also consider: after the review, the architect may add items to the backlog — auto mode should surface this as a next-step hint.",
+    "priority": "could",
+    "category": "autonomous-mode",
+    "steps": [
+      "In .aishore/aishore, find cmd_auto() and identify the loop exit paths: all-done vs circuit-breaker abort",
+      "Add a variable to track which exit path was taken (all-done vs abort)",
+      "On all-done exit, check for --auto-review flag; if set, skip prompt and run review directly",
+      "If --auto-review is absent, print a prompt asking the user whether to run architecture review",
+      "Invoke cmd_review (or equivalent) when confirmed",
+      "After review completes, check if new items exist in any backlog file and print a next-step hint if found"
+    ],
+    "acceptanceCriteria": [
+      "After auto done completes all items (not circuit-breaker abort), user is prompted to run architecture review",
+      "The --auto-review flag skips the prompt and runs architecture review automatically",
+      "No review prompt is shown when auto exits via circuit-breaker abort",
+      "If new backlog items exist after review completes, a next-step hint is printed"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "Steps and AC added. Architect agent already exists; this is wiring, not building. Main risk: cleanly distinguishing all-done vs abort exit path in cmd_auto().",
+    "completedAt": "2026-03-20T11:37:59-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-003",
+    "title": "backlog check flags unmet dependsOn as a readiness gate",
+    "intent": "backlog check must surface unmet dependencies so users know an item cannot safely run — dependency violations must be visible before sprint time, not discovered after.",
+    "description": "backlog check <ID> currently validates title, intent, steps, and AC. It does not check whether items listed in dependsOn exist and are done. If an item depends on FEAT-001 and FEAT-001 is still todo, the check should warn (or fail, depending on mode). This is a companion to FEAT-001 (picker enforcement) — between the two, the system prevents dependency violations at both check-time and pick-time. Implementation: in the readiness gate logic, for each ID in dependsOn, verify the item exists in any backlog file and has status=done.",
+    "priority": "should",
+    "category": "backlog-tooling",
+    "steps": [
+      "In .aishore/aishore, find cmd_backlog_check() where readiness warnings are assembled",
+      "After existing checks (title, intent, steps, AC), add a loop over .dependsOn // []",
+      "For each dependency ID, call find_item (or scan backlog JSON files) to locate the item",
+      "If the dependency is not found, emit a warning: dependency ID not found in any backlog",
+      "If found but status != done, emit a warning showing the dependency ID and its current status",
+      "Ensure warning format matches other readiness gate messages"
+    ],
+    "acceptanceCriteria": [
+      "backlog check <ID> warns when any dependsOn item does not have status: done",
+      "Warning includes the dependency ID and its current status (or 'not found' if missing from all backlogs)",
+      "Items with no dependsOn field or an empty array pass this check without warnings"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "Steps and AC added. This is the check-time companion to FEAT-001 (pick-time). Together they cover the full dependency enforcement surface. Low implementation risk — additive check in cmd_backlog_check().",
+    "completedAt": "2026-03-20T11:30:50-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-004",
+    "title": "Add --depends-on flag to backlog add and backlog edit",
+    "intent": "Users must be able to declare item dependencies via the CLI — enforcing dependsOn at pick time and check time has no value if users can't set it without editing JSON by hand.",
+    "description": "The dependsOn field exists in the item schema and is enforced by the sprint picker (FEAT-001) and backlog check (FEAT-003), but there is no CLI flag to set it. Users who want to declare that FEAT-002 requires FEAT-001 to be done first must hand-edit the backlog JSON, which is error-prone and undiscoverable. Add --depends-on <ID>[,<ID>...] to both backlog add and backlog edit. The flag should accept a comma-separated list of item IDs and write them to the dependsOn array.",
+    "priority": "must",
+    "category": null,
+    "steps": [],
+    "acceptanceCriteria": [
+      "backlog add --depends-on FEAT-001 creates an item with dependsOn: [\"FEAT-001\"]",
+      "backlog edit <ID> --depends-on FEAT-001,FEAT-002 sets dependsOn to both IDs, replacing any prior value",
+      "backlog show <ID> displays the dependsOn list when the field is present"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "Bumped to must: FEAT-001 and FEAT-003 ship dependsOn enforcement at pick-time and check-time, but users can only set dependsOn by hand-editing the backlog JSON. That makes the enforcement features essentially unusable — users cannot express ordering constraints without violating the CLI-first design principle. This item must ship to close the usability gap left by FEAT-001 and FEAT-003. AC are concrete and user-focused.",
+    "completedAt": "2026-03-20T11:47:18-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-005",
+    "title": "backlog list flags items with unmet dependsOn dependencies",
+    "intent": "backlog list must visually surface dependency blockers so users can see at a glance which items cannot be picked yet — invisible blockers cause wasted grooming and sprint failures.",
+    "description": "backlog list currently shows items with status, priority, and readyForSprint but gives no signal that an item has unresolved dependsOn constraints. A user looking at the list cannot tell which items are blocked versus which are truly ready. The fix is to add a visual marker in the list output when an item has one or more dependsOn entries whose items are not status: done. The marker should be minimal (e.g., a [blocked] tag or a ✗ in a deps column) and only appear when blockers exist.",
+    "priority": "could",
+    "category": null,
+    "steps": [],
+    "acceptanceCriteria": [
+      "backlog list shows a visual indicator next to items whose dependsOn items are not all status: done",
+      "backlog list shows no indicator for items with no dependsOn, or when all dependencies are done",
+      "The indicator includes a count or list of blocking IDs so the user can investigate"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "Kept as could. Depends on FEAT-004 being done first — visibility of blocked items only delivers value once users can actually set dependsOn via CLI. Low implementation risk (display-only change), but lower user value until FEAT-004 ships. AC are concrete.",
+    "completedAt": "2026-03-20T11:51:37-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-006",
+    "title": "backlog history command for querying completed sprint items",
+    "intent": "Users must be able to query what was completed and when without parsing JSONL by hand — sprint history should be as discoverable as the backlog itself.",
+    "description": "The archive/sprints.jsonl file records every completed sprint (itemId, date, status, duration, filesChanged, etc.) but there is no CLI command to query it. Users who want to know 'what did I complete this week?' or 'how many items passed vs failed?' must read raw JSONL. A 'backlog history' subcommand (or 'aishore history') should let users list recent completions, filter by date range or status, and surface per-item summaries. The metrics command gives aggregates; history would give the item-level view.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "In .aishore/aishore, find the archive path (SPRINT_ARCHIVE or sprints.jsonl) to understand the JSONL schema",
+      "Add a 'history' subcommand in the backlog command dispatcher (cmd_backlog or main case statement)",
+      "Implement cmd_backlog_history(): read sprints.jsonl, parse each line with jq, support --since YYYY-MM-DD filter (skip entries with date < arg), support --failed filter (skip entries with status == complete)",
+      "Format output as a table: ID, date, status, duration columns; align columns for readability",
+      "Add --failed flag handling: show only rows where status \\!= complete",
+      "Add 'backlog history' to the help text and usage message"
+    ],
+    "acceptanceCriteria": [
+      "backlog history (or aishore history) lists completed sprint items with ID, date, and status",
+      "backlog history --since YYYY-MM-DD filters to items completed on or after that date",
+      "backlog history --failed shows only items where status \\!= complete"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "PO bump to should: we now have 20 sprint entries in the archive from today's session. Users who want to answer 'what did I complete today?' or audit a sprint run are blocked until this ships — they must read raw JSONL. The metrics command covers aggregates; history fills the item-level gap. With real data in the archive, this feature has immediate user value rather than speculative future value. Bumped from could.",
+    "completedAt": "2026-03-20T13:08:16-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-007",
+    "title": "Configurable auto-fix command (fix_cmd)",
+    "intent": "Lint-fixable issues must be auto-resolved before validation.",
+    "description": "",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "Add fix_cmd config (config.yaml, AISHORE_FIX_CMD)",
+      "Run fix_cmd after developer agent completes",
+      "Warn on failure but do not abort sprint",
+      "On retry, run fix_cmd before developer re-attempts",
+      "Tell developer agent prompt that fix_cmd will auto-run"
+    ],
+    "acceptanceCriteria": [
+      "fix_cmd runs after developer agent",
+      "AISHORE_FIX_CMD env var takes precedence",
+      "fix_cmd failure warns but does not abort",
+      "On retry, fix_cmd runs before re-attempt",
+      "Unchanged when fix_cmd is unset"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "completedAt": "2026-03-20T14:29:43-07:00",
+    "groomedAt": null,
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-008",
+    "title": "Squash-merge feature branches into single commit",
+    "intent": "Each sprint item must produce exactly one clean commit on the target branch.",
+    "description": "",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "Add merge_strategy config default merge, option squash",
+      "When squash, use git merge --squash",
+      "Create commit using developer agent summary",
+      "Follow conventional commit format"
+    ],
+    "acceptanceCriteria": [
+      "merge_strategy squash causes squash-merge",
+      "AISHORE_MERGE_STRATEGY=squash env var works",
+      "Exactly one commit per sprint item",
+      "Squash commit includes developer summary",
+      "Default no-ff merge unchanged"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "completedAt": "2026-03-20T14:37:48-07:00",
+    "groomedAt": null,
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-009",
+    "title": "Create GitHub PR instead of merging (pr flag)",
+    "intent": "Users must be able to review sprint output before it lands on the target branch.",
+    "description": "",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "Add pr flag to cmd_run and cmd_auto",
+      "Add create_pr config (config.yaml, AISHORE_CREATE_PR)",
+      "pr flag implies no-merge",
+      "After pushing, run gh pr create with item title and agent summaries",
+      "Fall back to no-merge if gh unavailable"
+    ],
+    "acceptanceCriteria": [
+      "pr flag creates a GitHub PR",
+      "PR title includes item ID and title",
+      "PR body includes agent summaries",
+      "Falls back to no-merge if gh not installed",
+      "create_pr true in config makes PR default"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "completedAt": "2026-03-20T14:49:27-07:00",
+    "groomedAt": null,
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-010",
+    "title": "Failed sprint diagnostics — better crash output",
+    "intent": "When a sprint fails, the user must see enough context to diagnose why immediately.",
+    "description": "",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "On agent failure, tail last 20 lines of agent log",
+      "Include agent stderr if captured",
+      "Add diagnose flag for extended diagnostics",
+      "Store last failure context in .aishore/data/status/"
+    ],
+    "acceptanceCriteria": [
+      "Agent crash shows last 20 lines of log",
+      "diagnose flag shows extended diagnostics",
+      "Agent log path always printed on failure",
+      "Successful sprints unaffected"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "lastFailReason": "Validator agent rejected implementation",
+    "lastFailAt": "2026-03-20T15:02:32-07:00",
+    "failCount": 1,
+    "completedAt": "2026-03-20T16:02:47-07:00",
+    "groomedAt": null,
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-011",
+    "title": "Git worktree isolation mode for sprints",
+    "intent": "Sprint execution must never risk losing uncommitted work.",
+    "description": "",
+    "priority": "could",
+    "category": null,
+    "steps": [
+      "Add isolation config default stash, option worktree",
+      "When worktree, create git worktree for sprint branch",
+      "Run developer agent in worktree directory",
+      "Merge worktree branch on success",
+      "Clean up worktree on success or failure"
+    ],
+    "acceptanceCriteria": [
+      "isolation worktree causes sprints in git worktree",
+      "AISHORE_ISOLATION=worktree env var works",
+      "Uncommitted changes untouched",
+      "Worktree cleaned up",
+      "Default stash behavior unchanged"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "completedAt": "2026-03-20T15:13:40-07:00",
+    "groomedAt": null,
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-012",
+    "title": "Backlog sync — detect manually completed items",
+    "intent": "The backlog must reflect reality. Items completed outside aishore should be detectable.",
+    "description": "",
+    "priority": "could",
+    "category": null,
+    "steps": [
+      "Add backlog sync subcommand",
+      "Check todo items scope against git history",
+      "Flag items whose changes appear on current branch",
+      "Prompt to mark flagged items done",
+      "Add auto and dry-run flags"
+    ],
+    "acceptanceCriteria": [
+      "backlog sync lists apparently completed items",
+      "Items flagged based on scope and git history",
+      "dry-run shows candidates only",
+      "auto marks flagged items done"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "completedAt": "2026-03-20T15:21:55-07:00",
+    "groomedAt": null,
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-013",
+    "title": "Item complexity gate — warn on under-specified creative work",
+    "intent": "Creative items must be flagged to guide users toward prescriptive specs.",
+    "description": "",
+    "priority": "could",
+    "category": null,
+    "steps": [
+      "Add complexity heuristic to backlog check",
+      "Flag items lacking file paths or with fewer than 3 steps",
+      "Suggest more prescriptive steps",
+      "Log warning before sprint"
+    ],
+    "acceptanceCriteria": [
+      "backlog check flags vague items",
+      "Warning is advisory not blocking",
+      "Specific items do not trigger warning",
+      "Warning suggests how to improve spec"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "completedAt": "2026-03-20T15:28:54-07:00",
+    "groomedAt": null,
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-014",
+    "title": "Create docs/ARCHITECTURE.md — unified system architecture document",
+    "intent": "A developer evaluating aishore must understand how the system works from a single document — not by reading six files and piecing it together.",
+    "description": "Architecture content is fragmented across README.md (How It Works, The Workflow, Agent Roles, Item Schema, Project Structure), CLAUDE.md (Architecture section: sprint execution flow, maturity protocol, git branching, directory structure, completion contract, context auto-detection, agent invocation, concurrency, safe failure recovery, scope checking, testable AC, readiness gates, baseline pre-flight, spec refinement), CONTRIBUTING.md (Architecture section, Key Design Decisions), .aishore/agents/*.md (5 agent role files defining review focus areas and process), and backlog/DEFINITIONS.md (Definition of Ready, Definition of Done, Commander's Intent). The unified document must cover: system overview with pipeline diagram, the maturity protocol (implement-critique-harden) and why it exists, agent roles and data flow between them, git branching model, directory structure, design decisions with rationale, and the completion contract. Source from existing content — do not invent claims.",
+    "priority": "must",
+    "category": "documentation",
+    "steps": [
+      "Create docs/ directory if it does not exist",
+      "Read README.md sections: How It Works (pipeline diagram + 7-step flow), The Workflow (populate/groom/run/review), Agent Roles (table), Item Schema, Project Structure",
+      "Read CLAUDE.md Architecture section: sprint execution flow, maturity protocol, git branching model, directory structure, completion contract, context auto-detection, agent invocation, concurrency, safe failure recovery, scope checking, testable AC, readiness gates, baseline pre-flight, spec refinement, update integrity, version management",
+      "Read CONTRIBUTING.md: Architecture section, Key Design Decisions subsection, Version Management subsection",
+      "Read .aishore/agents/architect.md, developer.md, product-owner.md, tech-lead.md, validator.md for role definitions and process descriptions",
+      "Read backlog/DEFINITIONS.md for Definition of Ready, Definition of Done, Commander's Intent",
+      "Compose docs/ARCHITECTURE.md with these sections: Overview (pipeline diagram from README), The Maturity Protocol (from CLAUDE.md — why implement-critique-harden exists), Agent System (roles table from README + data flow from agent files), Git Branching Model (from CLAUDE.md), Directory Structure (from README Project Structure + CLAUDE.md), Design Decisions (from CONTRIBUTING.md Key Design Decisions, expanded with rationale), Quality Gates (from DEFINITIONS.md DoR/DoD + CLAUDE.md readiness gates/completion contract)",
+      "Verify all claims in the document are sourced from existing files — flag any gaps as TODO rather than inventing content"
+    ],
+    "acceptanceCriteria": [
+      "docs/ARCHITECTURE.md exists and covers: system overview with pipeline diagram, maturity protocol with rationale, agent roles and responsibilities, git branching model, directory structure, design decisions with rationale, quality gates (DoR/DoD/completion contract)",
+      "Every substantive claim in the document can be traced to an existing source file (README.md, CLAUDE.md, CONTRIBUTING.md, agent files, or DEFINITIONS.md)",
+      "The document reads as a coherent narrative for a developer evaluating the project — not a copy-paste collage",
+      "No content is duplicated verbatim from README.md — the README will link here instead"
+    ],
+    "scope": [
+      "docs/ARCHITECTURE.md"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "All ACs are clear and testable. Source files (README.md, CLAUDE.md, CONTRIBUTING.md, agent files, DEFINITIONS.md) are well-defined. No blockers. Priority must — this is a prerequisite for FEAT-019 and unblocks FEAT-021.",
+    "lastFailReason": "Validator agent rejected implementation",
+    "lastFailAt": "2026-03-20T17:26:57-07:00",
+    "failCount": 1,
+    "passes": true,
+    "completedAt": "2026-03-20T19:05:59-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-015",
+    "title": "Create docs/QUICKSTART.md — zero to first completed sprint",
+    "intent": "A new user must go from git clone to a completed sprint in under 10 minutes using a single document — if they have to jump between files they will abandon the tool.",
+    "description": "The quickstart content exists but is split between README.md (Quick Start: install + first sprint commands) and .aishore/README.md (Setup, The Intent-Driven Model, Create Backlog Items, What Makes an Item Sprint-Ready, Groom, Run Sprints, Troubleshooting). The .aishore/README.md is essentially already a quickstart guide but is hidden inside a dotfolder where no one will find it. The unified quickstart must walk through: prerequisites check, installation (curl or manual), init wizard, writing your first intent and backlog item, grooming, running a sprint, and what success looks like at each step. Include expected terminal output so users know they're on the right track. Source from .aishore/README.md as primary content, README.md Quick Start for the install path.",
+    "priority": "must",
+    "category": "documentation",
+    "steps": [
+      "Read .aishore/README.md sections: Setup (init commands, config.yaml validation), The Intent-Driven Model (how to write intent — good/bad examples), Create Backlog Items (add command, flags, testable AC examples), What Makes an Item Sprint-Ready (5 readiness gates), Groom (what grooming does), Run Sprints (what happens during a sprint), Troubleshooting (common failures and fixes)",
+      "Read README.md Quick Start section (install via curl, manual install, first sprint 3-step block)",
+      "Read backlog/DEFINITIONS.md Commander's Intent section for good/bad intent examples",
+      "Compose docs/QUICKSTART.md with these sections: Prerequisites (bash 4.4+, Claude Code CLI, jq, git), Install (curl one-liner + manual option), Initialize (init wizard walkthrough with expected output), Write Your First Intent (from .aishore/README.md intent model + DEFINITIONS.md examples), Add a Backlog Item (from .aishore/README.md create items), Groom (what it does, expected output), Run Your First Sprint (command + what to expect at each pipeline stage), Verify Success (how to confirm the sprint completed correctly), Troubleshooting (from .aishore/README.md troubleshooting section)",
+      "Add expected terminal output blocks after each command so users can verify they are on track",
+      "Verify the end-to-end flow works: a user following only this document should reach a completed sprint"
+    ],
+    "acceptanceCriteria": [
+      "docs/QUICKSTART.md exists and covers: prerequisites, install, init, first intent, first backlog item, groom, run sprint, verify success, troubleshooting",
+      "Each step includes the exact command to run and expected terminal output",
+      "A user following only this document (without reading any other file) can go from zero to a completed sprint",
+      "Content is sourced from .aishore/README.md and README.md — not invented",
+      "The document does not exceed 300 lines — it is a quickstart, not a manual"
+    ],
+    "scope": [
+      "docs/QUICKSTART.md"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "All ACs are clear and testable. Source files (.aishore/README.md, README.md Quick Start) are well-defined. Explicit length constraint (<300 lines) keeps scope tight. No blockers.",
+    "passes": true,
+    "completedAt": "2026-03-20T17:29:46-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-016",
+    "title": "Create docs/CONFIGURATION.md — every knob, what it does, safe defaults",
+    "intent": "Users must be able to find and understand every configuration option in one place — undocumented config options are invisible features.",
+    "description": "Configuration content is split between README.md (Configuration section: config.yaml example with 6 settings + environment variable table with 11 AISHORE_* vars + Complete Flag Reference for every CLI command) and CLAUDE.md (configuration precedence: env vars > config.yaml > defaults, scope checking modes, maturity protocol settings, agent permission descriptions). The unified document must cover: config.yaml with every option annotated, all environment variables with precedence rules, CLI flag reference grouped by command, and agent permissions. The current README Configuration section is a good foundation but only shows a subset of config.yaml options. The Complete Flag Reference section (~100 lines) should move here entirely.",
+    "priority": "should",
+    "category": "documentation",
+    "steps": [
+      "Read README.md Configuration section (config.yaml example, environment variable table)",
+      "Read README.md Complete Flag Reference section (all flags for backlog add/edit/list/check/populate/history, init, run, auto, groom, review, and other commands)",
+      "Read CLAUDE.md for: configuration precedence note, scope checking modes, maturity protocol settings, agent permission descriptions",
+      "Read .aishore/config.yaml for the actual config file schema with all available options",
+      "Compose docs/CONFIGURATION.md with these sections: Configuration File (annotated config.yaml with every option, its type, default value, and what it controls), Environment Variables (full table with precedence rules), CLI Flag Reference (moved from README Complete Flag Reference, grouped by command), Agent Permissions (what each permission enables, security implications), Configuration Precedence (env > config.yaml > defaults, with examples)",
+      "For each config option, document: name, type, default value, what it controls, when to change it"
+    ],
+    "acceptanceCriteria": [
+      "docs/CONFIGURATION.md exists and documents every config.yaml option, every AISHORE_* environment variable, and every CLI flag",
+      "Each option includes: name, type, default, description, and when to change it",
+      "Configuration precedence (env > config.yaml > defaults) is clearly explained",
+      "The Complete Flag Reference from README.md is fully represented here",
+      "No undocumented options remain — every setting in config.yaml and every AISHORE_* env var has an entry"
+    ],
+    "scope": [
+      "docs/CONFIGURATION.md"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "ACs are clear. Source files (README.md Configuration + Flag Reference, CLAUDE.md config precedence, .aishore/config.yaml) are all in-repo. Good scope — moves the Flag Reference out of README.md as a side effect. No blockers.",
+    "passes": true,
+    "completedAt": "2026-03-20T17:35:07-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-017",
+    "title": "Create docs/PROBLEMS.md — the pain points aishore solves, with evidence",
+    "intent": "People search for problems, not solutions — this document must rank for the frustrations that drive users to aishore.",
+    "description": "This is the weakest content area. The only existing source is README.md's 'Why aishore?' section (two paragraphs: vibe coding breaks at scale, no memory between sessions, no quality gate, no batch work). The document needs to articulate specific, googleable failure modes: context loss between AI coding sessions, no regression detection in AI-generated code, no audit trail for AI development decisions, one-shot prompting fails for multi-feature work, no quality gate between AI implementation and merge, AI agents don't self-critique without structure. For each problem, describe the pain as the user experiences it, link evidence where possible (forum posts, tweets, articles about vibe coding limitations), and explain concretely how aishore addresses it. This is part documentation, part SEO, part positioning.",
+    "priority": "should",
+    "category": "documentation",
+    "steps": [
+      "Read README.md 'Why aishore?' section for the seed content (vibe coding limitations, no memory, no quality gate, no batch work)",
+      "Read README.md opening paragraphs for the positioning statement (structured intent-based batch development with inline critic loops)",
+      "Read .aishore/README.md 'The Intent-Driven Model' section for implicit problem statements (why intent-driven is needed vs ad-hoc)",
+      "Compose docs/PROBLEMS.md with one section per problem, each structured as: Problem heading (stated as user would search for it), Description of the pain (2-3 sentences, concrete), Evidence section (link to real discussions — GitHub issues, forum posts, articles about AI coding limitations — or mark as TODO if evidence needs gathering), How aishore addresses this (concrete explanation referencing specific aishore features)",
+      "Cover at minimum these problems: AI coding context loss between sessions, No quality gates on AI-generated code, One-shot prompting fails at project scale, No audit trail for AI development decisions, AI agents don't self-critique without structure, No way to batch AI development work",
+      "Write problem headings as search queries: e.g. 'AI-generated code has no quality gate before merge' not 'Quality Gates'"
+    ],
+    "acceptanceCriteria": [
+      "docs/PROBLEMS.md exists with at least 6 distinct problem sections",
+      "Each problem is stated as a user would search for it (search-friendly heading)",
+      "Each problem section includes: pain description, evidence or TODO placeholder for evidence, and how aishore addresses it",
+      "The document does not read as marketing copy — it reads as honest problem documentation with concrete solutions",
+      "Problems reference specific aishore features (maturity protocol, commander's intent, backlog system) not vague claims"
+    ],
+    "scope": [
+      "docs/PROBLEMS.md"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "ACs are clear. Structured problem/evidence/solution format is well-defined. 6+ problem minimum is testable. Seed content from README.md 'Why aishore?' is sufficient starting point. No blockers.",
+    "passes": true,
+    "completedAt": "2026-03-20T17:37:47-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-018",
+    "title": "Create docs/ROADMAP.md — what's planned, what's missing, what's prioritized",
+    "intent": "Contributors and evaluators must see where the project is going — a project with no visible roadmap looks abandoned or directionless.",
+    "description": "No roadmap document exists. The trajectory can be inferred from CHANGELOG.md (15 releases, v0.1.0 through v0.3.2, showing evolution from basic sprint runner to autonomous mode with grooming, validation, and diagnostics) and from known limitations (single-repo only, bash-only CLI, Claude Code dependency, no multi-language agent support, no remote/CI execution mode, no plugin system for custom agents). The roadmap should be organized as Now (active work) / Next (committed direction) / Later (vision) / Known Limitations (honest about current constraints). This is a lightweight document — 50-100 lines, not a product spec.",
+    "priority": "should",
+    "category": "documentation",
+    "steps": [
+      "Read CHANGELOG.md to understand the project trajectory and what has shipped (v0.1.0 through v0.3.2)",
+      "Review backlog/backlog.json and backlog/bugs.json for any remaining todo items that indicate planned work",
+      "Compose docs/ROADMAP.md with sections: Current Version (what v0.3.x delivers — summarize from CHANGELOG), Now (any active backlog items), Next (committed direction based on trajectory: what the next releases will focus on), Later (vision items: multi-repo support, CI/CD integration, plugin system, non-Claude agent support), Known Limitations (honest list: bash-only, single-repo, Claude Code dependency, macOS/Linux only)",
+      "Keep the document under 100 lines — this is a signpost, not a spec",
+      "Include a 'Want to help?' line at the bottom linking to docs/CONTRIBUTING.md"
+    ],
+    "acceptanceCriteria": [
+      "docs/ROADMAP.md exists with sections: Current Version, Now, Next, Later, Known Limitations",
+      "Known Limitations is honest about real constraints (bash-only, single-repo, Claude Code dependency)",
+      "The document is under 100 lines",
+      "Each roadmap item is a clear statement, not a vague aspiration"
+    ],
+    "scope": [
+      "docs/ROADMAP.md"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "Raised from could to should — FEAT-018 is a hard dependency of FEAT-021 (must). A must item cannot be blocked by a could item. ROADMAP.md must exist before README can link to it in the Links section.",
+    "passes": true,
+    "completedAt": "2026-03-20T17:39:22-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-019",
+    "title": "Move CONTRIBUTING.md to docs/CONTRIBUTING.md and update references",
+    "intent": "All documentation must live in docs/ for consistency — a contributor looking in docs/ must find contribution guidelines there, not hunt at the repo root.",
+    "description": "CONTRIBUTING.md exists at repo root with complete content: Development Setup, Requirements, Code Style (bash conventions + naming table), Linting and Testing (shellcheck, syntax check, smoke test, JSON validation, checksums), Pull Request Process, Commit Convention table, Architecture section, and CLA. The move is straightforward: relocate the file, replace the inline Architecture section with a link to docs/ARCHITECTURE.md (FEAT-014), and add a section on agent prompt authoring (how to modify files in .aishore/agents/ and test prompt changes). Update any references to CONTRIBUTING.md in README.md and other files to point to the new location. GitHub will still find CONTRIBUTING.md via the docs/ path for its contributing prompt.",
+    "priority": "must",
+    "category": "documentation",
+    "steps": [
+      "Move CONTRIBUTING.md to docs/CONTRIBUTING.md",
+      "In docs/CONTRIBUTING.md, replace the inline Architecture section with a link: 'See [ARCHITECTURE.md](ARCHITECTURE.md) for system architecture and design decisions'",
+      "Add a new section 'Agent Prompt Authoring' explaining how to modify .aishore/agents/*.md files, what each agent file controls, and how to test prompt changes",
+      "Search all files for references to CONTRIBUTING.md and update paths to docs/CONTRIBUTING.md",
+      "Verify README.md Contributing section links to docs/CONTRIBUTING.md"
+    ],
+    "acceptanceCriteria": [
+      "docs/CONTRIBUTING.md exists with all original content preserved",
+      "CONTRIBUTING.md no longer exists at repo root",
+      "The inline Architecture section is replaced with a link to docs/ARCHITECTURE.md",
+      "An Agent Prompt Authoring section exists explaining how to modify agent files",
+      "All references to CONTRIBUTING.md across the repo point to docs/CONTRIBUTING.md"
+    ],
+    "scope": [
+      "CONTRIBUTING.md",
+      "docs/CONTRIBUTING.md",
+      "README.md"
+    ],
+    "dependsOn": [
+      "FEAT-014"
+    ],
+    "status": "done",
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "Elevated from should to must: FEAT-019 is a direct blocker for FEAT-021 (must). Running p0-only would skip FEAT-019 and leave FEAT-021 permanently blocked. Both must complete in the same priority pass to deliver the doc chain.",
+    "passes": true,
+    "completedAt": "2026-03-20T19:08:52-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-020",
+    "title": "Move CHANGELOG.md to docs/CHANGELOG.md and update references",
+    "intent": "All documentation must live in docs/ for consistency — changelog is documentation, not a build artifact.",
+    "description": "CHANGELOG.md exists at repo root with 15 well-structured releases (v0.1.0 through v0.3.2) using Added/Changed/Fixed/Removed/Documentation sections. This is a pure file move. Update any references to CHANGELOG.md in README.md, CONTRIBUTING.md, and other files to point to docs/CHANGELOG.md. Consider leaving a symlink at the root for tools that expect CHANGELOG.md at the repo root, but only if a concrete tool dependency is identified.",
+    "priority": "should",
+    "category": "documentation",
+    "steps": [
+      "Move CHANGELOG.md to docs/CHANGELOG.md",
+      "Search all files for references to CHANGELOG.md and update paths to docs/CHANGELOG.md",
+      "Verify README.md links to docs/CHANGELOG.md",
+      "Verify no build scripts or CI workflows reference CHANGELOG.md at the root"
+    ],
+    "acceptanceCriteria": [
+      "docs/CHANGELOG.md exists with all original content preserved",
+      "CHANGELOG.md no longer exists at repo root",
+      "All references across the repo point to docs/CHANGELOG.md",
+      "CI workflows (if any reference CHANGELOG.md) still work"
+    ],
+    "scope": [
+      "CHANGELOG.md",
+      "docs/CHANGELOG.md",
+      "README.md"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "Raised from could to should — FEAT-020 is a hard dependency of FEAT-021 (must). A must item cannot be blocked by a could item. docs/CHANGELOG.md must exist before README can link to it in the Links section.",
+    "passes": true,
+    "completedAt": "2026-03-20T17:49:58-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-021",
+    "title": "Slim README.md to storefront format — problem, solution, quickstart, links",
+    "intent": "The README must sell the project in 60 seconds — everything else belongs in docs/. A 500-line README is a wall, not a welcome mat.",
+    "description": "The current README.md is approximately 500 lines and contains content that belongs in 4 different docs/ files. After FEAT-014 through FEAT-020 create the destination files, the README must be cut to storefront format: badges, one-sentence pitch, one-paragraph description, The Problem (2-3 sentences from 'Why aishore?'), Quick Start (install + first sprint — 3 steps max, link to docs/QUICKSTART.md), How It Works (1 paragraph + pipeline diagram, link to docs/ARCHITECTURE.md), Status (honest alpha/beta/stable + what works/doesn't), Links section (all docs/ files with one-line descriptions), Author section (name, what you're building, open to roles). Remove entirely: How It Works detail, The Workflow, Autonomous Mode, Agent Roles table, Complete Flag Reference, Item Schema, Project Structure, Configuration section, Requirements, Keeping Updated. All of this content will already exist in docs/ files.",
+    "priority": "must",
+    "category": "documentation",
+    "steps": [
+      "Verify that docs/ARCHITECTURE.md, docs/QUICKSTART.md, docs/CONFIGURATION.md, docs/PROBLEMS.md, docs/CONTRIBUTING.md, and docs/CHANGELOG.md all exist (dependencies must be complete)",
+      "Keep in README.md: badges, opening tagline and paragraph, the flow diagram (You: define intent → aishore develops → You: review), 'Why aishore?' condensed to 2-3 sentences",
+      "Keep in README.md: Quick Start section but trim to just: install one-liner, init command, first sprint 3-step block, then 'See [full quickstart](docs/QUICKSTART.md)' link",
+      "Keep in README.md: How It Works but trim to 1 paragraph + the pipeline ASCII diagram + link to docs/ARCHITECTURE.md",
+      "Add a Status section: current version, stability level, what works well, what's rough",
+      "Add a Links section listing every docs/ file with a one-line description",
+      "Add an Author section: Simon Plant, building AI infrastructure tools, open to roles, GitHub/Twitter links",
+      "Remove entirely: The Workflow (4 subsections), Autonomous Mode, Agent Roles table, Complete Flag Reference (all subcommand flag tables), Item Schema, Project Structure, Configuration (config.yaml + env var table), Requirements, Keeping Updated",
+      "Verify all removed content has a home in a docs/ file — nothing should be lost, only relocated"
+    ],
+    "acceptanceCriteria": [
+      "README.md is under 120 lines (currently ~500)",
+      "README.md contains only: badges, pitch, problem statement, quick start (abbreviated), how it works (abbreviated), status, links to docs/, author section",
+      "Every section removed from README.md has a corresponding docs/ file that contains the content",
+      "No content is lost — everything is either in README.md or linked from it via docs/",
+      "README.md links section includes: Architecture, Quickstart, Configuration, Problems, Roadmap, Contributing, Changelog"
+    ],
+    "scope": [
+      "README.md"
+    ],
+    "dependsOn": [
+      "FEAT-014",
+      "FEAT-015",
+      "FEAT-016",
+      "FEAT-017",
+      "FEAT-018",
+      "FEAT-019",
+      "FEAT-020"
+    ],
+    "status": "done",
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "High-value user-facing item: README is the project storefront and currently a wall of text. Correct priority (must). Depends on the full doc chain (FEAT-014 through FEAT-020) which ensures all content has a home before removal. Step 1 has an explicit pre-flight check. readyForSprint: false until dependency chain completes — spec is solid, holding on deps.",
+    "groomedNotes": null,
+    "passes": true,
+    "completedAt": "2026-03-21T08:14:09-07:00"
+  },
+  {
+    "id": "FEAT-022",
+    "title": "Add .doc-standard.yaml schema file for doc structure enforcement",
+    "intent": "The repo must declare its doc standard version and structure so automated checks can validate compliance — undeclared standards are unenforceable.",
+    "description": "This is part of a cross-repo documentation standard (see repo-docs-system.md in the std-docs repo). The .doc-standard.yaml file declares: schema version, project metadata (name, tagline, category), required files list, cross-repo links to sibling projects (ClawHQ, Easy-Markdown, GigOS), and author info for consistency enforcement. This file enables a future GitHub Action (doc-check.yml) to validate that all required docs exist and the README follows the template structure. The schema is lightweight — under 30 lines of YAML.",
+    "priority": "could",
+    "category": "documentation",
+    "steps": [
+      "Create .doc-standard.yaml at repo root",
+      "Set schema_version to '1.0'",
+      "Set project name to 'aishore', tagline to 'Autonomous sprint orchestration for Claude Code', category to 'tool'",
+      "List required_files matching the docs/ structure: README.md, docs/ARCHITECTURE.md, docs/QUICKSTART.md, docs/CONFIGURATION.md, docs/PROBLEMS.md, docs/ROADMAP.md, docs/CONTRIBUTING.md, docs/CHANGELOG.md",
+      "Add portfolio section with sibling repos: ClawHQ (complementary), Easy-Markdown (related), GigOS (related)",
+      "Add author section: name Simon Plant, location Santa Barbara CA, status 'Building AI infrastructure tools. Open to roles.'",
+      "Verify the file is valid YAML"
+    ],
+    "acceptanceCriteria": [
+      ".doc-standard.yaml exists at repo root and is valid YAML",
+      "File declares schema_version, project metadata, required_files list, portfolio sibling repos, and author info",
+      "required_files list matches the actual docs/ file structure created by FEAT-014 through FEAT-020",
+      "Portfolio section lists ClawHQ, Easy-Markdown, and GigOS with correct GitHub URLs"
+    ],
+    "scope": [
+      ".doc-standard.yaml"
+    ],
+    "dependsOn": [
+      "FEAT-021"
+    ],
+    "status": "done",
+    "readyForSprint": false,
+    "groomedAt": "2026-03-21",
+    "groomingNotes": "Portfolio/meta tooling — machine-readable doc standard for cross-repo enforcement. Low direct user value for aishore users; value is in the broader ecosystem. 'could' priority is correct. Depends on FEAT-021 (all docs must exist first). No changes needed to spec.",
+    "groomedNotes": null,
+    "passes": true,
+    "completedAt": "2026-03-21T13:57:31-07:00"
+  },
+  {
+    "id": "FEAT-023",
+    "title": "backlog history row limit flag to cap output",
+    "intent": "Users must be able to see just the most recent N sprint completions without piping through head — a limit flag makes history browsable at any archive size.",
+    "description": "cmd_backlog_history() reads the full sprints.jsonl and prints all matching rows. For projects with many sprints, the output can be hundreds of rows. The command has no way to cap the output to N most recent entries. Adding a --limit N flag would print only the last N entries (after applying any --since or --failed filters). This is analogous to git log -n.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "In .aishore/aishore, find cmd_backlog_history() and add --limit to the flag parsing loop; add local limit=0 before the loop",
+      "In the --limit case: validate_arg then set limit=$2; shift 2; validate that the value is a positive integer",
+      "After filtering and collecting results, if limit > 0, pipe through tail -n $limit to keep only the last N entries",
+      "Add --limit to the usage message in cmd_backlog_history and cmd_help",
+      "Verify: 'backlog history' with limit 5 prints at most 5 rows; without limit flag prints all rows"
+    ],
+    "acceptanceCriteria": [
+      "backlog history with a limit flag prints only the N most recent matching entries",
+      "backlog history with both --since and a limit flag applies date filter first then limits rows",
+      "backlog history with no limit flag still prints all entries unchanged"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "Practical UX: after many sprint sessions, backlog history produces hundreds of rows. Users want 'show me the last 10' not 'show me all 200 then pipe through head'. Implementation is additive: add --limit flag parsing, add tail -n N after result collection. Low risk, small scope. No deps.",
+    "completedAt": "2026-03-20T17:52:58-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-024",
+    "title": "aishore status --watch mode for live sprint progress monitoring",
+    "intent": "Users must be able to monitor a running sprint without manually re-running status every few seconds — a watch mode eliminates the polling loop.",
+    "description": "cmd_status() is a snapshot command. Users running long sprints (1+ hour agent sessions) have no way to monitor progress without repeatedly running 'aishore status'. A --watch flag would run status on a configurable interval (default 30s) until the sprint completes (sprint.json status returns to idle) or Ctrl-C is pressed. The output should clear the terminal between refreshes (like watch(1)) and show a countdown to next refresh.",
+    "priority": "could",
+    "category": null,
+    "steps": [
+      "In .aishore/aishore, find cmd_status() and add --watch and --interval flags to the option parsing loop",
+      "Add local watch=false interval=30 before the loop; --watch sets watch=true; --interval sets interval=N",
+      "After existing status output logic, if watch is true: enter a loop that sleeps interval seconds, clears terminal (printf '\\033[2J\\033[H'), re-runs status output, prints 'Refreshing in Ns... (Ctrl-C to stop)'",
+      "In each loop iteration, check sprint.json status: if status is idle, print 'Sprint complete' and exit the loop",
+      "Verify: 'aishore status --watch' refreshes every 30s and exits when sprint completes; 'aishore status' without --watch works as before"
+    ],
+    "acceptanceCriteria": [
+      "aishore status --watch refreshes output every 30 seconds by default",
+      "aishore status --watch exits automatically when sprint.json status returns to idle",
+      "aishore status without --watch flag works identically to current behavior"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "Practical QoL: users currently poll 'aishore status' manually during long sprints. --watch eliminates the loop. Implementation is self-contained in cmd_status(): add flag, add sleep loop with terminal clear, exit condition checks sprint.json. Low risk, no deps. Kept as could because watch(1) is an alternative, but in-tool is more discoverable.",
+    "completedAt": "2026-03-20T18:00:32-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-025",
+    "title": "backlog add interactive mode — guided item creation via prompts",
+    "intent": "Users must be able to create a complete, sprint-ready backlog item interactively without knowing all the flags — interactive mode closes the discovery gap for new users.",
+    "description": "backlog add currently requires all fields to be passed as flags (--title, --intent, --priority, etc.) or creates a minimal item with empty fields. New users often don't know what fields are needed for sprint readiness. An interactive mode (triggered when no flags are passed, or with --interactive) should prompt for: type (feat/bug), title, intent, priority, steps (repeatable until empty), and acceptance criteria (repeatable until empty). Each prompt should show the field's purpose and an example. At the end, show the item and ask to confirm before writing.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "In .aishore/aishore, find cmd_backlog_add() and detect when no flags were passed (or --interactive was given)",
+      "Enter interactive mode: prompt for type with valid options shown; prompt for title; prompt for intent with hint about directive format; prompt for priority (must/should/could/future);",
+      "Prompt for steps in a loop: 'Step N (empty to finish):' — accumulate non-empty responses into steps array",
+      "Prompt for AC in a loop: 'AC N (empty to finish):' — accumulate non-empty responses into AC array",
+      "Display a summary of the item to be created and ask 'Create this item? (Y/n)' — if confirmed, create the item; if declined, exit without writing",
+      "Ensure interactive mode is skipped when stdin is not a terminal (piped usage) — check with [[ -t 0 ]]"
+    ],
+    "acceptanceCriteria": [
+      "backlog add with no flags prompts interactively for title, intent, priority, steps, and AC",
+      "User can press Enter on a step or AC prompt to stop adding entries (empty input ends the loop)",
+      "Interactive mode is skipped when stdin is not a tty (piped usage falls through to flag-based path)",
+      "The created item passes backlog check (all required fields populated)"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-20",
+    "groomingNotes": "New user onboarding gap: users who type 'backlog add' with no flags get a minimal item with empty steps/AC that fails readiness gates. Interactive mode closes this by guiding them through all required fields. Pattern exists: init already does interactive prompts. TTY check ensures scripted use is unaffected. No external deps.",
+    "completedAt": "2026-03-20T17:57:24-07:00",
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-026",
+    "title": "Add intent semantics to base developer and validator agent prompts",
+    "intent": "Add a one-sentence explanation of intent as the north-star tie-breaker directly in developer.md and validator.md so agent prompts are self-contained even without orchestrator injection",
+    "description": "",
+    "priority": "could",
+    "category": null,
+    "steps": [
+      "Add to developer.md: when implementation and AC conflict, intent wins",
+      "Add to validator.md: verify intent fulfillment, not just mechanical AC pass",
+      "Keep additions minimal — one sentence each, not duplicating the orchestrator injection"
+    ],
+    "acceptanceCriteria": [
+      "developer.md contains guidance about intent being the north star",
+      "validator.md contains guidance about verifying intent beyond AC"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "completedAt": "2026-03-20T19:11:10-07:00",
+    "groomedAt": null,
+    "groomedNotes": null
+  },
+  {
+    "id": "FEAT-027",
+    "title": "Multi-backlog support — run sprints across multiple backlog files in one session",
+    "intent": "aishore reads from all declared backlog files in a single session; items are picked by priority across all files with no manual pre-sorting required.",
+    "description": "Users working on large projects split work across component-specific backlog files. Currently aishore only reads from backlog.json and bugs.json. Multi-backlog support lets users declare additional backlog files (e.g. backlog/infra.json, backlog/api.json) in config.yaml, and the auto and run commands pick items from all declared files, respecting priority ordering across files. This removes the need to manually shuttle items between files before running sprints.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "Add a backlog_files config key (list of paths) to config.yaml, defaulting to the current two-file set",
+      "Update all backlog-reading functions (pick_item, list_pickable_ids, count_by_status, etc.) to iterate over the configured file list",
+      "Update resolve_backlog_file to search all declared files when resolving an item ID",
+      "Validate declared paths exist and are readable at startup; warn on missing files, don't abort",
+      "Update cmd_status to show counts per declared file",
+      "Update docs/CONFIGURATION.md with backlog_files knob",
+      "Verify: run auto done across two backlog files with items in each — both are picked and completed"
+    ],
+    "acceptanceCriteria": [
+      "config.yaml accepts a backlog_files list; omitting it defaults to current behaviour",
+      "Items are picked from all declared files in priority order across files",
+      "backlog list shows items from all declared files",
+      "resolve_backlog_file finds items in any declared file",
+      "Missing declared files produce a warning, not an abort"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-21",
+    "groomedNotes": null,
+    "completedAt": "2026-03-21T09:11:53-07:00"
+  },
+  {
+    "id": "FEAT-028",
+    "title": "Retry intelligence — carry prior failure context into retry developer cycles",
+    "intent": "On retry, the developer agent receives a structured summary of the prior failure — what was done and why it failed — and must acknowledge it before proceeding.",
+    "description": "When a sprint item fails validation and retries, the developer agent currently gets the same prompt as the first attempt with no memory of what was tried. If the first attempt made a mistake (wrong approach, missed edge case), the retry is likely to repeat it. Retry intelligence captures the validation failure output and a brief summary of what was changed in the failed attempt, then injects this as 'prior failure context' into the retry developer prompt. This reduces repeat mistakes and helps the agent course-correct.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "After each failed validation, capture: (a) the validation output, (b) a git diff summary of what the developer changed",
+      "Accumulate failure context across retries into a structured block (attempt N: summary + failure reason)",
+      "Inject the accumulated failure context into the developer agent prompt on retry, before the item spec",
+      "The developer prompt must instruct the agent to read the failure context section and address each failure before coding",
+      "Cap injected failure context at 2000 chars to avoid prompt bloat (truncate oldest first)",
+      "Verify: run --retries 2 on an item that will fail the first validation; confirm retry prompt contains prior failure context"
+    ],
+    "acceptanceCriteria": [
+      "On retry, developer prompt contains a 'Prior failure context' section with attempt number, git diff summary, and validation failure output",
+      "Failure context is capped at 2000 chars and truncated gracefully",
+      "First-attempt prompt is unchanged (no failure context section)",
+      "auto mode with --retries passes failure context across all retry cycles",
+      "shellcheck passes"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-21",
+    "groomedNotes": null,
+    "completedAt": "2026-03-21T09:18:14-07:00"
+  },
+  {
+    "id": "FEAT-029",
+    "title": "auto and run commands support --category filter to scope item selection",
+    "intent": "Users running auto or run on a mixed backlog can target a single category (e.g., auto done --category documentation) so a sprint session stays focused. Only items matching the given category are eligible — unmatched items are skipped as if they don't exist in that run.",
+    "description": "Users with large, categorized backlogs have no way to run a focused sprint on one area. Without a category filter, auto done picks any ready item regardless of category — mixing documentation bugs with feature work in the same session. A --category flag scopes item selection to only items tagged with that category, enabling focused sprint sessions by area (documentation, performance, testing, etc.).",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "Add --category <name> flag to cmd_run and cmd_auto option parsing",
+      "When --category is set, filter eligible items in pick_next_item to only those where item.category == category_filter",
+      "Pass category filter through the auto loop so each iteration respects the scope",
+      "If no items match the category filter, print a clear message and exit (not a circuit-breaker failure)",
+      "Update help text for run and auto commands to document --category"
+    ],
+    "acceptanceCriteria": [
+      "auto done --category documentation runs only documentation-tagged items; other items are not touched",
+      "auto done --category nonexistent exits with a clear 'no items found' message, not an error",
+      "run --category <name> with a specific ID rejects the item if it does not match the category",
+      "help text for run and auto shows the --category flag",
+      "shellcheck reports no new issues"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-21",
+    "groomedNotes": null,
+    "completedAt": "2026-03-21T10:09:43-07:00"
+  },
+  {
+    "id": "FEAT-030",
+    "title": "Completion notification when auto session ends or circuit-breaker fires",
+    "intent": "When auto done finishes — whether by draining the backlog, hitting the circuit breaker, or reaching --limit — the user gets an immediate terminal bell and optional system notification so they know the session is over without watching the terminal.",
+    "description": "Users run auto done on large backlogs that take 30-60+ minutes. Currently the session ends silently: green text appears but the user only sees it if they happen to be watching. A terminal bell (tput bel) is zero-config and works in any terminal. A richer system notification (osascript on macOS, notify-send on Linux) is opt-in via config. Both fire on clean completion and on circuit-breaker failure, with different messages.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "On session end (drained, circuit-breaker, or --limit reached), call tput bel to send a terminal bell — no config required, works everywhere",
+      "Add notifications.system config key (default: false); when true, detect platform and call osascript (macOS) or notify-send (Linux) with summary message (N items completed, M failed)",
+      "Add AISHORE_NOTIFY env var override (true/false) consistent with other env overrides",
+      "Bell and system notification fire on both clean exit and circuit-breaker failure, with distinct messages ('Sprint session complete' vs 'Sprint session stopped: N consecutive failures')",
+      "Update docs/CONFIGURATION.md with notifications.system key and AISHORE_NOTIFY env var",
+      "shellcheck passes; no new warnings"
+    ],
+    "acceptanceCriteria": [
+      "After auto done drains the backlog, a terminal bell sounds regardless of config",
+      "With notifications.system: true, a system notification appears on macOS (osascript) and Linux (notify-send) at session end",
+      "Circuit-breaker exit also triggers bell and system notification (if enabled) with a failure message",
+      "AISHORE_NOTIFY=false suppresses system notification even when config enables it",
+      "shellcheck passes"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-21",
+    "groomedNotes": null,
+    "completedAt": "2026-03-21T10:28:38-07:00"
+  },
+  {
+    "id": "FEAT-031",
+    "title": "auto --limit N flag to cap items processed per session",
+    "intent": "Users must be able to cap an auto session at N items — auto done --limit 3 processes exactly 3 items then stops cleanly, regardless of how many ready items remain. Clean exit, not a circuit-breaker failure.",
+    "description": "Users running auto done on a large backlog sometimes want to run a bounded session: test a new config on 2 items, manage API budget, or batch work into controlled chunks. The current auto command runs until the backlog drains or circuit-breaker fires. A --limit N flag adds an explicit session cap that exits cleanly (not as a failure) after N items complete. Distinct from --max-failures (circuit breaker) and priority scope (p0/p1/p2) — this is a pure count cap.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "Add --limit <N> flag to cmd_auto option parsing with validate_arg for non-empty positive integer",
+      "Pass limit through to run_sprint_loop; track items_completed counter incremented on each sprint success",
+      "When items_completed reaches limit, exit sprint loop cleanly with log_success 'Session limit reached: N items completed'",
+      "Limit exit is not counted as a failure — circuit breaker consecutive_failures counter is not incremented",
+      "Update help text for auto command to document --limit flag",
+      "shellcheck passes"
+    ],
+    "acceptanceCriteria": [
+      "auto done --limit 2 processes exactly 2 items then exits with a clean success message",
+      "The remaining backlog items are untouched after a --limit exit",
+      "auto done --limit 0 exits immediately with a clear 'limit must be a positive integer' error",
+      "Circuit-breaker consecutive_failures counter is not affected by a limit exit",
+      "help text shows --limit flag under auto command",
+      "shellcheck passes"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-21",
+    "groomedNotes": null,
+    "completedAt": "2026-03-21T10:34:22-07:00"
+  },
+  {
+    "id": "FEAT-032",
+    "title": "Stream developer agent output to terminal in real-time",
+    "intent": "During a sprint, the developer agent's output streams to the terminal live — users can see what the agent is writing rather than watching a spinner for 5-10 minutes with no feedback.",
+    "description": "The current polling loop shows 'Waiting for agent...' with no visibility into what the developer agent is doing. For a 5-10 minute sprint, users are completely blind. run_agent_process() writes agent output to a temp log; reading that log live (via tail -f or a poll loop printing new lines) gives real-time feedback with zero changes to agent behavior. This is the 'agent output streaming' item from the roadmap Next section.",
+    "priority": "must",
+    "category": null,
+    "steps": [
+      "In run_agent_process(), capture claude output to a temp log file (already done for result.json detection); read and print new lines from that log in the poll loop alongside the 'waiting' status",
+      "Rate-limit output printing to avoid overwhelming the terminal — print at most N new lines per poll interval (e.g., every 2 seconds)",
+      "Add streaming.enabled config key (default: true) and AISHORE_STREAMING env var override",
+      "When streaming.enabled is false, fall back to current 'Waiting for agent...' behavior",
+      "Streaming must not interfere with result.json detection or timeout behavior",
+      "shellcheck passes"
+    ],
+    "acceptanceCriteria": [
+      "During a sprint, developer agent output lines appear in the terminal as the agent writes them",
+      "Sprint orchestration (validation, commit, merge) still works correctly with streaming enabled",
+      "AISHORE_STREAMING=false disables streaming and reverts to spinner behavior",
+      "Timeout still fires correctly when streaming is enabled",
+      "shellcheck passes"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-21",
+    "groomedNotes": null,
+    "completedAt": "2026-03-21T10:23:29-07:00"
+  },
+  {
+    "id": "FEAT-033",
+    "title": "Live progress counter during auto sessions",
+    "intent": "During any auto session, users can see at a glance how many items have completed, how many failed, and how long the session has been running — they are never left wondering if the tool is still working or how far through the backlog it is.",
+    "description": "auto sessions can run for 30-60+ minutes processing many items. The current output shows per-sprint status but gives no session-level view: users cannot tell if they are 2 items in or 18 items in, how many have failed so far, or how long the session has been running. A persistent status line printed at the start of each new sprint gives users a live session view without requiring them to scroll back. This complements FEAT-030 (bell notification) and FEAT-031 (--limit N) to make auto sessions fully transparent.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "Track session start time in run_sprint_loop using date +%s at session open",
+      "Increment items_completed counter on each sprint success; items_failed on each failure",
+      "At start of each sprint iteration, compute elapsed minutes and print: 'Sprint session: N complete | M failed | Xm elapsed'",
+      "When ready-item count is known before the loop, show 'N/total' format; otherwise show 'N complete'",
+      "shellcheck passes; no new warnings"
+    ],
+    "acceptanceCriteria": [
+      "Each new sprint in an auto session prints a session progress line before per-sprint output",
+      "Line shows items completed, items failed, and elapsed time in minutes",
+      "Format: 'Sprint session: N complete | M failed | Xm elapsed'",
+      "shellcheck passes"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-21",
+    "groomedNotes": null,
+    "completedAt": "2026-03-21T10:43:13-07:00"
+  },
+  {
+    "id": "FEAT-034",
+    "title": "End-of-session summary table for auto runs",
+    "intent": "When an auto session ends — by draining the backlog, hitting --limit, or tripping the circuit breaker — users receive a formatted summary showing exactly what happened: items attempted, passed, failed, total duration, and lines changed.",
+    "description": "auto done ends with a single log line ('N items complete') that discards all the session data already being tracked. A formatted summary table — printed just before the terminal bell (FEAT-030) — gives users an at-a-glance record of the session without needing to scroll sprint logs. Data is already in-scope: items_completed, items_failed, session start time, and cumulative lines changed from result.json. This table is also the natural anchor for future --json output.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "At session end (drain, --limit, or circuit-breaker), collect: items_completed, items_failed, elapsed seconds, cumulative linesAdded and linesRemoved from each result.json",
+      "Print a formatted summary block: header line, then tabular rows for each stat, then a footer line",
+      "Include: Items attempted, Items passed, Items failed, Total duration (Xm Ys), Lines added, Lines removed",
+      "Summary fires on all exit paths: clean drain, --limit cap, and circuit-breaker failure",
+      "Add --no-summary flag to suppress the table for scripted/CI use",
+      "shellcheck passes; no new warnings"
+    ],
+    "acceptanceCriteria": [
+      "After auto done drains the backlog, a summary table prints showing counts, duration, and lines changed",
+      "Summary fires on --limit exit and circuit-breaker exit with appropriate header text",
+      "auto done --no-summary suppresses the table but does not suppress the completion message",
+      "All numeric totals are accurate (tested with a 2-item auto run)",
+      "shellcheck passes"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-21",
+    "groomedNotes": null,
+    "completedAt": "2026-03-21T10:50:19-07:00"
+  },
+  {
+    "id": "FEAT-035",
+    "title": "backlog populate --preview mode — show AI-generated items before committing",
+    "intent": "Users must be able to preview what backlog populate will add before it modifies backlog.json, so AI-generated noise cannot silently pollute the backlog.",
+    "description": "cmd_backlog_populate runs the AI agent and writes items directly to backlog.json with no preview step. A --preview flag should run the agent, print proposed items in a readable format, and exit without writing.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "Add --preview flag to cmd_backlog_populate() via parse_opts",
+      "When --preview is active, run agent but capture output to temp file instead of writing to backlog.json",
+      "Print proposed items in same table format as backlog list (id, priority, title)",
+      "Exit 0 after preview without modifying backlog.json",
+      "Add --preview to usage message and help output",
+      "Run shellcheck — confirm zero new warnings"
+    ],
+    "acceptanceCriteria": [
+      "Running backlog populate --preview prints proposed items and exits without modifying backlog.json",
+      "Running backlog populate without --preview still writes to backlog.json as before",
+      "Preview output includes id, priority, and title for each proposed item",
+      "shellcheck passes with zero new warnings"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomingNotes": "Closes the only fire-and-forget hole in backlog management. Without preview, AI-generated items land with no review step. On an established backlog this introduces noise requiring manual cleanup. Direct user value: confidence before committing.",
+    "groomedAt": "2026-03-21",
+    "groomedNotes": null,
+    "completedAt": "2026-03-21T12:44:30-07:00"
+  },
+  {
+    "id": "FEAT-036",
+    "title": "backlog check --all audits every item for readiness gates in one pass",
+    "intent": "Users must be able to run 'backlog check --all' and see a table of every non-done item with its readiness gate status and failure reasons, so they can fix the whole backlog in one pass instead of checking item by item.",
+    "description": "backlog check validates one item at a time. Users with large backlogs have no way to audit all items at once — they must loop manually. A --all flag on backlog check should iterate every non-done item, run the same gate checks, and print a summary table: item ID, PASS/FAIL, and which gates failed. This directly complements BUG-100: once auto warns about skipped items, users need a fast way to find and fix all broken items without running check N times.",
+    "priority": "should",
+    "category": null,
+    "steps": [],
+    "acceptanceCriteria": [],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomingNotes": "Directly complements BUG-100. Once auto warns on skipped items, users need a fast audit path. 'backlog check <ID>' one at a time doesn't scale. This closes the feedback loop: warn (BUG-100) → audit (FEAT-036) → fix. Priority should is correct — not must because BUG-100 alone gives reactive feedback; --all is proactive convenience.",
+    "groomedAt": "2026-03-21",
+    "groomedNotes": null,
+    "completedAt": "2026-03-21T13:49:31-07:00"
+  },
+  {
+    "id": "FEAT-037",
+    "title": "aishore config check — validate config.yaml and print effective values",
+    "intent": "Users must be able to run 'aishore config check' and see every effective configuration value with its source (default/config/env), and any validation errors in config.yaml must be reported explicitly.",
+    "description": "Users who edit config.yaml have no way to validate it before running a sprint. Unknown keys are silently ignored (load_config falls back to defaults), type errors produce cryptic runtime failures, and there's no way to see what the effective configuration actually is. A 'config check' command would: parse config.yaml (warn if missing), validate known keys and value types, flag unknown keys, and print a table of all effective values (merged from config.yaml + env vars). This removes a class of 'why isn't my config working' support issues and makes the configuration surface visible.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "Add cmd_config_check() function: read config.yaml via yq (if available) or fallback parser",
+      "Validate each key against the known config schema (agent_model, timeout, maturity.enabled, scope.mode, permissions.*, etc.) — log_warn on unknown keys",
+      "For each known config key, determine effective value: env var > config.yaml > default, and note source",
+      "Print a table: KEY | EFFECTIVE VALUE | SOURCE (env/config/default)",
+      "Exit 1 if config.yaml exists but cannot be parsed; exit 0 if config is valid or missing",
+      "Wire 'config check' as a top-level command in main dispatch and add to help text",
+      "Run shellcheck — zero new warnings"
+    ],
+    "acceptanceCriteria": [
+      "Running 'aishore config check' with no config.yaml prints all defaults with source=default",
+      "Running 'aishore config check' with a valid config.yaml shows overridden keys with source=config",
+      "Running 'aishore config check' with an env var set shows that key with source=env",
+      "Unknown keys in config.yaml produce a warning line in output",
+      "A malformed config.yaml (invalid YAML) exits 1 with a clear error",
+      "shellcheck passes with zero new warnings"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomingNotes": "Config validation is a recurring pain point: silent fallback to defaults hides misconfiguration. This surfaces the full effective config in one command, removing a class of support questions. Priority should is correct; no dependencies.",
+    "groomedAt": "2026-03-21",
+    "completedAt": "2026-03-21T13:56:11-07:00",
+    "groomedNotes": null
+  }
+]
