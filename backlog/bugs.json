@@ -74,36 +74,38 @@
     },
     {
       "id": "BUG-127",
-      "title": "Modularize the 5000+ line monolith into sourced modules",
-      "intent": "The single-file CLI must be split into sourced Bash modules so that functions are independently locatable, testable, and maintainable — preventing the monolith from becoming the bottleneck as features are added.",
-      "description": "aishore is 5282 lines in one file with no test suite. Split into sourced modules: lib/config.sh, lib/agent.sh, lib/sprint.sh, lib/backlog.sh, lib/groom.sh, lib/utils.sh. Main aishore file becomes a thin dispatcher. Each module is independently shellcheck-able. Checksums cover all modules. High-risk refactor — should be done as a dedicated sprint.",
+      "title": "Reduce and refactor the 5000+ line single-file CLI",
+      "intent": "The single-file CLI must be reduced in size and better organized WITHOUT breaking any existing behavior — after 126+ bugs fixed and 40+ features shipped, a refactor that introduces regressions is unacceptable. Every change must be provably safe.",
+      "description": "aishore is 5282 lines in one file, which is intentional for portability. But it has grown organically and contains dead code, verbose defensive patterns, duplicated logic, and oversized functions. Refactor within the single file: extract repeated jq patterns into helpers, collapse verbose guard clauses, remove dead branches (see BUG-072), consolidate duplicated option parsing, and add clear section headers. Goal: reduce to under 4000 lines without losing functionality.",
       "priority": "should",
       "category": "maintainability",
       "steps": [
-        "Create .aishore/lib/ directory",
-        "Extract config loading functions into lib/config.sh: load_config, _apply_env_overrides, _validate_backlog_files",
-        "Extract agent functions into lib/agent.sh: run_agent, run_agent_process, build_agent_prompt, build_context",
-        "Extract sprint loop functions into lib/sprint.sh: run_sprint_loop, _run_retry_loop, _run_developer_cycle, _run_validation_cycle",
-        "Extract backlog functions into lib/backlog.sh: cmd_backlog_*, pick_item, mark_complete",
-        "Extract groom functions into lib/groom.sh: cmd_groom, run_groom_flow, protect_items_from_groom, enforce_groom_limits",
-        "Extract shared utilities into lib/utils.sh: logging, color, json helpers, git helpers",
-        "Update main aishore file to source all modules from lib/ relative to script directory",
-        "Update checksums.sha256 to cover all new files",
-        "Run shellcheck on every module file individually — zero warnings",
-        "Run full integration test: aishore help, backlog list, backlog check --all, run --dry-run"
+        "Before any changes, capture baseline output for ALL commands: help, version, status, backlog list, backlog check --all, clean --dry-run, metrics, config check, diagnose — save to a reference file",
+        "Audit all functions for dead code: unreachable branches, unused variables, functions never called — remove ONLY after confirming no indirect invocation via eval, variable expansion, or agent callbacks",
+        "Identify repeated jq filter patterns and extract into named helper functions — verify each extraction produces identical output by diffing before/after on real backlog data",
+        "Collapse verbose guard clauses and defensive patterns that add lines without value (see BUG-072) — but DO NOT remove guards that protect against edge cases discovered in prior bug fixes",
+        "Consolidate duplicated option parsing logic across cmd_run, cmd_auto, and cmd_groom — test each command with all flag combinations after consolidation",
+        "Merge small single-use utility functions back into their callers ONLY when the function has no semantic value as a named abstraction",
+        "Ensure section headers and function grouping follow a logical order: constants, utils, backlog, sprint, groom, review, CLI",
+        "After ALL changes, diff baseline output against current output for every command — zero differences allowed",
+        "Run shellcheck — zero new warnings",
+        "Run a full dry-run sprint (aishore run --dry-run) to verify the orchestration path is intact"
       ],
       "acceptanceCriteria": [
-        "Main aishore file is under 500 lines and sources all functionality from lib/ modules",
-        "Each lib/ module passes shellcheck independently with zero warnings",
-        "All existing CLI commands work identically after the refactor",
-        "checksums.sha256 covers all new module files",
-        "aishore update correctly handles the new file structure"
+        "The script is under 4500 lines while retaining ALL existing functionality — zero regressions",
+        "Every CLI command produces byte-identical output before and after the refactor (verified by baseline diff)",
+        "No dead code remains: every function is reachable, every branch is exercised",
+        "Repeated jq patterns are consolidated into named helpers",
+        "No guards or defensive code from prior bug fixes (BUG-001 through BUG-126) are removed unless provably redundant",
+        "shellcheck passes with zero new warnings",
+        "A dry-run sprint completes without error"
       ],
       "scope": [
-        ".aishore/aishore",
-        ".aishore/lib/"
+        ".aishore/aishore"
       ],
-      "dependsOn": [],
+      "dependsOn": [
+        "BUG-072"
+      ],
       "status": "todo",
       "passes": false,
       "readyForSprint": false
