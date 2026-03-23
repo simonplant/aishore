@@ -1,49 +1,65 @@
 # aishore
 
 [![Version](https://img.shields.io/github/v/release/simonplant/aishore)](https://github.com/simonplant/aishore/releases)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+[![CI](https://github.com/simonplant/aishore/actions/workflows/ci.yml/badge.svg)](https://github.com/simonplant/aishore/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/simonplant/aishore)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey)]()
-[![Shell](https://img.shields.io/badge/shell-bash%204.4%2B-green)]()
-[![Claude Code](https://img.shields.io/badge/requires-Claude%20Code%20CLI-blueviolet)](https://docs.anthropic.com/en/docs/claude-code)
+[![Shell](https://img.shields.io/badge/bash-4.4%2B-green?logo=gnubash&logoColor=white)]()
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-required-blueviolet?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
+[![Last Commit](https://img.shields.io/github/last-commit/simonplant/aishore)](https://github.com/simonplant/aishore/commits/main)
+[![GitHub Stars](https://img.shields.io/github/stars/simonplant/aishore?style=flat)](https://github.com/simonplant/aishore/stargazers)
 
-**Autonomous sprint orchestration for Claude Code -- from backlog to merged code, hands-off.**
+**Autonomous sprint orchestration for Claude Code — from backlog to merged code, hands-off.**
 
-aishore is a drop-in sprint orchestration tool that reliably develops software in a guided and automated way -- aligned to commander's intent and quality standards. You define what must be true (intent), what to build (backlog), and how to verify it (acceptance criteria). aishore picks items, implements them through a maturity protocol (implement, critique, harden), validates against your intent, and archives completed work. You come back to code that was built right, for the right reasons.
+<!-- TODO: Record terminal GIF showing `aishore auto done` completing a sprint -->
+<!-- Recommended tool: asciinema or vhs (https://github.com/charmbracelet/vhs) -->
+<!-- Target: 15-20 seconds, under 5MB, showing pick → develop → validate → merge cycle -->
+
+## What is aishore?
+
+You define *what must be true* (intent), *what to build* (backlog), and *how to verify it* (acceptance criteria). aishore picks items, develops them through a 3-phase maturity protocol (implement, critique, harden), validates against your intent, and merges the result. You come back to code that was built right, for the right reasons.
 
 ```
-You: define intent + backlog  -->  aishore develops, critiques, hardens  -->  You: review quality work
+You: define intent + backlog  →  aishore develops, critiques, hardens  →  You: review merged code
 ```
 
-## Why aishore?
+## Highlights
 
-Vibe coding showed that AI can write code from natural language, but "just vibe it" breaks down at project scale -- no memory between sessions, no quality gate, no way to batch work or hold the AI to a standard. aishore is the next step: **structured intent-based batch development with inline critic loops**. You express *intent* (what must be true when done) and aishore runs full development sprints autonomously, catching bugs and edge cases before they escape. This is not vibe coding. This is **sprint coding**.
+- **Batch autonomous execution** — queue 50 items, walk away, come back to merged code
+- **Intent-driven quality** — every item has a commander's intent; the validator checks work against it
+- **Built-in critic loop** — implement → critique → harden inside each session, not across retries
+- **Zero config needed** — works out of the box; `init -y` detects your stack automatically
+- **Full git workflow** — feature branches, merge or squash, PR creation, scope checking
+- **Self-healing** — retries with failure context, spec refinement on exhausted retries, circuit breaker on runaway failures
 
 ## Quick Start
 
 ```bash
-# Install
 curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash
 .aishore/aishore init -y
-
-# Run your first sprint
 .aishore/aishore backlog add --title "Add health check endpoint" \
   --intent "Ops must know instantly if the service is alive or dead."
-.aishore/aishore groom
 .aishore/aishore run
 ```
 
-See the [full quickstart guide](docs/QUICKSTART.md) for detailed setup, configuration, and examples.
+To drain your entire backlog autonomously:
+
+```bash
+.aishore/aishore auto done
+```
+
+See the [full quickstart guide](docs/QUICKSTART.md) for setup, configuration, and examples.
 
 ## How It Works
 
-aishore models a real sprint team with specialized AI agents (Developer, Validator, Tech Lead, Product Owner, Architect), coordinated by a central orchestrator. Each sprint item is picked from the backlog, developed on an isolated feature branch through a 3-phase maturity protocol (implement, critique, harden), validated against acceptance criteria and commander's intent, then merged and archived.
+Five specialized AI agents (Developer, Validator, Tech Lead, Product Owner, Architect) coordinated by a Bash orchestrator. Each sprint item gets its own feature branch, a baseline pre-flight check, and a full maturity cycle before merge.
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────────────┐
 │                                  Sprint Orchestrator                                  │
 │                                                                                       │
 │  ┌──────┐  ┌────────┐  ┌───────────┐  ┌───────────┐  ┌────────┐  ┌─────────┐  ┌──────────┐
-│  │ Pick │->│ Branch │->│ Preflight │->│ Developer │->│ Verify │->│Validator│->│  Merge   │
+│  │ Pick │→ │ Branch │→ │ Preflight │→ │ Developer │→ │ Verify │→ │Validator│→ │  Merge   │
 │  │ Item │  │ Create │  │  Check    │  │   Agent   │  │  Suite │  │  Agent  │  │ Archive  │
 │  └──────┘  └────────┘  └───────────┘  └───────────┘  └────────┘  └─────────┘  └──────────┘
 │                                              │                         │              │
@@ -53,25 +69,51 @@ aishore models a real sprint team with specialized AI agents (Developer, Validat
 
 See [Architecture](docs/ARCHITECTURE.md) for the full pipeline, agent system, and design decisions.
 
-## Status
+## Built by aishore
 
-**Version:** 0.3.4 — **Alpha**
+This project builds itself. Nearly every commit in this repo was generated by aishore's own sprint orchestrator — from feature implementation to bug fixes to documentation.
 
-What works well: sprint orchestration, maturity protocol, autonomous mode with circuit breakers, backlog grooming, architecture review, checksum-verified updates, scope checking, spec refinement.
+| Metric | Value |
+|--------|-------|
+| Sprints completed | 268 |
+| Commits generated | 589 (95% of repo history) |
+| Bugs fixed autonomously | 178 |
+| Features shipped | 44 |
+| Releases in 53 days | 38 |
+| Archived success rate | 100% |
 
-What's rough: single-repo only (no monorepo support), error messages could be friendlier, limited to Claude Code CLI as the AI backend.
+Browse the [git history](https://github.com/simonplant/aishore/commits/main) — the conventional commit messages, feature branches, and merge commits are all aishore's work. The [changelog](docs/CHANGELOG.md) documents every release.
+
+## Why Not Just Prompt?
+
+**"I already use Claude Code / Cursor / Aider."**
+Those are single-session tools. You prompt, it codes, the session ends. There's no batch execution, no quality gates between items, no backlog memory across sessions. aishore wraps your AI coding tool in a sprint framework — it handles what happens *between* sessions.
+
+**"Can't I just write a shell script loop?"**
+You could. But you'd need to handle: git branching, baseline pre-flight checks, retries with failure context, scope enforcement, a maturity protocol, auto-grooming when ready items run low, circuit breakers, spec refinement, PR creation, and result archival. That's what aishore is.
+
+**"What about SWE-agent / OpenHands?"**
+Those are AI agents that solve individual tasks. aishore is the orchestration layer — it manages the *sprint*, not just the *task*. It could wrap any agent underneath; right now it uses Claude Code CLI because that's the most capable option for full-repo work.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | Pipeline, agents, quality model, and design decisions |
 | [Quickstart](docs/QUICKSTART.md) | Installation, setup, and first sprint walkthrough |
-| [Configuration](docs/CONFIGURATION.md) | Config file, environment variables, and all options |
+| [Architecture](docs/ARCHITECTURE.md) | Pipeline, agents, quality model, and design decisions |
+| [Configuration](docs/CONFIGURATION.md) | Config file, environment variables, CLI flag reference |
 | [Problems](docs/PROBLEMS.md) | Troubleshooting common issues |
 | [Roadmap](docs/ROADMAP.md) | Planned features and project direction |
 | [Contributing](docs/CONTRIBUTING.md) | Development setup, code style, and PR process |
 | [Changelog](docs/CHANGELOG.md) | Release history and breaking changes |
+
+## Status
+
+**v0.3.8 — Alpha.** Actively developed, used daily on real projects.
+
+What works well: sprint orchestration, maturity protocol, autonomous mode, backlog grooming, architecture review, scope checking, spec refinement, checksum-verified updates.
+
+What's rough: single-repo only (no monorepo), limited to Claude Code CLI as the AI backend, error messages could be friendlier.
 
 ## Author
 

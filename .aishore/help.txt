@@ -33,6 +33,7 @@ Commands:
     --remove-step N Remove step by 1-based index,
     --scope "glob"  Add scope glob (repeatable), --clear-scope to reset,
     --ac "text", --ac-verify "cmd"  Append testable acceptance criteria, --clear-ac to reset,
+    --remove-ac N   Remove acceptance criterion by 1-based index,
     --depends-on ID  Add dependency (repeatable), --clear-depends-on to reset
   backlog check <ID> Check readiness gates (title, intent, steps, AC, step length)
     --all           Audit every non-done item and print a summary table
@@ -72,6 +73,8 @@ Commands:
     --quick         Skip maturity protocol (fast iteration)
     --category <name>  Only run items matching this category
     --auto-review   Run architecture review after completion
+    --limit N       Cap session at N successful items then exit cleanly
+    --no-summary    Suppress end-of-session summary table
 
   groom             Groom bugs/tech debt (Tech Lead mode)
     --backlog       Groom features instead (Product Owner mode)

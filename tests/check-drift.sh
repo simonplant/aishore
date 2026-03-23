@@ -114,7 +114,7 @@ help_commands=$("$CLI" help 2>&1 \
     | sort -u)
 
 for cmd in $code_commands; do
-    [[ "$cmd" == "usage" ]] && continue  # internal default
+    [[ "$cmd" == "usage" || "$cmd" == "check" ]] && continue  # internal/subcommand
     if has_line "$cmd" "$help_commands"; then
         ok "Command '$cmd' in code and help"
     else
@@ -133,11 +133,13 @@ code_envvars=$(sed -n '/_apply_env_overrides()/,/^}/p' "$CLI" \
     | grep -oP 'AISHORE_\w+' \
     | sort -u)
 
+CONFIG_MD="$SCRIPT_DIR/docs/CONFIGURATION.md"
+
 for var in $code_envvars; do
-    if grep -Fq "$var" "$README" 2>/dev/null; then
-        ok "Env var $var documented in README"
+    if grep -Fq "$var" "$CONFIG_MD" 2>/dev/null; then
+        ok "Env var $var documented in CONFIGURATION.md"
     else
-        drift error "Env var $var in code but missing from README"
+        drift error "Env var $var in code but missing from CONFIGURATION.md"
     fi
 done
 
@@ -154,11 +156,10 @@ extract_code_flags() {
     local body
     body=$(sed -n "/^${func_name}()/,/^[a-z_]*() *{*$/p" "$CLI")
     {
-        # Case-statement patterns: --flag) or --flag| or -x|--flag)
-        echo "$body" | grep -oP '(?<=[\s|])--[\w-]+(?=\)|\|)'
-        # Equality checks: == "--flag" or == '--flag'
-        echo "$body" | grep -oP '==\s*["\x27]--[\w-]+["\x27]' | grep -oP '\-\-[\w-]+'
-    } | grep -v '^--_' | sort -u
+        # Unified extraction: --flag preceded by whitespace, |, or : and followed by ), |, ", or '
+        # Covers case-statement patterns, parse_opts specs, and equality checks
+        echo "$body" | grep -oP '(?<=[\s|:])--[\w-]+(?=\)|\||["\x27])'
+    } | grep -v '^--_' | grep -v '^--\(arg\|argjson\)$' | sort -u
 }
 
 # Extract flags from help for a specific command section.
@@ -196,10 +197,15 @@ is_intentionally_undocumented() {
 }
 
 check_command_flags() {
-    local func_name="$1" cmd_label="$2"
+    local func_names="$1" cmd_label="$2"
 
-    local code_flags help_flags
-    code_flags=$(extract_code_flags "$func_name") || true
+    local code_flags="" help_flags fn
+    for fn in $func_names; do
+        local fn_flags
+        fn_flags=$(extract_code_flags "$fn") || true
+        code_flags=$(printf '%s\n%s' "$code_flags" "$fn_flags")
+    done
+    code_flags=$(echo "$code_flags" | sort -u | sed '/^$/d')
     help_flags=$(extract_help_flags "$cmd_label") || true
 
     [[ -z "$code_flags" && -z "$help_flags" ]] && return
@@ -219,10 +225,14 @@ check_command_flags() {
     while IFS= read -r flag; do
         [[ -z "$flag" ]] && continue
         if ! has_line "$flag" "$code_flags"; then
-            # Auto flags are parsed in cmd_run (pass-through via --_auto)
+            # Auto flags are parsed in cmd_run/cmd_run_parse_args (pass-through via --_auto)
             if [[ "$cmd_label" == "auto" ]]; then
-                local run_flags
-                run_flags=$(extract_code_flags "cmd_run") || true
+                local run_flags fn_flags
+                run_flags=""
+                for fn_flags in cmd_run cmd_run_parse_args; do
+                    run_flags=$(printf '%s\n%s' "$run_flags" "$(extract_code_flags "$fn_flags")")
+                done
+                run_flags=$(echo "$run_flags" | sort -u | sed '/^$/d')
                 if has_line "$flag" "$run_flags"; then
                     ok "$cmd_label $flag parsed via run pass-through"
                     continue
@@ -233,7 +243,7 @@ check_command_flags() {
     done <<< "$help_flags"
 }
 
-check_command_flags "cmd_run" "run"
+check_command_flags "cmd_run cmd_run_parse_args" "run"
 check_command_flags "cmd_auto" "auto"
 check_command_flags "cmd_update" "update"
 check_command_flags "cmd_init" "init"
@@ -248,18 +258,18 @@ echo ""
 
 # ─── 6. Help vs README flag parity ──────────────────────────────────────────
 
-echo "── Flags: Help vs README ──"
+echo "── Flags: Help vs CONFIGURATION.md ──"
 
 all_help_flags=$("$CLI" help 2>&1 | grep -oP '\-\-[\w-]+' | sort -u)
 
 while IFS= read -r flag; do
     [[ -z "$flag" ]] && continue
-    if grep -Fq -- "$flag" "$README" 2>/dev/null; then
-        ok "Help flag $flag in README"
+    if grep -Fq -- "$flag" "$CONFIG_MD" 2>/dev/null; then
+        ok "Help flag $flag in CONFIGURATION.md"
     else
         case "$flag" in
-            --help|--version) ok "Help flag $flag (standard, README skip OK)" ;;
-            *) drift error "Help flag $flag missing from README" ;;
+            --help|--version) ok "Help flag $flag (standard, skip OK)" ;;
+            *) drift error "Help flag $flag missing from CONFIGURATION.md" ;;
         esac
     fi
 done <<< "$all_help_flags"

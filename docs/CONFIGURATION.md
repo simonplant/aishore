@@ -93,6 +93,11 @@ validation:
 # Isolation mode: "stash" (default) or "worktree"
 # isolation:
 #   mode: stash
+
+# Output streaming
+# streaming:
+#   enabled: true
+#   max_lines: 20
 ```
 
 ### Every Option Explained
@@ -327,6 +332,26 @@ validation:
 | **What it controls** | How aishore isolates sprint work from uncommitted changes. `stash` uses `git stash`; `worktree` uses `git worktree` for full isolation. |
 | **When to change** | Use `worktree` if you want to keep working in the main tree while sprints run. |
 
+#### `streaming.enabled`
+
+| | |
+|---|---|
+| **Type** | boolean |
+| **Default** | `true` |
+| **Env var** | `AISHORE_STREAMING` |
+| **What it controls** | Whether agent output is streamed to the terminal in real time. When `false`, output is only shown after the agent completes. |
+| **When to change** | Set to `false` to reduce terminal noise during autonomous sessions. |
+
+#### `streaming.max_lines`
+
+| | |
+|---|---|
+| **Type** | integer |
+| **Default** | `20` |
+| **Env var** | `AISHORE_STREAMING_MAX_LINES` |
+| **What it controls** | Maximum number of trailing output lines shown during agent streaming. |
+| **When to change** | Increase to see more live output; decrease to reduce terminal clutter. |
+
 ---
 
 ## Environment Variables
@@ -354,6 +379,8 @@ All `AISHORE_*` environment variables and what they map to:
 | `AISHORE_OUTPUT_TRUNCATE_LINES` | `output.truncate_lines` | `50` | Log truncation lines |
 | `AISHORE_CREATE_PR` | `pr.create` | `false` | Create PR instead of merging |
 | `AISHORE_ISOLATION` | `isolation.mode` | `stash` | Isolation mode |
+| `AISHORE_STREAMING` | `streaming.enabled` | `true` | Enable/disable output streaming |
+| `AISHORE_STREAMING_MAX_LINES` | `streaming.max_lines` | `20` | Max trailing lines during streaming |
 
 ---
 
@@ -385,6 +412,10 @@ All `AISHORE_*` environment variables and what they map to:
 | `--retries` | `N` | Retry N times on validation failure (default: `0`) |
 | `--refine` | — | Refine spec when retries exhausted, then retry once more |
 | `--quick` | — | Skip maturity protocol for this run |
+| `--category` | `<name>` | Only run items matching this category |
+| `--auto-review` | — | Run architecture review after completion |
+| `--limit` | `N` | Cap session at N successful items then exit cleanly |
+| `--no-summary` | — | Suppress end-of-session summary table |
 
 ### `auto` — Autonomous mode
 
@@ -414,6 +445,8 @@ All `AISHORE_*` environment variables and what they map to:
 | `--quick` | — | Skip maturity protocol |
 | `--auto-review` | — | Run architecture review after all items complete |
 | `--dry-run` | — | Preview first item without running |
+| `--category` | `<name>` | Only run items matching this category |
+| `--no-summary` | — | Suppress end-of-session summary table |
 
 ### `groom` — Refine backlog
 
@@ -475,13 +508,16 @@ All `AISHORE_*` environment variables and what they map to:
 | `--groomed-at` | `[YYYY-MM-DD]` | Set groomed date (defaults to today) |
 | `--groomed-notes` | `"text"` | Set grooming notes |
 | `--step` | `"text"` | Append implementation step *(repeatable)* |
+| `--remove-step` | `N` | Remove step by 1-based index |
 | `--clear-steps` | — | Reset steps to empty |
 | `--ac` | `"text"` | Add acceptance criterion *(repeatable)* |
 | `--ac-verify` | `"cmd"` | Attach verification command to preceding `--ac` |
+| `--remove-ac` | `N` | Remove acceptance criterion by 1-based index |
 | `--clear-ac` | — | Reset acceptance criteria to empty |
 | `--scope` | `"glob"` | Add scope glob *(repeatable)* |
 | `--clear-scope` | — | Reset scope to empty |
 | `--depends-on` | `ID` | Add dependency *(repeatable)* |
+| `--clear-depends-on` | — | Reset dependencies to empty |
 
 ### `backlog list` — List items
 
@@ -493,7 +529,9 @@ All `AISHORE_*` environment variables and what they map to:
 |------|----------|-------------|
 | `--type` | `feat` \| `bug` | Filter by type |
 | `--status` | `todo` \| `in-progress` \| `done` | Filter by status |
+| `--priority` | `must` \| `should` \| `could` \| `future` | Filter by priority |
 | `--ready` | — | Show only sprint-ready items |
+| `--no-ready` | — | Show only items not yet ready |
 
 ### `backlog show` — Display item detail
 
@@ -506,10 +544,14 @@ No flags. Shows full item details including steps, AC, and scope.
 ### `backlog check` — Validate readiness
 
 ```
-.aishore/aishore backlog check <ID>
+.aishore/aishore backlog check <ID|--all>
 ```
 
-No flags. Validates: title, commander's intent (>= 20 chars, must be a directive), steps, acceptance criteria, and step length.
+| Flag | Description |
+|------|-------------|
+| `--all` | Audit every non-done item and print a summary table |
+
+Validates: title, commander's intent (>= 20 chars, must be a directive), steps, acceptance criteria, and step length.
 
 ### `backlog rm` — Remove item
 
@@ -535,10 +577,14 @@ No flags. Validates: title, commander's intent (>= 20 chars, must be a directive
 ### `backlog populate` — AI-populate backlog
 
 ```
-.aishore/aishore backlog populate
+.aishore/aishore backlog populate [flags]
 ```
 
-No flags. Reads `PRODUCT.md` (or `PRD.md`, `README.md`) and uses a product owner agent to create backlog items.
+| Flag | Description |
+|------|-------------|
+| `--preview` | Show proposed items without modifying backlog |
+
+Reads `PRODUCT.md` (or `PRD.md`, `README.md`) and uses a product owner agent to create backlog items.
 
 ### `backlog sync` — Detect completed items
 
@@ -560,6 +606,7 @@ No flags. Reads `PRODUCT.md` (or `PRD.md`, `README.md`) and uses a product owner
 | Flag | Description |
 |------|-------------|
 | `--dry-run` | Preview what would be removed |
+| `--no-archive` | Skip archiving removed items |
 
 ### `update` — Update from upstream
 
@@ -586,10 +633,15 @@ No flags. Reads `PRODUCT.md` (or `PRD.md`, `README.md`) and uses a product owner
 ### `status` — Backlog overview
 
 ```
-.aishore/aishore status
+.aishore/aishore status [flags]
 ```
 
-No flags. Shows backlog summary and sprint readiness.
+| Flag | Argument | Description |
+|------|----------|-------------|
+| `--watch` | — | Live refresh until sprint completes or Ctrl-C |
+| `--interval` | `N` | Refresh interval in seconds (default: `30`) |
+
+Shows backlog summary and sprint readiness.
 
 ### `diagnose` — Failure diagnostics
 
