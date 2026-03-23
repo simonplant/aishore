@@ -10,8 +10,8 @@
 #   6. Flag parity — help vs README (all documented flags)
 #   7. Command parity — help vs CLAUDE.md
 #
-# Usage: bash tests/check-drift.sh
-#        bash tests/check-drift.sh --ci   (exit 1 on drift)
+# Usage: bash scripts/check-drift.sh
+#        bash scripts/check-drift.sh --ci   (exit 1 on drift)
 
 set -uo pipefail
 

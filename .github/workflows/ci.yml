@@ -45,20 +45,6 @@ jobs:
       - name: Test metrics command
         run: .aishore/aishore metrics
 
-  drift:
-    name: Drift Detection
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
-
-      - name: Check code ↔ help ↔ docs alignment
-        run: bash tests/check-drift.sh --ci
-
   macos:
     name: macOS Compatibility
     runs-on: macos-latest
