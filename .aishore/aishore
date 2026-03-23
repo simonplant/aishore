@@ -143,7 +143,7 @@ portable_date_epoch() {
 }
 
 # Default permission sets per agent role
-PERMS_DEVELOPER="Bash,Edit,Write,Read,Glob,Grep"
+PERMS_DEVELOPER="Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode"
 PERMS_VALIDATOR="Bash,Read,Write,Glob,Grep"
 PERMS_REVIEWER="Read,Glob,Grep"
 PERMS_REVIEWER_DOCS="Read,Glob,Grep,Edit,Write"
@@ -1555,9 +1555,12 @@ Output phase markers: \`═══ PHASE 2: CRITIQUE ═══\` / \`═══ PH
 Run \`$VALIDATE_CMD\` after implementing. Fix failures before writing result.json."
         fi
     elif [[ "$agent_name" == "validator" ]]; then
-        validate_hint="
-## Commander's Intent
-The \`intent\` field in sprint.json is a non-negotiable directive. Verify the implementation fulfills it — AC can pass mechanically while intent is missed."
+        validate_hint=""
+        if [[ -n "$VALIDATE_CMD" ]]; then
+            validate_hint="
+## Validation Command
+The orchestrator runs \`$VALIDATE_CMD\` before you. If results are provided below, trust them — do not re-run the command."
+        fi
     elif [[ "$agent_name" == "tech-lead" || "$agent_name" == "product-owner" ]]; then
         # CLI commands: shared preamble + role-specific examples
         local cli_role_lines
@@ -2331,9 +2334,27 @@ ${ac_report}"
         log_error "Validation failed"
         local agent_fail_reason=""
         [[ -f "$STATUS_DIR/result.json" ]] && agent_fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
-        retry_extra_prompt="Previous attempt failed validator agent review. Failure reason: ${agent_fail_reason}."
-        [[ -n "$validate_output" ]] && retry_extra_prompt="${retry_extra_prompt} Validation command output: ${validate_output}."
-        retry_extra_prompt="${retry_extra_prompt} Fix the issues and ensure all acceptance criteria pass."
+        # Build rich retry context: validator's detailed reason + log tail + validation output
+        retry_extra_prompt="Previous attempt failed validator review.
+
+## Validator Feedback
+${agent_fail_reason}"
+        # Append validator log tail for additional context (e.g., AC-by-AC breakdown)
+        if [[ -n "$LAST_AGENT_LOG" && -f "$LAST_AGENT_LOG" ]]; then
+            local validator_log_tail
+            validator_log_tail=$(tail -n 40 "$LAST_AGENT_LOG" 2>/dev/null || true)
+            [[ -n "$validator_log_tail" ]] && retry_extra_prompt="${retry_extra_prompt}
+
+## Validator Log (last 40 lines)
+${validator_log_tail}"
+        fi
+        [[ -n "$validate_output" ]] && retry_extra_prompt="${retry_extra_prompt}
+
+## Validation Command Output
+${validate_output}"
+        retry_extra_prompt="${retry_extra_prompt}
+
+Fix the issues identified above. Address each specific failure point."
         _validation_failure="Validator failed"
         return 1
     fi
@@ -2866,14 +2887,26 @@ run_sprint_loop() {
                 local -a groom_context=("@$BACKLOG_DIR/backlog.json" "@$BACKLOG_DIR/bugs.json")
                 local recent_sprints; recent_sprints=$(recent_sprints_file 20)
                 [[ -n "$recent_sprints" ]] && groom_context+=("$recent_sprints")
+                # Build failure feedback for groomers so they learn from downstream rejections
+                local groom_failure_feedback=""
+                if [[ ${#session_failures[@]} -gt 0 ]]; then
+                    groom_failure_feedback="## Recent Sprint Failures
+Items below failed during implementation or validation. Use these patterns to write better specs — clearer steps, more specific AC, tighter scope.
+"
+                    local gf_start=$(( ${#session_failures[@]} > 5 ? ${#session_failures[@]} - 5 : 0 ))
+                    for ((gf_i=gf_start; gf_i<${#session_failures[@]}; gf_i++)); do
+                        groom_failure_feedback="${groom_failure_feedback}
+- ${session_failures[$gf_i]}"
+                    done
+                fi
                 # Snapshot for groom limit enforcement
                 local auto_groom_snap
                 auto_groom_snap=$(mktemp -d)
                 snapshot_backlog_files "$auto_groom_snap"
-                GROOM_MONITOR=true run_agent "tech-lead" "groom" "$MODEL_FAST" groom_context || true
+                GROOM_MONITOR=true run_agent "tech-lead" "groom" "$MODEL_FAST" groom_context "" "$groom_failure_feedback" || true
                 GROOM_MONITOR=
                 check_result || log_warning "Tech-lead groom did not pass — continuing"
-                GROOM_MONITOR=true run_agent "product-owner" "groom" "$MODEL_FAST" groom_context || true
+                GROOM_MONITOR=true run_agent "product-owner" "groom" "$MODEL_FAST" groom_context "" "$groom_failure_feedback" || true
                 GROOM_MONITOR=
                 check_result || log_warning "Product-owner groom did not pass — continuing"
                 # Protect existing items from groomer rewrites, then enforce limits
