@@ -1,34 +1,34 @@
 {
-  "sprintId": "sprint-1774363259",
-  "startedAt": "2026-03-24T07:40:59-07:00",
+  "sprintId": "sprint-1774363645",
+  "startedAt": "2026-03-24T07:47:25-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-128",
-    "title": "Groom agents silently generate specs repeating known-bad patterns",
-    "intent": "Groom agents must receive proven successful spec examples from the archive alongside failure patterns so they generate specs modeled on what actually works — not just avoiding what failed.",
-    "description": "Groom agents receive failure patterns but no success patterns. Without positive examples, they may generate specs structurally similar to ones that already failed. In run_groom_flow, before invoking groom agents, extract the last 5 successful sprint entries from archive. Format as Specs That Worked with intent, AC, and attempt count. Inject alongside failure patterns.",
-    "sourceBacklog": "bugs.json",
+    "id": "FEAT-043",
+    "title": "Developer-side validation during implementation",
+    "intent": "The developer agent must run the validation command during the harden phase of the maturity protocol so it catches failures inside the session where context is hot — not after the cycle ends.",
+    "description": "Currently the developer flies blind until the orchestrator runs validation post-cycle. The developer has Bash permission and could self-check but is never told to. Inject the validation command into the maturity protocol harden phase instructions.",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "In run_groom_flow, before invoking groom agents, read last 5 successful entries from backlog/archive/sprints.jsonl",
-      "For each successful entry, look up the original item spec from archived backlogs to get intent and AC",
-      "Format as a Specs That Worked section with intent, AC count, and attempt count per item",
-      "Inject this section into the groom agent prompt alongside the existing failure patterns",
-      "When no archive data exists, omit the section entirely",
+      "In aishore build_agent_prompt, find the maturity protocol injection section",
+      "In the Phase 3 Harden text, add an instruction to run the validation command and fix failures before committing",
+      "Only inject this instruction when VALIDATE_CMD is non-empty",
+      "In agents/developer.md, in the Harden phase description, add a note that the validation command will be provided by the orchestrator",
       "Run shellcheck — zero new warnings"
     ],
     "acceptanceCriteria": [
-      "Groom agents receive a Specs That Worked section showing successful sprint patterns from the archive",
-      "Each pattern includes the original intent, AC count, and how many attempts it took",
-      "When the archive is empty or has no successes, the section is omitted without error",
+      "When VALIDATE_CMD is configured, the developer agent prompt includes the validation command in the Harden phase instructions",
+      "When VALIDATE_CMD is empty, no validation instruction is injected",
+      "The developer agent can run the validation command during implementation via its existing Bash permission",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [
-      ".aishore/aishore"
+      ".aishore/aishore",
+      ".aishore/agents/developer.md"
     ],
-    "startedAt": "2026-03-24T07:40:59-07:00",
+    "startedAt": "2026-03-24T07:47:25-07:00",
     "status": "passed",
-    "completedAt": "2026-03-24T07:47:23-07:00"
+    "completedAt": "2026-03-24T07:50:43-07:00"
   },
-  "completedAt": "2026-03-24T07:47:23-07:00",
+  "completedAt": "2026-03-24T07:50:43-07:00",
   "attempts": 1
 }
