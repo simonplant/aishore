@@ -1,38 +1,34 @@
 {
-  "sprintId": "sprint-1774354886",
-  "startedAt": "2026-03-24T05:21:26-07:00",
+  "sprintId": "sprint-1774362672",
+  "startedAt": "2026-03-24T07:31:12-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-045",
-    "title": "Parallel sprint execution for independent items",
-    "intent": "Auto mode must support running multiple independent sprint items concurrently using worktree isolation so that large backlogs drain 2-3x faster when items have non-overlapping scope.",
-    "description": "Items with non-overlapping scope arrays can safely run in parallel using git worktrees. Add --parallel N flag. Identify N items whose scope globs do not overlap, launch each in its own worktree, wait for all to complete, merge results sequentially. Items with no scope or overlapping scope run sequentially. Start conservative: max N=2.",
+    "id": "FEAT-041",
+    "title": "Success pattern feedback to groom agents",
+    "intent": "Groom agents must receive both failure AND success patterns from recent sprints so they can learn what spec structures produce clean first-attempt passes — not just what to avoid.",
+    "description": "Currently auto-groom agents receive session_failures but zero success signal. Add a session_successes array populated on each sprint pass. Feed last 5 successes to groom agents alongside failures. Also extract last 10 completed items from sprints.jsonl as proven spec patterns.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Add --parallel N flag to cmd_auto; validate N is 1-4; default 1 for sequential current behavior",
-      "Add scope_overlaps function: takes two scope arrays, expands globs, returns true if any files match both",
-      "In run_sprint_loop, when parallel > 1, call pick_parallel_batch to select up to N items with disjoint scopes",
-      "For each item in the parallel batch, create a git worktree and launch the sprint in a background process",
-      "Wait for all parallel sprints to complete and collect results",
-      "Merge successful worktrees sequentially into the base branch; handle conflicts by falling back to sequential retry",
-      "Items that fail in parallel are added to FAILED_IDS as normal; circuit breaker counts each failure",
+      "In run_sprint_loop, add a session_successes array alongside the existing session_failures array",
+      "In _handle_sprint_success, append a compact summary to session_successes mirroring the session_failures format",
+      "In the auto-groom section, build groom_success_feedback from last 5 entries of session_successes",
+      "In the same section, read last 10 completed entries from sprints.jsonl and format as Specs That Worked with intent and AC count and attempts",
+      "Pass groom_success_feedback alongside groom_failure_feedback to both tech-lead and product-owner groom agents",
       "Run shellcheck — zero new warnings"
     ],
     "acceptanceCriteria": [
-      "auto done --parallel 2 runs two items with non-overlapping scope concurrently in separate worktrees",
-      "Items with overlapping or missing scope arrays are never parallelized — they run sequentially",
-      "Parallel failures are counted correctly by the circuit breaker",
-      "Session summary accurately reflects all parallel and sequential items",
-      "auto done without --parallel behaves identically to current sequential behavior",
+      "After a sprint passes in auto mode, the success is recorded in session_successes and available to subsequent groom agents",
+      "Groom agents receive a Specs That Worked section showing recent successful sprint patterns alongside the existing failure patterns",
+      "When no successes exist yet in the session, the success section is omitted entirely",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [
       ".aishore/aishore"
     ],
-    "startedAt": "2026-03-24T05:21:26-07:00",
+    "startedAt": "2026-03-24T07:31:12-07:00",
     "status": "passed",
-    "completedAt": "2026-03-24T05:42:05-07:00"
+    "completedAt": "2026-03-24T07:36:33-07:00"
   },
-  "completedAt": "2026-03-24T05:42:05-07:00",
+  "completedAt": "2026-03-24T07:36:33-07:00",
   "attempts": 1
 }
