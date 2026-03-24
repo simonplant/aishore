@@ -2,8 +2,8 @@ aishore - AI Sprint Runner (v__VERSION__)
 Copyright (C) 2026 Simon Plant. Licensed under AGPL-3.0. See LICENSE.
 
 Usage: .aishore/aishore <command> [options]
-       .aishore/aishore auto <scope> [--parallel N] [--limit N] [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--warm-retry] [--category <name>] [--auto-review] [--no-summary] [--dry-run]
-       .aishore/aishore run [<count>|<ID>] [--limit N] [--dry-run] [--no-merge] [--pr] [--retries N] [--refine] [--quick] [--warm-retry] [--category <name>] [--no-summary]
+       .aishore/aishore auto <scope> [--parallel N] [--limit N] [--retries N] [--max-failures N] [--timeout N] [--no-merge] [--pr] [--refine] [--quick] [--warm-retry] [--category <name>] [--auto-review] [--no-summary] [--dry-run]
+       .aishore/aishore run [<count>|<ID>] [--limit N] [--timeout N] [--dry-run] [--no-merge] [--pr] [--retries N] [--refine] [--quick] [--warm-retry] [--category <name>] [--no-summary]
 
 Commands:
   backlog list      List all items (features + bugs)
@@ -55,6 +55,7 @@ Commands:
     --limit N       Cap session at N successful items then exit cleanly
     --max-failures N  Consecutive failures before stopping (default: 5)
     --retries N     Per-item retry attempts on failure
+    --timeout N     Kill agent after N minutes (default: 0 = no limit)
     --no-merge      Keep feature branches for PR review
     --pr            Create GitHub PR (implies --no-merge, requires gh CLI)
     --refine        Refine spec on exhausted retries and try once more
@@ -68,6 +69,7 @@ Commands:
   run [count]       Run N sprints (default: 1, feature branches, push/pull)
   run <ID>          Run specific item by ID (e.g., TEST-006)
     --dry-run       Preview what would happen without running agents
+    --timeout N     Kill agent after N minutes (default: 0 = no limit)
     --no-merge      Keep feature branches for PR review (push, don't merge)
     --pr            Create GitHub PR (implies --no-merge, requires gh CLI)
     --retries N     Allow up to N retry attempts on validation failure
@@ -107,6 +109,7 @@ Examples:
   .aishore/aishore run FEAT-001         # Run specific item
   .aishore/aishore run --no-merge 3     # Keep branches for PR review
   .aishore/aishore run --pr FEAT-001    # Create GitHub PR for review
+  .aishore/aishore auto done --timeout 5   # Kill agents running longer than 5 min
   .aishore/aishore auto done --category documentation  # Only documentation items
   .aishore/aishore groom --backlog      # Groom features
   .aishore/aishore update --dry-run     # Check for updates
