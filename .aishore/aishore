@@ -4327,6 +4327,65 @@ cmd_metrics() {
     fi
 }
 
+cmd_report() {
+    require_tool jq
+
+    local since="" output_file="" format="markdown"
+    parse_opts "val:since:--since" "val:output_file:--output" "val:format:--format" -- "$@" || return 1
+
+    local sprints_file="$ARCHIVE_DIR/sprints.jsonl"
+    if [[ ! -f "$sprints_file" || ! -s "$sprints_file" ]]; then
+        echo "No completed items found"
+        return 0
+    fi
+
+    # Build jq filter for complete items with optional --since
+    local jq_filter='[ .[] | select(.status == "complete") ]'
+    if [[ -n "$since" ]]; then
+        jq_filter="[ .[] | select(.status == \"complete\" and .date >= \"$since\") ]"
+    fi
+
+    local items
+    items=$(jq -s "$jq_filter" "$sprints_file" 2>/dev/null)
+
+    local count
+    count=$(printf '%s' "$items" | jq 'length')
+
+    if [[ "$count" -eq 0 ]]; then
+        echo "No completed items found"
+        return 0
+    fi
+
+    local result
+    if [[ "$format" == "json" ]]; then
+        result=$(printf '%s' "$items" | jq '.')
+    else
+        # Generate markdown grouped by date descending, within each date by priority
+        result=$(printf '%s' "$items" | jq -r '
+            def priority_order:
+                if . == "must" then 0
+                elif . == "should" then 1
+                elif . == "could" then 2
+                else 3 end;
+
+            group_by(.date) | sort_by(.[0].date) | reverse |
+            map(
+                "## " + .[0].date + "\n" +
+                (sort_by(.priority // "unknown" | priority_order) |
+                 map("- " + (.itemId // "???") + ": " + (.title // "untitled") + " (" + (.priority // "unknown") + ")") |
+                 join("\n"))
+            ) | join("\n\n")
+        ')
+    fi
+
+    if [[ -n "$output_file" ]]; then
+        printf '%s\n' "$result" > "$output_file"
+        echo "Report written to $output_file" >&2
+    else
+        printf '%s\n' "$result"
+    fi
+}
+
 _status_output() {
     local sprints_file="$ARCHIVE_DIR/sprints.jsonl"
 
@@ -6036,6 +6095,7 @@ main() {
         groom)   cmd_groom "$@" ;;
         review)  cmd_review "$@" ;;
         metrics) cmd_metrics "$@" ;;
+        report)  cmd_report "$@" ;;
         status)  cmd_status "$@" ;;
         update)  cmd_update "$@" ;;
         checksums) cmd_checksums ;;
