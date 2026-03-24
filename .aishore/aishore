@@ -1652,7 +1652,7 @@ After you finish, the orchestrator will automatically run \`$FIX_CMD\` to fix li
 ## Maturity Protocol (MANDATORY — complete all phases)
 **Phase 1 — Implement:** Write the code. Follow spec, match patterns.${VALIDATE_CMD:+ Run \`$VALIDATE_CMD\` and fix failures.}
 **Phase 2 — Critique:** STOP coding. Re-read every changed file. Verify intent is fulfilled and each AC is provably met. Hunt bugs, edge cases, dead code, missing error handling. Fix everything found.
-**Phase 3 — Harden:** Run validation${VALIDATE_CMD:+ (\`$VALIDATE_CMD\`)} again. Fix regressions. Re-verify all AC. Only then commit and signal done.
+**Phase 3 — Harden:**${VALIDATE_CMD:+ Run \`$VALIDATE_CMD\` — fix every failure before continuing.} Fix regressions. Re-verify all AC. Only then commit and signal done.
 Output phase markers: \`═══ PHASE 2: CRITIQUE ═══\` / \`═══ PHASE 3: HARDEN ═══\`"
         elif [[ -n "$VALIDATE_CMD" ]]; then
             validate_hint="$validate_hint
