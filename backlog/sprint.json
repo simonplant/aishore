@@ -1,31 +1,28 @@
 {
-  "sprintId": "sprint-1774127276",
-  "startedAt": "2026-03-21T14:07:56-07:00",
+  "sprintId": "sprint-1774323779",
+  "startedAt": "2026-03-23T20:42:59-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-126",
-    "title": "auto exits silently when session processes zero items — no actionable guidance shown",
-    "intent": "When an auto session ends with zero items processed, a session-level message must be shown stating how many items were skipped and why, with a suggested remediation command.",
-    "description": "When all items in an auto session are skipped (intent gate, not ready, or dependencies unmet), the session exits with no session-level summary. After BUG-100 adds per-item skip warnings, users will see individual warning lines but no closing message directing them to fix the backlog. A user who runs 'auto done' and sees 0 items processed needs the session to close with: 'Session complete: 0 of N items processed. X items skipped for intent issues — run backlog check --all to audit readiness.' This closes the feedback loop that BUG-100 opens.",
+    "id": "BUG-100",
+    "title": "auto silently skips items with missing or too-short intent — no feedback to user",
+    "intent": "When auto-pick bypasses items due to missing or insufficient intent, a warning must be logged identifying each skipped item by ID and stating the reason, so users can fix their backlog.",
+    "description": "pick_item silently skips items where intent is absent or under 20 characters. In an auto session with multiple unready items, the user sees no items processed and no explanation. This makes the intent gate invisible: users don't know why their backlog isn't draining. A targeted log_warn call when each item is bypassed for intent reasons closes the feedback loop.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "In cmd_auto (or the sprint loop exit path), after the loop ends, check if items_processed == 0",
-      "If zero items were processed, print: log_warn 'Session ended: 0 items processed. Check backlog readiness with: aishore backlog check --all'",
-      "Include the count of items that were available but skipped if that count is available from the loop state",
-      "If items_processed > 0 but less than queued, still show the normal summary (BUG-122 end-of-session table) — no change needed for the success path",
-      "Run shellcheck — zero new warnings"
+      "In pick_item, when an item is rejected due to missing or too-short intent, emit: log_warn \"Skipping $id: intent missing or too short (9 chars, need >=20)\"",
+      "Verify the same path is covered in list_pickable_ids if that function also filters by intent",
+      "Run shellcheck and verify no new warnings"
     ],
     "acceptanceCriteria": [
-      "Running 'auto done' when all items lack intent shows per-item warnings (BUG-100) plus a session-level closing message with remediation hint",
-      "Running 'auto done' when some items succeed shows the normal summary table with no extra warning",
-      "Running 'auto done' with an empty backlog shows the existing 'no items' message unchanged",
+      "Running auto with items whose intent is absent or under 20 chars produces a warning line per skipped item identifying the ID and reason",
+      "Items with valid intent are still processed normally — no regression",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-21T14:07:56-07:00",
+    "startedAt": "2026-03-23T20:42:59-07:00",
     "status": "passed",
-    "completedAt": "2026-03-21T14:13:22-07:00"
+    "completedAt": "2026-03-23T20:45:48-07:00"
   },
-  "completedAt": "2026-03-21T14:13:22-07:00",
+  "completedAt": "2026-03-23T20:45:48-07:00",
   "attempts": 1
 }
