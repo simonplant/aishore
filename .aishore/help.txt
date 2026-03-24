@@ -2,8 +2,8 @@ aishore - AI Sprint Runner (v__VERSION__)
 Copyright (C) 2026 Simon Plant. Licensed under AGPL-3.0. See LICENSE.
 
 Usage: .aishore/aishore <command> [options]
-       .aishore/aishore auto <scope> [--parallel N] [--limit N] [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--warm-retry] [--category <name>] [--auto-review] [--no-summary] [--dry-run]
-       .aishore/aishore run [<count>|<ID>] [--limit N] [--dry-run] [--no-merge] [--pr] [--retries N] [--refine] [--quick] [--warm-retry] [--category <name>] [--no-summary]
+       .aishore/aishore auto <scope> [--parallel N] [--limit N] [--budget N] [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--warm-retry] [--category <name>] [--auto-review] [--no-summary] [--dry-run]
+       .aishore/aishore run [<count>|<ID>] [--limit N] [--budget N] [--dry-run] [--no-merge] [--pr] [--retries N] [--refine] [--quick] [--warm-retry] [--category <name>] [--no-summary]
 
 Commands:
   backlog list      List all items (features + bugs)
@@ -53,6 +53,7 @@ Commands:
     p2              Complete all P0-P2 (must + should + could) items
     --parallel N    Run up to N items concurrently in worktrees (1-4, default: 1)
     --limit N       Cap session at N successful items then exit cleanly
+    --budget N      Stop when estimated session cost approaches $N (requires cost tracking)
     --max-failures N  Consecutive failures before stopping (default: 5)
     --retries N     Per-item retry attempts on failure
     --no-merge      Keep feature branches for PR review
@@ -77,6 +78,7 @@ Commands:
     --category <name>  Only run items matching this category
     --auto-review   Run architecture review after completion
     --limit N       Cap session at N successful items then exit cleanly
+    --budget N      Stop when estimated session cost approaches $N (requires cost tracking)
     --no-summary    Suppress end-of-session summary table
 
   groom             Groom bugs/tech debt (Tech Lead mode)

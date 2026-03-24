@@ -117,6 +117,25 @@ ISOLATION_MODE="stash"
 NOTIFY_SYSTEM="false"
 WARM_RETRY="false"
 
+# Cost tracking: per-million-token pricing (input/output) for each model.
+# Defaults match claude-opus-4-6 and claude-sonnet-4-6 public pricing.
+# Override via config.yaml cost_tracking.pricing or AISHORE_COST_TRACKING=false.
+COST_TRACKING_ENABLED="true"
+COST_PRICE_OPUS_IN="15.00"     # USD per 1M input tokens  (claude-opus-4-6)
+COST_PRICE_OPUS_OUT="75.00"    # USD per 1M output tokens (claude-opus-4-6)
+COST_PRICE_SONNET_IN="3.00"    # USD per 1M input tokens  (claude-sonnet-4-6)
+COST_PRICE_SONNET_OUT="15.00"  # USD per 1M output tokens (claude-sonnet-4-6)
+
+# Per-invocation results written by run_agent_process; read by callers to accumulate.
+LAST_AGENT_TOKENS_IN=0
+LAST_AGENT_TOKENS_OUT=0
+LAST_AGENT_COST="0.000000"
+
+# Sprint-level token totals (reset at start of each sprint, accumulated across retries).
+SPRINT_TOKENS_IN=0
+SPRINT_TOKENS_OUT=0
+SPRINT_COST="0.000000"
+
 # Detect timeout command once at startup (macOS uses gtimeout from coreutils)
 if command -v timeout &>/dev/null; then
     TIMEOUT_CMD="timeout"
@@ -541,6 +560,11 @@ load_config() {
             ".isolation.mode        ISOLATION_MODE"
             ".notifications.system NOTIFY_SYSTEM"
             ".retry.warm           WARM_RETRY"
+            ".cost_tracking.enabled          COST_TRACKING_ENABLED"
+            ".cost_tracking.pricing.opus_in      COST_PRICE_OPUS_IN"
+            ".cost_tracking.pricing.opus_out     COST_PRICE_OPUS_OUT"
+            ".cost_tracking.pricing.sonnet_in    COST_PRICE_SONNET_IN"
+            ".cost_tracking.pricing.sonnet_out   COST_PRICE_SONNET_OUT"
             ".permissions.developer CFG_PERMS_DEVELOPER"
             ".permissions.validator CFG_PERMS_VALIDATOR"
             ".permissions.reviewer  CFG_PERMS_REVIEWER"
@@ -607,6 +631,7 @@ _apply_env_overrides() {
         "AISHORE_ISOLATION         ISOLATION_MODE"
         "AISHORE_NOTIFY            NOTIFY_SYSTEM"
         "AISHORE_WARM_RETRY       WARM_RETRY"
+        "AISHORE_COST_TRACKING    COST_TRACKING_ENABLED"
     )
     local _env_name _target_var
     for _entry in "${_env_map[@]}"; do
@@ -1421,7 +1446,10 @@ mark_complete() {
         --arg priority "$item_priority" \
         --arg category "$item_category" \
         --arg title "$item_title" \
-        '{date: $date, sprintId: $sid, itemId: $iid, status: "complete", attempts: $attempts, filesChanged: $filesChanged, linesAdded: $linesAdded, linesRemoved: $linesRemoved, duration: $duration, priority: (if $priority == "" then null else $priority end), category: (if $category == "" then null else $category end), title: (if $title == "" then null else $title end)}' \
+        --argjson tokens_in "${SPRINT_TOKENS_IN:-0}" \
+        --argjson tokens_out "${SPRINT_TOKENS_OUT:-0}" \
+        --arg est_cost "${SPRINT_COST:-0.000000}" \
+        '{date: $date, sprintId: $sid, itemId: $iid, status: "complete", attempts: $attempts, filesChanged: $filesChanged, linesAdded: $linesAdded, linesRemoved: $linesRemoved, duration: $duration, priority: (if $priority == "" then null else $priority end), category: (if $category == "" then null else $category end), title: (if $title == "" then null else $title end), tokens_in: $tokens_in, tokens_out: $tokens_out, est_cost: $est_cost}' \
         >> "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null; then
         log_warning "Failed to append to archive — sprint data is still consistent"
     fi
@@ -1485,6 +1513,81 @@ _check_groom_progress() {
 
     if [[ "$changed" != "true" && $((elapsed % 30)) -eq 0 ]]; then
         log_agent "$label" "Working... (${elapsed}s elapsed)"
+    fi
+}
+
+# parse_token_usage <log_file> <model>
+# Reads a claude CLI log file, extracts input/output token counts, computes
+# estimated cost, and sets LAST_AGENT_TOKENS_IN / LAST_AGENT_TOKENS_OUT /
+# LAST_AGENT_COST globals.  Silent on failure — cost tracking is best-effort.
+parse_token_usage() {
+    local log_file="$1"
+    local model="${2:-$MODEL_PRIMARY}"
+
+    LAST_AGENT_TOKENS_IN=0
+    LAST_AGENT_TOKENS_OUT=0
+    LAST_AGENT_COST="0.000000"
+
+    [[ "$COST_TRACKING_ENABLED" != "true" ]] && return 0
+    [[ -z "$log_file" || ! -f "$log_file" ]] && return 0
+
+    # claude CLI prints usage as JSON objects; look for the last occurrence of
+    # "input_tokens" which appears in assistant message usage blocks.
+    # Pattern: {"input_tokens":NNN,"output_tokens":NNN,...}
+    # Also handle multi-line: try to extract from the entire file.
+    local tokens_in=0 tokens_out=0
+
+    # Strategy 1: find last JSON line containing both token fields
+    local usage_line
+    usage_line=$(grep -o '"input_tokens":[0-9]*' "$log_file" 2>/dev/null | tail -1 | grep -o '[0-9]*' || true)
+    [[ -n "$usage_line" ]] && tokens_in="$usage_line"
+
+    usage_line=$(grep -o '"output_tokens":[0-9]*' "$log_file" 2>/dev/null | tail -1 | grep -o '[0-9]*' || true)
+    [[ -n "$usage_line" ]] && tokens_out="$usage_line"
+
+    # Strategy 2: accumulate all output_tokens (summed invocations in one session)
+    if [[ "$tokens_in" -eq 0 && "$tokens_out" -eq 0 ]]; then
+        local _sum_in _sum_out
+        _sum_in=$(grep -o '"input_tokens":[0-9]*' "$log_file" 2>/dev/null \
+            | grep -o '[0-9]*' | awk '{s+=$1} END{print s+0}' || echo 0)
+        _sum_out=$(grep -o '"output_tokens":[0-9]*' "$log_file" 2>/dev/null \
+            | grep -o '[0-9]*' | awk '{s+=$1} END{print s+0}' || echo 0)
+        tokens_in="$_sum_in"
+        tokens_out="$_sum_out"
+    fi
+
+    LAST_AGENT_TOKENS_IN="$tokens_in"
+    LAST_AGENT_TOKENS_OUT="$tokens_out"
+
+    # Estimate cost based on model name substring
+    local price_in price_out
+    case "$model" in
+        *opus*)
+            price_in="$COST_PRICE_OPUS_IN"
+            price_out="$COST_PRICE_OPUS_OUT"
+            ;;
+        *sonnet*)
+            price_in="$COST_PRICE_SONNET_IN"
+            price_out="$COST_PRICE_SONNET_OUT"
+            ;;
+        *)
+            # Unknown model: use opus pricing (conservative)
+            price_in="$COST_PRICE_OPUS_IN"
+            price_out="$COST_PRICE_OPUS_OUT"
+            ;;
+    esac
+
+    if command -v python3 &>/dev/null; then
+        LAST_AGENT_COST=$(python3 -c "
+in_tok=$tokens_in; out_tok=$tokens_out
+price_in=$price_in; price_out=$price_out
+cost = (in_tok / 1_000_000) * price_in + (out_tok / 1_000_000) * price_out
+print(f'{cost:.6f}')
+" 2>/dev/null || echo "0.000000")
+    elif command -v awk &>/dev/null; then
+        LAST_AGENT_COST=$(awk -v i="$tokens_in" -v o="$tokens_out" \
+            -v pi="$price_in" -v po="$price_out" \
+            'BEGIN{printf "%.6f", (i/1000000)*pi + (o/1000000)*po}' 2>/dev/null || echo "0.000000")
     fi
 }
 
@@ -1633,8 +1736,20 @@ run_agent_process() {
     duration=$(($(date +%s) - start_time))
     log_agent "$agent_label" "Completed in ${duration}s"
 
+    # Parse token usage from agent log and update LAST_AGENT_TOKENS_*/LAST_AGENT_COST
+    parse_token_usage "$agent_log" "$model"
+
+    # Accumulate into sprint-level totals (reset at sprint start in _run_retry_loop)
+    SPRINT_TOKENS_IN=$((SPRINT_TOKENS_IN + LAST_AGENT_TOKENS_IN))
+    SPRINT_TOKENS_OUT=$((SPRINT_TOKENS_OUT + LAST_AGENT_TOKENS_OUT))
+    if command -v python3 &>/dev/null; then
+        SPRINT_COST=$(python3 -c "print(f'{float(\"${SPRINT_COST}\")+float(\"${LAST_AGENT_COST}\"):.6f}')" 2>/dev/null || echo "$SPRINT_COST")
+    elif command -v awk &>/dev/null; then
+        SPRINT_COST=$(awk -v a="$SPRINT_COST" -v b="$LAST_AGENT_COST" 'BEGIN{printf "%.6f", a+b}' 2>/dev/null || echo "$SPRINT_COST")
+    fi
+
     append_log "$LOGS_DIR/agent-runs.log" \
-        "$(portable_date_iso)|$agent_label|${AGENT_MODE:-unknown}|${duration}s|$model"
+        "$(portable_date_iso)|$agent_label|${AGENT_MODE:-unknown}|${duration}s|$model|tokens_in=${LAST_AGENT_TOKENS_IN}|tokens_out=${LAST_AGENT_TOKENS_OUT}|cost=${LAST_AGENT_COST}"
 }
 
 build_agent_prompt() {
@@ -2701,6 +2816,10 @@ _run_retry_loop() {
     initial_dev_context="$retry_extra_prompt"
     retry_extra_prompt=""
     retry_failure_history=()
+    # Reset sprint-level token/cost accumulators for this item
+    SPRINT_TOKENS_IN=0
+    SPRINT_TOKENS_OUT=0
+    SPRINT_COST="0.000000"
 
     # Generate session ID for warm retry on first attempt
     if [[ "$warm_retry" == "true" ]]; then
@@ -2781,6 +2900,18 @@ _handle_sprint_success() {
             _lr=$(printf '%s' "$_archive_lines" | jq -r '.linesRemoved // 0' 2>/dev/null || echo 0)
             session_lines_added=$((session_lines_added + _la))
             session_lines_removed=$((session_lines_removed + _lr))
+            # Accumulate token stats from the archive entry
+            local _ti _to _tc
+            _ti=$(printf '%s' "$_archive_lines" | jq -r '.tokens_in // 0' 2>/dev/null || echo 0)
+            _to=$(printf '%s' "$_archive_lines" | jq -r '.tokens_out // 0' 2>/dev/null || echo 0)
+            _tc=$(printf '%s' "$_archive_lines" | jq -r '.est_cost // "0"' 2>/dev/null || echo 0)
+            session_tokens_in=$((session_tokens_in + _ti))
+            session_tokens_out=$((session_tokens_out + _to))
+            if command -v python3 &>/dev/null; then
+                session_cost=$(python3 -c "print(f'{float(\"${session_cost}\")+float(\"${_tc}\"):.6f}')" 2>/dev/null || echo "$session_cost")
+            elif command -v awk &>/dev/null; then
+                session_cost=$(awk -v a="$session_cost" -v b="$_tc" 'BEGIN{printf "%.6f", a+b}' 2>/dev/null || echo "$session_cost")
+            fi
         fi
 
         send_notification "pass" "$ITEM_ID"
@@ -2914,7 +3045,7 @@ cmd_run_parse_args() {
     parse_opts --positional \
         "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:create_pr:--pr" \
         "bool:refine_on_exhaust:--refine" "bool:quick_mode:--quick" "bool:warm_retry:--warm-retry" "bool:auto_review:--auto-review" "bool:no_summary:--no-summary" \
-        "val:auto_scope:--_auto" "val:category_filter:--category" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" "num:parallel_count:--parallel" \
+        "val:auto_scope:--_auto" "val:category_filter:--category" "val:budget_limit:--budget" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" "num:parallel_count:--parallel" \
         -- "$@" || return 1
     [[ -n "$auto_scope" ]] && auto_mode=true
     local _arg
@@ -2991,6 +3122,16 @@ setup_sprint_environment() {
         fi
     fi
 
+    # Validate --budget: must be a positive number (dollars)
+    if [[ -n "$budget_limit" ]]; then
+        local _budget_ok
+        _budget_ok=$(awk -v b="$budget_limit" 'BEGIN{print (b+0 > 0) ? "ok" : "bad"}' 2>/dev/null || echo "bad")
+        if [[ "$_budget_ok" != "ok" ]]; then
+            log_error "budget must be a positive number in dollars (got: $budget_limit)"
+            return 1
+        fi
+    fi
+
     # Validate --parallel: must be 1-4, default 1; parallel > 1 forces worktree mode
     [[ -z "$parallel_count" ]] && parallel_count=1
     if [[ "$parallel_count" -lt 1 || "$parallel_count" -gt 4 ]] 2>/dev/null; then
@@ -3025,6 +3166,7 @@ setup_sprint_environment() {
         echo "Sprints: $count"
     fi
     [[ -n "$session_limit" ]] && echo "Session limit: $session_limit items"
+    [[ -n "$budget_limit" ]] && echo "Budget cap: \$$budget_limit"
     [[ -n "$category_filter" ]] && echo "Category: $category_filter"
     [[ "$parallel_count" -gt 1 ]] && echo "Parallel: $parallel_count"
     [[ "$ISOLATION_MODE" != "stash" ]] && echo "Isolation: $ISOLATION_MODE"
@@ -3048,6 +3190,9 @@ setup_sprint_environment() {
     skipped_ids=()
     session_lines_added=0
     session_lines_removed=0
+    session_tokens_in=0
+    session_tokens_out=0
+    session_cost="0.000000"
 
     # Pre-build ordered list of all items that could be attempted in this batch
     if [[ -n "$specific_id" ]]; then
@@ -3606,6 +3751,17 @@ ${specs_that_worked}"
                         break
                     fi
 
+                    # Budget cap check (parallel path)
+                    if [[ -n "$budget_limit" && "$COST_TRACKING_ENABLED" == "true" ]]; then
+                        local _over_budget_p
+                        _over_budget_p=$(awk -v spent="$session_cost" -v cap="$budget_limit" \
+                            'BEGIN{print (spent+0 >= cap+0) ? "yes" : "no"}' 2>/dev/null || echo "no")
+                        if [[ "$_over_budget_p" == "yes" ]]; then
+                            log_warning "Budget cap reached: estimated \$${session_cost} >= \$${budget_limit} — stopping session"
+                            break
+                        fi
+                    fi
+
                     [[ "$auto_mode" == "true" ]] && log_info "Progress: $passed passed, $failed failed, $(_count_total_ready) remaining ready"
                     continue
                 fi
@@ -3751,6 +3907,17 @@ ${specs_that_worked}"
             log_success "Session limit reached: $passed items completed"
             break
         fi
+
+        # Budget cap: stop before starting next item when estimated cost approaches limit
+        if [[ -n "$budget_limit" && "$COST_TRACKING_ENABLED" == "true" ]]; then
+            local _over_budget
+            _over_budget=$(awk -v spent="$session_cost" -v cap="$budget_limit" \
+                'BEGIN{print (spent+0 >= cap+0) ? "yes" : "no"}' 2>/dev/null || echo "no")
+            if [[ "$_over_budget" == "yes" ]]; then
+                log_warning "Budget cap reached: estimated \$${session_cost} >= \$${budget_limit} — stopping session"
+                break
+            fi
+        fi
     done
 }
 
@@ -3772,6 +3939,11 @@ print_session_summary_table() {
     echo -e "${CYAN}║${NC}  Total duration    $(printf '%14s' "${total_mins}m ${total_secs}s")  ${CYAN}║${NC}"
     echo -e "${CYAN}║${NC}  Lines added       $(printf '%14s' "+${session_lines_added}")  ${CYAN}║${NC}"
     echo -e "${CYAN}║${NC}  Lines removed     $(printf '%14s' "-${session_lines_removed}")  ${CYAN}║${NC}"
+    if [[ "$COST_TRACKING_ENABLED" == "true" && "${session_tokens_in:-0}" -gt 0 ]]; then
+        local _cost_display
+        _cost_display=$(printf '\$%.4f' "${session_cost:-0}" 2>/dev/null || echo "${session_cost:-0}")
+        echo -e "${CYAN}║${NC}  Est. cost         $(printf '%14s' "$_cost_display")  ${CYAN}║${NC}"
+    fi
     echo -e "${CYAN}╚══════════════════════════════════════╝${NC}"
     echo ""
 }
@@ -3863,7 +4035,7 @@ cmd_run() {
     local refine_on_exhaust=false quick_mode=false warm_retry=false
     local auto_mode=false auto_scope="" auto_priorities=""
     local auto_review=false max_consecutive_failures=""
-    local category_filter="" session_limit="" no_summary=false parallel_count=""
+    local category_filter="" session_limit="" no_summary=false parallel_count="" budget_limit=""
 
     cmd_run_parse_args "$@" || return $?
 
@@ -3874,6 +4046,7 @@ cmd_run() {
 
     local did_stash=false scope_label="" base_branch
     local session_lines_added=0 session_lines_removed=0
+    local session_tokens_in=0 session_tokens_out=0 session_cost="0.000000"
     local passed=0 failed=0
     declare -A FAILED_IDS
     declare -A COMPLETED_IDS
@@ -5824,6 +5997,11 @@ cmd_config_check() {
         "pr.create|CREATE_PR|AISHORE_CREATE_PR|false"
         "isolation.mode|ISOLATION_MODE|AISHORE_ISOLATION|stash"
         "retry.warm|WARM_RETRY|AISHORE_WARM_RETRY|false"
+        "cost_tracking.enabled|COST_TRACKING_ENABLED|AISHORE_COST_TRACKING|true"
+        "cost_tracking.pricing.opus_in|COST_PRICE_OPUS_IN||15.00"
+        "cost_tracking.pricing.opus_out|COST_PRICE_OPUS_OUT||75.00"
+        "cost_tracking.pricing.sonnet_in|COST_PRICE_SONNET_IN||3.00"
+        "cost_tracking.pricing.sonnet_out|COST_PRICE_SONNET_OUT||15.00"
         "permissions.developer|CFG_PERMS_DEVELOPER|.|"
         "permissions.validator|CFG_PERMS_VALIDATOR|.|"
         "permissions.reviewer|CFG_PERMS_REVIEWER|.|"
@@ -5833,7 +6011,7 @@ cmd_config_check() {
     local -a _known_top_keys=(
         validation fix models agent notifications auto groom scope
         maturity streaming output merge pr isolation permissions
-        retry project backlog_files
+        retry project backlog_files cost_tracking
     )
 
     local has_config=false

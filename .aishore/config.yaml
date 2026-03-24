@@ -32,3 +32,12 @@ validation:
 #   #   Linux:  notify-send 'aishore' "Sprint $1: $2"
 #   #   macOS:  osascript -e "display notification \"Sprint $1: $2\" with title \"aishore\""
 #   #   Webhook: curl -s -X POST https://example.com/hook -d "{\"status\":\"$1\",\"item\":\"$2\"}"
+
+# cost_tracking:
+#   enabled: true          # Set to false to disable all token/cost tracking
+#   pricing:
+#     opus_in: 15.00       # USD per 1M input tokens for claude-opus-4-*
+#     opus_out: 75.00      # USD per 1M output tokens for claude-opus-4-*
+#     sonnet_in: 3.00      # USD per 1M input tokens for claude-sonnet-4-*
+#     sonnet_out: 15.00    # USD per 1M output tokens for claude-sonnet-4-*
+# Use --budget N with auto/run to stop when estimated cost approaches $N.
