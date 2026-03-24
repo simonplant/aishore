@@ -88,6 +88,10 @@ Commands:
     --update-docs   Allow updates to docs
     --since <hash>  Review since specific commit
 
+  report            Sprint activity summary (markdown by default)
+    --since <date>  Only include items completed on or after YYYY-MM-DD
+    --output <file> Write report to file instead of stdout
+    --format json   Emit JSON array instead of markdown
   metrics           Show sprint metrics (--json for JSON output)
   status            Show backlog overview and sprint readiness
     --watch         Live refresh until sprint completes or Ctrl-C
