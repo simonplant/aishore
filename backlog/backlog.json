@@ -30,7 +30,8 @@
       "readyForSprint": false,
       "groomedAt": "2026-03-24",
       "groomingNotes": "Steps are clear and implementable. The timeout/gtimeout wrapping pattern is well-understood. Exit code 124 detection is correct for both tools. Default 0=no limit cleanly preserves existing behavior. Config key and env var follow established patterns.",
-      "completedAt": "2026-03-24T08:36:10-07:00"
+      "completedAt": "2026-03-24T08:36:10-07:00",
+      "resolved_at": "2026-03-24T15:41:16Z"
     },
     {
       "id": "FEAT-039",
@@ -55,11 +56,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-24",
-      "groomingNotes": "Steps are clear. Three-state transitions (todo/done/skip) are well-defined and non-overlapping. resolved_at timestamp on done transition provides audit trail without adding complexity. The confirmation print pattern follows existing CLI conventions."
+      "groomingNotes": "Steps are clear. Three-state transitions (todo/done/skip) are well-defined and non-overlapping. resolved_at timestamp on done transition provides audit trail without adding complexity. The confirmation print pattern follows existing CLI conventions.",
+      "completedAt": "2026-03-24T08:41:32-07:00"
     },
     {
       "id": "FEAT-040",

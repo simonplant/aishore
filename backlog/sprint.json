@@ -1,33 +1,32 @@
 {
-  "sprintId": "sprint-1774365718",
-  "startedAt": "2026-03-24T08:21:58-07:00",
+  "sprintId": "sprint-1774366571",
+  "startedAt": "2026-03-24T08:36:11-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-038",
-    "title": "Per-item agent timeout — prevent hung auto sessions",
-    "intent": "Every agent invocation has a configurable wall-clock timeout so that a hung sprint terminates cleanly, is counted as a failure, and the session continues rather than blocking indefinitely.",
-    "description": "run_agent_process() has no timeout. If the claude CLI hangs (network issue, infinite loop in generated code, waiting for stdin), the entire auto session stalls forever. Users running overnight or CI jobs have no recovery path. A --timeout N flag (minutes) and a timeout_minutes config option wrap the agent call with timeout/gtimeout. On expiry the agent process is killed, the sprint is marked failed with a clear TIMEOUT reason, branch cleanup runs normally, and the session continues. Default 0 = no limit, preserving current behavior.",
+    "id": "FEAT-039",
+    "title": "backlog edit --status — manual item status override",
+    "intent": "Users can mark any item done, skipped, or reset to todo from the CLI so that work resolved outside a sprint does not litter the active backlog and require JSON hacking.",
+    "description": "Items are sometimes resolved externally (manual fix, upstream change, decision not to implement). Currently the only way to mark an item done is to run a sprint. Users resort to editing JSON directly, which is fragile and bypasses validation. A --status flag on backlog edit allows clean status transitions: todo → done (externally resolved), todo → skip (won't do), done/skip → todo (re-open). The flag writes the updated status and sets a resolved_at timestamp when transitioning to done.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Add --timeout N (integer, minutes) flag to cmd_run and cmd_auto; validate it is a non-negative integer",
-      "Add timeout_minutes key to config.yaml schema and load it in load_config; env var AISHORE_TIMEOUT_MINUTES",
-      "In run_agent_process, wrap the claude invocation with timeout (Linux) / gtimeout (macOS) when timeout_minutes > 0",
-      "On timeout exit code (124), log_error 'Agent timeout after N minutes for $id' and set result to fail with reason TIMEOUT",
-      "Ensure the feature branch cleanup path runs on timeout the same as any other failure",
+      "Add --status <todo|done|skip> flag to cmd_backlog_edit; validate value is one of the three",
+      "When --status done is set, write status: done and resolved_at: <ISO date> to the item",
+      "When --status skip is set, write status: skip; when --status todo is set, clear resolved_at",
+      "Print a confirmation line showing the transition: 'FEAT-001: todo → done'",
       "Run shellcheck, verify no new warnings"
     ],
     "acceptanceCriteria": [
-      "auto done --timeout 5 kills any agent running longer than 5 minutes and logs a timeout message with the item ID",
-      "Timed-out items are counted as failures for circuit-breaker and session failure tracking",
-      "timeout_minutes: 5 in config.yaml produces the same behaviour as --timeout 5",
-      "Default behaviour (no flag, no config) is unchanged — no timeout applied",
+      "backlog edit FEAT-001 --status done marks the item done and sets resolved_at to today; backlog show reflects it",
+      "backlog edit FEAT-001 --status skip marks the item skipped; backlog list no longer shows it as active",
+      "backlog edit FEAT-001 --status todo resets status to todo and clears resolved_at",
+      "An invalid status value (e.g. --status wip) is rejected with a clear error and non-zero exit",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-24T08:21:58-07:00",
+    "startedAt": "2026-03-24T08:36:11-07:00",
     "status": "passed",
-    "completedAt": "2026-03-24T08:36:10-07:00"
+    "completedAt": "2026-03-24T08:41:32-07:00"
   },
-  "completedAt": "2026-03-24T08:36:10-07:00",
+  "completedAt": "2026-03-24T08:41:32-07:00",
   "attempts": 1
 }
