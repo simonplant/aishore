@@ -1067,8 +1067,8 @@ validate_priority() {
 validate_status() {
     local s="$1"
     case "$s" in
-        todo|in-progress|done) return 0 ;;
-        *) log_error "Invalid status: $s (must be: todo, in-progress, done)"; return 1 ;;
+        todo|in-progress|done|skip) return 0 ;;
+        *) log_error "Invalid status: $s (must be: todo, in-progress, done, skip)"; return 1 ;;
     esac
 }
 
@@ -5457,6 +5457,7 @@ cmd_backlog_show() {
         if (.dependsOn // [] | length) > 0 then "\nDependencies: \(.dependsOn | join(", "))" else empty end,
         if .groomedAt then "\nGroomed:      \(.groomedAt)" else empty end,
         if .groomingNotes then "Notes:        \(.groomingNotes)" else empty end,
+        if .resolved_at then "Resolved:     \(.resolved_at)" else empty end,
         if .completedAt then "Completed:    \(.completedAt)" else empty end
     '
 }
@@ -5501,6 +5502,14 @@ cmd_backlog_edit() {
     if [[ -n "$_e_status" ]]; then
         validate_status "$_e_status" || return 1
         jq_updates+=" | .status = \$status"; updates+=("--arg" "status" "$_e_status")
+        if [[ "$_e_status" == "done" ]]; then
+            local resolved_ts
+            resolved_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            jq_updates+=" | .resolved_at = \$resolved_at"
+            updates+=("--arg" "resolved_at" "$resolved_ts")
+        elif [[ "$_e_status" == "todo" ]]; then
+            jq_updates+=" | del(.resolved_at)"
+        fi
     fi
     [[ -n "$_e_category" ]] && { jq_updates+=" | .category = \$category"; updates+=("--arg" "category" "$_e_category"); }
     [[ -n "$_e_gnotes" ]] && { jq_updates+=" | .groomingNotes = \$gnotes"; updates+=("--arg" "gnotes" "$_e_gnotes"); }
@@ -5614,9 +5623,22 @@ cmd_backlog_edit() {
         return 1
     fi
 
+    # Capture old status before update (for transition message)
+    local old_status=""
+    if [[ -n "$_e_status" ]]; then
+        old_status=$(jq -r --arg id "$id" \
+            '[.items[] | select(.id == $id)][0].status // "todo"' \
+            "$BACKLOG_DIR/$file")
+    fi
+
     if ! update_item "$file" "$id" "$jq_updates" "${updates[@]}"; then
         log_error "Failed to update item"
         return 1
+    fi
+
+    # Print status transition if --status was used
+    if [[ -n "$_e_status" ]]; then
+        echo "$id: $old_status → $_e_status"
     fi
 
     log_success "Updated $id"
