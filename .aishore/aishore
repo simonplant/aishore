@@ -115,6 +115,7 @@ MERGE_STRATEGY="merge"
 CREATE_PR="false"
 ISOLATION_MODE="stash"
 NOTIFY_SYSTEM="false"
+WARM_RETRY="false"
 
 # Detect timeout command once at startup (macOS uses gtimeout from coreutils)
 if command -v timeout &>/dev/null; then
@@ -140,6 +141,21 @@ portable_date_epoch() {
     date -d "$input" +%s 2>/dev/null || \
         date -j -f "%Y-%m-%dT%H:%M:%S" "${input:0:19}" +%s 2>/dev/null || \
         echo 0
+}
+
+# Portable UUID v4 generator for session IDs
+_generate_uuid() {
+    if command -v uuidgen &>/dev/null; then
+        uuidgen | tr '[:upper:]' '[:lower:]'
+    elif [[ -r /proc/sys/kernel/random/uuid ]]; then
+        cat /proc/sys/kernel/random/uuid
+    elif command -v python3 &>/dev/null; then
+        python3 -c "import uuid; print(uuid.uuid4())"
+    else
+        # Fallback: hex from /dev/urandom
+        od -An -tx1 -N16 /dev/urandom 2>/dev/null | tr -d ' \n' | \
+            sed 's/^\(.\{8\}\)\(.\{4\}\).\(.\{3\}\).\(.\{3\}\)\(.\{12\}\)$/\1-\2-4\3-a\4-\5/'
+    fi
 }
 
 # Default permission sets per agent role
@@ -524,6 +540,7 @@ load_config() {
             ".pr.create             CREATE_PR"
             ".isolation.mode        ISOLATION_MODE"
             ".notifications.system NOTIFY_SYSTEM"
+            ".retry.warm           WARM_RETRY"
             ".permissions.developer CFG_PERMS_DEVELOPER"
             ".permissions.validator CFG_PERMS_VALIDATOR"
             ".permissions.reviewer  CFG_PERMS_REVIEWER"
@@ -589,6 +606,7 @@ _apply_env_overrides() {
         "AISHORE_CREATE_PR         CREATE_PR"
         "AISHORE_ISOLATION         ISOLATION_MODE"
         "AISHORE_NOTIFY            NOTIFY_SYSTEM"
+        "AISHORE_WARM_RETRY       WARM_RETRY"
     )
     local _env_name _target_var
     for _entry in "${_env_map[@]}"; do
@@ -1497,28 +1515,31 @@ run_agent_process() {
         --allowedTools "$allowed_tools"
     )
 
+    # Session continuation support (warm retries)
+    if [[ -n "${AGENT_RESUME_SESSION:-}" ]]; then
+        claude_args+=(--resume "$AGENT_RESUME_SESSION")
+    elif [[ -n "${AGENT_SESSION_ID:-}" ]]; then
+        claude_args+=(--session-id "$AGENT_SESSION_ID")
+    fi
+
+    # Determine prompt flag: --resume uses -p for the follow-up message,
+    # new sessions also use -p for the initial prompt — same flag either way.
+    local _out_target="${AGENT_OUTPUT_FILE:-$agent_log}"
+
     if [[ -n "${AGENT_OUTPUT_FILE:-}" ]]; then
         claude_args+=(--print)
-        if [[ "$has_setsid" == true ]]; then
-            setsid env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
-                claude "${claude_args[@]}" \
-                -p "$prompt" > "$AGENT_OUTPUT_FILE" 2>&1 &
-        else
-            env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
-                claude "${claude_args[@]}" \
-                -p "$prompt" > "$AGENT_OUTPUT_FILE" 2>&1 &
-        fi
     else
         claude_args+=(--output-format "$output_format")
-        if [[ "$has_setsid" == true ]]; then
-            setsid env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
-                claude "${claude_args[@]}" \
-                -p "$prompt" > "$agent_log" 2>&1 &
-        else
-            env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
-                claude "${claude_args[@]}" \
-                -p "$prompt" > "$agent_log" 2>&1 &
-        fi
+    fi
+
+    if [[ "$has_setsid" == true ]]; then
+        setsid env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+            claude "${claude_args[@]}" \
+            -p "$prompt" > "$_out_target" 2>&1 &
+    else
+        env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+            claude "${claude_args[@]}" \
+            -p "$prompt" > "$_out_target" 2>&1 &
     fi
 
     local agent_pid=$!
@@ -2131,7 +2152,7 @@ cmd_auto() {
     local scope="${1:-}"
 
     if [[ -z "$scope" ]]; then
-        log_error "Usage: auto {done|p0|p1|p2} [--parallel N] [--limit N] [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--category <name>] [--auto-review] [--no-summary] [--dry-run]"
+        log_error "Usage: auto {done|p0|p1|p2} [--parallel N] [--limit N] [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--warm-retry] [--category <name>] [--auto-review] [--no-summary] [--dry-run]"
         echo "" >&2
         echo "Scopes:" >&2
         echo "  done  Drain entire backlog to completion" >&2
@@ -2391,8 +2412,40 @@ _run_developer_cycle() {
         fi
     fi
 
-    # Run developer agent
-    run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
+    # Run developer agent (warm retry resumes existing session on retries)
+    if [[ "$warm_retry" == "true" && $attempt -gt 0 && -n "$_warm_session_id" ]]; then
+        # Warm retry: resume the existing session with failure context only
+        log_info "Warm retry: resuming session $_warm_session_id (attempt $attempt)"
+        rm -f "$STATUS_DIR/result.json"
+        local warm_prompt="$dev_extra_prompt
+
+You are continuing from a previous attempt that failed. Fix the issues described above. All your previous code changes are still in the working directory. Ensure all acceptance criteria pass."
+
+        local agent_perms="${CFG_PERMS_DEVELOPER:-$PERMS_DEVELOPER}"
+        AGENT_RESUME_SESSION="$_warm_session_id" AGENT_MODE="implement" \
+            run_agent_process "developer" "$MODEL_PRIMARY" "$agent_perms" "text" "$warm_prompt" || true
+
+        # Check if session resume actually worked (agent produced meaningful output)
+        if [[ ! -f "$STATUS_DIR/result.json" && -n "$LAST_AGENT_LOG" ]]; then
+            local _agent_log_size=0
+            [[ -f "$LAST_AGENT_LOG" ]] && _agent_log_size=$(wc -c < "$LAST_AGENT_LOG" 2>/dev/null || echo "0")
+            if [[ "$_agent_log_size" -lt 50 ]]; then
+                # Session resume likely failed — fall back to cold retry
+                log_warning "Warm retry failed (session may have expired) — falling back to cold retry"
+                _warm_session_id=""
+                run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
+            fi
+        fi
+    else
+        # Cold start (first attempt, or warm retry disabled)
+        if [[ -n "$_warm_session_id" ]]; then
+            # First invocation: pin session ID for later warm resume
+            AGENT_SESSION_ID="$_warm_session_id" run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
+        else
+            run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
+        fi
+    fi
+
     if ! check_result; then
         log_error "Implementation failed"
         local fail_reason=""
@@ -2620,10 +2673,17 @@ ${body}"
 #   retry_extra_prompt, retry_failure_history, initial_dev_context, item_source, sprint_start, ITEM_ID
 _run_retry_loop() {
     local attempt=0
+    local _warm_session_id=""
     sprint_passed=false
     initial_dev_context="$retry_extra_prompt"
     retry_extra_prompt=""
     retry_failure_history=()
+
+    # Generate session ID for warm retry on first attempt
+    if [[ "$warm_retry" == "true" ]]; then
+        _warm_session_id=$(_generate_uuid)
+        log_info "Warm retry enabled: session $_warm_session_id"
+    fi
 
     if ! _run_preflight; then
         _record_sprint_failure "Pre-flight failed" "Baseline validation failed before developer ran"
@@ -2830,7 +2890,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
 cmd_run_parse_args() {
     parse_opts --positional \
         "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:create_pr:--pr" \
-        "bool:refine_on_exhaust:--refine" "bool:quick_mode:--quick" "bool:auto_review:--auto-review" "bool:no_summary:--no-summary" \
+        "bool:refine_on_exhaust:--refine" "bool:quick_mode:--quick" "bool:warm_retry:--warm-retry" "bool:auto_review:--auto-review" "bool:no_summary:--no-summary" \
         "val:auto_scope:--_auto" "val:category_filter:--category" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" "num:parallel_count:--parallel" \
         -- "$@" || return 1
     [[ -n "$auto_scope" ]] && auto_mode=true
@@ -2857,6 +2917,11 @@ setup_sprint_environment() {
 
     # --quick disables maturity protocol for fast iteration
     [[ "$quick_mode" == "true" ]] && MATURITY_ENABLED="false"
+
+    # Config-driven warm retry (--warm-retry flag overrides)
+    if [[ "$warm_retry" != "true" && "$WARM_RETRY" == "true" ]]; then
+        warm_retry=true
+    fi
 
     # Config-driven PR creation (--pr flag overrides)
     if [[ "$create_pr" != "true" && "$CREATE_PR" == "true" ]]; then
@@ -3772,7 +3837,7 @@ cmd_run() {
 
     local count=1 dry_run=false specific_id="" retries=0
     local no_merge=false create_pr=false
-    local refine_on_exhaust=false quick_mode=false
+    local refine_on_exhaust=false quick_mode=false warm_retry=false
     local auto_mode=false auto_scope="" auto_priorities=""
     local auto_review=false max_consecutive_failures=""
     local category_filter="" session_limit="" no_summary=false parallel_count=""
@@ -5735,6 +5800,7 @@ cmd_config_check() {
         "merge.strategy|MERGE_STRATEGY|AISHORE_MERGE_STRATEGY|merge"
         "pr.create|CREATE_PR|AISHORE_CREATE_PR|false"
         "isolation.mode|ISOLATION_MODE|AISHORE_ISOLATION|stash"
+        "retry.warm|WARM_RETRY|AISHORE_WARM_RETRY|false"
         "permissions.developer|CFG_PERMS_DEVELOPER|.|"
         "permissions.validator|CFG_PERMS_VALIDATOR|.|"
         "permissions.reviewer|CFG_PERMS_REVIEWER|.|"
@@ -5744,7 +5810,7 @@ cmd_config_check() {
     local -a _known_top_keys=(
         validation fix models agent notifications auto groom scope
         maturity streaming output merge pr isolation permissions
-        project backlog_files
+        retry project backlog_files
     )
 
     local has_config=false

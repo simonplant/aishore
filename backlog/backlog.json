@@ -223,7 +223,10 @@
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Cost visibility is a genuine user need for overnight and CI auto sessions — without it users have no idea what a backlog drain costs until the bill arrives. Budget cap AC is important; --budget flag should abort gracefully, not mid-sprint."
+      "groomingNotes": "Should priority confirmed. Cost visibility is a genuine user need for overnight and CI auto sessions — without it users have no idea what a backlog drain costs until the bill arrives. Budget cap AC is important; --budget flag should abort gracefully, not mid-sprint.",
+      "lastFailReason": "Implementation failed",
+      "lastFailAt": "2026-03-24T08:02:50-07:00",
+      "failCount": 1
     },
     {
       "id": "FEAT-045",
@@ -320,11 +323,12 @@
         ".aishore/aishore"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Hot-context retries directly improve fix accuracy by preserving codebase understanding across retry cycles. The research step in implementation is critical — verify claude CLI actually supports session continuation before building around it. Fallback-to-cold is the right safety net."
+      "groomingNotes": "Should priority confirmed. Hot-context retries directly improve fix accuracy by preserving codebase understanding across retry cycles. The research step in implementation is critical — verify claude CLI actually supports session continuation before building around it. Fallback-to-cold is the right safety net.",
+      "completedAt": "2026-03-24T08:15:17-07:00"
     },
     {
       "id": "FEAT-048",
