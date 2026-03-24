@@ -355,11 +355,12 @@
         ".aishore/agents/developer.md"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Scope violations caught after a full developer cycle are pure waste in strict mode. Injecting constraints upfront is a simple, high-leverage change. AC is user-outcome focused and correct."
+      "groomingNotes": "Should priority confirmed. Scope violations caught after a full developer cycle are pure waste in strict mode. Injecting constraints upfront is a simple, high-leverage change. AC is user-outcome focused and correct.",
+      "completedAt": "2026-03-24T08:18:41-07:00"
     }
   ]
 }
