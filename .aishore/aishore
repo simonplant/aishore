@@ -2661,6 +2661,20 @@ _handle_sprint_success() {
         sprint_items+=("$ITEM_ID")
         sprint_times+=("$(( $(date +%s) - sprint_start ))")
 
+        # Record success pattern for groom feedback (AC count from backlog)
+        local _success_ac_count _success_title _success_attempts
+        _success_title=$(jq -r --arg id "$ITEM_ID" '
+            (.items // .) | map(select(.id == $id)) | first | .title // ""
+        ' "$BACKLOG_DIR/backlog.json" "$BACKLOG_DIR/bugs.json" 2>/dev/null \
+            | head -1 | cut -c1-60 || echo "")
+        _success_ac_count=$(jq -r --arg id "$ITEM_ID" '
+            (.items // .) | map(select(.id == $id)) | first
+            | (.acceptanceCriteria // []) | length
+        ' "$BACKLOG_DIR/backlog.json" "$BACKLOG_DIR/bugs.json" 2>/dev/null \
+            | head -1 || echo "0")
+        _success_attempts="$total_attempts"
+        session_successes+=("$ITEM_ID (${_success_ac_count} ACs, ${_success_attempts} attempt(s)): ${_success_title}")
+
         # Accumulate line stats from the archive entry just written
         local _archive_lines
         _archive_lines=$(tail -1 "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null || true)
@@ -2922,6 +2936,7 @@ setup_sprint_environment() {
     consecutive_failures=0
     groom_exhausted=false
     session_failures=()
+    session_successes=()
     queued_ids=()
     skipped_ids=()
     session_lines_added=0
@@ -3367,14 +3382,45 @@ Items below failed during implementation or validation. Use these patterns to wr
 - ${session_failures[$gf_i]}"
                     done
                 fi
+                # Build success feedback for groomers — session passes + recent archive patterns
+                local groom_success_feedback=""
+                if [[ ${#session_successes[@]} -gt 0 ]]; then
+                    groom_success_feedback="## Specs That Worked This Session
+Items below passed validation — use their spec structure as a template for new items.
+"
+                    local gs_start=$(( ${#session_successes[@]} > 5 ? ${#session_successes[@]} - 5 : 0 ))
+                    for ((gs_i=gs_start; gs_i<${#session_successes[@]}; gs_i++)); do
+                        groom_success_feedback="${groom_success_feedback}
+- ${session_successes[$gs_i]}"
+                    done
+                fi
+                # Append last 10 completed items from sprints.jsonl as proven patterns
+                local _sprints_file="$ARCHIVE_DIR/sprints.jsonl"
+                if [[ -f "$_sprints_file" ]]; then
+                    local _archive_patterns
+                    _archive_patterns=$(tail -20 "$_sprints_file" \
+                        | jq -rs '[.[] | select(.status=="complete")] | last(.[0:10][]) | "\(.itemId) (\(.attempts) attempt(s)): \(.title // "")"' \
+                        2>/dev/null || true)
+                    if [[ -n "$_archive_patterns" ]]; then
+                        groom_success_feedback="${groom_success_feedback}
+## Recently Completed Items (Archive)
+These items shipped cleanly — their scope and AC count are a useful baseline.
+$_archive_patterns"
+                    fi
+                fi
+                # Combine success and failure feedback into the single extra_context slot
+                local groom_extra_feedback="${groom_success_feedback}"
+                [[ -n "$groom_failure_feedback" && -n "$groom_extra_feedback" ]] && \
+                    groom_extra_feedback="${groom_extra_feedback}"$'\n\n'"${groom_failure_feedback}"
+                [[ -z "$groom_extra_feedback" ]] && groom_extra_feedback="$groom_failure_feedback"
                 # Snapshot for groom limit enforcement
                 local auto_groom_snap
                 auto_groom_snap=$(mktemp -d)
                 snapshot_backlog_files "$auto_groom_snap"
-                GROOM_MONITOR=true run_agent "tech-lead" "groom" "$MODEL_FAST" groom_context "" "$groom_failure_feedback" || true
+                GROOM_MONITOR=true run_agent "tech-lead" "groom" "$MODEL_FAST" groom_context "" "$groom_extra_feedback" || true
                 GROOM_MONITOR=
                 check_result || log_warning "Tech-lead groom did not pass — continuing"
-                GROOM_MONITOR=true run_agent "product-owner" "groom" "$MODEL_FAST" groom_context "" "$groom_failure_feedback" || true
+                GROOM_MONITOR=true run_agent "product-owner" "groom" "$MODEL_FAST" groom_context "" "$groom_extra_feedback" || true
                 GROOM_MONITOR=
                 check_result || log_warning "Product-owner groom did not pass — continuing"
                 # Protect existing items from groomer rewrites, then enforce limits
@@ -3718,7 +3764,7 @@ cmd_run() {
     declare -A COMPLETED_IDS
     local batch_start sprint_results=() sprint_items=() sprint_times=()
     local consecutive_failures=0 groom_exhausted=false
-    local -a session_failures=() queued_ids=() skipped_ids=()
+    local -a session_failures=() session_successes=() queued_ids=() skipped_ids=()
 
     setup_sprint_environment || return $?
 

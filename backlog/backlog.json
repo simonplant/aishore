@@ -3,7 +3,7 @@
   "items": [
     {
       "id": "FEAT-038",
-      "title": "Per-item agent timeout — prevent hung auto sessions",
+      "title": "Per-item agent timeout \u2014 prevent hung auto sessions",
       "intent": "Every agent invocation has a configurable wall-clock timeout so that a hung sprint terminates cleanly, is counted as a failure, and the session continues rather than blocking indefinitely.",
       "description": "run_agent_process() has no timeout. If the claude CLI hangs (network issue, infinite loop in generated code, waiting for stdin), the entire auto session stalls forever. Users running overnight or CI jobs have no recovery path. A --timeout N flag (minutes) and a timeout_minutes config option wrap the agent call with timeout/gtimeout. On expiry the agent process is killed, the sprint is marked failed with a clear TIMEOUT reason, branch cleanup runs normally, and the session continues. Default 0 = no limit, preserving current behavior.",
       "priority": "should",
@@ -20,7 +20,7 @@
         "auto done --timeout 5 kills any agent running longer than 5 minutes and logs a timeout message with the item ID",
         "Timed-out items are counted as failures for circuit-breaker and session failure tracking",
         "timeout_minutes: 5 in config.yaml produces the same behaviour as --timeout 5",
-        "Default behaviour (no flag, no config) is unchanged — no timeout applied",
+        "Default behaviour (no flag, no config) is unchanged \u2014 no timeout applied",
         "shellcheck passes with zero new warnings"
       ],
       "scope": [],
@@ -29,20 +29,20 @@
       "passes": false,
       "readyForSprint": false,
       "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Hung sessions are a real CI/overnight pain point. Default 0 (no limit) correctly preserves current behavior. The gtimeout fallback for macOS is important — verify it works on both platforms in AC."
+      "groomingNotes": "Should priority confirmed. Hung sessions are a real CI/overnight pain point. Default 0 (no limit) correctly preserves current behavior. The gtimeout fallback for macOS is important \u2014 verify it works on both platforms in AC."
     },
     {
       "id": "FEAT-039",
-      "title": "backlog edit --status — manual item status override",
+      "title": "backlog edit --status \u2014 manual item status override",
       "intent": "Users can mark any item done, skipped, or reset to todo from the CLI so that work resolved outside a sprint does not litter the active backlog and require JSON hacking.",
-      "description": "Items are sometimes resolved externally (manual fix, upstream change, decision not to implement). Currently the only way to mark an item done is to run a sprint. Users resort to editing JSON directly, which is fragile and bypasses validation. A --status flag on backlog edit allows clean status transitions: todo → done (externally resolved), todo → skip (won't do), done/skip → todo (re-open). The flag writes the updated status and sets a resolved_at timestamp when transitioning to done.",
+      "description": "Items are sometimes resolved externally (manual fix, upstream change, decision not to implement). Currently the only way to mark an item done is to run a sprint. Users resort to editing JSON directly, which is fragile and bypasses validation. A --status flag on backlog edit allows clean status transitions: todo \u2192 done (externally resolved), todo \u2192 skip (won't do), done/skip \u2192 todo (re-open). The flag writes the updated status and sets a resolved_at timestamp when transitioning to done.",
       "priority": "should",
       "category": null,
       "steps": [
         "Add --status <todo|done|skip> flag to cmd_backlog_edit; validate value is one of the three",
         "When --status done is set, write status: done and resolved_at: <ISO date> to the item",
         "When --status skip is set, write status: skip; when --status todo is set, clear resolved_at",
-        "Print a confirmation line showing the transition: 'FEAT-001: todo → done'",
+        "Print a confirmation line showing the transition: 'FEAT-001: todo \u2192 done'",
         "Run shellcheck, verify no new warnings"
       ],
       "acceptanceCriteria": [
@@ -58,11 +58,11 @@
       "passes": false,
       "readyForSprint": false,
       "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Manual status override is a clear UX gap — users doing manual fixes or external resolutions shouldn't have to edit JSON. The resolved_at timestamp on done transitions is the right approach for audit trail. AC covers all valid transitions and the error case."
+      "groomingNotes": "Should priority confirmed. Manual status override is a clear UX gap \u2014 users doing manual fixes or external resolutions shouldn't have to edit JSON. The resolved_at timestamp on done transitions is the right approach for audit trail. AC covers all valid transitions and the error case."
     },
     {
       "id": "FEAT-040",
-      "title": "aishore report — sprint activity summary for changelogs and standups",
+      "title": "aishore report \u2014 sprint activity summary for changelogs and standups",
       "intent": "aishore report generates a formatted markdown summary of completed sprint work from the archive so teams can produce changelogs and standup notes without manually querying sprint history.",
       "description": "After draining a backlog, users need to communicate what shipped. Currently they must read sprints.jsonl manually or piece together git log output. A report command reads backlog/archive/sprints.jsonl, groups completed items by date, and emits a markdown document with item ID, title, priority, and date. --since <YYYY-MM-DD> scopes the report. --output <file> writes to disk. The report is purely derived from the archive; no AI agent is needed.",
       "priority": "should",
@@ -70,7 +70,7 @@
       "steps": [
         "Add cmd_report() dispatched from cmd_backlog or as a top-level command; register in cmd_usage and help text",
         "Read backlog/archive/sprints.jsonl and filter to status=complete records; apply --since filter if provided",
-        "Group records by date (YYYY-MM-DD) descending; within each date group items by priority (must → should → could)",
+        "Group records by date (YYYY-MM-DD) descending; within each date group items by priority (must \u2192 should \u2192 could)",
         "Emit markdown: ## YYYY-MM-DD header per group, then bullet lines: - ID: Title (priority)",
         "Support --output <path>: write output to file instead of stdout; print confirmation to stderr",
         "Support --format json: emit raw JSON array of completed items instead of markdown (useful for piping)",
@@ -91,12 +91,12 @@
       "passes": false,
       "readyForSprint": false,
       "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Post-sprint reporting is a real need for teams and solo devs alike — changelogs and standups shouldn't require reading raw JSONL. Pure read-only derived output is the right design (no AI needed). --format json flag is good for piping into other tools."
+      "groomingNotes": "Should priority confirmed. Post-sprint reporting is a real need for teams and solo devs alike \u2014 changelogs and standups shouldn't require reading raw JSONL. Pure read-only derived output is the right design (no AI needed). --format json flag is good for piping into other tools."
     },
     {
       "id": "FEAT-041",
       "title": "Success pattern feedback to groom agents",
-      "intent": "Groom agents must receive both failure AND success patterns from recent sprints so they can learn what spec structures produce clean first-attempt passes — not just what to avoid.",
+      "intent": "Groom agents must receive both failure AND success patterns from recent sprints so they can learn what spec structures produce clean first-attempt passes \u2014 not just what to avoid.",
       "description": "Currently auto-groom agents receive session_failures but zero success signal. Add a session_successes array populated on each sprint pass. Feed last 5 successes to groom agents alongside failures. Also extract last 10 completed items from sprints.jsonl as proven spec patterns.",
       "priority": "must",
       "category": "autonomous-mode",
@@ -106,7 +106,7 @@
         "In the auto-groom section, build groom_success_feedback from last 5 entries of session_successes",
         "In the same section, read last 10 completed entries from sprints.jsonl and format as Specs That Worked with intent and AC count and attempts",
         "Pass groom_success_feedback alongside groom_failure_feedback to both tech-lead and product-owner groom agents",
-        "Run shellcheck — zero new warnings"
+        "Run shellcheck \u2014 zero new warnings"
       ],
       "acceptanceCriteria": [
         "After a sprint passes in auto mode, the success is recorded in session_successes and available to subsequent groom agents",
@@ -118,11 +118,11 @@
         ".aishore/aishore"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
+      "status": "done",
+      "passes": true,
       "readyForSprint": true,
       "groomedAt": "2026-03-23",
-      "groomingNotes": "Critical foundation for both session-level and groom-level learning loops. Without success signal, groom agents are flying half-blind. Correct must priority — this unlocks BUG-128. Sprint order: FEAT-041 before BUG-128."
+      "groomingNotes": "Critical foundation for both session-level and groom-level learning loops. Without success signal, groom agents are flying half-blind. Correct must priority \u2014 this unlocks BUG-128. Sprint order: FEAT-041 before BUG-128."
     },
     {
       "id": "FEAT-042",
@@ -138,7 +138,7 @@
         "If ac_results exists, build targeted retry context listing only failed ACs with their issue and file:line",
         "If ac_results parsing fails, fall back to existing behavior using reason field as-is",
         "Update _build_prior_failure_context to format per-AC failures when structured data is available",
-        "Run shellcheck — zero new warnings"
+        "Run shellcheck \u2014 zero new warnings"
       ],
       "acceptanceCriteria": [
         "Validator agent outputs result.json with ac_results array containing per-AC pass/fail verdicts",
@@ -155,12 +155,12 @@
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-23",
-      "groomingNotes": "Must priority confirmed. Targeted per-AC retry context directly reduces wasted developer cycles — agent gets told exactly which AC failed and where, not a vague failure blob. Structured output also unblocks future tooling on top of validation results."
+      "groomingNotes": "Must priority confirmed. Targeted per-AC retry context directly reduces wasted developer cycles \u2014 agent gets told exactly which AC failed and where, not a vague failure blob. Structured output also unblocks future tooling on top of validation results."
     },
     {
       "id": "FEAT-043",
       "title": "Developer-side validation during implementation",
-      "intent": "The developer agent must run the validation command during the harden phase of the maturity protocol so it catches failures inside the session where context is hot — not after the cycle ends.",
+      "intent": "The developer agent must run the validation command during the harden phase of the maturity protocol so it catches failures inside the session where context is hot \u2014 not after the cycle ends.",
       "description": "Currently the developer flies blind until the orchestrator runs validation post-cycle. The developer has Bash permission and could self-check but is never told to. Inject the validation command into the maturity protocol harden phase instructions.",
       "priority": "should",
       "category": "sprint-execution",
@@ -169,7 +169,7 @@
         "In the Phase 3 Harden text, add an instruction to run the validation command and fix failures before committing",
         "Only inject this instruction when VALIDATE_CMD is non-empty",
         "In agents/developer.md, in the Harden phase description, add a note that the validation command will be provided by the orchestrator",
-        "Run shellcheck — zero new warnings"
+        "Run shellcheck \u2014 zero new warnings"
       ],
       "acceptanceCriteria": [
         "When VALIDATE_CMD is configured, the developer agent prompt includes the validation command in the Harden phase instructions",
@@ -186,12 +186,12 @@
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Self-validation during harden phase is a quality multiplier — catches failures while context is hot rather than forcing a cold retry cycle. Especially valuable on items with 2+ ACs. Pair with FEAT-042 for best effect."
+      "groomingNotes": "Should priority confirmed. Self-validation during harden phase is a quality multiplier \u2014 catches failures while context is hot rather than forcing a cold retry cycle. Especially valuable on items with 2+ ACs. Pair with FEAT-042 for best effect."
     },
     {
       "id": "FEAT-044",
       "title": "Cost tracking and budget controls for agent invocations",
-      "intent": "Every agent invocation must log token usage and estimated cost so users have visibility into spend per item and per session — and can set a budget cap to prevent runaway costs in auto mode.",
+      "intent": "Every agent invocation must log token usage and estimated cost so users have visibility into spend per item and per session \u2014 and can set a budget cap to prevent runaway costs in auto mode.",
       "description": "Capture token usage from claude CLI stderr after each agent invocation. Parse input/output tokens, estimate cost. Accumulate per-item and per-session totals. Add cost to session summary table. Add --budget flag to stop when limit is approached. Log token stats in archive entries.",
       "priority": "should",
       "category": "observability",
@@ -203,7 +203,7 @@
         "Add cost column to print_session_summary_table showing estimated cost",
         "Add --budget dollars flag to cmd_run and cmd_auto; check accumulated cost before each sprint item",
         "Add token fields to archive entry in mark_complete: tokens_in, tokens_out, est_cost",
-        "Run shellcheck — zero new warnings"
+        "Run shellcheck \u2014 zero new warnings"
       ],
       "acceptanceCriteria": [
         "Session summary table shows estimated cost for the session",
@@ -220,7 +220,7 @@
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Cost visibility is a genuine user need for overnight and CI auto sessions — without it users have no idea what a backlog drain costs until the bill arrives. Budget cap AC is important; --budget flag should abort gracefully, not mid-sprint."
+      "groomingNotes": "Should priority confirmed. Cost visibility is a genuine user need for overnight and CI auto sessions \u2014 without it users have no idea what a backlog drain costs until the bill arrives. Budget cap AC is important; --budget flag should abort gracefully, not mid-sprint."
     },
     {
       "id": "FEAT-045",
@@ -237,11 +237,11 @@
         "Wait for all parallel sprints to complete and collect results",
         "Merge successful worktrees sequentially into the base branch; handle conflicts by falling back to sequential retry",
         "Items that fail in parallel are added to FAILED_IDS as normal; circuit breaker counts each failure",
-        "Run shellcheck — zero new warnings"
+        "Run shellcheck \u2014 zero new warnings"
       ],
       "acceptanceCriteria": [
         "auto done --parallel 2 runs two items with non-overlapping scope concurrently in separate worktrees",
-        "Items with overlapping or missing scope arrays are never parallelized — they run sequentially",
+        "Items with overlapping or missing scope arrays are never parallelized \u2014 they run sequentially",
         "Parallel failures are counted correctly by the circuit breaker",
         "Session summary accurately reflects all parallel and sequential items",
         "auto done without --parallel behaves identically to current sequential behavior",
@@ -262,7 +262,7 @@
       "id": "FEAT-046",
       "title": "Archive-driven complexity estimation before item pick",
       "intent": "Before starting a sprint item, the orchestrator must consult historical archive data to estimate complexity and warn when an item resembles historically difficult work.",
-      "description": "sprints.jsonl captures attempts, lines changed, and duration per completed item. Use this data to estimate complexity for queued items by matching on category and AC/step count. If historical items in the same category averaged more than 2 attempts, log an advisory note. Purely advisory — does not block or change behavior.",
+      "description": "sprints.jsonl captures attempts, lines changed, and duration per completed item. Use this data to estimate complexity for queued items by matching on category and AC/step count. If historical items in the same category averaged more than 2 attempts, log an advisory note. Purely advisory \u2014 does not block or change behavior.",
       "priority": "could",
       "category": "autonomous-mode",
       "steps": [
@@ -271,7 +271,7 @@
         "Before pick_item returns, call estimate_complexity with the picked item category and AC count",
         "If estimated attempts exceed 2 or estimated duration exceeds 30 minutes, log_info an advisory complexity hint",
         "Add a complexity column to print_batch_summary showing estimated vs actual attempts",
-        "Run shellcheck — zero new warnings"
+        "Run shellcheck \u2014 zero new warnings"
       ],
       "acceptanceCriteria": [
         "Before a sprint item starts, an advisory complexity hint is logged when historical data suggests the category is difficult",
@@ -293,7 +293,7 @@
     {
       "id": "FEAT-047",
       "title": "Warm-context retries using session continuation",
-      "intent": "Developer retries must continue the existing agent session instead of starting cold so the agent retains its codebase understanding and prior work context — reducing token waste and improving fix accuracy.",
+      "intent": "Developer retries must continue the existing agent session instead of starting cold so the agent retains its codebase understanding and prior work context \u2014 reducing token waste and improving fix accuracy.",
       "description": "Each retry currently spawns a fresh claude process, losing the hot context from the previous attempt. Add --warm-retry flag and config retry.warm. When enabled, on retry, use claude CLI session continuation to send failure context as a follow-up message in the same session. Fall back to cold retry if session continuation is not supported. Keep cold retry as default.",
       "priority": "should",
       "category": "sprint-execution",
@@ -304,7 +304,7 @@
         "In _run_developer_cycle, on retry attempt greater than 0 with warm retry enabled, invoke claude with session continuation instead of a fresh prompt",
         "Pass the failure context as the continuation message not re-sending the full prompt",
         "If session continuation fails due to unsupported CLI version or session expiry, fall back to cold retry with log_warn",
-        "Run shellcheck — zero new warnings"
+        "Run shellcheck \u2014 zero new warnings"
       ],
       "acceptanceCriteria": [
         "With --warm-retry, developer retries continue the existing session instead of starting a new one",
@@ -321,12 +321,12 @@
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Hot-context retries directly improve fix accuracy by preserving codebase understanding across retry cycles. The research step in implementation is critical — verify claude CLI actually supports session continuation before building around it. Fallback-to-cold is the right safety net."
+      "groomingNotes": "Should priority confirmed. Hot-context retries directly improve fix accuracy by preserving codebase understanding across retry cycles. The research step in implementation is critical \u2014 verify claude CLI actually supports session continuation before building around it. Fallback-to-cold is the right safety net."
     },
     {
       "id": "FEAT-048",
       "title": "Pre-sprint scope enforcement in developer prompt",
-      "intent": "When scope is defined and mode is strict, the developer agent must know its file boundaries before writing any code — so scope violations are prevented, not just detected after wasting a full cycle.",
+      "intent": "When scope is defined and mode is strict, the developer agent must know its file boundaries before writing any code \u2014 so scope violations are prevented, not just detected after wasting a full cycle.",
       "description": "Currently scope violations are checked after the developer completes, wasting the entire attempt in strict mode. Inject scope constraints into the developer prompt before implementation starts. When scope globs are defined, add a hard constraint for strict mode or a soft advisory for warn mode.",
       "priority": "should",
       "category": "sprint-execution",
@@ -335,7 +335,7 @@
         "If scope is defined and SCOPE_MODE is strict, inject a File Scope Constraint section listing allowed globs and stating modifications outside scope will cause sprint failure",
         "If scope is defined and SCOPE_MODE is warn, inject a softer File Scope Advisory section listing preferred globs",
         "In agents/developer.md, add a note that scope constraints may be injected by the orchestrator",
-        "Run shellcheck — zero new warnings"
+        "Run shellcheck \u2014 zero new warnings"
       ],
       "acceptanceCriteria": [
         "When an item has scope globs and mode is strict, the developer prompt includes a hard file scope constraint before implementation",
