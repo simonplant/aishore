@@ -7,7 +7,7 @@
 # Usage: .aishore/aishore <command> [options]
 #
 # Commands:
-#   auto <scope>    Autonomous mode — drain backlog (done, p0, p1, p2)
+#   auto <scope>    Autonomous mode — drain backlog (done, p0, p1, p2) [--parallel N]
 #   run [count|ID]  Run sprints (default: 1, feature branches, auto-commit)
 #   groom           Groom bugs/tech debt (Tech Lead)
 #   groom --backlog Groom features (Product Owner)
@@ -1104,6 +1104,90 @@ list_pickable_ids() {
     sort -t$'\t' -k1,1n -s "$_lpi_tmp" | cut -f2
 }
 
+# Pick up to N items with disjoint (non-overlapping) scopes for parallel execution.
+# Items with empty/missing scope are never parallelized.
+# Outputs one JSON object per line (item + _source field).
+# Args: $1 = max batch size, $2 = skip_ids (comma-separated), $3 = priority_filter, $4 = category_filter
+pick_parallel_batch() {
+    local max_count="$1"
+    local skip_ids="${2:-}"
+    local priority_filter="${3:-}"
+    local cat_filter="${4:-}"
+
+    local skip_json="[]"
+    if [[ -n "$skip_ids" ]]; then
+        skip_json=$(printf '%s\n' "$skip_ids" | tr ',' '\n' | jq -R . | jq -s .)
+    fi
+    local prio_json="[]"
+    if [[ -n "$priority_filter" ]]; then
+        # shellcheck disable=SC2086
+        prio_json=$(printf '%s\n' $priority_filter | jq -R . | jq -s .)
+    fi
+    local done_ids_json
+    done_ids_json=$(collect_done_ids)
+
+    # Collect all pickable items with scope info across all backlog files
+    local all_items="[]"
+    _ppb_collect() {
+        local backlog="$1"
+        [[ -f "$BACKLOG_DIR/$backlog" ]] || return 0
+        local items
+        items=$(jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --argjson prios "$prio_json" --arg src "$backlog" --arg catf "$cat_filter" '
+            '"$PICKABLE_ITEMS_FILTER"' |
+            [.[] | select($catf == "" or (.category // "") == $catf)] |
+            [.[] | select(($prios | length) == 0 or (.priority // "should") as $p | $prios | index($p) != null)] |
+            sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end) |
+            [.[] | '"$ITEM_PROJECTION"' + {_source: $src}]
+        ' "$BACKLOG_DIR/$backlog" 2>/dev/null || echo "[]")
+        all_items=$(printf '%s\n%s\n' "$all_items" "$items" | jq -s 'add')
+    }
+    map_backlog_files _ppb_collect
+
+    # Sort by priority globally
+    all_items=$(printf '%s\n' "$all_items" | jq '
+        sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end)
+    ')
+
+    local total
+    total=$(printf '%s\n' "$all_items" | jq 'length')
+    [[ "$total" -eq 0 ]] && return 0
+
+    # Greedy selection: pick items with non-empty scope that don't overlap any already-picked item
+    local -a batch_scopes=()
+    local picked=0 idx
+    for ((idx=0; idx<total; idx++)); do
+        [[ "$picked" -ge "$max_count" ]] && break
+
+        local item_json scope_json
+        item_json=$(printf '%s\n' "$all_items" | jq ".[$idx]")
+        scope_json=$(printf '%s\n' "$item_json" | jq '.scope // []')
+
+        # Skip items with empty/missing scope — they cannot be parallelized
+        if [[ -z "$scope_json" || "$scope_json" == "null" || "$scope_json" == "[]" ]]; then
+            continue
+        fi
+        local scope_len
+        scope_len=$(jq 'length' <<< "$scope_json")
+        [[ "$scope_len" -eq 0 ]] && continue
+
+        # Check overlap against all already-picked items
+        local overlaps=false
+        local bs
+        for bs in "${batch_scopes[@]}"; do
+            if scope_overlaps "$scope_json" "$bs"; then
+                overlaps=true
+                break
+            fi
+        done
+        [[ "$overlaps" == "true" ]] && continue
+
+        # Add to batch
+        batch_scopes+=("$scope_json")
+        printf '%s\n' "$item_json"
+        picked=$((picked + 1))
+    done
+}
+
 collect_done_ids() {
     local done_ids="[]"
     _collect_done_one() {
@@ -1785,6 +1869,42 @@ check_scope_violations() {
     return 0
 }
 
+# Check if two scope arrays overlap (share any files).
+# Returns 0 (true) if scopes overlap or either is empty/null, 1 (false) if disjoint.
+# Args: $1 = scope JSON array, $2 = scope JSON array
+scope_overlaps() {
+    local scope_a="$1" scope_b="$2"
+
+    # Empty/null scope = unbounded = always overlaps
+    [[ -z "$scope_a" || "$scope_a" == "null" || "$scope_a" == "[]" ]] && return 0
+    [[ -z "$scope_b" || "$scope_b" == "null" || "$scope_b" == "[]" ]] && return 0
+
+    # Expand both scope arrays to file lists via git ls-files, then check intersection
+    local tmp_a tmp_b
+    tmp_a="$(ensure_tmpdir)/scope_a.txt"
+    tmp_b="$(ensure_tmpdir)/scope_b.txt"
+    : > "$tmp_a"
+    : > "$tmp_b"
+
+    local glob
+    while IFS= read -r glob; do
+        git ls-files "$glob" 2>/dev/null >> "$tmp_a"
+    done < <(jq -r '.[]' <<< "$scope_a" 2>/dev/null)
+
+    while IFS= read -r glob; do
+        git ls-files "$glob" 2>/dev/null >> "$tmp_b"
+    done < <(jq -r '.[]' <<< "$scope_b" 2>/dev/null)
+
+    # If either expands to zero files, treat as unbounded
+    [[ ! -s "$tmp_a" || ! -s "$tmp_b" ]] && return 0
+
+    # Sort and check intersection
+    local overlap
+    overlap=$(comm -12 <(sort -u "$tmp_a") <(sort -u "$tmp_b") | head -1)
+    [[ -n "$overlap" ]] && return 0
+    return 1
+}
+
 run_ac_verification() {
     local sprint_file="$BACKLOG_DIR/sprint.json"
     [[ ! -f "$sprint_file" ]] && return 0
@@ -2011,7 +2131,7 @@ cmd_auto() {
     local scope="${1:-}"
 
     if [[ -z "$scope" ]]; then
-        log_error "Usage: auto {done|p0|p1|p2} [--limit N] [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--category <name>] [--auto-review] [--no-summary] [--dry-run]"
+        log_error "Usage: auto {done|p0|p1|p2} [--parallel N] [--limit N] [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--category <name>] [--auto-review] [--no-summary] [--dry-run]"
         echo "" >&2
         echo "Scopes:" >&2
         echo "  done  Drain entire backlog to completion" >&2
@@ -2655,7 +2775,7 @@ cmd_run_parse_args() {
     parse_opts --positional \
         "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:create_pr:--pr" \
         "bool:refine_on_exhaust:--refine" "bool:quick_mode:--quick" "bool:auto_review:--auto-review" "bool:no_summary:--no-summary" \
-        "val:auto_scope:--_auto" "val:category_filter:--category" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" \
+        "val:auto_scope:--_auto" "val:category_filter:--category" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" "num:parallel_count:--parallel" \
         -- "$@" || return 1
     [[ -n "$auto_scope" ]] && auto_mode=true
     local _arg
@@ -2727,6 +2847,16 @@ setup_sprint_environment() {
         fi
     fi
 
+    # Validate --parallel: must be 1-4, default 1; parallel > 1 forces worktree mode
+    [[ -z "$parallel_count" ]] && parallel_count=1
+    if [[ "$parallel_count" -lt 1 || "$parallel_count" -gt 4 ]] 2>/dev/null; then
+        log_error "parallel must be 1-4 (got: $parallel_count)"
+        return 1
+    fi
+    if [[ "$parallel_count" -gt 1 ]]; then
+        ISOLATION_MODE="worktree"
+    fi
+
     # Auto mode setup
     scope_label=""
     if [[ "$auto_mode" == "true" ]]; then
@@ -2752,6 +2882,7 @@ setup_sprint_environment() {
     fi
     [[ -n "$session_limit" ]] && echo "Session limit: $session_limit items"
     [[ -n "$category_filter" ]] && echo "Category: $category_filter"
+    [[ "$parallel_count" -gt 1 ]] && echo "Parallel: $parallel_count"
     [[ "$ISOLATION_MODE" != "stash" ]] && echo "Isolation: $ISOLATION_MODE"
     [[ "$no_merge" == "true" ]] && echo "Merge: disabled (branches kept for review)"
     [[ "$retries" -gt 0 ]] && echo "Retries: $retries"
@@ -2869,6 +3000,297 @@ _record_sprint_failure() {
     handle_sprint_failure
 }
 
+# Run a single sprint item in a worktree as a background-safe subprocess.
+# Writes results to a JSON file since subshells cannot modify parent variables.
+# Args: $1 = item JSON (with _source), $2 = result file path, $3 = slot index
+_run_parallel_sprint() {
+    local item_with_source="$1"
+    local result_file="$2"
+    local slot="$3"
+
+    local p_item_json p_item_source p_item_id p_item_title
+    p_item_source=$(printf '%s\n' "$item_with_source" | jq -r '._source')
+    p_item_json=$(printf '%s\n' "$item_with_source" | jq 'del(._source)')
+    p_item_id=$(printf '%s\n' "$p_item_json" | jq -r '.id')
+    p_item_title=$(printf '%s\n' "$p_item_json" | jq -r '.title // .description')
+
+    log_info "Parallel slot $slot: starting $p_item_id ($p_item_title)"
+    local p_start
+    p_start=$(date +%s)
+
+    # Isolate subshell state: clear parent's trap-sensitive globals so cleanup_exit
+    # doesn't destroy parent's tmpdir or interfere with other parallel slots
+    AISHORE_TMPDIR=""
+    AISHORE_WORKTREE_DIR=""
+    AISHORE_FEATURE_BRANCH=""
+    AISHORE_BASE_BRANCH=""
+    AISHORE_DID_STASH=""
+
+    # Write initial result (fail) in case of unexpected exit
+    jq -n --arg id "$p_item_id" --arg src "$p_item_source" \
+        '{"item_id": $id, "source": $src, "status": "fail", "reason": "unexpected exit"}' > "$result_file"
+
+    # Derive item ID and branch name before creating worktree
+    local p_item_id_actual
+    p_item_id_actual=$(printf '%s\n' "$p_item_json" | jq -r '.id')
+    local branch_name="aishore/${p_item_id_actual}"
+    branch_name=$(printf '%s\n' "$branch_name" | sed 's/[^a-zA-Z0-9/_-]/-/g')
+
+    # Create worktree first so create_sprint writes into it, not the shared backlog
+    local wt_dir
+    wt_dir=$(mktemp -d "${TMPDIR:-/tmp}/aishore-wt-XXXXXX")
+    rmdir "$wt_dir"
+    git branch -D "$branch_name" 2>/dev/null || true
+    git worktree add "$wt_dir" -b "$branch_name" 2>/dev/null || {
+        log_error "Parallel slot $slot: failed to create worktree for $p_item_id_actual"
+        jq -n --arg id "$p_item_id_actual" --arg src "$p_item_source" \
+            '{"item_id": $id, "source": $src, "status": "fail", "reason": "worktree creation failed"}' > "$result_file"
+        return 0
+    }
+
+    AISHORE_WORKTREE_DIR="$wt_dir"
+    AISHORE_FEATURE_BRANCH="$branch_name"
+
+    # Redirect paths into worktree before creating sprint (avoids racing on shared sprint.json)
+    STATUS_DIR="$wt_dir/.aishore/data/status"
+    LOGS_DIR="$wt_dir/.aishore/data/logs"
+    BACKLOG_DIR="$wt_dir/backlog"
+    ARCHIVE_DIR="$BACKLOG_DIR/archive"
+    mkdir -p "$STATUS_DIR" "$LOGS_DIR" "$ARCHIVE_DIR"
+
+    # Create sprint.json inside the worktree
+    ITEM_ID=""
+    create_sprint "$p_item_json" "$p_item_source"
+
+    cd "$wt_dir"
+
+    log_info "Parallel slot $slot: worktree $wt_dir, branch $branch_name"
+
+    # Run the developer → validation → validator cycle
+    local sprint_passed=false
+    local retry_extra_prompt=""
+    local initial_dev_context=""
+    local total_attempts=1
+    local sprint_start="$p_start"
+    local item_source="$p_item_source"
+    _run_retry_loop
+
+    local p_elapsed=$(( $(date +%s) - p_start ))
+
+    if [[ "$sprint_passed" == "true" ]]; then
+        # Ensure agent committed
+        if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
+            log_warning "Parallel slot $slot: agent left uncommitted changes — committing"
+            local safety_summary
+            safety_summary=$(jq -r '.summary // ""' "$STATUS_DIR/result.json" 2>/dev/null || echo "")
+            safety_summary="${safety_summary:0:500}"
+            git add -A
+            if [[ -n "$safety_summary" ]]; then
+                git commit -m "feat($p_item_id_actual): $safety_summary
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+            else
+                git commit -m "feat($p_item_id_actual): implement sprint item
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+            fi
+        fi
+
+        # Capture archive entry before worktree destruction
+        local archive_entry=""
+        [[ -f "$ARCHIVE_DIR/sprints.jsonl" ]] && archive_entry=$(tail -1 "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null || true)
+
+        local lines_added=0 lines_removed=0
+        if [[ -n "$archive_entry" ]]; then
+            lines_added=$(printf '%s' "$archive_entry" | jq -r '.linesAdded // 0' 2>/dev/null || echo 0)
+            lines_removed=$(printf '%s' "$archive_entry" | jq -r '.linesRemoved // 0' 2>/dev/null || echo 0)
+        fi
+
+        jq -n --arg id "$p_item_id_actual" --arg src "$p_item_source" \
+            --arg branch "$branch_name" --arg wt "$wt_dir" \
+            --argjson elapsed "$p_elapsed" --argjson attempts "$total_attempts" \
+            --argjson la "$lines_added" --argjson lr "$lines_removed" \
+            --arg archive "$archive_entry" \
+            '{"item_id": $id, "source": $src, "status": "pass", "branch": $branch,
+              "worktree": $wt, "elapsed": $elapsed, "attempts": $attempts,
+              "lines_added": $la, "lines_removed": $lr, "archive_entry": $archive}' > "$result_file"
+
+        log_success "Parallel slot $slot: $p_item_id_actual passed (${p_elapsed}s)"
+    else
+        # Failure: _record_sprint_failure (called by _run_retry_loop) already cleaned up
+        # the worktree via handle_sprint_failure. Get reason from FAILED_IDS.
+        local fail_reason="${FAILED_IDS[$p_item_id_actual]:-unknown}"
+
+        # Ensure worktree and branch are cleaned up (may be redundant but safe)
+        cd "$PROJECT_ROOT" 2>/dev/null || true
+        if [[ -d "$wt_dir" ]]; then
+            git worktree remove "$wt_dir" --force 2>/dev/null || true
+            [[ -d "$wt_dir" ]] && rm -rf "$wt_dir" 2>/dev/null || true
+        fi
+        git branch -D "$branch_name" 2>/dev/null || true
+        AISHORE_WORKTREE_DIR=""
+        AISHORE_FEATURE_BRANCH=""
+
+        jq -n --arg id "$p_item_id_actual" --arg src "$p_item_source" \
+            --arg reason "$fail_reason" --argjson elapsed "$p_elapsed" \
+            '{"item_id": $id, "source": $src, "status": "fail", "reason": $reason, "elapsed": $elapsed}' > "$result_file"
+
+        log_warning "Parallel slot $slot: $p_item_id_actual failed — $fail_reason (${p_elapsed}s)"
+    fi
+
+    # Restore paths (cleanup_worktree may have already done this, but be safe)
+    STATUS_DIR="$DATA_DIR/status"
+    LOGS_DIR="$DATA_DIR/logs"
+    BACKLOG_DIR="$PROJECT_ROOT/backlog"
+    ARCHIVE_DIR="$BACKLOG_DIR/archive"
+    cd "$PROJECT_ROOT" 2>/dev/null || true
+}
+
+# Run a parallel batch: launch N sprints in background subshells, wait, collect results, merge.
+# Uses and modifies outer-scope locals from cmd_run and setup_sprint_environment.
+# Args: $1 = newline-delimited JSON items (with _source), $2 = sprint_start timestamp
+_run_parallel_batch() {
+    local batch_items="$1"
+
+    local results_dir
+    results_dir=$(mktemp -d "${TMPDIR:-/tmp}/aishore-parallel-XXXXXX")
+
+    # Launch each item in a background subshell
+    local -a pids=()
+    local -a slot_ids=()
+    local slot=0
+    while IFS= read -r item_line; do
+        [[ -z "$item_line" ]] && continue
+        slot=$((slot + 1))
+        local p_id
+        p_id=$(printf '%s\n' "$item_line" | jq -r '.id')
+        slot_ids+=("$p_id")
+
+        _run_parallel_sprint "$item_line" "$results_dir/slot-${slot}.json" "$slot" &
+        pids+=($!)
+    done <<< "$batch_items"
+
+    local total_slots=${#pids[@]}
+    log_info "Parallel: waiting for $total_slots sprints to complete"
+
+    # Wait for all background sprints
+    local pid
+    for pid in "${pids[@]}"; do
+        wait "$pid" 2>/dev/null || true
+    done
+
+    log_info "Parallel: all $total_slots sprints finished — collecting results"
+
+    # Collect results and merge successful ones sequentially
+    local any_passed=false
+    local s
+    for ((s=1; s<=total_slots; s++)); do
+        local rf="$results_dir/slot-${s}.json"
+        [[ ! -f "$rf" ]] && continue
+
+        local r_status r_id r_source r_elapsed r_reason r_branch r_wt r_attempts r_la r_lr r_archive
+        r_status=$(jq -r '.status' "$rf")
+        r_id=$(jq -r '.item_id' "$rf")
+        r_source=$(jq -r '.source' "$rf")
+        r_elapsed=$(jq -r '.elapsed // 0' "$rf")
+
+        local p_sprint_start
+        p_sprint_start=$(( $(date +%s) - r_elapsed ))
+
+        if [[ "$r_status" == "pass" ]]; then
+            r_branch=$(jq -r '.branch' "$rf")
+            r_wt=$(jq -r '.worktree' "$rf")
+            r_attempts=$(jq -r '.attempts // 1' "$rf")
+            r_la=$(jq -r '.lines_added // 0' "$rf")
+            r_lr=$(jq -r '.lines_removed // 0' "$rf")
+            r_archive=$(jq -r '.archive_entry // ""' "$rf")
+
+            # Mark complete in the main repo's backlog
+            ITEM_ID="$r_id"
+            local item_source="$r_source"
+            local total_attempts="$r_attempts"
+            local sprint_start="$p_sprint_start"
+            if mark_complete "$r_id" "$r_source" "$r_attempts"; then
+                COMPLETED_IDS["$r_id"]=1
+            else
+                log_warning "Parallel: failed to mark $r_id complete in backlog"
+            fi
+
+            # Append archive entry to main repo
+            if [[ -n "$r_archive" && "$r_archive" != "" ]]; then
+                mkdir -p "$ARCHIVE_DIR"
+                printf '%s\n' "$r_archive" >> "$ARCHIVE_DIR/sprints.jsonl"
+            fi
+
+            # Remove worktree, keep branch for merge
+            cd "$PROJECT_ROOT" 2>/dev/null || true
+            if [[ -d "$r_wt" ]]; then
+                git worktree remove "$r_wt" --force 2>/dev/null || true
+                [[ -d "$r_wt" ]] && rm -rf "$r_wt" 2>/dev/null || true
+            fi
+
+            # Merge the feature branch
+            log_info "Parallel: merging $r_branch into $base_branch"
+            if [[ "$no_merge" == "true" ]]; then
+                log_info "Branch $r_branch kept for review"
+                if git remote get-url origin &>/dev/null; then
+                    git push -u origin "$r_branch" 2>/dev/null || \
+                        log_warning "Failed to push $r_branch — push manually"
+                fi
+                if [[ "$create_pr" == "true" ]]; then
+                    local pr_title pr_body
+                    pr_title="$r_id"
+                    pr_body="## Summary"$'\n\n'"Parallel sprint item $r_id"
+                    gh pr create --base "$base_branch" --head "$r_branch" \
+                        --title "$pr_title" --body "$pr_body" 2>/dev/null || \
+                        log_warning "Failed to create PR for $r_id — branch pushed for manual review"
+                fi
+            else
+                if git merge --no-ff "$r_branch" -m "merge: $r_id $(jq -r '.item.title // .item.id' "$BACKLOG_DIR/sprint.json" 2>/dev/null || echo "$r_id")" 2>/dev/null; then
+                    git branch -D "$r_branch" 2>/dev/null || true
+                    _sync_remote "$base_branch" 2>/dev/null || true
+                else
+                    log_warning "Parallel: merge conflict for $r_id — aborting merge, item marked pass but branch kept"
+                    git merge --abort 2>/dev/null || true
+                    # Push the branch so work isn't lost
+                    git push -u origin "$r_branch" 2>/dev/null || true
+                fi
+            fi
+
+            passed=$((passed + 1))
+            any_passed=true
+            sprint_results+=("pass")
+            sprint_items+=("$r_id")
+            sprint_times+=("$r_elapsed")
+            session_lines_added=$((session_lines_added + r_la))
+            session_lines_removed=$((session_lines_removed + r_lr))
+            send_notification "pass" "$r_id"
+
+            log_success "Parallel: $r_id merged successfully"
+        else
+            r_reason=$(jq -r '.reason // "unknown"' "$rf")
+            failed=$((failed + 1))
+            consecutive_failures=$((consecutive_failures + 1))
+            FAILED_IDS["$r_id"]="$r_reason"
+            session_failures+=("$r_id: $r_reason")
+            mark_item_failed "$r_id" "$r_reason" "$r_source" 2>/dev/null || true
+            sprint_results+=("fail")
+            sprint_items+=("$r_id")
+            sprint_times+=("$r_elapsed")
+            send_notification "fail" "$r_id"
+        fi
+    done
+
+    # Reset consecutive failures if any item passed
+    [[ "$any_passed" == "true" ]] && consecutive_failures=0
+
+    rm -rf "$results_dir"
+
+    # Reset global worktree state
+    AISHORE_WORKTREE_DIR=""
+    AISHORE_FEATURE_BRANCH=""
+}
+
 # Execute the core pick-implement-validate-merge cycle.
 # Uses and modifies outer-scope locals from cmd_run and setup_sprint_environment.
 run_sprint_loop() {
@@ -2978,6 +3400,35 @@ Items below failed during implementation or validation. Use these patterns to wr
         for _k in "${!COMPLETED_IDS[@]}"; do _skip_keys+=("$_k"); done
         local skip_list
         skip_list=$(IFS=,; printf '%s' "${_skip_keys[*]}")
+
+        # Parallel dispatch: when parallel_count > 1, try to pick a batch of items
+        if [[ "$parallel_count" -gt 1 && "$auto_mode" == "true" && -z "$specific_id" ]]; then
+            local batch_items
+            batch_items=$(pick_parallel_batch "$parallel_count" "$skip_list" "$auto_priorities" "$category_filter")
+
+            if [[ -n "$batch_items" ]]; then
+                local batch_size
+                batch_size=$(printf '%s\n' "$batch_items" | grep -c '^{' || true)
+
+                if [[ "$batch_size" -ge 2 ]]; then
+                    log_info "Parallel: found $batch_size items with disjoint scopes"
+                    _run_parallel_batch "$batch_items"
+
+                    # Advance loop counter by batch size (minus 1 since the for loop increments)
+                    i=$((i + batch_size - 1))
+
+                    # Session limit check
+                    if [[ -n "$session_limit" && "$passed" -ge "$session_limit" ]]; then
+                        log_success "Session limit reached: $passed items completed"
+                        break
+                    fi
+
+                    [[ "$auto_mode" == "true" ]] && log_info "Progress: $passed passed, $failed failed, $(_count_total_ready) remaining ready"
+                    continue
+                fi
+            fi
+            # Fall through to sequential execution if < 2 parallelizable items
+        fi
 
         local item_json
         if ! item_json=$(pick_item "$specific_id" "$skip_list" "$category_filter"); then
@@ -3229,7 +3680,7 @@ cmd_run() {
     local refine_on_exhaust=false quick_mode=false
     local auto_mode=false auto_scope="" auto_priorities=""
     local auto_review=false max_consecutive_failures=""
-    local category_filter="" session_limit="" no_summary=false
+    local category_filter="" session_limit="" no_summary=false parallel_count=""
 
     cmd_run_parse_args "$@" || return $?
 
