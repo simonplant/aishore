@@ -2476,11 +2476,28 @@ ${ac_report}"
         log_error "Validation failed"
         local agent_fail_reason=""
         [[ -f "$STATUS_DIR/result.json" ]] && agent_fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
-        # Build rich retry context: validator's detailed reason + log tail + validation output
-        retry_extra_prompt="Previous attempt failed validator review.
+
+        # Try to extract structured per-AC results for targeted retry context
+        local ac_targeted_ctx=""
+        if [[ -f "$STATUS_DIR/result.json" ]]; then
+            local ac_results_json
+            ac_results_json=$(jq -c '.ac_results // empty' "$STATUS_DIR/result.json" 2>/dev/null || true)
+            if [[ -n "$ac_results_json" && "$ac_results_json" != "null" ]]; then
+                ac_targeted_ctx=$(_build_ac_failure_context "$ac_results_json")
+            fi
+        fi
+
+        # Build rich retry context: per-AC failures (if available) or validator's reason + log tail + validation output
+        if [[ -n "$ac_targeted_ctx" ]]; then
+            retry_extra_prompt="Previous attempt failed validator review.
+
+${ac_targeted_ctx}"
+        else
+            retry_extra_prompt="Previous attempt failed validator review.
 
 ## Validator Feedback
 ${agent_fail_reason}"
+        fi
         # Append validator log tail for additional context (e.g., AC-by-AC breakdown)
         if [[ -n "$LAST_AGENT_LOG" && -f "$LAST_AGENT_LOG" ]]; then
             local validator_log_tail
@@ -2513,6 +2530,39 @@ _validation_failure_reason() {
         "Validator failed")         echo "Validator agent rejected implementation" ;;
         *)                          printf '%s\n' "$1" ;;
     esac
+}
+
+# Build targeted retry context from structured ac_results JSON.
+# Extracts only failed ACs with their issue and file:line references.
+# Args: $1 = ac_results JSON array string
+# Returns: formatted context string via stdout, or empty if no failures found.
+_build_ac_failure_context() {
+    local ac_json="$1"
+    local failed_count
+    failed_count=$(printf '%s' "$ac_json" | jq '[.[] | select(.met == false)] | length' 2>/dev/null || echo "0")
+    [[ "$failed_count" -eq 0 ]] && return
+
+    local ctx="## Failed Acceptance Criteria
+**Only the ACs below failed — do not re-implement passing ACs.**
+"
+    local i=0 ac_index issue file line loc
+    while IFS= read -r entry; do
+        ac_index=$(printf '%s' "$entry" | jq -r '.ac_index // "?"')
+        issue=$(printf '%s' "$entry" | jq -r '.issue // "no details"')
+        file=$(printf '%s' "$entry" | jq -r '.file // empty' 2>/dev/null || true)
+        line=$(printf '%s' "$entry" | jq -r '.line // empty' 2>/dev/null || true)
+        loc=""
+        if [[ -n "$file" ]]; then
+            loc=" ($file"
+            [[ -n "$line" ]] && loc="${loc}:${line}"
+            loc="${loc})"
+        fi
+        ctx="${ctx}
+- **AC$((ac_index + 1)):**${loc} ${issue}"
+        i=$((i + 1))
+    done < <(printf '%s' "$ac_json" | jq -c '.[] | select(.met == false)' 2>/dev/null)
+
+    [[ $i -gt 0 ]] && printf '%s\n' "$ctx"
 }
 
 # Capture failure context after a failed attempt for retry intelligence.
