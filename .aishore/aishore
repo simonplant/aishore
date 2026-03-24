@@ -5786,6 +5786,80 @@ cmd_config_check() {
     echo ""
 }
 
+cmd_report() {
+    require_tool jq
+
+    local since="" output="" format="markdown"
+    parse_opts "val:since:--since" "val:output:--output" "val:format:--format" -- "$@" || return 1
+
+    local sprints_file="$ARCHIVE_DIR/sprints.jsonl"
+    if [[ ! -f "$sprints_file" || ! -s "$sprints_file" ]]; then
+        echo "No completed items found"
+        return 0
+    fi
+
+    # Validate --format
+    case "$format" in
+        markdown|json) ;;
+        *)
+            log_error "Invalid --format value: $format. Use 'markdown' or 'json'."
+            return 1
+            ;;
+    esac
+
+    # Build jq filter: only complete records, apply optional --since date filter
+    local jq_since_filter=""
+    if [[ -n "$since" ]]; then
+        jq_since_filter="| select(.date >= \"$since\")"
+    fi
+
+    if [[ "$format" == "json" ]]; then
+        local json_out
+        json_out=$(jq -c "select(.status == \"complete\")${jq_since_filter}" "$sprints_file" | jq -s '.')
+        if [[ -n "$output" ]]; then
+            printf '%s\n' "$json_out" > "$output"
+            echo "Report written to $output" >&2
+        else
+            printf '%s\n' "$json_out"
+        fi
+        return 0
+    fi
+
+    # Markdown output — group by date descending, within each date sort by priority
+    local priority_order='{"must":0,"should":1,"could":2,"future":3,"null":4}'
+
+    local report
+    report=$(jq -rn --argjson po "$priority_order" "
+        [
+            inputs
+            | select(.status == \"complete\")${jq_since_filter}
+        ]
+        | group_by(.date)
+        | sort_by(.[0].date)
+        | reverse[]
+        | (.[0].date) as \$d
+        | [
+            \"## \(\$d)\",
+            (
+                sort_by(\$po[(.priority // \"null\")])[]
+                | \"- \(.itemId): \(.title // \"(no title)\") (\(.priority // \"unknown\"))\"
+            )
+          ][]
+    " "$sprints_file" 2>/dev/null)
+
+    if [[ -z "$report" ]]; then
+        echo "No completed items found"
+        return 0
+    fi
+
+    if [[ -n "$output" ]]; then
+        printf '%s\n' "$report" > "$output"
+        echo "Report written to $output" >&2
+    else
+        printf '%s\n' "$report"
+    fi
+}
+
 cmd_help() {
     sed "s/__VERSION__/$AISHORE_VERSION/g" "$AISHORE_ROOT/help.txt"
 }
@@ -5807,6 +5881,7 @@ main() {
         groom)   cmd_groom "$@" ;;
         review)  cmd_review "$@" ;;
         metrics) cmd_metrics "$@" ;;
+        report)  cmd_report "$@" ;;
         status)  cmd_status "$@" ;;
         update)  cmd_update "$@" ;;
         checksums) cmd_checksums ;;

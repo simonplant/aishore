@@ -85,6 +85,10 @@ Commands:
     --since <hash>  Review since specific commit
 
   metrics           Show sprint metrics (--json for JSON output)
+  report            Generate a markdown summary of completed sprint work
+    --since <date>  Limit to items completed on or after YYYY-MM-DD
+    --output <path> Write report to file instead of stdout
+    --format json   Emit a JSON array of completed records instead of markdown
   status            Show backlog overview and sprint readiness
     --watch         Live refresh until sprint completes or Ctrl-C
     --interval N    Refresh interval in seconds (default: 30)
