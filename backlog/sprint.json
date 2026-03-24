@@ -1,28 +1,38 @@
 {
-  "sprintId": "sprint-1774323779",
-  "startedAt": "2026-03-23T20:42:59-07:00",
+  "sprintId": "sprint-1774354886",
+  "startedAt": "2026-03-24T05:21:26-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-100",
-    "title": "auto silently skips items with missing or too-short intent — no feedback to user",
-    "intent": "When auto-pick bypasses items due to missing or insufficient intent, a warning must be logged identifying each skipped item by ID and stating the reason, so users can fix their backlog.",
-    "description": "pick_item silently skips items where intent is absent or under 20 characters. In an auto session with multiple unready items, the user sees no items processed and no explanation. This makes the intent gate invisible: users don't know why their backlog isn't draining. A targeted log_warn call when each item is bypassed for intent reasons closes the feedback loop.",
-    "sourceBacklog": "bugs.json",
+    "id": "FEAT-045",
+    "title": "Parallel sprint execution for independent items",
+    "intent": "Auto mode must support running multiple independent sprint items concurrently using worktree isolation so that large backlogs drain 2-3x faster when items have non-overlapping scope.",
+    "description": "Items with non-overlapping scope arrays can safely run in parallel using git worktrees. Add --parallel N flag. Identify N items whose scope globs do not overlap, launch each in its own worktree, wait for all to complete, merge results sequentially. Items with no scope or overlapping scope run sequentially. Start conservative: max N=2.",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "In pick_item, when an item is rejected due to missing or too-short intent, emit: log_warn \"Skipping $id: intent missing or too short (9 chars, need >=20)\"",
-      "Verify the same path is covered in list_pickable_ids if that function also filters by intent",
-      "Run shellcheck and verify no new warnings"
+      "Add --parallel N flag to cmd_auto; validate N is 1-4; default 1 for sequential current behavior",
+      "Add scope_overlaps function: takes two scope arrays, expands globs, returns true if any files match both",
+      "In run_sprint_loop, when parallel > 1, call pick_parallel_batch to select up to N items with disjoint scopes",
+      "For each item in the parallel batch, create a git worktree and launch the sprint in a background process",
+      "Wait for all parallel sprints to complete and collect results",
+      "Merge successful worktrees sequentially into the base branch; handle conflicts by falling back to sequential retry",
+      "Items that fail in parallel are added to FAILED_IDS as normal; circuit breaker counts each failure",
+      "Run shellcheck — zero new warnings"
     ],
     "acceptanceCriteria": [
-      "Running auto with items whose intent is absent or under 20 chars produces a warning line per skipped item identifying the ID and reason",
-      "Items with valid intent are still processed normally — no regression",
+      "auto done --parallel 2 runs two items with non-overlapping scope concurrently in separate worktrees",
+      "Items with overlapping or missing scope arrays are never parallelized — they run sequentially",
+      "Parallel failures are counted correctly by the circuit breaker",
+      "Session summary accurately reflects all parallel and sequential items",
+      "auto done without --parallel behaves identically to current sequential behavior",
       "shellcheck passes with zero new warnings"
     ],
-    "scope": [],
-    "startedAt": "2026-03-23T20:42:59-07:00",
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "startedAt": "2026-03-24T05:21:26-07:00",
     "status": "passed",
-    "completedAt": "2026-03-23T20:45:48-07:00"
+    "completedAt": "2026-03-24T05:42:05-07:00"
   },
-  "completedAt": "2026-03-23T20:45:48-07:00",
+  "completedAt": "2026-03-24T05:42:05-07:00",
   "attempts": 1
 }
