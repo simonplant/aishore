@@ -37,9 +37,9 @@
       "status": "todo",
       "passes": false,
       "readyForSprint": true,
-      "lastFailReason": "Validator agent rejected implementation",
-      "lastFailAt": "2026-03-21T08:34:27-07:00",
-      "failCount": 2,
+      "lastFailReason": "Implementation failed",
+      "lastFailAt": "2026-03-24T08:51:22-07:00",
+      "failCount": 3,
       "groomedAt": "2026-03-21",
       "groomedNotes": null,
       "groomingNotes": "Elevated to should so its dependent BUG-127 (refactor) can run in auto p1 mode. BUG-072 has failed twice — Tech Lead must review failure reasons before sprint. User value: unblocking BUG-127 (5000→4000 line reduction) makes the tool more maintainable and reduces future defect rate. PO accepts two-step sequencing: BUG-072 must land first."

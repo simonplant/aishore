@@ -102,7 +102,7 @@
       "title": "Cost tracking and budget controls for agent invocations",
       "intent": "Every agent invocation must log token usage and estimated cost so users have visibility into spend per item and per session — and can set a budget cap to prevent runaway costs in auto mode.",
       "description": "Capture token usage from claude CLI stderr after each agent invocation. Parse input/output tokens, estimate cost. Accumulate per-item and per-session totals. Add cost to session summary table. Add --budget flag to stop when limit is approached. Log token stats in archive entries.",
-      "priority": "should",
+      "priority": "could",
       "category": "observability",
       "steps": [
         "In run_agent_process, capture stderr output from the claude CLI process alongside stdout",
