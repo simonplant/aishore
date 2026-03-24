@@ -1660,6 +1660,29 @@ build_agent_prompt() {
 ## Commander's Intent
 The \`intent\` field in sprint.json is a non-negotiable directive — what must be true when done. When the spec is unclear or steps seem wrong, intent is the order you follow."
 
+        # Inject scope constraints if the item declares scope globs
+        local item_scope_json
+        item_scope_json=$(jq -r '.item.scope // empty' "$BACKLOG_DIR/sprint.json" 2>/dev/null)
+        if [[ -n "$item_scope_json" ]] && [[ "$(jq 'length' <<< "$item_scope_json")" -gt 0 ]]; then
+            local scope_list
+            scope_list=$(jq -r '.[]' <<< "$item_scope_json" | sed 's/^/- `/' | sed 's/$/`/')
+            if [[ "$SCOPE_MODE" == "strict" ]]; then
+                validate_hint="$validate_hint
+
+## File Scope Constraint (STRICT)
+You may ONLY create or modify files matching these globs:
+${scope_list}
+Any modifications outside this scope will cause the sprint to fail. Do not touch files outside these paths."
+            else
+                validate_hint="$validate_hint
+
+## File Scope Advisory
+The following file globs define the preferred scope for this item:
+${scope_list}
+Try to keep your changes within these paths. Out-of-scope changes will be flagged in review."
+            fi
+        fi
+
         if [[ -n "$FIX_CMD" ]]; then
             validate_hint="$validate_hint
 
