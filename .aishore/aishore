@@ -30,10 +30,7 @@ LAST_AGENT_LOG=""
 cleanup_exit() {
     # Clean up worktree on unexpected exit
     if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
-        cd "$PROJECT_ROOT" 2>/dev/null || true
-        git worktree remove "$AISHORE_WORKTREE_DIR" --force 2>/dev/null || true
-        [[ -d "$AISHORE_WORKTREE_DIR" ]] && rm -rf "$AISHORE_WORKTREE_DIR" 2>/dev/null || true
-        [[ -n "$AISHORE_FEATURE_BRANCH" ]] && git branch -D "$AISHORE_FEATURE_BRANCH" >/dev/null 2>&1 || true
+        _remove_worktree "$AISHORE_WORKTREE_DIR" "$AISHORE_FEATURE_BRANCH"
         AISHORE_WORKTREE_DIR=""
         AISHORE_FEATURE_BRANCH=""
     elif [[ -n "$AISHORE_FEATURE_BRANCH" && -n "$AISHORE_BASE_BRANCH" ]]; then
@@ -64,6 +61,9 @@ reverse_lines() {
         awk '{lines[NR]=$0} END{for(i=NR;i>=1;i--) print lines[i]}'
     fi
 }
+
+# Convert a comma-separated or newline-separated string to a JSON array
+_to_json_array() { printf '%s\n' "$1" | tr ',' '\n' | jq -R . | jq -s .; }
 
 # ============================================================================
 # PATHS
@@ -127,6 +127,15 @@ else
     TIMEOUT_CMD=""
 fi
 
+# Detect SHA-256 hash command once at startup
+if command -v sha256sum &>/dev/null; then
+    _HASH_CMD="sha256sum"
+elif command -v shasum &>/dev/null; then
+    _HASH_CMD="shasum -a 256"
+else
+    _HASH_CMD=""
+fi
+
 # Portable date helpers (GNU date uses -Iseconds / -d; BSD date does not)
 portable_date_iso() {
     date -Iseconds 2>/dev/null || {
@@ -173,6 +182,8 @@ CFG_PERMS_REVIEWER=""
 # Shared constants
 BACKLOG_FILES=("backlog.json" "bugs.json")
 ITEM_PROJECTION='{id, title, intent, description, steps, acceptanceCriteria, priority, scope, category, status: (.status // "todo"), passes: (.passes // false)}'
+# Shared jq function for priority ordering — used inline via string interpolation
+JQ_PRIO_RANK='def prio_rank: {"must":0,"should":1,"could":2}[.] // 3;'
 # Shared jq filter for pickable items — used by pick_item() and list_pickable_ids()
 # Expects $skip (JSON array of IDs to skip) and $done_ids (JSON array of completed IDs)
 PICKABLE_ITEMS_FILTER='[.items[] |
@@ -355,6 +366,30 @@ run_validated_command() {
     fi
 }
 
+# Ensure agent's work is committed (safety net if agent missed it)
+_safety_commit() {
+    local item_id="$1"
+    if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
+        log_warning "Agent left uncommitted changes — committing"
+        local summary
+        summary=$(jq -r '.summary // ""' "$STATUS_DIR/result.json" 2>/dev/null || echo "")
+        summary="${summary:0:500}"
+        git add -A
+        git commit -m "feat($item_id): ${summary:-implement sprint item}
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+    fi
+}
+
+# Remove a git worktree and optionally its branch
+_remove_worktree() {
+    local wt_dir="$1" branch="${2:-}"
+    cd "$PROJECT_ROOT" 2>/dev/null || true
+    git worktree remove "$wt_dir" --force 2>/dev/null || true
+    [[ -d "$wt_dir" ]] && rm -rf "$wt_dir" 2>/dev/null || true
+    [[ -n "$branch" ]] && git branch -D "$branch" 2>/dev/null || true
+}
+
 restore_stash() {
     local pop_output
     if pop_output=$(git stash pop 2>&1); then
@@ -384,16 +419,11 @@ build_context() {
     for arg in "$@"; do
         [[ -n "$context" ]] && context="$context $arg" || context="$arg"
     done
-    # Developer/architect need CLAUDE.md; validator/groom agents don't benefit enough to justify tokens
+    # Developer/architect need CLAUDE.md and ARCHITECTURE.md/PRODUCT.md
     if [[ "$agent_role" == "developer" || "$agent_role" == "architect" ]]; then
-        local claude_md
-        claude_md=$(find_claude_md)
+        local claude_md; claude_md=$(find_claude_md)
         [[ -n "$claude_md" ]] && context="$context @$claude_md"
-    fi
-    # Only developer/architect need ARCHITECTURE.md/PRODUCT.md
-    if [[ "$agent_role" == "developer" || "$agent_role" == "architect" ]]; then
-        local project_docs
-        project_docs=$(find_project_docs)
+        local project_docs; project_docs=$(find_project_docs)
         [[ -n "$project_docs" ]] && context="$context $project_docs"
     fi
     printf '%s\n' "$context"
@@ -430,18 +460,11 @@ append_log() {
 }
 
 verify_checksum() {
-    local file="$1"
-    local expected="$2"
+    local file="$1" expected="$2"
     [[ -z "$expected" ]] && { log_error "No expected checksum provided"; return 1; }
+    [[ -z "$_HASH_CMD" ]] && { log_warning "No sha256sum or shasum found — skipping checksum verification"; return 0; }
     local actual
-    if command -v sha256sum &>/dev/null; then
-        actual=$(sha256sum "$file" | cut -d' ' -f1)
-    elif command -v shasum &>/dev/null; then
-        actual=$(shasum -a 256 "$file" | cut -d' ' -f1)
-    else
-        log_warning "No sha256sum or shasum found — skipping checksum verification"
-        return 0
-    fi
+    actual=$($_HASH_CMD "$file" | cut -d' ' -f1)
     [[ "$actual" == "$expected" ]]
 }
 
@@ -745,7 +768,7 @@ pick_item() {
     # Build skip list as JSON array for jq
     local skip_json="[]"
     if [[ -n "$skip_ids" ]]; then
-        skip_json=$(printf '%s\n' "$skip_ids" | tr ',' '\n' | jq -R . | jq -s .)
+        skip_json=$(_to_json_array "$skip_ids")
     fi
 
     # Build list of done item IDs from both backlogs for dependency checking
@@ -803,9 +826,8 @@ pick_item() {
 
     # Pick highest priority across all files
     local best
-    best=$(printf '%s\n' "$all_candidates" | jq -r '
-        sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end) |
-        first // empty
+    best=$(printf '%s\n' "$all_candidates" | jq -r "$JQ_PRIO_RANK"'
+        sort_by(.priority // "should" | prio_rank) | first // empty
     ' 2>/dev/null)
 
     if [[ -n "$best" && "$best" != "null" ]]; then
@@ -1100,7 +1122,7 @@ list_pickable_ids() {
     local cat_filter="${3:-}"
     local skip_json="[]"
     if [[ -n "$skip_ids" ]]; then
-        skip_json=$(printf '%s\n' "$skip_ids" | tr ',' '\n' | jq -R . | jq -s .)
+        skip_json=$(_to_json_array "$skip_ids")
     fi
     local prio_json="[]"
     if [[ -n "$priority_filter" ]]; then
@@ -1114,11 +1136,11 @@ list_pickable_ids() {
     : > "$_lpi_tmp"
     _list_pickable_one() {
         local backlog="$1"
-        jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --argjson prios "$prio_json" --arg catf "$cat_filter" '
+        jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --argjson prios "$prio_json" --arg catf "$cat_filter" "$JQ_PRIO_RANK"'
             '"$PICKABLE_ITEMS_FILTER"' |
             [.[] | select($catf == "" or (.category // "") == $catf)] |
             [.[] | select(($prios | length) == 0 or (.priority // "should") as $p | $prios | index($p) != null)] |
-            .[] | (if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end | tostring) + "\t" + .id
+            .[] | (.priority // "should" | prio_rank | tostring) + "\t" + .id
         ' "$BACKLOG_DIR/$backlog" 2>/dev/null >> "$_lpi_tmp" || true
     }
     map_backlog_files _list_pickable_one
@@ -1137,7 +1159,7 @@ pick_parallel_batch() {
 
     local skip_json="[]"
     if [[ -n "$skip_ids" ]]; then
-        skip_json=$(printf '%s\n' "$skip_ids" | tr ',' '\n' | jq -R . | jq -s .)
+        skip_json=$(_to_json_array "$skip_ids")
     fi
     local prio_json="[]"
     if [[ -n "$priority_filter" ]]; then
@@ -1153,11 +1175,11 @@ pick_parallel_batch() {
         local backlog="$1"
         [[ -f "$BACKLOG_DIR/$backlog" ]] || return 0
         local items
-        items=$(jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --argjson prios "$prio_json" --arg src "$backlog" --arg catf "$cat_filter" '
+        items=$(jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --argjson prios "$prio_json" --arg src "$backlog" --arg catf "$cat_filter" "$JQ_PRIO_RANK"'
             '"$PICKABLE_ITEMS_FILTER"' |
             [.[] | select($catf == "" or (.category // "") == $catf)] |
             [.[] | select(($prios | length) == 0 or (.priority // "should") as $p | $prios | index($p) != null)] |
-            sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end) |
+            sort_by(.priority // "should" | prio_rank) |
             [.[] | '"$ITEM_PROJECTION"' + {_source: $src}]
         ' "$BACKLOG_DIR/$backlog" 2>/dev/null || echo "[]")
         all_items=$(printf '%s\n%s\n' "$all_items" "$items" | jq -s 'add')
@@ -1165,8 +1187,8 @@ pick_parallel_batch() {
     map_backlog_files _ppb_collect
 
     # Sort by priority globally
-    all_items=$(printf '%s\n' "$all_items" | jq '
-        sort_by(if .priority == "must" then 0 elif .priority == "should" then 1 elif .priority == "could" then 2 else 3 end)
+    all_items=$(printf '%s\n' "$all_items" | jq "$JQ_PRIO_RANK"'
+        sort_by(.priority // "should" | prio_rank)
     ')
 
     local total
@@ -1453,10 +1475,8 @@ reset_sprint() {
 
 # Helper: portable file hash for change detection (not cryptographic)
 _file_hash() {
-    if command -v sha256sum &>/dev/null; then
-        sha256sum "$1" | cut -d' ' -f1
-    elif command -v shasum &>/dev/null; then
-        shasum -a 256 "$1" | cut -d' ' -f1
+    if [[ -n "$_HASH_CMD" ]]; then
+        $_HASH_CMD "$1" | cut -d' ' -f1
     else
         cksum "$1" | cut -d' ' -f1
     fi
@@ -2048,12 +2068,8 @@ mark_item_failed() {
 _cleanup_worktree() {
     # Remove worktree and restore paths to original project root
     if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
-        cd "$PROJECT_ROOT" 2>/dev/null || true
-        git worktree remove "$AISHORE_WORKTREE_DIR" --force 2>/dev/null || true
-        [[ -d "$AISHORE_WORKTREE_DIR" ]] && rm -rf "$AISHORE_WORKTREE_DIR" 2>/dev/null || true
+        _remove_worktree "$AISHORE_WORKTREE_DIR"
         AISHORE_WORKTREE_DIR=""
-
-        # Restore paths to original project
         STATUS_DIR="$DATA_DIR/status"
         LOGS_DIR="$DATA_DIR/logs"
         BACKLOG_DIR="$PROJECT_ROOT/backlog"
@@ -2312,43 +2328,21 @@ Output ONLY the JSON object, no markdown fences, no explanation."
     local refine_output_file
     refine_output_file="$(ensure_tmpdir)/refine_output.txt"
 
-    local has_setsid=false
-    command -v setsid &>/dev/null && has_setsid=true
+    local -a _refine_cmd=()
+    command -v setsid &>/dev/null && _refine_cmd+=(setsid)
+    [[ -n "$TIMEOUT_CMD" ]] && _refine_cmd+=("$TIMEOUT_CMD" "${AGENT_TIMEOUT:-3600}")
+    _refine_cmd+=(env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT
+        claude --model "$MODEL_FAST" --permission-mode acceptEdits
+        --allowedTools "Read,Glob,Grep" --print
+        -p "$refinement_prompt")
 
-    local claude_args=(
-        --model "$MODEL_FAST"
-        --permission-mode acceptEdits
-        --allowedTools "Read,Glob,Grep"
-        --print
-    )
-
-    local refine_timeout="${AGENT_TIMEOUT:-3600}"
-    local timeout_prefix=()
-    if [[ -n "$TIMEOUT_CMD" ]]; then
-        timeout_prefix=("$TIMEOUT_CMD" "$refine_timeout")
-    fi
-
-    if [[ "$has_setsid" == true ]]; then
-        setsid "${timeout_prefix[@]}" env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
-            claude "${claude_args[@]}" \
-            -p "$refinement_prompt" > "$refine_output_file" 2>&1 || {
-            local exit_code=$?
-            if [[ $exit_code -eq 124 ]]; then
-                log_error "Refinement agent timed out after ${refine_timeout}s"
-                return 1
-            fi
-        }
-    else
-        "${timeout_prefix[@]}" env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
-            claude "${claude_args[@]}" \
-            -p "$refinement_prompt" > "$refine_output_file" 2>&1 || {
-            local exit_code=$?
-            if [[ $exit_code -eq 124 ]]; then
-                log_error "Refinement agent timed out after ${refine_timeout}s"
-                return 1
-            fi
-        }
-    fi
+    "${_refine_cmd[@]}" > "$refine_output_file" 2>&1 || {
+        local exit_code=$?
+        if [[ $exit_code -eq 124 ]]; then
+            log_error "Refinement agent timed out after ${AGENT_TIMEOUT:-3600}s"
+            return 1
+        fi
+    }
 
     local raw_output
     raw_output=$(cat "$refine_output_file" 2>/dev/null || true)
@@ -2819,23 +2813,7 @@ _handle_sprint_success() {
         return 0
     fi
 
-    # Ensure agent's work is committed (safety net if agent missed it)
-    if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
-        log_warning "Agent left uncommitted changes — committing"
-        local safety_summary
-        safety_summary=$(jq -r '.summary // ""' "$STATUS_DIR/result.json" 2>/dev/null || echo "")
-        safety_summary="${safety_summary:0:500}"
-        git add -A
-        if [[ -n "$safety_summary" ]]; then
-            git commit -m "feat($ITEM_ID): $safety_summary
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-        else
-            git commit -m "feat($ITEM_ID): implement sprint item
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-        fi
-    fi
+    _safety_commit "$ITEM_ID"
 
     # Worktree mode: copy result.json back, then remove worktree and restore paths
     # The feature branch (with all commits) is shared via git, so merge works from original dir
@@ -3139,6 +3117,53 @@ setup_sprint_environment() {
 }
 
 # Count total ready items across all backlogs
+# Build combined failure+success feedback for groom agents.
+# Reads outer-scope: session_failures, session_successes arrays.
+# Outputs the combined feedback string to stdout.
+_build_groom_feedback() {
+    local feedback=""
+    if [[ ${#session_failures[@]} -gt 0 ]]; then
+        feedback="## Recent Sprint Failures
+Items below failed during implementation or validation. Use these patterns to write better specs — clearer steps, more specific AC, tighter scope.
+"
+        local start=$(( ${#session_failures[@]} > 5 ? ${#session_failures[@]} - 5 : 0 ))
+        local idx
+        for ((idx=start; idx<${#session_failures[@]}; idx++)); do
+            feedback="${feedback}
+- ${session_failures[$idx]}"
+        done
+    fi
+    local success_fb=""
+    if [[ ${#session_successes[@]} -gt 0 ]]; then
+        success_fb="## Recent Sprint Successes
+These items passed on implementation. Learn from their spec patterns — clear intent, right-sized steps, testable AC.
+"
+        local start=$(( ${#session_successes[@]} > 5 ? ${#session_successes[@]} - 5 : 0 ))
+        local idx
+        for ((idx=start; idx<${#session_successes[@]}; idx++)); do
+            success_fb="${success_fb}
+- ${session_successes[$idx]}"
+        done
+    fi
+    if [[ -f "$ARCHIVE_DIR/sprints.jsonl" ]]; then
+        local specs
+        specs=$(tail -10 "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null | jq -r \
+            'select(.status == "complete") | "- \(.itemId) (\(.attempts) attempt(s)): \(.title // .itemId)"' 2>/dev/null || true)
+        if [[ -n "$specs" ]]; then
+            success_fb="${success_fb:+${success_fb}
+
+}## Specs That Worked
+Recent completed items — these spec structures produced passing sprints. Emulate their patterns.
+${specs}"
+        fi
+    fi
+    [[ -n "$feedback" ]] && printf '%s' "$feedback"
+    if [[ -n "$success_fb" ]]; then
+        [[ -n "$feedback" ]] && printf '\n\n'
+        printf '%s' "$success_fb"
+    fi
+}
+
 _count_total_ready() {
     sum_backlog_count count_ready_items
 }
@@ -3241,23 +3266,7 @@ _run_parallel_sprint() {
     local p_elapsed=$(( $(date +%s) - p_start ))
 
     if [[ "$sprint_passed" == "true" ]]; then
-        # Ensure agent committed
-        if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
-            log_warning "Parallel slot $slot: agent left uncommitted changes — committing"
-            local safety_summary
-            safety_summary=$(jq -r '.summary // ""' "$STATUS_DIR/result.json" 2>/dev/null || echo "")
-            safety_summary="${safety_summary:0:500}"
-            git add -A
-            if [[ -n "$safety_summary" ]]; then
-                git commit -m "feat($p_item_id_actual): $safety_summary
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-            else
-                git commit -m "feat($p_item_id_actual): implement sprint item
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-            fi
-        fi
+        _safety_commit "$p_item_id_actual"
 
         # Capture archive entry before worktree destruction
         local archive_entry=""
@@ -3285,12 +3294,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
         local fail_reason="${FAILED_IDS[$p_item_id_actual]:-unknown}"
 
         # Ensure worktree and branch are cleaned up (may be redundant but safe)
-        cd "$PROJECT_ROOT" 2>/dev/null || true
-        if [[ -d "$wt_dir" ]]; then
-            git worktree remove "$wt_dir" --force 2>/dev/null || true
-            [[ -d "$wt_dir" ]] && rm -rf "$wt_dir" 2>/dev/null || true
-        fi
-        git branch -D "$branch_name" 2>/dev/null || true
+        [[ -d "$wt_dir" ]] && _remove_worktree "$wt_dir" "$branch_name"
         AISHORE_WORKTREE_DIR=""
         AISHORE_FEATURE_BRANCH=""
 
@@ -3386,11 +3390,7 @@ _run_parallel_batch() {
             fi
 
             # Remove worktree, keep branch for merge
-            cd "$PROJECT_ROOT" 2>/dev/null || true
-            if [[ -d "$r_wt" ]]; then
-                git worktree remove "$r_wt" --force 2>/dev/null || true
-                [[ -d "$r_wt" ]] && rm -rf "$r_wt" 2>/dev/null || true
-            fi
+            [[ -d "$r_wt" ]] && _remove_worktree "$r_wt"
 
             # Merge the feature branch
             log_info "Parallel: merging $r_branch into $base_branch"
@@ -3499,54 +3499,11 @@ run_sprint_loop() {
                 log_info "Auto: ready buffer low ($total_ready < $AUTO_GROOM_THRESHOLD) — grooming"
                 # Auto-clean done items so groom agents see lean backlogs
                 cmd_clean 2>/dev/null || true
-                local -a groom_context=("@$BACKLOG_DIR/backlog.json" "@$BACKLOG_DIR/bugs.json")
-                local recent_sprints; recent_sprints=$(recent_sprints_file 20)
-                [[ -n "$recent_sprints" ]] && groom_context+=("$recent_sprints")
-                # Build failure feedback for groomers so they learn from downstream rejections
-                local groom_failure_feedback=""
-                if [[ ${#session_failures[@]} -gt 0 ]]; then
-                    groom_failure_feedback="## Recent Sprint Failures
-Items below failed during implementation or validation. Use these patterns to write better specs — clearer steps, more specific AC, tighter scope.
-"
-                    local gf_start=$(( ${#session_failures[@]} > 5 ? ${#session_failures[@]} - 5 : 0 ))
-                    for ((gf_i=gf_start; gf_i<${#session_failures[@]}; gf_i++)); do
-                        groom_failure_feedback="${groom_failure_feedback}
-- ${session_failures[$gf_i]}"
-                    done
-                fi
-                # Build success feedback for groomers so they learn from specs that worked
-                local groom_success_feedback=""
-                if [[ ${#session_successes[@]} -gt 0 ]]; then
-                    groom_success_feedback="## Recent Sprint Successes
-These items passed on implementation. Learn from their spec patterns — clear intent, right-sized steps, testable AC.
-"
-                    local gs_start=$(( ${#session_successes[@]} > 5 ? ${#session_successes[@]} - 5 : 0 ))
-                    for ((gs_i=gs_start; gs_i<${#session_successes[@]}; gs_i++)); do
-                        groom_success_feedback="${groom_success_feedback}
-- ${session_successes[$gs_i]}"
-                    done
-                fi
-                # Append proven spec patterns from sprint history
-                if [[ -f "$ARCHIVE_DIR/sprints.jsonl" ]]; then
-                    local specs_that_worked
-                    specs_that_worked=$(tail -10 "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null | jq -r \
-                        'select(.status == "complete") | "- \(.itemId) (\(.attempts) attempt(s)): \(.title // .itemId)"' 2>/dev/null || true)
-                    if [[ -n "$specs_that_worked" ]]; then
-                        groom_success_feedback="${groom_success_feedback:+${groom_success_feedback}
-
-}## Specs That Worked
-Recent completed items — these spec structures produced passing sprints. Emulate their patterns.
-${specs_that_worked}"
-                    fi
-                fi
-                # Combine failure and success feedback for groom agents
-                local groom_combined_feedback=""
-                [[ -n "$groom_failure_feedback" ]] && groom_combined_feedback="$groom_failure_feedback"
-                if [[ -n "$groom_success_feedback" ]]; then
-                    groom_combined_feedback="${groom_combined_feedback:+${groom_combined_feedback}
-
-}${groom_success_feedback}"
-                fi
+                local -a groom_context
+                # shellcheck disable=SC2034  # used via nameref in run_agent
+                mapfile -t groom_context < <(_build_groom_context)
+                local groom_combined_feedback
+                groom_combined_feedback=$(_build_groom_feedback)
                 # Snapshot for groom limit enforcement
                 local auto_groom_snap
                 auto_groom_snap=$(mktemp -d)
@@ -3935,11 +3892,22 @@ cmd_groom() {
 
     print_groom_summary
 
-    local -a context_args=("@$BACKLOG_DIR/backlog.json" "@$BACKLOG_DIR/bugs.json")
-    local recent_sprints; recent_sprints=$(recent_sprints_file 20)
-    [[ -n "$recent_sprints" ]] && context_args+=("$recent_sprints")
+    local -a context_args
+    mapfile -t context_args < <(_build_groom_context)
 
     run_groom_flow "$agent" "groom" context_args
+}
+
+# Build standard groom/review context args: all backlog files + recent sprints
+_build_groom_context() {
+    local -a _gc=()
+    local _gc_f
+    for _gc_f in "${BACKLOG_FILES[@]}"; do
+        [[ -f "$BACKLOG_DIR/$_gc_f" ]] && _gc+=("@$BACKLOG_DIR/$_gc_f")
+    done
+    local _gc_rs; _gc_rs=$(recent_sprints_file 20)
+    [[ -n "$_gc_rs" ]] && _gc+=("$_gc_rs")
+    printf '%s\n' "${_gc[@]}"
 }
 
 print_groom_summary() {
@@ -4177,9 +4145,8 @@ cmd_review() {
     echo "Mode: $([[ "$update_docs" == "true" ]] && echo "Update docs" || echo "Read-only")"
     echo ""
 
-    local -a context_args=("@$BACKLOG_DIR/backlog.json" "@$BACKLOG_DIR/bugs.json")
-    local recent_sprints; recent_sprints=$(recent_sprints_file 20)
-    [[ -n "$recent_sprints" ]] && context_args+=("$recent_sprints")
+    local -a context_args
+    mapfile -t context_args < <(_build_groom_context)
 
     local extra_prompt
     extra_prompt="## Additional Context
@@ -4361,17 +4328,11 @@ cmd_report() {
         result=$(printf '%s' "$items" | jq '.')
     else
         # Generate markdown grouped by date descending, within each date by priority
-        result=$(printf '%s' "$items" | jq -r '
-            def priority_order:
-                if . == "must" then 0
-                elif . == "should" then 1
-                elif . == "could" then 2
-                else 3 end;
-
+        result=$(printf '%s' "$items" | jq -r "$JQ_PRIO_RANK"'
             group_by(.date) | sort_by(.[0].date) | reverse |
             map(
                 "## " + .[0].date + "\n" +
-                (sort_by(.priority // "unknown" | priority_order) |
+                (sort_by(.priority // "unknown" | prio_rank) |
                  map("- " + (.itemId // "???") + ": " + (.title // "untitled") + " (" + (.priority // "unknown") + ")") |
                  join("\n"))
             ) | join("\n\n")
@@ -5065,20 +5026,12 @@ cmd_checksums() {
     done
 
     # Generate checksums
-    local hash_cmd=()
-    if command -v sha256sum &>/dev/null; then
-        hash_cmd=(sha256sum)
-    elif command -v shasum &>/dev/null; then
-        hash_cmd=(shasum -a 256)
-    else
-        log_error "No sha256sum or shasum found"
-        return 1
-    fi
+    [[ -z "$_HASH_CMD" ]] && { log_error "No sha256sum or shasum found"; return 1; }
 
     local tmp
     tmp="$(ensure_tmpdir)/checksums_gen.txt"
     for f in "${files[@]}"; do
-        [[ -f "$f" ]] && "${hash_cmd[@]}" "$f" >> "$tmp"
+        [[ -f "$f" ]] && $_HASH_CMD "$f" >> "$tmp"
     done
 
     if [[ ! -s "$tmp" ]]; then
@@ -5335,7 +5288,7 @@ cmd_backlog_list() {
         [[ -f "$BACKLOG_DIR/$f" ]] || continue
         local items
         # shellcheck disable=SC1010
-        items=$(jq -r --argjson done "$done_ids" "[$jq_filter] | sort_by(if .priority == \"must\" then 0 elif .priority == \"should\" then 1 elif .priority == \"could\" then 2 else 3 end) | .[] | [.id, .priority // \"-\", .status // \"todo\", (if .readyForSprint then \"yes\" else \"no\" end), ((.dependsOn // []) | map(select(. as \$d | \$done | index(\$d) | not)) | if length == 0 then \"-\" else join(\",\") end), .title] | @tsv" "$BACKLOG_DIR/$f" 2>/dev/null) || continue
+        items=$(jq -r --argjson done "$done_ids" "${JQ_PRIO_RANK}[$jq_filter] | sort_by(.priority // \"should\" | prio_rank) | .[] | [.id, .priority // \"-\", .status // \"todo\", (if .readyForSprint then \"yes\" else \"no\" end), ((.dependsOn // []) | map(select(. as \$d | \$done | index(\$d) | not)) | if length == 0 then \"-\" else join(\",\") end), .title] | @tsv" "$BACKLOG_DIR/$f" 2>/dev/null) || continue
         if [[ -n "$items" ]]; then
             while IFS=$'\t' read -r id pri status ready blocked title; do
                 local blocked_display=""
@@ -5438,7 +5391,7 @@ cmd_backlog_add() {
     # Build dependsOn array
     local depends_json="[]"
     if [[ -n "$depends_on" ]]; then
-        depends_json=$(printf '%s' "$depends_on" | tr ',' '\n' | jq -R . | jq -s .)
+        depends_json=$(_to_json_array "$depends_on")
     fi
 
     # Create item and append
@@ -5726,20 +5679,17 @@ cmd_backlog_history() {
     printf "%-12s %-12s %-10s %-10s %s\n" "ID" "DATE" "STATUS" "DURATION" "TITLE"
     printf "%-12s %-12s %-10s %-10s %s\n" "──────────" "──────────" "────────" "────────" "─────────────────────"
 
+    local _hist_jq='[.itemId // "-", .date // "-", .status // "-", (if (.duration // 0) > 0 then (if .duration >= 60 then "\(.duration / 60 | floor)m \(.duration % 60)s" else "\(.duration)s" end) else "-" end), ((.title // "-") | if length > 40 then .[:40] + "…" else . end)] | @tsv'
+    local _hist_input
     if [[ "$all" == "true" ]]; then
-        jq -r '[.itemId // "-", .date // "-", .status // "-", (if (.duration // 0) > 0 then (if .duration >= 60 then "\(.duration / 60 | floor)m \(.duration % 60)s" else "\(.duration)s" end) else "-" end), ((.title // "-") | if length > 40 then .[:40] + "…" else . end)] | @tsv' "$sprints_file" | \
-            reverse_lines | \
-            while IFS=$'\t' read -r id date status duration title; do
-                printf "%-12s %-12s %-10s %-10s %s\n" "$id" "$date" "$status" "$duration" "$title"
-            done
+        _hist_input=$(cat "$sprints_file")
     else
-        tail -n "$limit" "$sprints_file" | \
-            jq -r '[.itemId // "-", .date // "-", .status // "-", (if (.duration // 0) > 0 then (if .duration >= 60 then "\(.duration / 60 | floor)m \(.duration % 60)s" else "\(.duration)s" end) else "-" end), ((.title // "-") | if length > 40 then .[:40] + "…" else . end)] | @tsv' | \
-            reverse_lines | \
-            while IFS=$'\t' read -r id date status duration title; do
-                printf "%-12s %-12s %-10s %-10s %s\n" "$id" "$date" "$status" "$duration" "$title"
-            done
+        _hist_input=$(tail -n "$limit" "$sprints_file")
     fi
+    printf '%s\n' "$_hist_input" | jq -r "$_hist_jq" | reverse_lines | \
+        while IFS=$'\t' read -r id date status duration title; do
+            printf "%-12s %-12s %-10s %-10s %s\n" "$id" "$date" "$status" "$duration" "$title"
+        done
 }
 
 cmd_backlog_rm() {
@@ -5967,17 +5917,12 @@ cmd_config_check() {
             # Without yq, attempt basic validation via python/ruby
             local _yaml_ok=true
             if command -v python3 &>/dev/null; then
-                if ! python3 -c "import sys, yaml; yaml.safe_load(open(sys.argv[1]))" "$CONFIG_FILE" &>/dev/null; then
-                    _yaml_ok=false
-                fi
+                python3 -c "import sys, yaml; yaml.safe_load(open(sys.argv[1]))" "$CONFIG_FILE" &>/dev/null || _yaml_ok=false
             elif command -v ruby &>/dev/null; then
-                if ! ruby -ryaml -e "YAML.load_file(ARGV[0])" "$CONFIG_FILE" &>/dev/null; then
-                    _yaml_ok=false
-                fi
+                ruby -ryaml -e "YAML.load_file(ARGV[0])" "$CONFIG_FILE" &>/dev/null || _yaml_ok=false
             fi
             if [[ "$_yaml_ok" == "false" ]]; then
                 log_error "config.yaml is malformed — cannot parse YAML"
-                echo ""
                 echo "  Fix the syntax errors in $CONFIG_FILE and re-run."
                 exit 1
             fi
@@ -5985,19 +5930,11 @@ cmd_config_check() {
 
         # Check for unknown top-level keys
         if command -v yq &> /dev/null; then
-            local _top_keys
-            _top_keys=$(yq -r 'keys | .[]' "$CONFIG_FILE" 2>/dev/null || echo "")
-            local _k _found
-            for _k in $_top_keys; do
-                _found=false
-                local _kk
-                for _kk in "${_known_top_keys[@]}"; do
-                    if [[ "$_k" == "$_kk" ]]; then
-                        _found=true
-                        break
-                    fi
-                done
-                if [[ "$_found" == "false" ]]; then
+            local -A _known_set=()
+            local _kk; for _kk in "${_known_top_keys[@]}"; do _known_set["$_kk"]=1; done
+            local _k
+            for _k in $(yq -r 'keys | .[]' "$CONFIG_FILE" 2>/dev/null); do
+                if [[ -z "${_known_set[$_k]:-}" ]]; then
                     log_warning "Unknown config key: $_k"
                     has_warnings=true
                 fi
