@@ -2476,12 +2476,34 @@ ${ac_report}"
         log_error "Validation failed"
         local agent_fail_reason=""
         [[ -f "$STATUS_DIR/result.json" ]] && agent_fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
-        # Build rich retry context: validator's detailed reason + log tail + validation output
+
+        # Build targeted per-AC retry context when ac_results is available
+        local ac_feedback=""
+        if [[ -f "$STATUS_DIR/result.json" ]]; then
+            local failed_ac_count
+            failed_ac_count=$(jq '[.ac_results // [] | .[] | select(.met == false)] | length' "$STATUS_DIR/result.json" 2>/dev/null || echo "0")
+            if [[ "$failed_ac_count" -gt 0 ]]; then
+                local acs_json
+                acs_json=$(jq -r '
+                    (.ac_results // []) |
+                    .[] |
+                    select(.met == false) |
+                    "- AC\((.ac_index + 1)): \(.issue // "failed")\(if .file then " (\(.file)\(if .line then ":\(.line)" else "" end))" else "" end)"
+                ' "$STATUS_DIR/result.json" 2>/dev/null || true)
+                [[ -n "$acs_json" ]] && ac_feedback="
+
+## Failed Acceptance Criteria
+Address each failing AC specifically:
+${acs_json}"
+            fi
+        fi
+
+        # Build rich retry context: per-AC failures (if available) + validator reason + log tail + validation output
         retry_extra_prompt="Previous attempt failed validator review.
 
 ## Validator Feedback
-${agent_fail_reason}"
-        # Append validator log tail for additional context (e.g., AC-by-AC breakdown)
+${agent_fail_reason}${ac_feedback}"
+        # Append validator log tail for additional context
         if [[ -n "$LAST_AGENT_LOG" && -f "$LAST_AGENT_LOG" ]]; then
             local validator_log_tail
             validator_log_tail=$(tail -n 40 "$LAST_AGENT_LOG" 2>/dev/null || true)

@@ -34,12 +34,44 @@ When in doubt, **PASS with notes**. A pass with advisory notes is better than a 
 
 ## Output
 
-Write result.json with a detailed reason field that the developer will receive if they need to retry:
+Write result.json with **structured per-AC results** so the orchestrator can build targeted retry context.
 
-- **Pass:** `{"status": "pass", "summary": "AC1: met (users see 401 on unauthed requests). AC2: met (...). Intent fulfilled."}`
-- **Fail:** `{"status": "fail", "reason": "AC3 NOT MET: endpoint returns 500 instead of 401 for expired tokens. See src/middleware/auth.ts:45 — the expiry check falls through to the default error handler. AC1 and AC2 are met. Intent partially fulfilled — auth works but error handling does not meet the 'told exactly why' bar."}`
+### Pass format
+```json
+{
+  "status": "pass",
+  "summary": "AC1: met (users see 401 on unauthed requests). AC2: met (...). Intent fulfilled.",
+  "ac_results": [
+    {"ac_index": 0, "met": true, "issue": null},
+    {"ac_index": 1, "met": true, "issue": null}
+  ]
+}
+```
 
-The `reason` field is the ONLY feedback the developer gets on retry. Make it specific, actionable, and include file paths and line numbers. Do not write vague reasons like "code quality issues" — the developer cannot fix what they cannot find.
+### Fail format
+```json
+{
+  "status": "fail",
+  "reason": "AC3 NOT MET: endpoint returns 500 instead of 401 for expired tokens. AC1 and AC2 are met.",
+  "ac_results": [
+    {"ac_index": 0, "met": true, "issue": null},
+    {"ac_index": 1, "met": true, "issue": null},
+    {"ac_index": 2, "met": false, "issue": "returns 500 instead of 401 for expired tokens", "file": "src/middleware/auth.ts", "line": 45}
+  ]
+}
+```
+
+### ac_results schema (required on every verdict)
+Each entry in `ac_results` maps to the AC at that index in `acceptanceCriteria`:
+- `ac_index` (int) — zero-based index into acceptanceCriteria array
+- `met` (bool) — whether this AC is satisfied
+- `issue` (string or null) — specific description of what is missing or wrong; null when met
+- `file` (string, optional) — source file where the issue was found
+- `line` (int, optional) — line number in that file
+
+**Include `ac_results` on every verdict, pass or fail.** The orchestrator uses it for targeted developer retries. If you cannot determine file/line, omit those fields but still include `met` and `issue`.
+
+The `reason` field (on fail) is the ONLY top-level feedback the developer gets. Make it specific, actionable, and include file paths and line numbers. Do not write vague reasons like "code quality issues" — the developer cannot fix what they cannot find.
 
 ## Rules
 
