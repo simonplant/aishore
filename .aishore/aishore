@@ -2329,7 +2329,7 @@ Fix the issues and ensure all acceptance criteria pass."
     [[ -n "$ac_report" ]] && validator_extra="
 ## AC Verification Results
 ${ac_report}"
-    run_agent "validator" "validate" "$MODEL_FAST" "" "" "$validator_extra"
+    run_agent "validator" "validate" "$MODEL_PRIMARY" "" "" "$validator_extra"
     if ! check_result; then
         log_error "Validation failed"
         local agent_fail_reason=""
