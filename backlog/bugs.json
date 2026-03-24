@@ -6,7 +6,7 @@
       "title": "Trim verbose defensive coding across all functions",
       "intent": "Error handling is terse and consistent. Redundant null guards, verbose suggestions, unnecessary fallbacks, single-use variables, and redundant return 0 statements are removed. Saves ~200 lines spread across the entire script.",
       "description": "Across 82 functions, the script has accumulated verbose patterns: (1) jq calls with 2>/dev/null || true on caller-guaranteed input. (2) Error messages with full command examples belonging in help text. (3) Existence checks on files just created or caller-validated. (4) Multi-line error blocks where single log_error suffices. (5) ~5 redundant return 0 at end of functions. (6) Per-item dual jq calls in enforce_groom_limits and mark_complete that can be combined into single calls. (7) Variables computed and used exactly once that should be inlined. (8) cmd_diagnose has 6 separate jq -r calls on the same file — consolidate to one.",
-      "priority": "could",
+      "priority": "should",
       "category": null,
       "steps": [
         "Remove 2>/dev/null from jq calls where input JSON was constructed in the same function",
@@ -42,37 +42,7 @@
       "failCount": 2,
       "groomedAt": "2026-03-21",
       "groomedNotes": null,
-      "groomingNotes": null
-    },
-    {
-      "id": "BUG-100",
-      "title": "auto silently skips items with missing or too-short intent — no feedback to user",
-      "intent": "When auto-pick bypasses items due to missing or insufficient intent, a warning must be logged identifying each skipped item by ID and stating the reason, so users can fix their backlog.",
-      "description": "pick_item silently skips items where intent is absent or under 20 characters. In an auto session with multiple unready items, the user sees no items processed and no explanation. This makes the intent gate invisible: users don't know why their backlog isn't draining. A targeted log_warn call when each item is bypassed for intent reasons closes the feedback loop.",
-      "priority": "must",
-      "category": null,
-      "steps": [
-        "In pick_item, when an item is rejected due to missing or too-short intent, emit: log_warn \"Skipping $id: intent missing or too short (9 chars, need >=20)\"",
-        "Verify the same path is covered in list_pickable_ids if that function also filters by intent",
-        "Run shellcheck and verify no new warnings"
-      ],
-      "acceptanceCriteria": [
-        "Running auto with items whose intent is absent or under 20 chars produces a warning line per skipped item identifying the ID and reason",
-        "Items with valid intent are still processed normally — no regression",
-        "shellcheck passes with zero new warnings"
-      ],
-      "scope": [],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomingNotes": "Core UX gap: the intent gate is a hard requirement but invisible when it fires. Users running auto sessions and seeing nothing processed have no way to diagnose why without reading source code. A single log_warn per bypassed item costs nothing and closes the feedback loop completely. Priority should is correct.",
-      "groomedAt": "2026-03-21",
-      "lastFailReason": "Validator agent rejected implementation",
-      "lastFailAt": "2026-03-21T11:27:51-07:00",
-      "failCount": 1,
-      "groomedNotes": null,
-      "completedAt": "2026-03-23T20:45:48-07:00"
+      "groomingNotes": "Elevated to should so its dependent BUG-127 (refactor) can run in auto p1 mode. BUG-072 has failed twice — Tech Lead must review failure reasons before sprint. User value: unblocking BUG-127 (5000→4000 line reduction) makes the tool more maintainable and reduces future defect rate. PO accepts two-step sequencing: BUG-072 must land first."
     },
     {
       "id": "BUG-127",
@@ -110,43 +80,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
-      "groomedAt": null,
-      "groomingNotes": null
-    },
-    {
-      "id": "BUG-128",
-      "title": "Groom agents silently generate specs repeating known-bad patterns",
-      "intent": "Groom agents must receive proven successful spec examples from the archive alongside failure patterns so they generate specs modeled on what actually works — not just avoiding what failed.",
-      "description": "Groom agents receive failure patterns but no success patterns. Without positive examples, they may generate specs structurally similar to ones that already failed. In run_groom_flow, before invoking groom agents, extract the last 5 successful sprint entries from archive. Format as Specs That Worked with intent, AC, and attempt count. Inject alongside failure patterns.",
-      "priority": "must",
-      "category": "autonomous-mode",
-      "steps": [
-        "In run_groom_flow, before invoking groom agents, read last 5 successful entries from backlog/archive/sprints.jsonl",
-        "For each successful entry, look up the original item spec from archived backlogs to get intent and AC",
-        "Format as a Specs That Worked section with intent, AC count, and attempt count per item",
-        "Inject this section into the groom agent prompt alongside the existing failure patterns",
-        "When no archive data exists, omit the section entirely",
-        "Run shellcheck — zero new warnings"
-      ],
-      "acceptanceCriteria": [
-        "Groom agents receive a Specs That Worked section showing successful sprint patterns from the archive",
-        "Each pattern includes the original intent, AC count, and how many attempts it took",
-        "When the archive is empty or has no successes, the section is omitted without error",
-        "shellcheck passes with zero new warnings"
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [
-        "FEAT-041"
-      ],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomedAt": "2026-03-23",
-      "groomingNotes": "Must priority confirmed. Completes the learning loop started by FEAT-041 — success patterns must reach groom agents, not just the auto session. Dependency on FEAT-041 is correct; sprint only after FEAT-041 passes.",
-      "completedAt": "2026-03-24T07:47:23-07:00"
+      "readyForSprint": true,
+      "groomedAt": "2026-03-24",
+      "groomingNotes": "Depends on BUG-072 (must run first). Steps are defensively written: baseline capture before any changes, output-diff verification enforces zero regressions. The constraint 'do NOT remove guards from prior bug fixes' is explicit. Dry-run sprint verification at the end is the right final gate. BUG-072 must complete first."
     }
   ]
 }

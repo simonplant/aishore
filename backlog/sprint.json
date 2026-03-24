@@ -1,34 +1,33 @@
 {
-  "sprintId": "sprint-1774365318",
-  "startedAt": "2026-03-24T08:15:18-07:00",
+  "sprintId": "sprint-1774365718",
+  "startedAt": "2026-03-24T08:21:58-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-048",
-    "title": "Pre-sprint scope enforcement in developer prompt",
-    "intent": "When scope is defined and mode is strict, the developer agent must know its file boundaries before writing any code — so scope violations are prevented, not just detected after wasting a full cycle.",
-    "description": "Currently scope violations are checked after the developer completes, wasting the entire attempt in strict mode. Inject scope constraints into the developer prompt before implementation starts. When scope globs are defined, add a hard constraint for strict mode or a soft advisory for warn mode.",
+    "id": "FEAT-038",
+    "title": "Per-item agent timeout — prevent hung auto sessions",
+    "intent": "Every agent invocation has a configurable wall-clock timeout so that a hung sprint terminates cleanly, is counted as a failure, and the session continues rather than blocking indefinitely.",
+    "description": "run_agent_process() has no timeout. If the claude CLI hangs (network issue, infinite loop in generated code, waiting for stdin), the entire auto session stalls forever. Users running overnight or CI jobs have no recovery path. A --timeout N flag (minutes) and a timeout_minutes config option wrap the agent call with timeout/gtimeout. On expiry the agent process is killed, the sprint is marked failed with a clear TIMEOUT reason, branch cleanup runs normally, and the session continues. Default 0 = no limit, preserving current behavior.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "In aishore build_agent_prompt, check if the current item has a non-empty scope array",
-      "If scope is defined and SCOPE_MODE is strict, inject a File Scope Constraint section listing allowed globs and stating modifications outside scope will cause sprint failure",
-      "If scope is defined and SCOPE_MODE is warn, inject a softer File Scope Advisory section listing preferred globs",
-      "In agents/developer.md, add a note that scope constraints may be injected by the orchestrator",
-      "Run shellcheck — zero new warnings"
+      "Add --timeout N (integer, minutes) flag to cmd_run and cmd_auto; validate it is a non-negative integer",
+      "Add timeout_minutes key to config.yaml schema and load it in load_config; env var AISHORE_TIMEOUT_MINUTES",
+      "In run_agent_process, wrap the claude invocation with timeout (Linux) / gtimeout (macOS) when timeout_minutes > 0",
+      "On timeout exit code (124), log_error 'Agent timeout after N minutes for $id' and set result to fail with reason TIMEOUT",
+      "Ensure the feature branch cleanup path runs on timeout the same as any other failure",
+      "Run shellcheck, verify no new warnings"
     ],
     "acceptanceCriteria": [
-      "When an item has scope globs and mode is strict, the developer prompt includes a hard file scope constraint before implementation",
-      "When an item has scope globs and mode is warn, the developer prompt includes a soft scope advisory",
-      "When no scope is defined, no scope section is injected",
+      "auto done --timeout 5 kills any agent running longer than 5 minutes and logs a timeout message with the item ID",
+      "Timed-out items are counted as failures for circuit-breaker and session failure tracking",
+      "timeout_minutes: 5 in config.yaml produces the same behaviour as --timeout 5",
+      "Default behaviour (no flag, no config) is unchanged — no timeout applied",
       "shellcheck passes with zero new warnings"
     ],
-    "scope": [
-      ".aishore/aishore",
-      ".aishore/agents/developer.md"
-    ],
-    "startedAt": "2026-03-24T08:15:18-07:00",
+    "scope": [],
+    "startedAt": "2026-03-24T08:21:58-07:00",
     "status": "passed",
-    "completedAt": "2026-03-24T08:18:41-07:00"
+    "completedAt": "2026-03-24T08:36:10-07:00"
   },
-  "completedAt": "2026-03-24T08:18:41-07:00",
+  "completedAt": "2026-03-24T08:36:10-07:00",
   "attempts": 1
 }

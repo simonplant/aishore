@@ -25,11 +25,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
+      "status": "done",
+      "passes": true,
       "readyForSprint": false,
-      "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Hung sessions are a real CI/overnight pain point. Default 0 (no limit) correctly preserves current behavior. The gtimeout fallback for macOS is important — verify it works on both platforms in AC."
+      "groomedAt": "2026-03-24",
+      "groomingNotes": "Steps are clear and implementable. The timeout/gtimeout wrapping pattern is well-understood. Exit code 124 detection is correct for both tools. Default 0=no limit cleanly preserves existing behavior. Config key and env var follow established patterns.",
+      "completedAt": "2026-03-24T08:36:10-07:00"
     },
     {
       "id": "FEAT-039",
@@ -56,9 +57,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
-      "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Manual status override is a clear UX gap — users doing manual fixes or external resolutions shouldn't have to edit JSON. The resolved_at timestamp on done transitions is the right approach for audit trail. AC covers all valid transitions and the error case."
+      "readyForSprint": true,
+      "groomedAt": "2026-03-24",
+      "groomingNotes": "Steps are clear. Three-state transitions (todo/done/skip) are well-defined and non-overlapping. resolved_at timestamp on done transition provides audit trail without adding complexity. The confirmation print pattern follows existing CLI conventions."
     },
     {
       "id": "FEAT-040",
@@ -89,107 +90,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
-      "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Post-sprint reporting is a real need for teams and solo devs alike — changelogs and standups shouldn't require reading raw JSONL. Pure read-only derived output is the right design (no AI needed). --format json flag is good for piping into other tools."
-    },
-    {
-      "id": "FEAT-041",
-      "title": "Success pattern feedback to groom agents",
-      "intent": "Groom agents must receive both failure AND success patterns from recent sprints so they can learn what spec structures produce clean first-attempt passes — not just what to avoid.",
-      "description": "Currently auto-groom agents receive session_failures but zero success signal. Add a session_successes array populated on each sprint pass. Feed last 5 successes to groom agents alongside failures. Also extract last 10 completed items from sprints.jsonl as proven spec patterns.",
-      "priority": "must",
-      "category": "autonomous-mode",
-      "steps": [
-        "In run_sprint_loop, add a session_successes array alongside the existing session_failures array",
-        "In _handle_sprint_success, append a compact summary to session_successes mirroring the session_failures format",
-        "In the auto-groom section, build groom_success_feedback from last 5 entries of session_successes",
-        "In the same section, read last 10 completed entries from sprints.jsonl and format as Specs That Worked with intent and AC count and attempts",
-        "Pass groom_success_feedback alongside groom_failure_feedback to both tech-lead and product-owner groom agents",
-        "Run shellcheck — zero new warnings"
-      ],
-      "acceptanceCriteria": [
-        "After a sprint passes in auto mode, the success is recorded in session_successes and available to subsequent groom agents",
-        "Groom agents receive a Specs That Worked section showing recent successful sprint patterns alongside the existing failure patterns",
-        "When no successes exist yet in the session, the success section is omitted entirely",
-        "shellcheck passes with zero new warnings"
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomedAt": "2026-03-23",
-      "groomingNotes": "Critical foundation for both session-level and groom-level learning loops. Without success signal, groom agents are flying half-blind. Correct must priority — this unlocks BUG-128. Sprint order: FEAT-041 before BUG-128.",
-      "completedAt": "2026-03-24T07:36:33-07:00"
-    },
-    {
-      "id": "FEAT-042",
-      "title": "Structured validator verdict format with per-AC results",
-      "intent": "The validator must output structured per-AC pass/fail results so the orchestrator can build targeted retry context that tells the developer exactly which acceptance criteria failed and where.",
-      "description": "The validator currently outputs free-text reason on failure. Change the validator prompt to require structured JSON with ac_results array. Update the orchestrator to parse ac_results and build per-AC retry context. Fall back to current format if structured parsing fails.",
-      "priority": "must",
-      "category": "sprint-execution",
-      "steps": [
-        "In agents/validator.md, update the output format section to require structured JSON with ac_results array",
-        "Define the schema: each ac_result has ac_index, met boolean, issue string, file string optional, line int optional",
-        "In aishore _run_validation_cycle, after reading result.json, attempt to parse ac_results with jq",
-        "If ac_results exists, build targeted retry context listing only failed ACs with their issue and file:line",
-        "If ac_results parsing fails, fall back to existing behavior using reason field as-is",
-        "Update _build_prior_failure_context to format per-AC failures when structured data is available",
-        "Run shellcheck — zero new warnings"
-      ],
-      "acceptanceCriteria": [
-        "Validator agent outputs result.json with ac_results array containing per-AC pass/fail verdicts",
-        "On retry, developer receives targeted context listing only the specific ACs that failed with file:line references",
-        "If validator outputs old-format result.json without ac_results, orchestrator falls back to existing behavior without error",
-        "shellcheck passes with zero new warnings"
-      ],
-      "scope": [
-        ".aishore/aishore",
-        ".aishore/agents/validator.md"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomedAt": "2026-03-23",
-      "groomingNotes": "Must priority confirmed. Targeted per-AC retry context directly reduces wasted developer cycles — agent gets told exactly which AC failed and where, not a vague failure blob. Structured output also unblocks future tooling on top of validation results.",
-      "completedAt": "2026-03-24T07:40:58-07:00"
-    },
-    {
-      "id": "FEAT-043",
-      "title": "Developer-side validation during implementation",
-      "intent": "The developer agent must run the validation command during the harden phase of the maturity protocol so it catches failures inside the session where context is hot — not after the cycle ends.",
-      "description": "Currently the developer flies blind until the orchestrator runs validation post-cycle. The developer has Bash permission and could self-check but is never told to. Inject the validation command into the maturity protocol harden phase instructions.",
-      "priority": "should",
-      "category": "sprint-execution",
-      "steps": [
-        "In aishore build_agent_prompt, find the maturity protocol injection section",
-        "In the Phase 3 Harden text, add an instruction to run the validation command and fix failures before committing",
-        "Only inject this instruction when VALIDATE_CMD is non-empty",
-        "In agents/developer.md, in the Harden phase description, add a note that the validation command will be provided by the orchestrator",
-        "Run shellcheck — zero new warnings"
-      ],
-      "acceptanceCriteria": [
-        "When VALIDATE_CMD is configured, the developer agent prompt includes the validation command in the Harden phase instructions",
-        "When VALIDATE_CMD is empty, no validation instruction is injected",
-        "The developer agent can run the validation command during implementation via its existing Bash permission",
-        "shellcheck passes with zero new warnings"
-      ],
-      "scope": [
-        ".aishore/aishore",
-        ".aishore/agents/developer.md"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Self-validation during harden phase is a quality multiplier — catches failures while context is hot rather than forcing a cold retry cycle. Especially valuable on items with 2+ ACs. Pair with FEAT-042 for best effect.",
-      "completedAt": "2026-03-24T07:50:43-07:00"
+      "readyForSprint": true,
+      "groomedAt": "2026-03-24",
+      "groomingNotes": "Pure read-only derived output — no AI agent needed, low implementation risk. Steps cover all output paths: markdown grouping by date+priority, --since filter, --output file, --format json. Graceful empty-archive handling is explicitly specified. Dispatching as top-level or cmd_backlog subcommand should follow existing patterns."
     },
     {
       "id": "FEAT-044",
@@ -223,46 +126,10 @@
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Cost visibility is a genuine user need for overnight and CI auto sessions — without it users have no idea what a backlog drain costs until the bill arrives. Budget cap AC is important; --budget flag should abort gracefully, not mid-sprint.",
+      "groomingNotes": "Failed once ('Implementation failed'). Key risk: claude CLI stderr format for token usage. Implementation notes: (1) Capture stderr by redirecting to a temp file alongside the existing stdout capture — do NOT try to tee or interleave stderr with stdout as it will corrupt the completion contract polling. (2) After run_agent_process returns, read the temp stderr file and grep for patterns like 'input_tokens' and 'output_tokens' — the claude CLI JSON output in verbose mode includes these fields. (3) If the pattern is not found, set token counts to 0 and continue silently — the AC already covers this graceful degradation path. (4) Budget check must happen BEFORE pick_item selects the next sprint item, not mid-sprint — abort with a clear message and zero exit code. (5) Keep model pricing as simple bash variables, not a config schema change, unless config.yaml support is already scaffolded. PO note: the graceful degradation AC is the most important — cost data is a 'nice to have', but the system must never fail because token parsing failed. The budget cap is the second most critical for users running large auto sessions overnight.",
       "lastFailReason": "Implementation failed",
       "lastFailAt": "2026-03-24T08:02:50-07:00",
       "failCount": 1
-    },
-    {
-      "id": "FEAT-045",
-      "title": "Parallel sprint execution for independent items",
-      "intent": "Auto mode must support running multiple independent sprint items concurrently using worktree isolation so that large backlogs drain 2-3x faster when items have non-overlapping scope.",
-      "description": "Items with non-overlapping scope arrays can safely run in parallel using git worktrees. Add --parallel N flag. Identify N items whose scope globs do not overlap, launch each in its own worktree, wait for all to complete, merge results sequentially. Items with no scope or overlapping scope run sequentially. Start conservative: max N=2.",
-      "priority": "could",
-      "category": "autonomous-mode",
-      "steps": [
-        "Add --parallel N flag to cmd_auto; validate N is 1-4; default 1 for sequential current behavior",
-        "Add scope_overlaps function: takes two scope arrays, expands globs, returns true if any files match both",
-        "In run_sprint_loop, when parallel > 1, call pick_parallel_batch to select up to N items with disjoint scopes",
-        "For each item in the parallel batch, create a git worktree and launch the sprint in a background process",
-        "Wait for all parallel sprints to complete and collect results",
-        "Merge successful worktrees sequentially into the base branch; handle conflicts by falling back to sequential retry",
-        "Items that fail in parallel are added to FAILED_IDS as normal; circuit breaker counts each failure",
-        "Run shellcheck — zero new warnings"
-      ],
-      "acceptanceCriteria": [
-        "auto done --parallel 2 runs two items with non-overlapping scope concurrently in separate worktrees",
-        "Items with overlapping or missing scope arrays are never parallelized — they run sequentially",
-        "Parallel failures are counted correctly by the circuit breaker",
-        "Session summary accurately reflects all parallel and sequential items",
-        "auto done without --parallel behaves identically to current sequential behavior",
-        "shellcheck passes with zero new warnings"
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomedAt": null,
-      "groomingNotes": null,
-      "completedAt": "2026-03-24T05:42:05-07:00"
     },
     {
       "id": "FEAT-046",
@@ -295,72 +162,6 @@
       "readyForSprint": false,
       "groomedAt": null,
       "groomingNotes": null
-    },
-    {
-      "id": "FEAT-047",
-      "title": "Warm-context retries using session continuation",
-      "intent": "Developer retries must continue the existing agent session instead of starting cold so the agent retains its codebase understanding and prior work context — reducing token waste and improving fix accuracy.",
-      "description": "Each retry currently spawns a fresh claude process, losing the hot context from the previous attempt. Add --warm-retry flag and config retry.warm. When enabled, on retry, use claude CLI session continuation to send failure context as a follow-up message in the same session. Fall back to cold retry if session continuation is not supported. Keep cold retry as default.",
-      "priority": "should",
-      "category": "sprint-execution",
-      "steps": [
-        "Research claude CLI flags for session continuation such as --resume or --continue or session ID reuse",
-        "Add WARM_RETRY config option in config retry.warm, env AISHORE_WARM_RETRY, default false, and --warm-retry CLI flag",
-        "In run_agent_process, when warm retry is enabled, capture the session ID from the first invocation",
-        "In _run_developer_cycle, on retry attempt greater than 0 with warm retry enabled, invoke claude with session continuation instead of a fresh prompt",
-        "Pass the failure context as the continuation message not re-sending the full prompt",
-        "If session continuation fails due to unsupported CLI version or session expiry, fall back to cold retry with log_warn",
-        "Run shellcheck — zero new warnings"
-      ],
-      "acceptanceCriteria": [
-        "With --warm-retry, developer retries continue the existing session instead of starting a new one",
-        "The failure context from the previous attempt is sent as a continuation message in the existing session",
-        "If session continuation is unavailable, the system falls back to cold retry with a warning",
-        "Without --warm-retry, behavior is identical to current cold retries",
-        "shellcheck passes with zero new warnings"
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Hot-context retries directly improve fix accuracy by preserving codebase understanding across retry cycles. The research step in implementation is critical — verify claude CLI actually supports session continuation before building around it. Fallback-to-cold is the right safety net.",
-      "completedAt": "2026-03-24T08:15:17-07:00"
-    },
-    {
-      "id": "FEAT-048",
-      "title": "Pre-sprint scope enforcement in developer prompt",
-      "intent": "When scope is defined and mode is strict, the developer agent must know its file boundaries before writing any code — so scope violations are prevented, not just detected after wasting a full cycle.",
-      "description": "Currently scope violations are checked after the developer completes, wasting the entire attempt in strict mode. Inject scope constraints into the developer prompt before implementation starts. When scope globs are defined, add a hard constraint for strict mode or a soft advisory for warn mode.",
-      "priority": "should",
-      "category": "sprint-execution",
-      "steps": [
-        "In aishore build_agent_prompt, check if the current item has a non-empty scope array",
-        "If scope is defined and SCOPE_MODE is strict, inject a File Scope Constraint section listing allowed globs and stating modifications outside scope will cause sprint failure",
-        "If scope is defined and SCOPE_MODE is warn, inject a softer File Scope Advisory section listing preferred globs",
-        "In agents/developer.md, add a note that scope constraints may be injected by the orchestrator",
-        "Run shellcheck — zero new warnings"
-      ],
-      "acceptanceCriteria": [
-        "When an item has scope globs and mode is strict, the developer prompt includes a hard file scope constraint before implementation",
-        "When an item has scope globs and mode is warn, the developer prompt includes a soft scope advisory",
-        "When no scope is defined, no scope section is injected",
-        "shellcheck passes with zero new warnings"
-      ],
-      "scope": [
-        ".aishore/aishore",
-        ".aishore/agents/developer.md"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomedAt": "2026-03-23",
-      "groomingNotes": "Should priority confirmed. Scope violations caught after a full developer cycle are pure waste in strict mode. Injecting constraints upfront is a simple, high-leverage change. AC is user-outcome focused and correct.",
-      "completedAt": "2026-03-24T08:18:41-07:00"
     }
   ]
 }
