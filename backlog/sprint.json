@@ -1,36 +1,34 @@
 {
-  "sprintId": "sprint-1774362994",
-  "startedAt": "2026-03-24T07:36:34-07:00",
+  "sprintId": "sprint-1774363259",
+  "startedAt": "2026-03-24T07:40:59-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-042",
-    "title": "Structured validator verdict format with per-AC results",
-    "intent": "The validator must output structured per-AC pass/fail results so the orchestrator can build targeted retry context that tells the developer exactly which acceptance criteria failed and where.",
-    "description": "The validator currently outputs free-text reason on failure. Change the validator prompt to require structured JSON with ac_results array. Update the orchestrator to parse ac_results and build per-AC retry context. Fall back to current format if structured parsing fails.",
-    "sourceBacklog": "backlog.json",
+    "id": "BUG-128",
+    "title": "Groom agents silently generate specs repeating known-bad patterns",
+    "intent": "Groom agents must receive proven successful spec examples from the archive alongside failure patterns so they generate specs modeled on what actually works — not just avoiding what failed.",
+    "description": "Groom agents receive failure patterns but no success patterns. Without positive examples, they may generate specs structurally similar to ones that already failed. In run_groom_flow, before invoking groom agents, extract the last 5 successful sprint entries from archive. Format as Specs That Worked with intent, AC, and attempt count. Inject alongside failure patterns.",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "In agents/validator.md, update the output format section to require structured JSON with ac_results array",
-      "Define the schema: each ac_result has ac_index, met boolean, issue string, file string optional, line int optional",
-      "In aishore _run_validation_cycle, after reading result.json, attempt to parse ac_results with jq",
-      "If ac_results exists, build targeted retry context listing only failed ACs with their issue and file:line",
-      "If ac_results parsing fails, fall back to existing behavior using reason field as-is",
-      "Update _build_prior_failure_context to format per-AC failures when structured data is available",
+      "In run_groom_flow, before invoking groom agents, read last 5 successful entries from backlog/archive/sprints.jsonl",
+      "For each successful entry, look up the original item spec from archived backlogs to get intent and AC",
+      "Format as a Specs That Worked section with intent, AC count, and attempt count per item",
+      "Inject this section into the groom agent prompt alongside the existing failure patterns",
+      "When no archive data exists, omit the section entirely",
       "Run shellcheck — zero new warnings"
     ],
     "acceptanceCriteria": [
-      "Validator agent outputs result.json with ac_results array containing per-AC pass/fail verdicts",
-      "On retry, developer receives targeted context listing only the specific ACs that failed with file:line references",
-      "If validator outputs old-format result.json without ac_results, orchestrator falls back to existing behavior without error",
+      "Groom agents receive a Specs That Worked section showing successful sprint patterns from the archive",
+      "Each pattern includes the original intent, AC count, and how many attempts it took",
+      "When the archive is empty or has no successes, the section is omitted without error",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [
-      ".aishore/aishore",
-      ".aishore/agents/validator.md"
+      ".aishore/aishore"
     ],
-    "startedAt": "2026-03-24T07:36:34-07:00",
+    "startedAt": "2026-03-24T07:40:59-07:00",
     "status": "passed",
-    "completedAt": "2026-03-24T07:40:58-07:00"
+    "completedAt": "2026-03-24T07:47:23-07:00"
   },
-  "completedAt": "2026-03-24T07:40:58-07:00",
+  "completedAt": "2026-03-24T07:47:23-07:00",
   "attempts": 1
 }
