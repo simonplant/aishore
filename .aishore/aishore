@@ -1660,6 +1660,29 @@ Output phase markers: \`═══ PHASE 2: CRITIQUE ═══\` / \`═══ PH
 ## Validation
 Run \`$VALIDATE_CMD\` after implementing. Fix failures before writing result.json."
         fi
+
+        # Scope enforcement injection
+        local sprint_scope_json
+        sprint_scope_json=$(jq -r '.item.scope // [] | select(length > 0) | . ' "$BACKLOG_DIR/sprint.json" 2>/dev/null)
+        if [[ -n "$sprint_scope_json" && "$sprint_scope_json" != "[]" && "$sprint_scope_json" != "null" ]]; then
+            local scope_globs
+            scope_globs=$(jq -r '.[]' <<< "$sprint_scope_json" 2>/dev/null | sed 's/^/  - /')
+            if [[ "$SCOPE_MODE" == "strict" ]]; then
+                validate_hint="$validate_hint
+
+## File Scope Constraint (STRICT — enforced)
+This item is restricted to the following file globs. Modifications **outside** these paths will cause sprint failure:
+$scope_globs
+Do not touch any file not matched by the above globs. If implementing the spec requires touching other files, stop and signal blocked."
+            else
+                validate_hint="$validate_hint
+
+## File Scope Advisory
+This item is intended to modify files matching these globs:
+$scope_globs
+Prefer to keep changes within this scope. Changes outside it will trigger a warning."
+            fi
+        fi
     elif [[ "$agent_name" == "validator" ]]; then
         validate_hint=""
         if [[ -n "$VALIDATE_CMD" ]]; then

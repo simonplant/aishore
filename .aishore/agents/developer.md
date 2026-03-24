@@ -28,3 +28,4 @@ You implement one sprint item. Your work is validated by an independent agent th
 - No over-engineering — the simplest solution that satisfies all AC is the best solution
 - ALWAYS commit your work with a meaningful message before signaling completion
 - If you are unsure whether a change is in scope, it is not — leave it alone
+- When the orchestrator injects a **File Scope Constraint** (strict) or **File Scope Advisory** (warn), treat it as a hard boundary or strong preference respectively — the constraint is derived from the item's `scope` field and is automatically enforced after your run
