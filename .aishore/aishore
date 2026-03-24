@@ -744,6 +744,28 @@ pick_item() {
     }
     map_backlog_files _warn_self_refs
 
+    # Warn about items skipped due to missing or too-short intent
+    _warn_intent_skipped() {
+        local bf="$1"
+        [[ -f "$BACKLOG_DIR/$bf" ]] || return 0
+        local skipped
+        skipped=$(jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --arg catf "$cat_filter" '
+            [.items[] |
+                select(.readyForSprint == true and (.passes == false or .passes == null) and (.status == "todo" or .status == null)) |
+                select(.id as $id | $skip | index($id) | not) |
+                select(.dependsOn == null or (.dependsOn | length == 0) or (.id as $self | .dependsOn | all(. != $self) and all(. as $dep | $done_ids | index($dep) != null))) |
+                select($catf == "" or (.category // "") == $catf) |
+                select(.intent == null or .intent == "" or (.intent | length) < 20)] |
+            .[] | .id + "\t" + (if .intent == null or .intent == "" then "missing" else "\(.intent | length) chars, need >=20" end)
+        ' "$BACKLOG_DIR/$bf" 2>/dev/null || true)
+        if [[ -n "$skipped" ]]; then
+            while IFS=$'\t' read -r skip_id skip_reason; do
+                log_warning "Skipping $skip_id: intent $skip_reason"
+            done <<< "$skipped"
+        fi
+    }
+    map_backlog_files _warn_intent_skipped
+
     # Auto-pick: highest priority ready item across ALL declared backlog files
     local all_candidates="[]"
     _collect_candidates() {
