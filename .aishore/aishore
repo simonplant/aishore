@@ -3980,6 +3980,48 @@ run_groom_flow() {
     # Clean done items before grooming so agents see lean backlogs
     cmd_clean 2>/dev/null || true
 
+    # Build "Specs That Worked" section from archive so groomers see proven patterns
+    local specs_that_worked_section=""
+    if [[ -f "$ARCHIVE_DIR/sprints.jsonl" ]]; then
+        local successful_entries
+        successful_entries=$(tail -20 "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null \
+            | jq -r 'select(.status == "complete")' 2>/dev/null \
+            | jq -s '[ .[] ] | reverse | .[0:5]' 2>/dev/null || true)
+        if [[ -n "$successful_entries" && "$successful_entries" != "[]" ]]; then
+            # Build a lookup of item specs from archived backlogs
+            local archive_lookup_jq='
+                [.[] | {key: .id, value: {intent: (.intent // ""), ac_count: ((.acceptanceCriteria // []) | length)}}]
+                | from_entries
+            '
+            local item_lookup="{}"
+            for done_file in "$ARCHIVE_DIR"/backlog_done.json "$ARCHIVE_DIR"/bugs_done.json; do
+                if [[ -f "$done_file" ]]; then
+                    local partial
+                    partial=$(jq "$archive_lookup_jq" "$done_file" 2>/dev/null || true)
+                    [[ -n "$partial" && "$partial" != "{}" ]] && \
+                        item_lookup=$(printf '%s\n%s' "$item_lookup" "$partial" | jq -s 'add' 2>/dev/null || echo "$item_lookup")
+                fi
+            done
+            # Format each successful entry with intent, AC count, and attempts
+            local formatted_specs
+            formatted_specs=$(echo "$successful_entries" | jq -r --argjson lookup "$item_lookup" '
+                .[] |
+                .itemId as $id |
+                ($lookup[$id] // {intent: "", ac_count: 0}) as $spec |
+                if $spec.intent != "" then
+                    "- \($id) (\(.attempts) attempt(s), \($spec.ac_count) AC): \($spec.intent)"
+                else
+                    "- \($id) (\(.attempts) attempt(s)): \(.title // $id)"
+                end
+            ' 2>/dev/null || true)
+            if [[ -n "$formatted_specs" ]]; then
+                specs_that_worked_section="## Specs That Worked
+Recent completed items — these spec structures produced passing sprints. Emulate their patterns.
+${formatted_specs}"
+            fi
+        fi
+    fi
+
     local snap_before
     snap_before=$(snapshot_backlogs)
 
@@ -3990,7 +4032,7 @@ run_groom_flow() {
     log_info "Running $agent agent..."
     echo ""
 
-    GROOM_MONITOR=true run_agent "$agent" "$mode" "$MODEL_FAST" "$_gf_ctx_name"
+    GROOM_MONITOR=true run_agent "$agent" "$mode" "$MODEL_FAST" "$_gf_ctx_name" "" "$specs_that_worked_section"
     GROOM_MONITOR=
 
     protect_items_from_groom "$snap_dir"
