@@ -1,32 +1,36 @@
 {
-  "sprintId": "sprint-1774366571",
-  "startedAt": "2026-03-24T08:36:11-07:00",
+  "sprintId": "sprint-1774366894",
+  "startedAt": "2026-03-24T08:41:34-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-039",
-    "title": "backlog edit --status — manual item status override",
-    "intent": "Users can mark any item done, skipped, or reset to todo from the CLI so that work resolved outside a sprint does not litter the active backlog and require JSON hacking.",
-    "description": "Items are sometimes resolved externally (manual fix, upstream change, decision not to implement). Currently the only way to mark an item done is to run a sprint. Users resort to editing JSON directly, which is fragile and bypasses validation. A --status flag on backlog edit allows clean status transitions: todo → done (externally resolved), todo → skip (won't do), done/skip → todo (re-open). The flag writes the updated status and sets a resolved_at timestamp when transitioning to done.",
+    "id": "FEAT-040",
+    "title": "aishore report — sprint activity summary for changelogs and standups",
+    "intent": "aishore report generates a formatted markdown summary of completed sprint work from the archive so teams can produce changelogs and standup notes without manually querying sprint history.",
+    "description": "After draining a backlog, users need to communicate what shipped. Currently they must read sprints.jsonl manually or piece together git log output. A report command reads backlog/archive/sprints.jsonl, groups completed items by date, and emits a markdown document with item ID, title, priority, and date. --since <YYYY-MM-DD> scopes the report. --output <file> writes to disk. The report is purely derived from the archive; no AI agent is needed.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Add --status <todo|done|skip> flag to cmd_backlog_edit; validate value is one of the three",
-      "When --status done is set, write status: done and resolved_at: <ISO date> to the item",
-      "When --status skip is set, write status: skip; when --status todo is set, clear resolved_at",
-      "Print a confirmation line showing the transition: 'FEAT-001: todo → done'",
+      "Add cmd_report() dispatched from cmd_backlog or as a top-level command; register in cmd_usage and help text",
+      "Read backlog/archive/sprints.jsonl and filter to status=complete records; apply --since filter if provided",
+      "Group records by date (YYYY-MM-DD) descending; within each date group items by priority (must → should → could)",
+      "Emit markdown: ## YYYY-MM-DD header per group, then bullet lines: - ID: Title (priority)",
+      "Support --output <path>: write output to file instead of stdout; print confirmation to stderr",
+      "Support --format json: emit raw JSON array of completed items instead of markdown (useful for piping)",
       "Run shellcheck, verify no new warnings"
     ],
     "acceptanceCriteria": [
-      "backlog edit FEAT-001 --status done marks the item done and sets resolved_at to today; backlog show reflects it",
-      "backlog edit FEAT-001 --status skip marks the item skipped; backlog list no longer shows it as active",
-      "backlog edit FEAT-001 --status todo resets status to todo and clears resolved_at",
-      "An invalid status value (e.g. --status wip) is rejected with a clear error and non-zero exit",
+      "aishore report prints a markdown summary of all completed items to stdout, grouped by date",
+      "aishore report --since 2026-03-01 limits output to items completed on or after 2026-03-01",
+      "aishore report --output SPRINT_NOTES.md writes the file and prints a confirmation line to stderr",
+      "aishore report --format json emits a JSON array of completed item records",
+      "An empty archive produces a graceful 'No completed items found' message rather than an error",
+      "aishore help mentions the report command",
       "shellcheck passes with zero new warnings"
     ],
     "scope": [],
-    "startedAt": "2026-03-24T08:36:11-07:00",
+    "startedAt": "2026-03-24T08:41:34-07:00",
     "status": "passed",
-    "completedAt": "2026-03-24T08:41:32-07:00"
+    "completedAt": "2026-03-24T08:47:05-07:00"
   },
-  "completedAt": "2026-03-24T08:41:32-07:00",
+  "completedAt": "2026-03-24T08:47:05-07:00",
   "attempts": 1
 }

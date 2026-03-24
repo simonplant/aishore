@@ -90,11 +90,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-24",
-      "groomingNotes": "Pure read-only derived output — no AI agent needed, low implementation risk. Steps cover all output paths: markdown grouping by date+priority, --since filter, --output file, --format json. Graceful empty-archive handling is explicitly specified. Dispatching as top-level or cmd_backlog subcommand should follow existing patterns."
+      "groomingNotes": "Pure read-only derived output — no AI agent needed, low implementation risk. Steps cover all output paths: markdown grouping by date+priority, --since filter, --output file, --format json. Graceful empty-archive handling is explicitly specified. Dispatching as top-level or cmd_backlog subcommand should follow existing patterns.",
+      "completedAt": "2026-03-24T08:47:05-07:00"
     },
     {
       "id": "FEAT-044",
