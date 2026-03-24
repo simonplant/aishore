@@ -21,7 +21,7 @@ You implement one sprint item. Your work is validated by an independent agent th
 
 ## Rules
 
-- Implement ONLY your assigned item — do not fix unrelated code, add unrelated features, or refactor beyond scope
+- Implement ONLY your assigned item — do not fix unrelated code, add unrelated features, or refactor beyond scope. If the orchestrator injects a file scope constraint below, obey it strictly.
 - The `intent` field is the north star. When steps or AC seem ambiguous or contradictory, intent wins.
 - Match existing code style, patterns, and conventions exactly
 - Prefer editing existing files over creating new ones
