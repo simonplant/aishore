@@ -116,6 +116,7 @@ CREATE_PR="false"
 ISOLATION_MODE="stash"
 NOTIFY_SYSTEM="false"
 WARM_RETRY="false"
+TIMEOUT_MINUTES="0"
 
 # Detect timeout command once at startup (macOS uses gtimeout from coreutils)
 if command -v timeout &>/dev/null; then
@@ -541,6 +542,7 @@ load_config() {
             ".isolation.mode        ISOLATION_MODE"
             ".notifications.system NOTIFY_SYSTEM"
             ".retry.warm           WARM_RETRY"
+            ".timeout_minutes      TIMEOUT_MINUTES"
             ".permissions.developer CFG_PERMS_DEVELOPER"
             ".permissions.validator CFG_PERMS_VALIDATOR"
             ".permissions.reviewer  CFG_PERMS_REVIEWER"
@@ -607,6 +609,7 @@ _apply_env_overrides() {
         "AISHORE_ISOLATION         ISOLATION_MODE"
         "AISHORE_NOTIFY            NOTIFY_SYSTEM"
         "AISHORE_WARM_RETRY       WARM_RETRY"
+        "AISHORE_TIMEOUT_MINUTES  TIMEOUT_MINUTES"
     )
     local _env_name _target_var
     for _entry in "${_env_map[@]}"; do
@@ -1609,7 +1612,17 @@ run_agent_process() {
     # Kill the process if it's still running
     if kill -0 "$agent_pid" 2>/dev/null; then
         if [[ "$got_result" != "true" ]]; then
-            log_warning "Agent timed out after ${AGENT_TIMEOUT}s, killing..."
+            local timeout_min=$((AGENT_TIMEOUT / 60))
+            local _timeout_item_id=""
+            _timeout_item_id=$(jq -r '.item.id // ""' "$BACKLOG_DIR/sprint.json" 2>/dev/null) || true
+            if [[ -n "$_timeout_item_id" ]]; then
+                log_error "Agent timeout after ${timeout_min} minutes for ${_timeout_item_id}"
+            else
+                log_error "Agent timeout after ${timeout_min} minutes for ${agent_label}"
+            fi
+            # Write TIMEOUT result so the sprint loop treats this as a countable failure
+            printf '{"status":"fail","reason":"TIMEOUT: agent exceeded %d-minute limit"}\n' "$timeout_min" \
+                > "$STATUS_DIR/result.json"
         fi
         if [[ "$has_setsid" == true ]]; then
             kill -TERM -- -"$agent_pid" 2>/dev/null || kill -TERM "$agent_pid" 2>/dev/null
@@ -2175,7 +2188,7 @@ cmd_auto() {
     local scope="${1:-}"
 
     if [[ -z "$scope" ]]; then
-        log_error "Usage: auto {done|p0|p1|p2} [--parallel N] [--limit N] [--retries N] [--max-failures N] [--no-merge] [--pr] [--refine] [--quick] [--warm-retry] [--category <name>] [--auto-review] [--no-summary] [--dry-run]"
+        log_error "Usage: auto {done|p0|p1|p2} [--parallel N] [--limit N] [--retries N] [--max-failures N] [--timeout N] [--no-merge] [--pr] [--refine] [--quick] [--warm-retry] [--category <name>] [--auto-review] [--no-summary] [--dry-run]"
         echo "" >&2
         echo "Scopes:" >&2
         echo "  done  Drain entire backlog to completion" >&2
@@ -2914,7 +2927,7 @@ cmd_run_parse_args() {
     parse_opts --positional \
         "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:create_pr:--pr" \
         "bool:refine_on_exhaust:--refine" "bool:quick_mode:--quick" "bool:warm_retry:--warm-retry" "bool:auto_review:--auto-review" "bool:no_summary:--no-summary" \
-        "val:auto_scope:--_auto" "val:category_filter:--category" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" "num:parallel_count:--parallel" \
+        "val:auto_scope:--_auto" "val:category_filter:--category" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" "num:parallel_count:--parallel" "num:timeout_minutes:--timeout" \
         -- "$@" || return 1
     [[ -n "$auto_scope" ]] && auto_mode=true
     local _arg
@@ -2940,6 +2953,12 @@ setup_sprint_environment() {
 
     # --quick disables maturity protocol for fast iteration
     [[ "$quick_mode" == "true" ]] && MATURITY_ENABLED="false"
+
+    # Apply timeout_minutes: CLI flag > env/config > default (0 = no override)
+    if [[ "${TIMEOUT_MINUTES:-0}" -gt 0 ]]; then
+        AGENT_TIMEOUT=$((TIMEOUT_MINUTES * 60))
+        log_info "Agent timeout set to ${TIMEOUT_MINUTES} minutes (${AGENT_TIMEOUT}s)"
+    fi
 
     # Config-driven warm retry (--warm-retry flag overrides)
     if [[ "$warm_retry" != "true" && "$WARM_RETRY" == "true" ]]; then
@@ -3864,8 +3883,14 @@ cmd_run() {
     local auto_mode=false auto_scope="" auto_priorities=""
     local auto_review=false max_consecutive_failures=""
     local category_filter="" session_limit="" no_summary=false parallel_count=""
+    local timeout_minutes=""
 
     cmd_run_parse_args "$@" || return $?
+
+    # --timeout N (minutes) overrides AGENT_TIMEOUT; config/env already loaded as TIMEOUT_MINUTES
+    if [[ -n "$timeout_minutes" ]]; then
+        TIMEOUT_MINUTES="$timeout_minutes"
+    fi
 
     if [[ "$dry_run" == "true" ]]; then
         _run_dry_run
@@ -5809,6 +5834,7 @@ cmd_config_check() {
         "models.primary|MODEL_PRIMARY|AISHORE_MODEL_PRIMARY|claude-opus-4-6"
         "models.fast|MODEL_FAST|AISHORE_MODEL_FAST|claude-sonnet-4-6"
         "agent.timeout|AGENT_TIMEOUT|AISHORE_AGENT_TIMEOUT|3600"
+        "timeout_minutes|TIMEOUT_MINUTES|AISHORE_TIMEOUT_MINUTES|0"
         "notifications.on_complete|NOTIFY_CMD|AISHORE_NOTIFY_CMD|"
         "notifications.system|NOTIFY_SYSTEM|AISHORE_NOTIFY|false"
         "auto.groom_threshold|AUTO_GROOM_THRESHOLD|AISHORE_AUTO_GROOM_THRESHOLD|3"

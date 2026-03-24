@@ -2221,6 +2221,33 @@
     "completedAt": "2026-03-21T08:52:37-07:00"
   },
   {
+    "id": "BUG-080",
+    "title": "Consolidate 6 separate jq calls in cmd_diagnose into one",
+    "intent": "cmd_diagnose makes 6 separate jq -r calls on the same JSON file to extract individual fields. Combine into a single jq invocation to reduce forks and lines.",
+    "description": "",
+    "priority": "could",
+    "category": null,
+    "steps": [
+      "Replace the 6 individual jq -r calls in cmd_diagnose with a single jq call that extracts all fields at once",
+      "Verify diagnose output is unchanged"
+    ],
+    "acceptanceCriteria": [
+      "cmd_diagnose has at most 1 jq call to extract fields from the diagnostics file",
+      "Output format is unchanged",
+      "shellcheck passes"
+    ],
+    "scope": [
+      ".aishore/**"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-21",
+    "groomedNotes": null,
+    "completedAt": "2026-03-21T11:31:15-07:00"
+  },
+  {
     "id": "BUG-081",
     "title": "backlog history title column always shows '-' — title not stored in archive",
     "intent": "backlog history shows real item titles. mark_complete archives the title field so history output is human-readable.",
@@ -2783,31 +2810,34 @@
     "groomedNotes": null
   },
   {
-    "id": "BUG-080",
-    "title": "Consolidate 6 separate jq calls in cmd_diagnose into one",
-    "intent": "cmd_diagnose makes 6 separate jq -r calls on the same JSON file to extract individual fields. Combine into a single jq invocation to reduce forks and lines.",
-    "description": "",
-    "priority": "could",
+    "id": "BUG-100",
+    "title": "auto silently skips items with missing or too-short intent — no feedback to user",
+    "intent": "When auto-pick bypasses items due to missing or insufficient intent, a warning must be logged identifying each skipped item by ID and stating the reason, so users can fix their backlog.",
+    "description": "pick_item silently skips items where intent is absent or under 20 characters. In an auto session with multiple unready items, the user sees no items processed and no explanation. This makes the intent gate invisible: users don't know why their backlog isn't draining. A targeted log_warn call when each item is bypassed for intent reasons closes the feedback loop.",
+    "priority": "must",
     "category": null,
     "steps": [
-      "Replace the 6 individual jq -r calls in cmd_diagnose with a single jq call that extracts all fields at once",
-      "Verify diagnose output is unchanged"
+      "In pick_item, when an item is rejected due to missing or too-short intent, emit: log_warn \"Skipping $id: intent missing or too short (9 chars, need >=20)\"",
+      "Verify the same path is covered in list_pickable_ids if that function also filters by intent",
+      "Run shellcheck and verify no new warnings"
     ],
     "acceptanceCriteria": [
-      "cmd_diagnose has at most 1 jq call to extract fields from the diagnostics file",
-      "Output format is unchanged",
-      "shellcheck passes"
+      "Running auto with items whose intent is absent or under 20 chars produces a warning line per skipped item identifying the ID and reason",
+      "Items with valid intent are still processed normally — no regression",
+      "shellcheck passes with zero new warnings"
     ],
-    "scope": [
-      ".aishore/**"
-    ],
+    "scope": [],
     "dependsOn": [],
     "status": "done",
     "passes": true,
     "readyForSprint": false,
+    "groomingNotes": "Core UX gap: the intent gate is a hard requirement but invisible when it fires. Users running auto sessions and seeing nothing processed have no way to diagnose why without reading source code. A single log_warn per bypassed item costs nothing and closes the feedback loop completely. Priority should is correct.",
     "groomedAt": "2026-03-21",
+    "lastFailReason": "Validator agent rejected implementation",
+    "lastFailAt": "2026-03-21T11:27:51-07:00",
+    "failCount": 1,
     "groomedNotes": null,
-    "completedAt": "2026-03-21T11:31:15-07:00"
+    "completedAt": "2026-03-23T20:45:48-07:00"
   },
   {
     "id": "BUG-101",
@@ -3569,5 +3599,39 @@
     "groomedAt": "2026-03-21",
     "completedAt": "2026-03-21T14:13:22-07:00",
     "groomedNotes": null
+  },
+  {
+    "id": "BUG-128",
+    "title": "Groom agents silently generate specs repeating known-bad patterns",
+    "intent": "Groom agents must receive proven successful spec examples from the archive alongside failure patterns so they generate specs modeled on what actually works — not just avoiding what failed.",
+    "description": "Groom agents receive failure patterns but no success patterns. Without positive examples, they may generate specs structurally similar to ones that already failed. In run_groom_flow, before invoking groom agents, extract the last 5 successful sprint entries from archive. Format as Specs That Worked with intent, AC, and attempt count. Inject alongside failure patterns.",
+    "priority": "must",
+    "category": "autonomous-mode",
+    "steps": [
+      "In run_groom_flow, before invoking groom agents, read last 5 successful entries from backlog/archive/sprints.jsonl",
+      "For each successful entry, look up the original item spec from archived backlogs to get intent and AC",
+      "Format as a Specs That Worked section with intent, AC count, and attempt count per item",
+      "Inject this section into the groom agent prompt alongside the existing failure patterns",
+      "When no archive data exists, omit the section entirely",
+      "Run shellcheck — zero new warnings"
+    ],
+    "acceptanceCriteria": [
+      "Groom agents receive a Specs That Worked section showing successful sprint patterns from the archive",
+      "Each pattern includes the original intent, AC count, and how many attempts it took",
+      "When the archive is empty or has no successes, the section is omitted without error",
+      "shellcheck passes with zero new warnings"
+    ],
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "dependsOn": [
+      "FEAT-041"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-23",
+    "groomingNotes": "Must priority confirmed. Completes the learning loop started by FEAT-041 — success patterns must reach groom agents, not just the auto session. Dependency on FEAT-041 is correct; sprint only after FEAT-041 passes.",
+    "completedAt": "2026-03-24T07:47:23-07:00"
   }
 ]
