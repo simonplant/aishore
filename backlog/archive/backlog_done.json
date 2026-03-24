@@ -1120,6 +1120,102 @@
     "groomedNotes": null
   },
   {
+    "id": "FEAT-038",
+    "title": "Per-item agent timeout — prevent hung auto sessions",
+    "intent": "Every agent invocation has a configurable wall-clock timeout so that a hung sprint terminates cleanly, is counted as a failure, and the session continues rather than blocking indefinitely.",
+    "description": "run_agent_process() has no timeout. If the claude CLI hangs (network issue, infinite loop in generated code, waiting for stdin), the entire auto session stalls forever. Users running overnight or CI jobs have no recovery path. A --timeout N flag (minutes) and a timeout_minutes config option wrap the agent call with timeout/gtimeout. On expiry the agent process is killed, the sprint is marked failed with a clear TIMEOUT reason, branch cleanup runs normally, and the session continues. Default 0 = no limit, preserving current behavior.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "Add --timeout N (integer, minutes) flag to cmd_run and cmd_auto; validate it is a non-negative integer",
+      "Add timeout_minutes key to config.yaml schema and load it in load_config; env var AISHORE_TIMEOUT_MINUTES",
+      "In run_agent_process, wrap the claude invocation with timeout (Linux) / gtimeout (macOS) when timeout_minutes > 0",
+      "On timeout exit code (124), log_error 'Agent timeout after N minutes for $id' and set result to fail with reason TIMEOUT",
+      "Ensure the feature branch cleanup path runs on timeout the same as any other failure",
+      "Run shellcheck, verify no new warnings"
+    ],
+    "acceptanceCriteria": [
+      "auto done --timeout 5 kills any agent running longer than 5 minutes and logs a timeout message with the item ID",
+      "Timed-out items are counted as failures for circuit-breaker and session failure tracking",
+      "timeout_minutes: 5 in config.yaml produces the same behaviour as --timeout 5",
+      "Default behaviour (no flag, no config) is unchanged — no timeout applied",
+      "shellcheck passes with zero new warnings"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-24",
+    "groomingNotes": "Steps are clear and implementable. The timeout/gtimeout wrapping pattern is well-understood. Exit code 124 detection is correct for both tools. Default 0=no limit cleanly preserves existing behavior. Config key and env var follow established patterns.",
+    "completedAt": "2026-03-24T08:36:10-07:00",
+    "resolved_at": "2026-03-24T15:41:16Z"
+  },
+  {
+    "id": "FEAT-039",
+    "title": "backlog edit --status — manual item status override",
+    "intent": "Users can mark any item done, skipped, or reset to todo from the CLI so that work resolved outside a sprint does not litter the active backlog and require JSON hacking.",
+    "description": "Items are sometimes resolved externally (manual fix, upstream change, decision not to implement). Currently the only way to mark an item done is to run a sprint. Users resort to editing JSON directly, which is fragile and bypasses validation. A --status flag on backlog edit allows clean status transitions: todo → done (externally resolved), todo → skip (won't do), done/skip → todo (re-open). The flag writes the updated status and sets a resolved_at timestamp when transitioning to done.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "Add --status <todo|done|skip> flag to cmd_backlog_edit; validate value is one of the three",
+      "When --status done is set, write status: done and resolved_at: <ISO date> to the item",
+      "When --status skip is set, write status: skip; when --status todo is set, clear resolved_at",
+      "Print a confirmation line showing the transition: 'FEAT-001: todo → done'",
+      "Run shellcheck, verify no new warnings"
+    ],
+    "acceptanceCriteria": [
+      "backlog edit FEAT-001 --status done marks the item done and sets resolved_at to today; backlog show reflects it",
+      "backlog edit FEAT-001 --status skip marks the item skipped; backlog list no longer shows it as active",
+      "backlog edit FEAT-001 --status todo resets status to todo and clears resolved_at",
+      "An invalid status value (e.g. --status wip) is rejected with a clear error and non-zero exit",
+      "shellcheck passes with zero new warnings"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-24",
+    "groomingNotes": "Steps are clear. Three-state transitions (todo/done/skip) are well-defined and non-overlapping. resolved_at timestamp on done transition provides audit trail without adding complexity. The confirmation print pattern follows existing CLI conventions.",
+    "completedAt": "2026-03-24T08:41:32-07:00"
+  },
+  {
+    "id": "FEAT-040",
+    "title": "aishore report — sprint activity summary for changelogs and standups",
+    "intent": "aishore report generates a formatted markdown summary of completed sprint work from the archive so teams can produce changelogs and standup notes without manually querying sprint history.",
+    "description": "After draining a backlog, users need to communicate what shipped. Currently they must read sprints.jsonl manually or piece together git log output. A report command reads backlog/archive/sprints.jsonl, groups completed items by date, and emits a markdown document with item ID, title, priority, and date. --since <YYYY-MM-DD> scopes the report. --output <file> writes to disk. The report is purely derived from the archive; no AI agent is needed.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "Add cmd_report() dispatched from cmd_backlog or as a top-level command; register in cmd_usage and help text",
+      "Read backlog/archive/sprints.jsonl and filter to status=complete records; apply --since filter if provided",
+      "Group records by date (YYYY-MM-DD) descending; within each date group items by priority (must → should → could)",
+      "Emit markdown: ## YYYY-MM-DD header per group, then bullet lines: - ID: Title (priority)",
+      "Support --output <path>: write output to file instead of stdout; print confirmation to stderr",
+      "Support --format json: emit raw JSON array of completed items instead of markdown (useful for piping)",
+      "Run shellcheck, verify no new warnings"
+    ],
+    "acceptanceCriteria": [
+      "aishore report prints a markdown summary of all completed items to stdout, grouped by date",
+      "aishore report --since 2026-03-01 limits output to items completed on or after 2026-03-01",
+      "aishore report --output SPRINT_NOTES.md writes the file and prints a confirmation line to stderr",
+      "aishore report --format json emits a JSON array of completed item records",
+      "An empty archive produces a graceful 'No completed items found' message rather than an error",
+      "aishore help mentions the report command",
+      "shellcheck passes with zero new warnings"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-24",
+    "groomingNotes": "Pure read-only derived output — no AI agent needed, low implementation risk. Steps cover all output paths: markdown grouping by date+priority, --since filter, --output file, --format json. Graceful empty-archive handling is explicitly specified. Dispatching as top-level or cmd_backlog subcommand should follow existing patterns.",
+    "completedAt": "2026-03-24T08:47:05-07:00"
+  },
+  {
     "id": "FEAT-041",
     "title": "Success pattern feedback to groom agents",
     "intent": "Groom agents must receive both failure AND success patterns from recent sprints so they can learn what spec structures produce clean first-attempt passes — not just what to avoid.",

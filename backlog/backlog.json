@@ -2,139 +2,6 @@
   "description": "Feature backlog - Product Owner owns priority",
   "items": [
     {
-      "id": "FEAT-038",
-      "title": "Per-item agent timeout — prevent hung auto sessions",
-      "intent": "Every agent invocation has a configurable wall-clock timeout so that a hung sprint terminates cleanly, is counted as a failure, and the session continues rather than blocking indefinitely.",
-      "description": "run_agent_process() has no timeout. If the claude CLI hangs (network issue, infinite loop in generated code, waiting for stdin), the entire auto session stalls forever. Users running overnight or CI jobs have no recovery path. A --timeout N flag (minutes) and a timeout_minutes config option wrap the agent call with timeout/gtimeout. On expiry the agent process is killed, the sprint is marked failed with a clear TIMEOUT reason, branch cleanup runs normally, and the session continues. Default 0 = no limit, preserving current behavior.",
-      "priority": "should",
-      "category": null,
-      "steps": [
-        "Add --timeout N (integer, minutes) flag to cmd_run and cmd_auto; validate it is a non-negative integer",
-        "Add timeout_minutes key to config.yaml schema and load it in load_config; env var AISHORE_TIMEOUT_MINUTES",
-        "In run_agent_process, wrap the claude invocation with timeout (Linux) / gtimeout (macOS) when timeout_minutes > 0",
-        "On timeout exit code (124), log_error 'Agent timeout after N minutes for $id' and set result to fail with reason TIMEOUT",
-        "Ensure the feature branch cleanup path runs on timeout the same as any other failure",
-        "Run shellcheck, verify no new warnings"
-      ],
-      "acceptanceCriteria": [
-        "auto done --timeout 5 kills any agent running longer than 5 minutes and logs a timeout message with the item ID",
-        "Timed-out items are counted as failures for circuit-breaker and session failure tracking",
-        "timeout_minutes: 5 in config.yaml produces the same behaviour as --timeout 5",
-        "Default behaviour (no flag, no config) is unchanged — no timeout applied",
-        "shellcheck passes with zero new warnings"
-      ],
-      "scope": [],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomedAt": "2026-03-24",
-      "groomingNotes": "Steps are clear and implementable. The timeout/gtimeout wrapping pattern is well-understood. Exit code 124 detection is correct for both tools. Default 0=no limit cleanly preserves existing behavior. Config key and env var follow established patterns.",
-      "completedAt": "2026-03-24T08:36:10-07:00",
-      "resolved_at": "2026-03-24T15:41:16Z"
-    },
-    {
-      "id": "FEAT-039",
-      "title": "backlog edit --status — manual item status override",
-      "intent": "Users can mark any item done, skipped, or reset to todo from the CLI so that work resolved outside a sprint does not litter the active backlog and require JSON hacking.",
-      "description": "Items are sometimes resolved externally (manual fix, upstream change, decision not to implement). Currently the only way to mark an item done is to run a sprint. Users resort to editing JSON directly, which is fragile and bypasses validation. A --status flag on backlog edit allows clean status transitions: todo → done (externally resolved), todo → skip (won't do), done/skip → todo (re-open). The flag writes the updated status and sets a resolved_at timestamp when transitioning to done.",
-      "priority": "should",
-      "category": null,
-      "steps": [
-        "Add --status <todo|done|skip> flag to cmd_backlog_edit; validate value is one of the three",
-        "When --status done is set, write status: done and resolved_at: <ISO date> to the item",
-        "When --status skip is set, write status: skip; when --status todo is set, clear resolved_at",
-        "Print a confirmation line showing the transition: 'FEAT-001: todo → done'",
-        "Run shellcheck, verify no new warnings"
-      ],
-      "acceptanceCriteria": [
-        "backlog edit FEAT-001 --status done marks the item done and sets resolved_at to today; backlog show reflects it",
-        "backlog edit FEAT-001 --status skip marks the item skipped; backlog list no longer shows it as active",
-        "backlog edit FEAT-001 --status todo resets status to todo and clears resolved_at",
-        "An invalid status value (e.g. --status wip) is rejected with a clear error and non-zero exit",
-        "shellcheck passes with zero new warnings"
-      ],
-      "scope": [],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomedAt": "2026-03-24",
-      "groomingNotes": "Steps are clear. Three-state transitions (todo/done/skip) are well-defined and non-overlapping. resolved_at timestamp on done transition provides audit trail without adding complexity. The confirmation print pattern follows existing CLI conventions.",
-      "completedAt": "2026-03-24T08:41:32-07:00"
-    },
-    {
-      "id": "FEAT-040",
-      "title": "aishore report — sprint activity summary for changelogs and standups",
-      "intent": "aishore report generates a formatted markdown summary of completed sprint work from the archive so teams can produce changelogs and standup notes without manually querying sprint history.",
-      "description": "After draining a backlog, users need to communicate what shipped. Currently they must read sprints.jsonl manually or piece together git log output. A report command reads backlog/archive/sprints.jsonl, groups completed items by date, and emits a markdown document with item ID, title, priority, and date. --since <YYYY-MM-DD> scopes the report. --output <file> writes to disk. The report is purely derived from the archive; no AI agent is needed.",
-      "priority": "should",
-      "category": null,
-      "steps": [
-        "Add cmd_report() dispatched from cmd_backlog or as a top-level command; register in cmd_usage and help text",
-        "Read backlog/archive/sprints.jsonl and filter to status=complete records; apply --since filter if provided",
-        "Group records by date (YYYY-MM-DD) descending; within each date group items by priority (must → should → could)",
-        "Emit markdown: ## YYYY-MM-DD header per group, then bullet lines: - ID: Title (priority)",
-        "Support --output <path>: write output to file instead of stdout; print confirmation to stderr",
-        "Support --format json: emit raw JSON array of completed items instead of markdown (useful for piping)",
-        "Run shellcheck, verify no new warnings"
-      ],
-      "acceptanceCriteria": [
-        "aishore report prints a markdown summary of all completed items to stdout, grouped by date",
-        "aishore report --since 2026-03-01 limits output to items completed on or after 2026-03-01",
-        "aishore report --output SPRINT_NOTES.md writes the file and prints a confirmation line to stderr",
-        "aishore report --format json emits a JSON array of completed item records",
-        "An empty archive produces a graceful 'No completed items found' message rather than an error",
-        "aishore help mentions the report command",
-        "shellcheck passes with zero new warnings"
-      ],
-      "scope": [],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomedAt": "2026-03-24",
-      "groomingNotes": "Pure read-only derived output — no AI agent needed, low implementation risk. Steps cover all output paths: markdown grouping by date+priority, --since filter, --output file, --format json. Graceful empty-archive handling is explicitly specified. Dispatching as top-level or cmd_backlog subcommand should follow existing patterns.",
-      "completedAt": "2026-03-24T08:47:05-07:00"
-    },
-    {
-      "id": "FEAT-044",
-      "title": "Cost tracking and budget controls for agent invocations",
-      "intent": "Every agent invocation must log token usage and estimated cost so users have visibility into spend per item and per session — and can set a budget cap to prevent runaway costs in auto mode.",
-      "description": "Capture token usage from claude CLI stderr after each agent invocation. Parse input/output tokens, estimate cost. Accumulate per-item and per-session totals. Add cost to session summary table. Add --budget flag to stop when limit is approached. Log token stats in archive entries.",
-      "priority": "could",
-      "category": "observability",
-      "steps": [
-        "In run_agent_process, capture stderr output from the claude CLI process alongside stdout",
-        "After agent completes, parse token usage from stderr looking for input_tokens and output_tokens patterns",
-        "Store per-invocation token counts and accumulate into item and session level variables",
-        "Compute estimated cost using hardcoded model pricing configurable via config.yaml",
-        "Add cost column to print_session_summary_table showing estimated cost",
-        "Add --budget dollars flag to cmd_run and cmd_auto; check accumulated cost before each sprint item",
-        "Add token fields to archive entry in mark_complete: tokens_in, tokens_out, est_cost",
-        "Run shellcheck — zero new warnings"
-      ],
-      "acceptanceCriteria": [
-        "Session summary table shows estimated cost for the session",
-        "Archive entries include token_in, token_out, and est_cost fields",
-        "The --budget flag stops auto mode when estimated cost approaches the limit with a clear message",
-        "When token usage cannot be parsed from stderr, the system continues without cost data",
-        "shellcheck passes with zero new warnings"
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
-      "groomedAt": "2026-03-23",
-      "groomingNotes": "Failed once ('Implementation failed'). Key risk: claude CLI stderr format for token usage. Implementation notes: (1) Capture stderr by redirecting to a temp file alongside the existing stdout capture — do NOT try to tee or interleave stderr with stdout as it will corrupt the completion contract polling. (2) After run_agent_process returns, read the temp stderr file and grep for patterns like 'input_tokens' and 'output_tokens' — the claude CLI JSON output in verbose mode includes these fields. (3) If the pattern is not found, set token counts to 0 and continue silently — the AC already covers this graceful degradation path. (4) Budget check must happen BEFORE pick_item selects the next sprint item, not mid-sprint — abort with a clear message and zero exit code. (5) Keep model pricing as simple bash variables, not a config schema change, unless config.yaml support is already scaffolded. PO note: the graceful degradation AC is the most important — cost data is a 'nice to have', but the system must never fail because token parsing failed. The budget cap is the second most critical for users running large auto sessions overnight.",
-      "lastFailReason": "Implementation failed",
-      "lastFailAt": "2026-03-24T08:02:50-07:00",
-      "failCount": 1
-    },
-    {
       "id": "FEAT-046",
       "title": "Archive-driven complexity estimation before item pick",
       "intent": "Before starting a sprint item, the orchestrator must consult historical archive data to estimate complexity and warn when an item resembles historically difficult work.",
@@ -164,7 +31,7 @@
       "passes": false,
       "readyForSprint": false,
       "groomedAt": null,
-      "groomingNotes": null
+      "groomingNotes": "Priority 'could' is correct — purely advisory, zero blocking behavior. User value: reduces surprise on hard items by surfacing historical difficulty before the sprint starts. AC are appropriately scoped (no hints when no data, no blocking). Implementation risk is low since it reads existing sprints.jsonl data. No dependency on other items. PO note: the complexity hint must never appear as an error or warning that implies the sprint should be skipped — it is informational only. Batch summary column is a nice addition but secondary to the pre-sprint hint."
     }
   ]
 }

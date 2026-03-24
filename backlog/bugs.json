@@ -42,7 +42,7 @@
       "failCount": 3,
       "groomedAt": "2026-03-21",
       "groomedNotes": null,
-      "groomingNotes": "Elevated to should so its dependent BUG-127 (refactor) can run in auto p1 mode. BUG-072 has failed twice — Tech Lead must review failure reasons before sprint. User value: unblocking BUG-127 (5000→4000 line reduction) makes the tool more maintainable and reduces future defect rate. PO accepts two-step sequencing: BUG-072 must land first."
+      "groomingNotes": "Elevated to should so its dependent BUG-127 (refactor) can run in auto p1 mode. BUG-072 has failed 3 times — Tech Lead must review failure reasons before sprint. User value: unblocking BUG-127 (5000→4000 line reduction) makes the tool more maintainable and reduces future defect rate. PO accepts two-step sequencing: BUG-072 must land first. PO concern: 3 failures is a signal the scope may be too broad or the AC too vague for an agent to verify reliably — Tech Lead should consider splitting or tightening the AC before the next attempt."
     },
     {
       "id": "BUG-127",
