@@ -41,7 +41,8 @@
       "lastFailAt": "2026-03-21T08:34:27-07:00",
       "failCount": 2,
       "groomedAt": "2026-03-21",
-      "groomedNotes": null
+      "groomedNotes": null,
+      "groomingNotes": null
     },
     {
       "id": "BUG-100",
@@ -108,7 +109,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": false,
+      "groomedAt": null,
+      "groomingNotes": null
     },
     {
       "id": "BUG-128",
@@ -139,7 +142,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true
+      "readyForSprint": true,
+      "groomedAt": "2026-03-23",
+      "groomingNotes": "Must priority confirmed. Completes the learning loop started by FEAT-041 — success patterns must reach groom agents, not just the auto session. Dependency on FEAT-041 is correct; sprint only after FEAT-041 passes."
     }
   ]
 }

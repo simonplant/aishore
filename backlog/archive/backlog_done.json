@@ -1118,5 +1118,39 @@
     "groomedAt": "2026-03-21",
     "completedAt": "2026-03-21T13:56:11-07:00",
     "groomedNotes": null
+  },
+  {
+    "id": "FEAT-049",
+    "title": "Archive-preserving clean and auto-clean during groom",
+    "intent": "The clean command must preserve full item specs in an archive file before removing them from active backlogs — and groom must auto-clean done items so active backlog files stay lean and groom agents receive focused context.",
+    "description": "Two gaps: (1) cmd_clean deletes done items via remove_items_by_status without saving the full item spec anywhere. sprints.jsonl has metadata but not intent, steps, or AC. If a user needs to reference a completed spec, it is gone. Fix: before removing, append each done item to backlog/archive/backlog_done.json or bugs_done.json. (2) Done items accumulate in active backlogs indefinitely, bloating files that groom agents read as context. Fix: at the start of run_groom_flow or auto-groom, call cmd_clean automatically to keep active backlogs lean. This is what happened manually when 161 done items were archived, dropping file size 90%.",
+    "priority": "must",
+    "category": "backlog-tooling",
+    "steps": [
+      "In cmd_clean, before calling remove_items_by_status for each file, extract done items with jq and append them to the corresponding archive file (backlog/archive/backlog_done.json or bugs_done.json)",
+      "If the archive file does not exist, create it as a JSON array; if it exists, merge the new items into the existing array",
+      "Ensure archive files are valid JSON after append by writing to a temp file and validating before moving",
+      "Add --no-archive flag to skip archiving if user explicitly wants destructive clean",
+      "In run_groom_flow and the auto-groom section of run_sprint_loop, call cmd_clean before invoking groom agents so active backlogs are lean",
+      "Ensure cmd_clean is safe to call when there are zero done items (no-op, no error)",
+      "Update aishore help text to mention that clean now archives by default",
+      "Run shellcheck — zero new warnings"
+    ],
+    "acceptanceCriteria": [
+      "aishore clean archives done items to backlog/archive/backlog_done.json and bugs_done.json before removing them from active backlogs",
+      "Archive files contain valid JSON arrays of full item objects with all fields preserved",
+      "Running clean twice does not duplicate items in the archive",
+      "aishore clean --no-archive deletes without archiving for backward compatibility",
+      "Groom auto-cleans done items before invoking groom agents so active backlogs stay lean",
+      "shellcheck passes with zero new warnings"
+    ],
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "completedAt": "2026-03-23T00:00:00-07:00"
   }
 ]

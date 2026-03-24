@@ -17,7 +17,6 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLI="$SCRIPT_DIR/.aishore/aishore"
-README="$SCRIPT_DIR/README.md"
 CLAUDE_MD="$SCRIPT_DIR/CLAUDE.md"
 
 RED='\033[0;31m'

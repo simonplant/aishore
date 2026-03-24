@@ -27,7 +27,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": false,
+      "groomedAt": "2026-03-23",
+      "groomingNotes": "Should priority confirmed. Hung sessions are a real CI/overnight pain point. Default 0 (no limit) correctly preserves current behavior. The gtimeout fallback for macOS is important — verify it works on both platforms in AC."
     },
     {
       "id": "FEAT-039",
@@ -54,7 +56,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": false,
+      "groomedAt": "2026-03-23",
+      "groomingNotes": "Should priority confirmed. Manual status override is a clear UX gap — users doing manual fixes or external resolutions shouldn't have to edit JSON. The resolved_at timestamp on done transitions is the right approach for audit trail. AC covers all valid transitions and the error case."
     },
     {
       "id": "FEAT-040",
@@ -85,7 +89,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": false,
+      "groomedAt": "2026-03-23",
+      "groomingNotes": "Should priority confirmed. Post-sprint reporting is a real need for teams and solo devs alike — changelogs and standups shouldn't require reading raw JSONL. Pure read-only derived output is the right design (no AI needed). --format json flag is good for piping into other tools."
     },
     {
       "id": "FEAT-041",
@@ -114,7 +120,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true
+      "readyForSprint": true,
+      "groomedAt": "2026-03-23",
+      "groomingNotes": "Critical foundation for both session-level and groom-level learning loops. Without success signal, groom agents are flying half-blind. Correct must priority — this unlocks BUG-128. Sprint order: FEAT-041 before BUG-128."
     },
     {
       "id": "FEAT-042",
@@ -145,7 +153,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true
+      "readyForSprint": true,
+      "groomedAt": "2026-03-23",
+      "groomingNotes": "Must priority confirmed. Targeted per-AC retry context directly reduces wasted developer cycles — agent gets told exactly which AC failed and where, not a vague failure blob. Structured output also unblocks future tooling on top of validation results."
     },
     {
       "id": "FEAT-043",
@@ -174,7 +184,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true
+      "readyForSprint": true,
+      "groomedAt": "2026-03-23",
+      "groomingNotes": "Should priority confirmed. Self-validation during harden phase is a quality multiplier — catches failures while context is hot rather than forcing a cold retry cycle. Especially valuable on items with 2+ ACs. Pair with FEAT-042 for best effect."
     },
     {
       "id": "FEAT-044",
@@ -206,7 +218,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true
+      "readyForSprint": true,
+      "groomedAt": "2026-03-23",
+      "groomingNotes": "Should priority confirmed. Cost visibility is a genuine user need for overnight and CI auto sessions — without it users have no idea what a backlog drain costs until the bill arrives. Budget cap AC is important; --budget flag should abort gracefully, not mid-sprint."
     },
     {
       "id": "FEAT-045",
@@ -239,7 +253,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": false,
+      "groomedAt": null,
+      "groomingNotes": null
     },
     {
       "id": "FEAT-046",
@@ -269,7 +285,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": false,
+      "groomedAt": null,
+      "groomingNotes": null
     },
     {
       "id": "FEAT-047",
@@ -300,7 +318,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true
+      "readyForSprint": true,
+      "groomedAt": "2026-03-23",
+      "groomingNotes": "Should priority confirmed. Hot-context retries directly improve fix accuracy by preserving codebase understanding across retry cycles. The research step in implementation is critical — verify claude CLI actually supports session continuation before building around it. Fallback-to-cold is the right safety net."
     },
     {
       "id": "FEAT-048",
@@ -329,41 +349,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true
-    },
-    {
-      "id": "FEAT-049",
-      "title": "Archive-preserving clean and auto-clean during groom",
-      "intent": "The clean command must preserve full item specs in an archive file before removing them from active backlogs — and groom must auto-clean done items so active backlog files stay lean and groom agents receive focused context.",
-      "description": "Two gaps: (1) cmd_clean deletes done items via remove_items_by_status without saving the full item spec anywhere. sprints.jsonl has metadata but not intent, steps, or AC. If a user needs to reference a completed spec, it is gone. Fix: before removing, append each done item to backlog/archive/backlog_done.json or bugs_done.json. (2) Done items accumulate in active backlogs indefinitely, bloating files that groom agents read as context. Fix: at the start of run_groom_flow or auto-groom, call cmd_clean automatically to keep active backlogs lean. This is what happened manually when 161 done items were archived, dropping file size 90%.",
-      "priority": "must",
-      "category": "backlog-tooling",
-      "steps": [
-        "In cmd_clean, before calling remove_items_by_status for each file, extract done items with jq and append them to the corresponding archive file (backlog/archive/backlog_done.json or bugs_done.json)",
-        "If the archive file does not exist, create it as a JSON array; if it exists, merge the new items into the existing array",
-        "Ensure archive files are valid JSON after append by writing to a temp file and validating before moving",
-        "Add --no-archive flag to skip archiving if user explicitly wants destructive clean",
-        "In run_groom_flow and the auto-groom section of run_sprint_loop, call cmd_clean before invoking groom agents so active backlogs are lean",
-        "Ensure cmd_clean is safe to call when there are zero done items (no-op, no error)",
-        "Update aishore help text to mention that clean now archives by default",
-        "Run shellcheck — zero new warnings"
-      ],
-      "acceptanceCriteria": [
-        "aishore clean archives done items to backlog/archive/backlog_done.json and bugs_done.json before removing them from active backlogs",
-        "Archive files contain valid JSON arrays of full item objects with all fields preserved",
-        "Running clean twice does not duplicate items in the archive",
-        "aishore clean --no-archive deletes without archiving for backward compatibility",
-        "Groom auto-cleans done items before invoking groom agents so active backlogs stay lean",
-        "shellcheck passes with zero new warnings"
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "completedAt": "2026-03-23T00:00:00-07:00"
+      "readyForSprint": true,
+      "groomedAt": "2026-03-23",
+      "groomingNotes": "Should priority confirmed. Scope violations caught after a full developer cycle are pure waste in strict mode. Injecting constraints upfront is a simple, high-leverage change. AC is user-outcome focused and correct."
     }
   ]
 }
