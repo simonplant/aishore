@@ -3441,10 +3441,60 @@ run_groom_flow() {
     snap_dir=$(mktemp -d)
     snapshot_backlog_files "$snap_dir"
 
+    # Build "Specs That Worked" section from archive so groom agents model proven patterns
+    local groom_success_feedback=""
+    local sprints_jsonl="$ARCHIVE_DIR/sprints.jsonl"
+    if [[ -f "$sprints_jsonl" && -s "$sprints_jsonl" ]]; then
+        # Extract last 5 completed entries: itemId, attempts, title
+        local recent_success_items
+        recent_success_items=$(jq -rs '
+            [.[] | select(.status == "complete")] |
+            last(5) |
+            .[] |
+            "\(.itemId)\t\(.attempts // 1)\t\(.title // "")"
+        ' "$sprints_jsonl" 2>/dev/null || true)
+
+        if [[ -n "$recent_success_items" ]]; then
+            # Build feedback by looking up intent + AC count in archived done files
+            local success_lines=""
+            while IFS=$'\t' read -r s_id s_attempts s_title; do
+                [[ -z "$s_id" ]] && continue
+                # Look up full spec in archived done backlogs
+                local s_intent="" s_ac_count=""
+                for done_file in "$ARCHIVE_DIR/backlog_done.json" "$ARCHIVE_DIR/bugs_done.json"; do
+                    [[ -f "$done_file" ]] || continue
+                    local found
+                    found=$(jq -r --arg id "$s_id" '
+                        .[] | select(.id == $id) |
+                        "\(.intent // "")\t\(.acceptanceCriteria | length)"
+                    ' "$done_file" 2>/dev/null | head -1 || true)
+                    if [[ -n "$found" ]]; then
+                        s_intent=$(printf '%s' "$found" | cut -f1)
+                        s_ac_count=$(printf '%s' "$found" | cut -f2)
+                        break
+                    fi
+                done
+                # Compose entry — omit if no useful data
+                if [[ -n "$s_intent" ]]; then
+                    local entry="- **$s_id** (${s_ac_count:-?} ACs, ${s_attempts} attempt(s)): $s_title"$'\n'"  Intent: $s_intent"
+                else
+                    local entry="- **$s_id** (${s_attempts} attempt(s)): ${s_title:-no title}"
+                fi
+                success_lines="${success_lines:+$success_lines$'\n'}$entry"
+            done <<< "$recent_success_items"
+
+            if [[ -n "$success_lines" ]]; then
+                groom_success_feedback="## Specs That Worked
+Model new specs on these recently completed items — their structure passed implementation and validation:
+$success_lines"
+            fi
+        fi
+    fi
+
     log_info "Running $agent agent..."
     echo ""
 
-    GROOM_MONITOR=true run_agent "$agent" "$mode" "$MODEL_FAST" "$_gf_ctx_name"
+    GROOM_MONITOR=true run_agent "$agent" "$mode" "$MODEL_FAST" "$_gf_ctx_name" "" "$groom_success_feedback"
     GROOM_MONITOR=
 
     protect_items_from_groom "$snap_dir"
