@@ -6,41 +6,42 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   shellcheck:
     name: Shellcheck
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
-      - name: Run ShellCheck on aishore CLI
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: '.aishore'
-          severity: warning
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
 
-      - name: Run ShellCheck on install.sh
-        run: shellcheck -S warning install.sh
-
-      - name: Run ShellCheck on scripts
-        run: shellcheck -S warning scripts/*.sh
+      - name: Run ShellCheck
+        run: shellcheck -S warning .aishore/aishore install.sh scripts/*.sh
 
   test:
     name: Basic Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
+        run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Check script is executable
         run: test -x .aishore/aishore
 
-      - name: Syntax check install.sh
-        run: bash -n install.sh
+      - name: Syntax check
+        run: bash -n install.sh && bash -n scripts/check-drift.sh
 
       - name: Test metrics command
         run: .aishore/aishore metrics
@@ -48,8 +49,9 @@ jobs:
   macos:
     name: macOS Compatibility
     runs-on: macos-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Install dependencies
         run: brew install jq coreutils
@@ -59,3 +61,6 @@ jobs:
 
       - name: Test version command
         run: .aishore/aishore version
+
+      - name: Test metrics command
+        run: .aishore/aishore metrics
