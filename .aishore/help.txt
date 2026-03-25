@@ -20,21 +20,19 @@ Commands:
     --priority <p>  must, should, could, or future (default: should)
     --category "."  Category
     --ready         Mark as ready for sprint
-    --ac "text"     Add acceptance criterion (repeatable)
+    --ac "text"     Acceptance criterion (repeatable, replaces all AC)
     --ac-verify "cmd"  Attach verify command to preceding --ac
-    --step "text"   Add implementation step (repeatable, ordered)
-    --scope "glob"  Add scope glob (repeatable)
-    --depends-on ID Add dependency on another item (repeatable)
+    --steps "text"  Implementation step (repeatable, replaces all steps)
+    --scope "glob"  Scope glob (repeatable, replaces all scope)
+    --depends-on ID Dependency (repeatable, replaces all deps)
   backlog show <ID> Show full detail of one item
   backlog edit <ID> Update fields on an item
     --title, --intent, --desc, --priority, --status, --category, --ready, --no-ready,
     --groomed-at [date], --groomed-notes "...",
-    --step "text"   Append implementation step (repeatable), --clear-steps to reset,
-    --remove-step N Remove step by 1-based index,
-    --scope "glob"  Add scope glob (repeatable), --clear-scope to reset,
-    --ac "text", --ac-verify "cmd"  Append testable acceptance criteria, --clear-ac to reset,
-    --remove-ac N   Remove acceptance criterion by 1-based index,
-    --depends-on ID  Add dependency (repeatable), --clear-depends-on to reset
+    --steps "text"  Set implementation steps (repeatable, replaces all steps),
+    --scope "glob"  Set scope globs (repeatable, replaces all scope),
+    --ac "text", --ac-verify "cmd"  Set acceptance criteria (repeatable, replaces all AC),
+    --depends-on ID  Set dependencies (repeatable, replaces all deps)
   backlog check <ID> Check readiness gates (title, intent, steps, AC, step length)
     --all           Audit every non-done item and print a summary table
   backlog rm <ID>   Remove an item (with confirmation)
