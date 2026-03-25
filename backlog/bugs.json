@@ -36,13 +36,13 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true,
+      "readyForSprint": false,
       "lastFailReason": "Implementation failed",
       "lastFailAt": "2026-03-24T08:51:22-07:00",
       "failCount": 3,
-      "groomedAt": "2026-03-21",
+      "groomedAt": "2026-03-24",
       "groomedNotes": null,
-      "groomingNotes": "Elevated to should so its dependent BUG-127 (refactor) can run in auto p1 mode. BUG-072 has failed 3 times — Tech Lead must review failure reasons before sprint. User value: unblocking BUG-127 (5000→4000 line reduction) makes the tool more maintainable and reduces future defect rate. PO accepts two-step sequencing: BUG-072 must land first. PO concern: 3 failures is a signal the scope may be too broad or the AC too vague for an agent to verify reliably — Tech Lead should consider splitting or tightening the AC before the next attempt."
+      "groomingNotes": "Tech Lead review after 3 failures. Assessment: spec is stale. Three specific steps are already implemented in current codebase — mark_complete already uses a single jq call (line 1430, comment 'single jq call'), cmd_diagnose already uses jq -j for all 6 fields (lines 5837-5842), enforce_groom_limits already returns id+priority in one jq call (line 4026). Script is now 6090 lines (was 5282 when spec written). Remaining work is real but the spec needs to be rewritten to target only what remains: (1) 62 instances of '2>/dev/null || true' on jq calls — need to identify which are on locally-constructed JSON vs external files; (2) ~5 truly redundant terminal return 0 (most are early-return guards, not terminal); (3) inline single-use variables; (4) collapse verbose multi-line error blocks. The broad multi-category scope across a 6000-line file with subjective AC is why this keeps failing — the developer cannot reliably determine 'input JSON was constructed in the same function' without reading the entire script. Recommendation: rewrite spec with specific line numbers or function names for each change, or split into 3 focused items targeting one change type each. Do not sprint until spec is refreshed."
     },
     {
       "id": "BUG-127",
@@ -82,7 +82,7 @@
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-24",
-      "groomingNotes": "Depends on BUG-072 (must run first). Steps are defensively written: baseline capture before any changes, output-diff verification enforces zero regressions. The constraint 'do NOT remove guards from prior bug fixes' is explicit. Dry-run sprint verification at the end is the right final gate. BUG-072 must complete first."
+      "groomingNotes": "Depends on BUG-072 (must run first). BUG-072 has been marked not-ready pending spec refresh — BUG-127 remains blocked. Steps are defensively written with baseline capture and output-diff verification. Once BUG-072 is specced and passing, this item is ready to sprint. No changes needed to BUG-127's own spec."
     }
   ]
 }
