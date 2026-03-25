@@ -32,6 +32,410 @@
       "readyForSprint": false,
       "groomedAt": null,
       "groomingNotes": "Priority 'could' is correct — purely advisory, zero blocking behavior. User value: reduces surprise on hard items by surfacing historical difficulty before the sprint starts. AC are appropriately scoped (no hints when no data, no blocking). Implementation risk is low since it reads existing sprints.jsonl data. No dependency on other items. PO note: the complexity hint must never appear as an error or warning that implies the sprint should be skipped — it is informational only. Batch summary column is a nice addition but secondary to the pre-sprint hint."
+    },
+    {
+      "id": "FEAT-049",
+      "title": "Add module loader infrastructure",
+      "intent": "Establish the lazy-loading mechanism so subsequent items can extract commands to .aishore/lib/*.sh modules without changing any behavior",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Add declare -A _LOADED_MODULES and _load_module function after UTILITIES header",
+        "Create empty .aishore/lib/ directory",
+        "No dispatch changes yet — pure infrastructure"
+      ],
+      "acceptanceCriteria": [
+        "bash -n .aishore/aishore passes",
+        "All existing commands still work identically",
+        "_load_module function exists and can source a file from lib/"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/**"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Steps are clear and mechanical. Infrastructure-only: add declare -A _LOADED_MODULES and _load_module() after the UTILITIES header (line 414), create empty .aishore/lib/ directory. No dispatch changes. AC are testable: bash -n passes, existing commands still work, _load_module exists. No dependencies. Safe to sprint — zero risk of regressions since it's purely additive.",
+      "groomedAt": "2026-03-24"
+    },
+    {
+      "id": "FEAT-050",
+      "title": "Extract cmd-diagnose to module",
+      "intent": "First extraction — prove the lazy-load pattern works on the simplest most isolated command (56 lines, zero deps beyond globals)",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Create .aishore/lib/cmd-diagnose.sh with cmd_diagnose function",
+        "Remove cmd_diagnose from main script",
+        "Update main() dispatch to use _load_module cmd-diagnose"
+      ],
+      "acceptanceCriteria": [
+        "bash -n on both files passes",
+        "aishore diagnose works",
+        "aishore run --dry-run still works"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-diagnose.sh"
+      ],
+      "dependsOn": [
+        "FEAT-049"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-051",
+      "title": "Extract cmd-config to module",
+      "intent": "Extract cmd_config_check (154 lines) to lazy-loaded module — isolated, only reads config",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Create .aishore/lib/cmd-config.sh with cmd_config_check",
+        "Remove function and section header from main script",
+        "Update main() dispatch config case to use _load_module"
+      ],
+      "acceptanceCriteria": [
+        "bash -n on both files passes",
+        "aishore config check shows effective values"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-config.sh"
+      ],
+      "dependsOn": [
+        "FEAT-049"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-052",
+      "title": "Extract cmd-review to module",
+      "intent": "Extract cmd_review (56 lines) — calls run_agent and _build_groom_context which stay in core",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Create .aishore/lib/cmd-review.sh with cmd_review",
+        "Remove from main script and update dispatch"
+      ],
+      "acceptanceCriteria": [
+        "bash -n on both files passes",
+        "aishore review invokes architect agent"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-review.sh"
+      ],
+      "dependsOn": [
+        "FEAT-049"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-053",
+      "title": "Extract cmd-report and cmd-metrics to module",
+      "intent": "Bundle both reporting commands into one module — _compute_metrics_json (46 lines), cmd_metrics (60 lines), cmd_report (52 lines) — they read the same sprints.jsonl",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Create .aishore/lib/cmd-report.sh with _compute_metrics_json, cmd_metrics, cmd_report",
+        "Remove all three from main script",
+        "Update dispatch for both metrics and report commands"
+      ],
+      "acceptanceCriteria": [
+        "bash -n on both files passes",
+        "aishore metrics and aishore metrics --json work",
+        "aishore report and aishore report --since work"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-report.sh"
+      ],
+      "dependsOn": [
+        "FEAT-049"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-054",
+      "title": "Extract cmd-status to module",
+      "intent": "Extract status dashboard — _status_output (88 lines) and cmd_status (38 lines) — to lazy-loaded module",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Create .aishore/lib/cmd-status.sh with _status_output and cmd_status",
+        "Remove both from main script and update dispatch"
+      ],
+      "acceptanceCriteria": [
+        "bash -n on both files passes",
+        "aishore status shows backlog overview",
+        "aishore status --watch enters live refresh"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-status.sh"
+      ],
+      "dependsOn": [
+        "FEAT-049"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-055",
+      "title": "Extract cmd-groom entry to module",
+      "intent": "Extract only cmd_groom (33 lines) and print_groom_summary (13 lines) — all groom helpers MUST stay in core because sprint loop auto-groom calls them directly",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Create .aishore/lib/cmd-groom.sh with cmd_groom and print_groom_summary only",
+        "Remove both from main script and update dispatch",
+        "Verify run_groom_flow, protect_items_from_groom, enforce_groom_limits etc remain in core"
+      ],
+      "acceptanceCriteria": [
+        "bash -n on both files passes",
+        "aishore groom --backlog works",
+        "aishore auto done --dry-run still shows auto-groom capability"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-groom.sh"
+      ],
+      "dependsOn": [
+        "FEAT-049"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-056",
+      "title": "Extract cmd-backlog-write to module",
+      "intent": "Extract the three write-heavy backlog commands (add 133, edit 191, populate 96 lines) to lazy-loaded module — read commands (list, show, check, rm, history) stay in core",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Create .aishore/lib/cmd-backlog-write.sh with cmd_backlog_add, cmd_backlog_edit, cmd_backlog_populate",
+        "Remove all three from main script",
+        "Update cmd_backlog() router to _load_module for add, edit, populate subcommands",
+        "Verify list, show, check, rm, history still work without loading module"
+      ],
+      "acceptanceCriteria": [
+        "bash -n on both files passes",
+        "aishore backlog add --title test --type feat creates item",
+        "aishore backlog edit ID --ready works",
+        "aishore backlog list works without loading module"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-backlog-write.sh"
+      ],
+      "dependsOn": [
+        "FEAT-049"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-057",
+      "title": "Extract cmd-init to module",
+      "intent": "Extract setup wizard and its three helpers (_init_check_prereqs 29, _init_detect_project 99, _init_scaffold_files 118, cmd_init 79 lines) to lazy-loaded module",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Create .aishore/lib/cmd-init.sh with all four functions",
+        "Remove all four from main script and update dispatch"
+      ],
+      "acceptanceCriteria": [
+        "bash -n on both files passes",
+        "aishore init -y works in a temp directory"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-init.sh"
+      ],
+      "dependsOn": [
+        "FEAT-049"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-058",
+      "title": "Extract cmd-update to module",
+      "intent": "Extract self-update (cmd_update 188 lines with nested _fetch_and_stage) and cmd_checksums (42 lines) — update cmd_checksums to also glob .aishore/lib/*.sh files",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Create .aishore/lib/cmd-update.sh with cmd_update and cmd_checksums",
+        "Add lib/*.sh glob to the distributable list in cmd_checksums",
+        "Remove both from main script and update dispatch"
+      ],
+      "acceptanceCriteria": [
+        "bash -n on both files passes",
+        "aishore update --dry-run works",
+        "aishore checksums includes lib/*.sh files in output"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-update.sh"
+      ],
+      "dependsOn": [
+        "FEAT-049"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-059",
+      "title": "Finalize modularization — checksums, docs, version",
+      "intent": "Regenerate checksums with all new lib files included, update CLAUDE.md architecture section to document module layout, bump version",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Run aishore checksums to regenerate with lib/*.sh included",
+        "Update CLAUDE.md architecture section to document module layout and lib/ directory",
+        "Update help.txt if any command names changed",
+        "Bump version (patch)",
+        "Full smoke test of every command"
+      ],
+      "acceptanceCriteria": [
+        "aishore checksums includes all lib/*.sh files",
+        "CLAUDE.md documents the module structure",
+        "Every command works: help, version, run --dry-run, auto done --dry-run, backlog list, backlog show, backlog add, status, groom, review, report, metrics, diagnose, config check, update --dry-run, init -y",
+        "wc -l .aishore/aishore is approximately 4500 lines (down from 6090)"
+      ],
+      "scope": [
+        ".aishore/**",
+        "CLAUDE.md"
+      ],
+      "dependsOn": [
+        "FEAT-050",
+        "FEAT-051",
+        "FEAT-052",
+        "FEAT-053",
+        "FEAT-054",
+        "FEAT-055",
+        "FEAT-056",
+        "FEAT-057",
+        "FEAT-058"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-060",
+      "title": "Merge metrics into report command",
+      "intent": "Reduce command surface — add --metrics flag to cmd_report, remove standalone cmd_metrics, one less command for users to discover",
+      "description": "",
+      "priority": "could",
+      "category": "simplify",
+      "steps": [
+        "Add --metrics flag to cmd_report",
+        "Move _compute_metrics_json display logic into cmd_report --metrics branch",
+        "Remove cmd_metrics function and metrics dispatch entry",
+        "Update help.txt"
+      ],
+      "acceptanceCriteria": [
+        "aishore report --metrics produces same output as old aishore metrics",
+        "aishore report --metrics --json works",
+        "aishore metrics is no longer a valid command"
+      ],
+      "scope": [
+        ".aishore/lib/cmd-report.sh",
+        ".aishore/aishore"
+      ],
+      "dependsOn": [
+        "FEAT-059"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-061",
+      "title": "Merge diagnose into status command",
+      "intent": "Reduce command surface — show last-failure info at the bottom of status output, remove standalone diagnose command",
+      "description": "",
+      "priority": "could",
+      "category": "simplify",
+      "steps": [
+        "Move cmd_diagnose body into a _diagnose_section helper",
+        "Call _diagnose_section from _status_output",
+        "Remove cmd_diagnose function and diagnose dispatch entry",
+        "Update help.txt"
+      ],
+      "acceptanceCriteria": [
+        "aishore status shows last failure details at the bottom",
+        "aishore diagnose is no longer a valid command"
+      ],
+      "scope": [
+        ".aishore/lib/cmd-status.sh",
+        ".aishore/lib/cmd-diagnose.sh",
+        ".aishore/aishore"
+      ],
+      "dependsOn": [
+        "FEAT-059"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-062",
+      "title": "Clean up minor flags",
+      "intent": "Remove low-value flags that add surface area without meaningful capability — --no-summary (always show), --interval on status (hardcode 30s), --no-archive on clean (always archive), --check alias on update (just use --dry-run)",
+      "description": "",
+      "priority": "could",
+      "category": "simplify",
+      "steps": [
+        "Remove --no-summary flag from run/auto parse_opts and conditional",
+        "Remove --interval flag from status, hardcode 30s",
+        "Remove --no-archive flag from clean, always archive",
+        "Remove --check alias from update (keep --dry-run)",
+        "Update help.txt"
+      ],
+      "acceptanceCriteria": [
+        "All four flags are gone from the codebase",
+        "Summary always shows after sprint session",
+        "Status --watch refreshes at 30s"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-update.sh",
+        ".aishore/lib/cmd-status.sh"
+      ],
+      "dependsOn": [
+        "FEAT-059"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
     }
   ]
 }
