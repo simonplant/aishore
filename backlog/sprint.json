@@ -1,30 +1,31 @@
 {
-  "sprintId": "sprint-1774454538",
-  "startedAt": "2026-03-25T09:02:18-07:00",
+  "sprintId": "sprint-1774478409",
+  "startedAt": "2026-03-25T15:40:09-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-071",
-    "title": "Move session tuning flags to config defaults",
-    "intent": "Flags like max-failures, warm-retry, auto-review, no-summary are session preferences — hide from default help, document as config-first with flag override",
+    "id": "FEAT-056",
+    "title": "Extract cmd-config to module",
+    "intent": "Extract cmd_config_check (154 lines) to lazy-loaded module — isolated, only reads config",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Verify all session flags have config.yaml equivalents",
-      "Remove session flags from default help, keep in help --full",
-      "Make the pr flag imply no-merge automatically"
+      "Create .aishore/lib/cmd-config.sh with extracted functions",
+      "Remove functions from main script",
+      "Update dispatch to use _load_module"
     ],
     "acceptanceCriteria": [
-      "Default help for run shows only essential flags",
-      "Session tuning flags still work as CLI overrides"
+      "bash -n on both files passes",
+      "Command works via lazy-load",
+      "Core commands (run, backlog list) unaffected"
     ],
     "scope": [
       ".aishore/aishore",
-      ".aishore/help.txt"
+      ".aishore/lib/cmd-config.sh"
     ],
-    "startedAt": "2026-03-25T09:02:18-07:00",
+    "startedAt": "2026-03-25T15:40:09-07:00",
     "status": "passed",
-    "completedAt": "2026-03-25T09:08:22-07:00"
+    "completedAt": "2026-03-25T15:43:20-07:00"
   },
-  "completedAt": "2026-03-25T09:08:22-07:00",
+  "completedAt": "2026-03-25T15:43:20-07:00",
   "attempts": 1
 }
