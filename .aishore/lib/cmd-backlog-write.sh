@@ -4,7 +4,8 @@
 # PROJECT_ROOT, jq, log_*, parse_opts, validate_arg, validate_priority, validate_status,
 # next_id, add_item, update_item, find_item, resolve_backlog_file, _build_ac_json,
 # check_readiness_gates, acquire_lock, load_config, _find_prd, snapshot_backlog_files,
-# restore_backlog_files, run_groom_flow, collect_done_ids) come from the main script.
+# restore_backlog_files, collect_done_ids) come from the main script.
+# run_groom_flow comes from cmd-groom module (loaded via _load_module cmd-groom).
 # Read commands (list, show, check, rm, history) remain in core.
 
 cmd_backlog_populate() {
@@ -18,6 +19,7 @@ cmd_backlog_populate() {
 
     acquire_lock
     load_config
+    _load_module cmd-groom
     cd "$PROJECT_ROOT"
 
     log_header "Product Owner: Populate Backlog"

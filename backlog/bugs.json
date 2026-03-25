@@ -197,11 +197,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Expanding an existing module rather than creating a new one — append-only operation. cmd-groom.sh is currently only 48 lines; all groom logic should live there. Dispatch likely already loads the module. AC: bash -n passes, groom flow is reachable.",
-      "groomedAt": "2026-03-25"
+      "groomedAt": "2026-03-25",
+      "completedAt": "2026-03-25T16:34:38-07:00"
     }
   ]
 }
