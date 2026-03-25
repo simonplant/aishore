@@ -31,11 +31,12 @@
         "FEAT-067",
         "FEAT-070"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-24",
-      "groomingNotes": "FEAT-067 trace complete: Agent backlog-edit usage is limited to scalar flags (--priority, --ready, --groomed-at, --groomed-notes) and --depends-on. No agent uses --step/--ac/--scope/--clear-*/--remove-* via backlog edit. The replace-array semantics proposed by FEAT-051 are fully compatible — no blockers. Only the architect uses --depends-on (already passes full list in one call). See FEAT-067 commit for full trace."
+      "groomingNotes": "FEAT-067 trace complete: Agent backlog-edit usage is limited to scalar flags (--priority, --ready, --groomed-at, --groomed-notes) and --depends-on. No agent uses --step/--ac/--scope/--clear-*/--remove-* via backlog edit. The replace-array semantics proposed by FEAT-051 are fully compatible — no blockers. Only the architect uses --depends-on (already passes full list in one call). See FEAT-067 commit for full trace.",
+      "completedAt": "2026-03-24T21:50:36-07:00"
     },
     {
       "id": "FEAT-052",

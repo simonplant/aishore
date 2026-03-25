@@ -5347,16 +5347,16 @@ cmd_backlog_list() {
 
 cmd_backlog_add() {
     local item_type="feat" title="" intent="" desc="" priority="should" category="" ready=false
-    local depends_on=""
     local -a ac_entries=()
     local -a step_entries=()
     local -a scope_entries=()
+    local -a depends_entries=()
 
     parse_opts \
         "val:item_type:--type" "val:title:--title" "val:intent:--intent" \
         "val:desc:--desc" "val:priority:--priority" "val:category:--category" \
-        "bool:ready:--ready" "val:depends_on:--depends-on" \
-        "arr:step_entries:--step" "arr:scope_entries:--scope" \
+        "bool:ready:--ready" "arr:depends_entries:--depends-on" \
+        "arr:step_entries:--steps|--step" "arr:scope_entries:--scope" \
         "passval:--ac" "passval:--ac-verify" \
         -- "$@" || return 1
 
@@ -5428,10 +5428,17 @@ cmd_backlog_add() {
         scope_json=$(printf '%s\n' "${scope_entries[@]}" | jq -R . | jq -s .)
     fi
 
-    # Build dependsOn array
+    # Build dependsOn array (expand comma-separated entries for compat)
     local depends_json="[]"
-    if [[ -n "$depends_on" ]]; then
-        depends_json=$(_to_json_array "$depends_on")
+    if [[ ${#depends_entries[@]} -gt 0 ]]; then
+        local -a expanded_deps=()
+        local _dep_entry
+        for _dep_entry in "${depends_entries[@]}"; do
+            while IFS= read -r _dep; do
+                [[ -n "$_dep" ]] && expanded_deps+=("$_dep")
+            done < <(printf '%s\n' "$_dep_entry" | tr ',' '\n')
+        done
+        depends_json=$(printf '%s\n' "${expanded_deps[@]}" | jq -R . | jq -s .)
     fi
 
     # Create item and append
@@ -5516,7 +5523,7 @@ cmd_backlog_show() {
 
 cmd_backlog_edit() {
     local id="${1:-}"
-    [[ -z "$id" ]] && { log_error "Usage: backlog edit <ID> [--title ...] [--intent ...] [--priority ...] [--status ...] [--desc ...] [--category ...] [--depends-on ...] [--clear-depends-on] [--ready] [--no-ready] [--step ...] [--clear-steps] [--remove-step N] [--scope ...] [--clear-scope] [--ac ...] [--ac-verify ...] [--clear-ac] [--remove-ac N] [--groomed-at ...] [--groomed-notes ...]"; return 1; }
+    [[ -z "$id" ]] && { log_error "Usage: backlog edit <ID> [--title ...] [--intent ...] [--priority ...] [--status ...] [--desc ...] [--category ...] [--steps ...] [--ac ...] [--ac-verify ...] [--scope ...] [--depends-on ...] [--ready] [--no-ready] [--groomed-at ...] [--groomed-notes ...]"; return 1; }
     shift
 
     # Verify item exists
@@ -5527,19 +5534,17 @@ cmd_backlog_edit() {
 
     # Parse update flags
     local _e_title="" _e_intent="" _e_desc="" _e_priority="" _e_status="" _e_category="" _e_gnotes=""
-    local _e_ready=false _e_no_ready=false _e_remove_step="" _e_remove_ac=""
-    local _e_clear_scope=false _e_clear_steps=false _e_clear_deps=false _e_clear_ac=false
-    local -a scope_vals=() step_vals=() ac_entries=()
+    local _e_ready=false _e_no_ready=false
+    local -a scope_vals=() step_vals=() ac_entries=() deps_vals=()
 
     parse_opts \
         "val:_e_title:--title" "val:_e_intent:--intent" "val:_e_desc:--desc" \
         "val:_e_priority:--priority" "val:_e_status:--status" "val:_e_category:--category" \
-        "val:_e_gnotes:--groomed-notes" "val:_e_remove_step:--remove-step" "val:_e_remove_ac:--remove-ac" \
+        "val:_e_gnotes:--groomed-notes" \
         "bool:_e_ready:--ready" "bool:_e_no_ready:--no-ready" \
-        "bool:_e_clear_scope:--clear-scope" "bool:_e_clear_steps:--clear-steps" \
-        "bool:_e_clear_deps:--clear-depends-on" "bool:_e_clear_ac:--clear-ac" \
-        "arr:scope_vals:--scope" "arr:step_vals:--step" \
-        "passval:--ac" "passval:--ac-verify" "passval:--depends-on" "passval:--groomed-at" \
+        "arr:scope_vals:--scope" "arr:step_vals:--steps|--step" \
+        "arr:deps_vals:--depends-on" \
+        "passval:--ac" "passval:--ac-verify" "passval:--groomed-at" \
         -- "$@" || return 1
 
     # Build jq updates from parsed values
@@ -5567,51 +5572,7 @@ cmd_backlog_edit() {
     [[ -n "$_e_gnotes" ]] && { jq_updates+=" | .groomingNotes = \$gnotes"; updates+=("--arg" "gnotes" "$_e_gnotes"); }
     [[ "$_e_ready" == "true" ]] && { jq_updates+=" | .readyForSprint = true"; setting_ready=true; }
     [[ "$_e_no_ready" == "true" ]] && jq_updates+=" | .readyForSprint = false"
-    [[ "$_e_clear_scope" == "true" ]] && jq_updates+=" | .scope = []"
-    [[ "$_e_clear_steps" == "true" ]] && jq_updates+=" | .steps = []"
-    [[ "$_e_clear_deps" == "true" ]] && jq_updates+=" | .dependsOn = []"
-    [[ "$_e_clear_ac" == "true" ]] && jq_updates+=" | .acceptanceCriteria = []"
-
-    # --remove-step N: validate and remove a single step by 1-based index
-    if [[ -n "$_e_remove_step" ]]; then
-        if ! [[ "$_e_remove_step" =~ ^[0-9]+$ ]] || [[ "$_e_remove_step" -lt 1 ]]; then
-            log_error "--remove-step requires a positive integer (got '$_e_remove_step')"
-            return 1
-        fi
-        local step_count
-        step_count=$(jq --arg id "$id" \
-            '[.items[] | select(.id == $id)][0].steps | length' \
-            "$BACKLOG_DIR/$file") || { log_error "Failed to read steps for $id"; return 1; }
-        if [[ "$_e_remove_step" -gt "$step_count" ]]; then
-            log_error "step $_e_remove_step does not exist ($id has $step_count steps)"
-            return 1
-        fi
-        local rm_idx=$(( _e_remove_step - 1 ))
-        jq_updates+=" | .steps |= del(.[\$rm_idx])"
-        updates+=("--argjson" "rm_idx" "$rm_idx")
-    fi
-
-    # --remove-ac N: validate and remove a single AC by 1-based index
-    if [[ -n "$_e_remove_ac" ]]; then
-        if ! [[ "$_e_remove_ac" =~ ^[0-9]+$ ]] || [[ "$_e_remove_ac" -lt 1 ]]; then
-            log_error "--remove-ac requires a positive integer (got '$_e_remove_ac')"
-            return 1
-        fi
-        local ac_count
-        ac_count=$(jq --arg id "$id" \
-            '[.items[] | select(.id == $id)][0].acceptanceCriteria | length' \
-            "$BACKLOG_DIR/$file") || { log_error "Failed to read acceptance criteria for $id"; return 1; }
-        if [[ "$_e_remove_ac" -gt "$ac_count" ]]; then
-            log_error "AC $_e_remove_ac does not exist ($id has $ac_count ACs)"
-            return 1
-        fi
-        local rm_ac_idx=$(( _e_remove_ac - 1 ))
-        jq_updates+=" | .acceptanceCriteria |= del(.[\$rm_ac_idx])"
-        updates+=("--argjson" "rm_ac_idx" "$rm_ac_idx")
-    fi
-
     # Process custom flags from _PARSE_REMAINING (order-dependent)
-    local -a deps_vals=()
     set -- "${_PARSE_REMAINING[@]}"
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -5627,12 +5588,6 @@ cmd_backlog_edit() {
                 fi
                 local last_text="${ac_entries[-1]}"
                 ac_entries[-1]="{\"text\":$last_text,\"verify\":$(printf '%s' "$2" | jq -Rs .)}"
-                shift 2 ;;
-            --depends-on)
-                validate_arg "$1" "${2:-}" || return 1
-                while IFS= read -r dep; do
-                    [[ -n "$dep" ]] && deps_vals+=("$dep")
-                done < <(printf '%s\n' "$2" | tr ',' '\n')
                 shift 2 ;;
             --groomed-at)
                 local gdate
@@ -5654,24 +5609,42 @@ cmd_backlog_edit() {
         esac
     done
 
-    # Build array field updates using shared helper
-    [[ ${#scope_vals[@]} -gt 0 ]] && _append_array_field "scope" "newscope" "${scope_vals[@]}"
-    [[ ${#step_vals[@]} -gt 0 ]] && _append_array_field "steps" "newsteps" "${step_vals[@]}"
-    if [[ ${#deps_vals[@]} -gt 0 ]]; then
-        _append_array_field "dependsOn" "newdeps" "${deps_vals[@]}"
-        jq_updates="$jq_updates | .dependsOn |= unique"
+    # Build array field updates (replace-entire-array semantics)
+    if [[ ${#scope_vals[@]} -gt 0 ]]; then
+        local scope_json
+        scope_json=$(printf '%s\n' "${scope_vals[@]}" | jq -R . | jq -s .)
+        jq_updates+=" | .scope = \$newscope"
+        updates+=("--argjson" "newscope" "$scope_json")
     fi
-
-    # Build AC jq update if any --ac flags were used
+    if [[ ${#step_vals[@]} -gt 0 ]]; then
+        local steps_json
+        steps_json=$(printf '%s\n' "${step_vals[@]}" | jq -R . | jq -s .)
+        jq_updates+=" | .steps = \$newsteps"
+        updates+=("--argjson" "newsteps" "$steps_json")
+    fi
+    if [[ ${#deps_vals[@]} -gt 0 ]]; then
+        # Expand comma-separated entries for backward compat
+        local -a expanded_deps=()
+        local _dep_entry
+        for _dep_entry in "${deps_vals[@]}"; do
+            while IFS= read -r _dep; do
+                [[ -n "$_dep" ]] && expanded_deps+=("$_dep")
+            done < <(printf '%s\n' "$_dep_entry" | tr ',' '\n')
+        done
+        local deps_json
+        deps_json=$(printf '%s\n' "${expanded_deps[@]}" | jq -R . | jq -s .)
+        jq_updates+=" | .dependsOn = \$newdeps"
+        updates+=("--argjson" "newdeps" "$deps_json")
+    fi
     if [[ ${#ac_entries[@]} -gt 0 ]]; then
         local ac_json
         ac_json=$(_build_ac_json "${ac_entries[@]}")
-        jq_updates="$jq_updates | .acceptanceCriteria = ((.acceptanceCriteria // []) + \$newac)"
+        jq_updates+=" | .acceptanceCriteria = \$newac"
         updates+=("--argjson" "newac" "$ac_json")
     fi
 
     if [[ -z "$jq_updates" ]]; then
-        log_error "No updates specified. Use --title, --intent, --priority, --status, --desc, --category, --depends-on, --clear-depends-on, --ready, --no-ready, --step, --clear-steps, --remove-step, --scope, --clear-scope, --ac, --ac-verify, --clear-ac, --remove-ac, --groomed-at, --groomed-notes"
+        log_error "No updates specified. Use --title, --intent, --priority, --status, --desc, --category, --steps, --ac, --ac-verify, --scope, --depends-on, --ready, --no-ready, --groomed-at, --groomed-notes"
         return 1
     fi
 
