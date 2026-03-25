@@ -1759,7 +1759,8 @@ The orchestrator runs \`$VALIDATE_CMD\` before you. If results are provided belo
 .aishore/aishore backlog edit <ID> --priority must --groomed-at --groomed-notes \"...\""
         elif [[ "$agent_name" == "architect" ]]; then
             cli_role_lines=".aishore/aishore backlog add --type feat --title \"...\" --intent \"...\" --desc \"...\" --priority must --ready --step \"...\" --step \"...\" --ac \"...\" --ac \"...\"
-.aishore/aishore backlog edit <ID> --ready --groomed-at --groomed-notes \"...\""
+.aishore/aishore backlog edit <ID> --ready --groomed-at --groomed-notes \"...\"
+.aishore/aishore backlog edit <ID> --depends-on FEAT-XXX,FEAT-YYY"
         else
             cli_role_lines=".aishore/aishore backlog add --type bug --title \"...\" --desc \"...\" --priority should
 .aishore/aishore backlog edit <ID> --ready --groomed-at --groomed-notes \"...\"
@@ -3522,6 +3523,11 @@ run_sprint_loop() {
                 local auto_groom_snap
                 auto_groom_snap=$(mktemp -d)
                 snapshot_backlog_files "$auto_groom_snap"
+                # Architect runs first — detects fragment risk and creates scaffolding items
+                # before tech-lead/product-owner groom features that depend on the skeleton
+                GROOM_MONITOR=true run_agent "architect" "groom" "$MODEL_FAST" groom_context "" "$groom_combined_feedback" || true
+                GROOM_MONITOR=
+                check_result || log_warning "Architect groom did not pass — continuing"
                 GROOM_MONITOR=true run_agent "tech-lead" "groom" "$MODEL_FAST" groom_context "" "$groom_combined_feedback" || true
                 GROOM_MONITOR=
                 check_result || log_warning "Tech-lead groom did not pass — continuing"
