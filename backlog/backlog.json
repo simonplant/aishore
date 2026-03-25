@@ -87,11 +87,12 @@
       "dependsOn": [
         "FEAT-068"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "_compute_metrics_json (line 4211) is called only from cmd_metrics — extract to cmd-report.sh along with cmd_metrics (line 4257) and cmd_report (line 4318). Both dispatch entries need updating: 'metrics) _load_module cmd-report; cmd_metrics \"$@\" ;;' and 'report) _load_module cmd-report; cmd_report \"$@\" ;;'. Pattern follows cmd-diagnose.",
-      "groomedAt": "2026-03-25"
+      "groomedAt": "2026-03-25",
+      "completedAt": "2026-03-25T15:49:06-07:00"
     },
     {
       "id": "FEAT-059",
