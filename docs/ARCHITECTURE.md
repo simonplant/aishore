@@ -55,7 +55,7 @@ aishore models a real sprint team with five specialized AI agents, each with a d
 | **Validator** | Checks acceptance criteria and commander's intent against actual changes | `run` | `Bash,Read,Write,Glob,Grep` |
 | **Tech Lead** | Grooms bugs and features for technical clarity — adds steps, testable AC, marks items ready | `groom` | CLI commands |
 | **Product Owner** | Grooms features for value alignment, sets priorities, populates backlog from requirements | `groom --backlog`, `backlog populate` | CLI commands |
-| **Architect** | Reviews patterns, risks, code quality, technical debt, and documentation | `review` | `Read,Glob,Grep` (+ `Edit,Write` with `--update-docs`) |
+| **Architect** | Reviews patterns and risks; detects fragment risk and injects scaffolding items | `review`, `groom --architect` | `Read,Glob,Grep` (+ `Edit,Write` with `--update-docs`; full permissions in groom mode) |
 
 ### Data flow between agents
 

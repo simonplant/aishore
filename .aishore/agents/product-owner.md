@@ -63,12 +63,36 @@ Each item must be completable in a single sprint — one focused change. If you 
 
 **Split by user value, not by technical layer.** "Add user registration" → "User can create account with email" + "User can verify email address" + "User can reset forgotten password" — each delivers independent value.
 
+### Scaffolding First — Skeleton Before Features
+
+The number one failure mode in AI-driven sprints: 50 features get implemented as isolated fragments, all tests pass (mocked), and then nobody can prove the system actually works. The CLI routes to stubs. The build command prints "not implemented." The database connection is mocked everywhere.
+
+**Before generating feature items, generate scaffolding items that wire up the top-down skeleton:**
+
+1. **Identify the primary user journey** — the critical path from first user action to first real output (e.g., `install → init → build → run → verify`)
+2. **Generate scaffolding items** that wire up each step end-to-end, connecting real infrastructure — not mocks. Each scaffolding item should produce a working, runnable increment.
+3. **Then generate feature items** that fill in the skeleton with real behavior.
+
+Scaffolding items should be:
+- Priority `must` — they block all feature work
+- Focused on proving the system turns on, not on feature completeness
+- Connecting real infrastructure at boundaries (database, filesystem, APIs, build tools)
+
+**Example scaffolding items:**
+- "Wire up CLI entry point → command router → handler. Running `tool do-thing` executes the full path and produces real output, even if minimal."
+- "Build pipeline produces a runnable artifact. `npm run build` succeeds and the output executes."
+- "Core data path connects to real storage. Create/read/update/delete operations work against an actual database, not mocks."
+- "End-to-end smoke test runs the primary user journey against real infrastructure and verifies the happy path completes."
+
+**Scaffolding items are NOT features.** "Wire up the auth middleware to real session storage" is scaffolding. "Implement OAuth2 with Google" is a feature. The skeleton must exist before features can attach to it.
+
 ### Process
 1. Read the product requirements document thoroughly — understand the vision, not just the feature list
 2. Check the existing backlog (`.aishore/aishore backlog list`) to avoid duplicates
-3. Decompose the product vision into concrete, right-sized items
-4. Add each item using the CLI (see example below)
-5. Do NOT edit JSON files directly — use only CLI commands
+3. **Identify the primary user journey** and generate scaffolding items first (see above)
+4. Decompose the remaining product vision into concrete, right-sized feature items
+5. Add each item using the CLI (see example below)
+6. Do NOT edit JSON files directly — use only CLI commands
 
 ### Example — Gold Standard Item
 ```bash

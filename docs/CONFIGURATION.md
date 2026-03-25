@@ -381,6 +381,8 @@ All `AISHORE_*` environment variables and what they map to:
 | `AISHORE_ISOLATION` | `isolation.mode` | `stash` | Isolation mode |
 | `AISHORE_STREAMING` | `streaming.enabled` | `true` | Enable/disable output streaming |
 | `AISHORE_STREAMING_MAX_LINES` | `streaming.max_lines` | `20` | Max trailing lines during streaming |
+| `AISHORE_TIMEOUT_MINUTES` | `timeout_minutes` | `0` | Agent timeout in minutes (overrides `agent.timeout`; 0 = no override) |
+| `AISHORE_WARM_RETRY` | `retry.warm` | `false` | Resume existing session on retry instead of starting fresh |
 
 ---
 
@@ -416,6 +418,9 @@ All `AISHORE_*` environment variables and what they map to:
 | `--auto-review` | — | Run architecture review after completion |
 | `--limit` | `N` | Cap session at N successful items then exit cleanly |
 | `--no-summary` | — | Suppress end-of-session summary table |
+| `--timeout` | `N` | Kill agent after N minutes (default: `0` = no limit) |
+| `--warm-retry` | — | Resume existing session on retry (retains prior context) |
+| `--parallel` | `N` | Run up to N items concurrently in worktrees (1–4, default: `1`) |
 
 ### `auto` — Autonomous mode
 
@@ -447,6 +452,9 @@ All `AISHORE_*` environment variables and what they map to:
 | `--dry-run` | — | Preview first item without running |
 | `--category` | `<name>` | Only run items matching this category |
 | `--no-summary` | — | Suppress end-of-session summary table |
+| `--timeout` | `N` | Kill agent after N minutes (default: `0` = no limit) |
+| `--warm-retry` | — | Resume existing session on retry (retains prior context) |
+| `--parallel` | `N` | Run up to N items concurrently in worktrees (1–4, default: `1`) |
 
 ### `groom` — Refine backlog
 
@@ -457,6 +465,7 @@ All `AISHORE_*` environment variables and what they map to:
 | Flag | Description |
 |------|-------------|
 | `--backlog` | Product owner mode: groom features (default: groom bugs) |
+| `--architect` | Architect mode: detect fragment risk, inject scaffolding items |
 
 ### `review` — Architecture review
 
@@ -468,6 +477,18 @@ All `AISHORE_*` environment variables and what they map to:
 |------|----------|-------------|
 | `--update-docs` | — | Allow reviewer to update docs and add backlog items |
 | `--since` | `<commit>` | Review changes since a specific commit |
+
+### `report` — Sprint activity summary
+
+```
+.aishore/aishore report [flags]
+```
+
+| Flag | Argument | Description |
+|------|----------|-------------|
+| `--since` | `<date>` | Only include items completed on or after YYYY-MM-DD |
+| `--output` | `<file>` | Write report to file instead of stdout |
+| `--format` | `json` | Emit JSON array instead of markdown (default: `markdown`) |
 
 ### `backlog add` — Add item
 

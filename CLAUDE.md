@@ -49,11 +49,16 @@ jq empty backlog/*.json
 .aishore/aishore run --quick        # Skip maturity protocol (fast iteration)
 .aishore/aishore groom              # Tech lead: groom bugs
 .aishore/aishore groom --backlog    # Product owner: groom features
+.aishore/aishore groom --architect  # Architect: scaffolding review
 .aishore/aishore review             # Architecture review
 .aishore/aishore review --update-docs          # Review and update docs
 .aishore/aishore review --since <commit>       # Review changes since commit
 .aishore/aishore metrics            # Sprint metrics
 .aishore/aishore metrics --json     # Metrics as JSON
+.aishore/aishore report             # Sprint activity summary (markdown)
+.aishore/aishore report --since 2026-03-01  # Filter by date
+.aishore/aishore report --format json       # JSON output
+.aishore/aishore report --output report.md  # Write to file
 .aishore/aishore clean              # Remove done items from backlogs
 .aishore/aishore clean --dry-run    # Show what would be removed
 .aishore/aishore status             # Show backlog overview and sprint readiness

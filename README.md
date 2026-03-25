@@ -99,7 +99,7 @@ Intent is a **hard gate**. Items without it are skipped. When the spec is ambigu
 
 **Self-healing failures.** Retries carry full failure context (prior diff, validator feedback, error logs). Spec refinement rewrites the steps and AC based on what went wrong. Circuit breaker stops runaway sessions.
 
-**AI-powered grooming.** Tech Lead and Product Owner agents decompose rough ideas into sprint-ready items. `backlog populate` reads your PRODUCT.md and generates a full backlog. Auto-groom keeps the pipeline filled during long autonomous runs.
+**AI-powered grooming.** Tech Lead, Product Owner, and Architect agents decompose rough ideas into sprint-ready items. `backlog populate` reads your PRODUCT.md and generates a scaffolded backlog — skeleton items first, then features. `groom --architect` detects when a project is building fragments without a working top-down skeleton and injects scaffolding items. Auto-groom keeps the pipeline filled during long autonomous runs.
 
 **Zero config.** Pure Bash, no build step. `init -y` detects your project type and test command. Works out of the box. Customize later via `config.yaml` or environment variables.
 
@@ -144,7 +144,7 @@ Those are AI agents that solve individual tasks. aishore manages the *sprint*, n
 
 **v0.3.8 — Alpha.** Battle-tested on its own codebase, used daily on real projects.
 
-Works well: sprint orchestration, maturity protocol, autonomous mode, backlog grooming, architecture review, scope checking, spec refinement, checksum-verified updates.
+Works well: sprint orchestration, maturity protocol, autonomous mode, backlog grooming, scaffolding detection, architecture review, scope checking, spec refinement, checksum-verified updates.
 
 Known limits: single-repo only, Claude Code CLI as the only AI backend, macOS/Linux only.
 
