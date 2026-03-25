@@ -1,15 +1,15 @@
 {
-  "sprintId": "sprint-1774478769",
-  "startedAt": "2026-03-25T15:46:09-07:00",
+  "sprintId": "sprint-1774478948",
+  "startedAt": "2026-03-25T15:49:08-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-058",
-    "title": "Extract cmd-report and cmd-metrics to module",
-    "intent": "Extract reporting commands to single module — _compute_metrics_json, cmd_metrics, cmd_report share sprints.jsonl data",
+    "id": "FEAT-059",
+    "title": "Extract cmd-status to module",
+    "intent": "Extract _status_output and cmd_status (126 lines) to lazy-loaded module",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Create .aishore/lib/cmd-report.sh with extracted functions",
+      "Create .aishore/lib/cmd-status.sh with extracted functions",
       "Remove functions from main script",
       "Update dispatch to use _load_module"
     ],
@@ -20,12 +20,12 @@
     ],
     "scope": [
       ".aishore/aishore",
-      ".aishore/lib/cmd-report.sh"
+      ".aishore/lib/cmd-status.sh"
     ],
-    "startedAt": "2026-03-25T15:46:09-07:00",
+    "startedAt": "2026-03-25T15:49:08-07:00",
     "status": "passed",
-    "completedAt": "2026-03-25T15:49:06-07:00"
+    "completedAt": "2026-03-25T15:52:22-07:00"
   },
-  "completedAt": "2026-03-25T15:49:06-07:00",
+  "completedAt": "2026-03-25T15:52:22-07:00",
   "attempts": 1
 }

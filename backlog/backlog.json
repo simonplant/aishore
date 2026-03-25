@@ -118,11 +118,12 @@
       "dependsOn": [
         "FEAT-068"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "_status_output (line 4371) is called only from cmd_status (lines 4467, 4474) — safe to co-locate in cmd-status.sh. cmd_status (line 4459) is only called from dispatch (line 6232). Dispatch update: 'status) _load_module cmd-status; cmd_status \"$@\" ;;'. Pattern follows cmd-diagnose.",
-      "groomedAt": "2026-03-25"
+      "groomedAt": "2026-03-25",
+      "completedAt": "2026-03-25T15:52:22-07:00"
     },
     {
       "id": "FEAT-060",
