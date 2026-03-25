@@ -35,7 +35,7 @@
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-24",
-      "groomingNotes": "Steps are specific and actionable. AC are testable. No dependencies. Straightforward flag consolidation — repeatable pattern flags (--ac, --steps, --scope, --depends-on) each replace their entire array. Validation-before-write AC is a safety gate, not extra scope."
+      "groomingNotes": "FEAT-067 trace complete: Agent backlog-edit usage is limited to scalar flags (--priority, --ready, --groomed-at, --groomed-notes) and --depends-on. No agent uses --step/--ac/--scope/--clear-*/--remove-* via backlog edit. The replace-array semantics proposed by FEAT-051 are fully compatible — no blockers. Only the architect uses --depends-on (already passes full list in one call). See FEAT-067 commit for full trace."
     },
     {
       "id": "FEAT-052",
