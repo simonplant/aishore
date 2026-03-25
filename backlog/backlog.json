@@ -25,11 +25,12 @@
       "dependsOn": [
         "FEAT-068"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Note: cmd_config_check is dispatched from a NESTED case block (config > check), not a top-level case. The lazy-load goes inside that nested block: 'check) _load_module cmd-config; cmd_config_check \"$@\" ;;'. The outer 'config)' case block with its shift logic stays in core. Also confirm cmd_config_check has no callers other than dispatch (grep confirms only line 6241). Pattern otherwise follows cmd-diagnose exactly.",
-      "groomedAt": "2026-03-25"
+      "groomedAt": "2026-03-25",
+      "completedAt": "2026-03-25T15:43:20-07:00"
     },
     {
       "id": "FEAT-057",
