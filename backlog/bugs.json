@@ -167,11 +167,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Smallest of the four extractions (~70 lines). cmd_clean and _archive_done_items are self-contained. AC: bash -n passes, clean --dry-run unchanged.",
-      "groomedAt": "2026-03-25"
+      "groomedAt": "2026-03-25",
+      "completedAt": "2026-03-25T16:28:53-07:00"
     },
     {
       "id": "BUG-132",

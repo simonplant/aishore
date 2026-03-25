@@ -1,33 +1,31 @@
 {
-  "sprintId": "sprint-1774480960",
-  "startedAt": "2026-03-25T16:22:40-07:00",
+  "sprintId": "sprint-1774481172",
+  "startedAt": "2026-03-25T16:26:12-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-130",
-    "title": "Extract backlog read commands to cmd-backlog-read module",
-    "intent": "Extract cmd_backlog (dispatcher), cmd_backlog_check, _backlog_check_all, cmd_backlog_list, cmd_backlog_show, cmd_backlog_history, cmd_backlog_rm to .aishore/lib/cmd-backlog-read.sh — lazy-loaded, ~260 lines removed from main, dispatch updated, bash -n passes on both files.",
+    "id": "BUG-131",
+    "title": "Extract cmd-clean to lazy-loaded module",
+    "intent": "Extract cmd_clean and _archive_done_items to .aishore/lib/cmd-clean.sh — lazy-loaded on demand, ~70 lines removed from main script, dispatch updated, bash -n passes on both files.",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Identify all backlog read/check functions in .aishore/aishore (cmd_backlog, cmd_backlog_check, _backlog_check_all, cmd_backlog_list, cmd_backlog_show, cmd_backlog_history, cmd_backlog_rm)",
-      "Create .aishore/lib/cmd-backlog-read.sh with all identified functions, following the same module header pattern as existing modules",
+      "Identify cmd_clean and _archive_done_items in .aishore/aishore",
+      "Create .aishore/lib/cmd-clean.sh with both functions, following the same module header pattern as existing modules",
       "Remove the extracted functions from .aishore/aishore",
-      "Update dispatch table in main to _load_module cmd-backlog-read before any backlog subcommand invocation — verify cmd-backlog-write is still loaded separately for write commands",
+      "Update dispatch table in main to _load_module cmd-clean before invoking cmd_clean",
       "Run bash -n on both files to verify syntax",
-      "Run .aishore/aishore backlog list, backlog show, backlog check --all, backlog history, backlog rm --help to verify output is unchanged"
+      "Run .aishore/aishore clean --dry-run to verify behavior is unchanged"
     ],
     "acceptanceCriteria": [
-      "bash -n .aishore/aishore and bash -n .aishore/lib/cmd-backlog-read.sh both pass",
-      ".aishore/aishore backlog list produces correct output",
-      ".aishore/aishore backlog show and backlog history work correctly",
-      ".aishore/aishore backlog check --all runs without error",
-      "wc -l .aishore/aishore shows at least 230 fewer lines than before this change"
+      "bash -n .aishore/aishore and bash -n .aishore/lib/cmd-clean.sh both pass",
+      ".aishore/aishore clean --dry-run produces correct output",
+      "wc -l .aishore/aishore shows at least 60 fewer lines than before this change"
     ],
     "scope": [],
-    "startedAt": "2026-03-25T16:22:40-07:00",
+    "startedAt": "2026-03-25T16:26:12-07:00",
     "status": "passed",
-    "completedAt": "2026-03-25T16:26:11-07:00"
+    "completedAt": "2026-03-25T16:28:53-07:00"
   },
-  "completedAt": "2026-03-25T16:26:11-07:00",
+  "completedAt": "2026-03-25T16:28:53-07:00",
   "attempts": 1
 }
