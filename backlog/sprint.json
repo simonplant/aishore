@@ -1,31 +1,32 @@
 {
-  "sprintId": "sprint-1774479974",
-  "startedAt": "2026-03-25T16:06:14-07:00",
+  "sprintId": "sprint-1774480695",
+  "startedAt": "2026-03-25T16:18:15-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-063",
-    "title": "Extract cmd-update to module",
-    "intent": "Extract cmd_update (188 lines with nested _fetch_and_stage) and cmd_checksums — update checksums to glob lib/*.sh",
+    "id": "BUG-129",
+    "title": "Extract cmd-help to lazy-loaded module",
+    "intent": "Extract all help functions (cmd_usage, cmd_help, _help_*) to .aishore/lib/cmd-help.sh — lazy-loaded on demand, ~270 lines removed from main script, dispatch updated, bash -n passes on both files.",
     "description": "",
-    "sourceBacklog": "backlog.json",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "Create .aishore/lib/cmd-update.sh with extracted functions",
-      "Remove functions from main script",
-      "Update dispatch to use _load_module"
+      "Identify all help functions in .aishore/aishore (cmd_usage, cmd_help, _help_compact, _help_run, _help_auto, _help_backlog, _help_groom, _help_review, _help_report, _help_metrics, _help_status, _help_update, _help_clean, _help_config, _help_init)",
+      "Create .aishore/lib/cmd-help.sh with all identified functions, following the same module header pattern as existing modules",
+      "Remove the extracted functions from .aishore/aishore",
+      "Update dispatch table in main to call _load_module cmd-help before invoking cmd_help or cmd_usage",
+      "Run bash -n on both files to verify syntax",
+      "Run .aishore/aishore help and .aishore/aishore help run to verify output is unchanged"
     ],
     "acceptanceCriteria": [
-      "bash -n on both files passes",
-      "Command works via lazy-load",
-      "Core commands (run, backlog list) unaffected"
+      "bash -n .aishore/aishore and bash -n .aishore/lib/cmd-help.sh both pass",
+      ".aishore/aishore help produces identical output before and after",
+      ".aishore/aishore help run produces identical output before and after",
+      "wc -l .aishore/aishore shows at least 250 fewer lines than before this change"
     ],
-    "scope": [
-      ".aishore/aishore",
-      ".aishore/lib/cmd-update.sh"
-    ],
-    "startedAt": "2026-03-25T16:06:14-07:00",
+    "scope": [],
+    "startedAt": "2026-03-25T16:18:15-07:00",
     "status": "passed",
-    "completedAt": "2026-03-25T16:10:02-07:00"
+    "completedAt": "2026-03-25T16:22:38-07:00"
   },
-  "completedAt": "2026-03-25T16:10:02-07:00",
+  "completedAt": "2026-03-25T16:22:38-07:00",
   "attempts": 1
 }
