@@ -1,36 +1,32 @@
 {
-  "sprintId": "sprint-1774413725",
-  "startedAt": "2026-03-24T21:42:05-07:00",
+  "sprintId": "sprint-1774414238",
+  "startedAt": "2026-03-24T21:50:38-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-051",
-    "title": "Streamline backlog edit flags",
-    "intent": "Reduce backlog edit from 20+ flags to ~10 by collapsing the step/AC/scope array manipulation into simpler patterns — keep flags for scripting safety but remove the redundant clear/remove variants",
+    "id": "FEAT-052",
+    "title": "Tiered help — compact default, deep per-command",
+    "intent": "New users see a 10-15 line overview by default instead of 100+ lines — help <command> gives the deep dive, help --full gives the current exhaustive output",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Replace --step/--clear-steps/--remove-step with --steps (JSON array or comma-separated, replaces entire array)",
-      "Replace --ac/--ac-verify/--clear-ac/--remove-ac with --ac (repeatable, replaces entire AC array when used)",
-      "Replace --scope/--clear-scope with --scope (replaces entire array when used)",
-      "Replace --depends-on/--clear-depends-on with --depends-on (replaces entire array when used)",
-      "Keep --title --intent --desc --priority --status --category --ready --no-ready --groomed-notes --groomed-at as-is",
-      "Update cmd_backlog_add to use same simplified patterns",
-      "Update help.txt"
+      "Rewrite default help output to ~15 lines: core commands only (run, backlog, groom, status, init, help)",
+      "Add per-command help: aishore help run, aishore help backlog, etc — shows flags and examples for that command",
+      "Move current full help to aishore help --full",
+      "Update cmd_help to dispatch based on argument"
     ],
     "acceptanceCriteria": [
-      "backlog edit has ~12 flags (down from 20+)",
-      "backlog edit FEAT-001 --ac 'criterion 1' --ac 'criterion 2' replaces all AC",
-      "backlog edit FEAT-001 --steps 'step 1' --steps 'step 2' replaces all steps",
-      "Existing backlog JSON is never corrupted — validation before write"
+      "aishore help fits in one terminal screen (< 20 lines)",
+      "aishore help run shows all run flags with descriptions",
+      "aishore help --full shows complete reference"
     ],
     "scope": [
       ".aishore/aishore",
       ".aishore/help.txt"
     ],
-    "startedAt": "2026-03-24T21:42:05-07:00",
+    "startedAt": "2026-03-24T21:50:38-07:00",
     "status": "passed",
-    "completedAt": "2026-03-24T21:50:36-07:00"
+    "completedAt": "2026-03-24T21:55:01-07:00"
   },
-  "completedAt": "2026-03-24T21:50:36-07:00",
+  "completedAt": "2026-03-24T21:55:01-07:00",
   "attempts": 1
 }

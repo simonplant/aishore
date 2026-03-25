@@ -63,11 +63,12 @@
       "dependsOn": [
         "FEAT-070"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomedAt": "2026-03-24",
-      "groomingNotes": "High user value — first impression matters. New users currently face 100+ lines of help; a 15-line overview solves a real discoverability problem. AC are user-focused and testable (terminal screen fit, per-command detail, --full escape hatch). Priority must is correct. IMPORTANT: FEAT-053 depends on the --full tier this creates — ensure FEAT-052 ships before FEAT-053."
+      "groomingNotes": "High user value — first impression matters. New users currently face 100+ lines of help; a 15-line overview solves a real discoverability problem. AC are user-focused and testable (terminal screen fit, per-command detail, --full escape hatch). Priority must is correct. IMPORTANT: FEAT-053 depends on the --full tier this creates — ensure FEAT-052 ships before FEAT-053.",
+      "completedAt": "2026-03-24T21:55:01-07:00"
     },
     {
       "id": "FEAT-056",
