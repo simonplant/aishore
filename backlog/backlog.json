@@ -435,9 +435,10 @@
         ".aishore/agents/*.md"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-24T21:38:40-07:00"
     },
     {
       "id": "FEAT-068",

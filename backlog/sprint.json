@@ -1,7 +1,7 @@
 {
   "sprintId": "sprint-1774413372",
   "startedAt": "2026-03-24T21:36:12-07:00",
-  "status": "in_progress",
+  "status": "completed",
   "item": {
     "id": "FEAT-067",
     "title": "Code trace: verify how groom agents use backlog edit",
@@ -22,6 +22,10 @@
     "scope": [
       ".aishore/agents/*.md"
     ],
-    "startedAt": "2026-03-24T21:36:12-07:00"
-  }
+    "startedAt": "2026-03-24T21:36:12-07:00",
+    "status": "passed",
+    "completedAt": "2026-03-24T21:38:40-07:00"
+  },
+  "completedAt": "2026-03-24T21:38:40-07:00",
+  "attempts": 1
 }
