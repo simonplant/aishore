@@ -118,6 +118,12 @@ ISOLATION_MODE="stash"
 NOTIFY_SYSTEM="false"
 WARM_RETRY="false"
 TIMEOUT_MINUTES="0"
+AUTO_REVIEW="false"
+NO_SUMMARY="false"
+REFINE_ON_EXHAUST="false"
+SESSION_RETRIES="0"
+SESSION_LIMIT=""
+SESSION_CATEGORY=""
 
 # Detect timeout command once at startup (macOS uses gtimeout from coreutils)
 if command -v timeout &>/dev/null; then
@@ -583,6 +589,12 @@ load_config() {
             ".notifications.system NOTIFY_SYSTEM"
             ".retry.warm           WARM_RETRY"
             ".timeout_minutes      TIMEOUT_MINUTES"
+            ".run.auto_review      AUTO_REVIEW"
+            ".run.no_summary       NO_SUMMARY"
+            ".run.refine           REFINE_ON_EXHAUST"
+            ".run.retries          SESSION_RETRIES"
+            ".run.limit            SESSION_LIMIT"
+            ".run.category         SESSION_CATEGORY"
             ".permissions.developer CFG_PERMS_DEVELOPER"
             ".permissions.validator CFG_PERMS_VALIDATOR"
             ".permissions.reviewer  CFG_PERMS_REVIEWER"
@@ -650,6 +662,12 @@ _apply_env_overrides() {
         "AISHORE_NOTIFY            NOTIFY_SYSTEM"
         "AISHORE_WARM_RETRY       WARM_RETRY"
         "AISHORE_TIMEOUT_MINUTES  TIMEOUT_MINUTES"
+        "AISHORE_AUTO_REVIEW      AUTO_REVIEW"
+        "AISHORE_NO_SUMMARY       NO_SUMMARY"
+        "AISHORE_REFINE           REFINE_ON_EXHAUST"
+        "AISHORE_RETRIES          SESSION_RETRIES"
+        "AISHORE_SESSION_LIMIT    SESSION_LIMIT"
+        "AISHORE_SESSION_CATEGORY SESSION_CATEGORY"
     )
     local _env_name _target_var
     for _entry in "${_env_map[@]}"; do
@@ -2959,6 +2977,36 @@ setup_sprint_environment() {
     if [[ "$create_pr" != "true" && "$CREATE_PR" == "true" ]]; then
         create_pr=true
     fi
+    # Config-driven auto_review (--auto-review flag overrides)
+    if [[ "$auto_review" != "true" && "$AUTO_REVIEW" == "true" ]]; then
+        auto_review=true
+    fi
+
+    # Config-driven no_summary (--no-summary flag overrides)
+    if [[ "$no_summary" != "true" && "$NO_SUMMARY" == "true" ]]; then
+        no_summary=true
+    fi
+
+    # Config-driven refine (--refine flag overrides)
+    if [[ "$refine_on_exhaust" != "true" && "$REFINE_ON_EXHAUST" == "true" ]]; then
+        refine_on_exhaust=true
+    fi
+
+    # Config-driven retries (--retries flag overrides)
+    if [[ "$retries" -eq 0 && "${SESSION_RETRIES:-0}" -gt 0 ]]; then
+        retries="$SESSION_RETRIES"
+    fi
+
+    # Config-driven session_limit (--limit flag overrides)
+    if [[ -z "$session_limit" && -n "$SESSION_LIMIT" ]]; then
+        session_limit="$SESSION_LIMIT"
+    fi
+
+    # Config-driven category (--category flag overrides)
+    if [[ -z "$category_filter" && -n "$SESSION_CATEGORY" ]]; then
+        category_filter="$SESSION_CATEGORY"
+    fi
+
     # --pr implies --no-merge
     if [[ "$create_pr" == "true" ]]; then
         no_merge=true
@@ -5820,6 +5868,12 @@ cmd_config_check() {
         "pr.create|CREATE_PR|AISHORE_CREATE_PR|false"
         "isolation.mode|ISOLATION_MODE|AISHORE_ISOLATION|stash"
         "retry.warm|WARM_RETRY|AISHORE_WARM_RETRY|false"
+        "run.auto_review|AUTO_REVIEW|AISHORE_AUTO_REVIEW|false"
+        "run.no_summary|NO_SUMMARY|AISHORE_NO_SUMMARY|false"
+        "run.refine|REFINE_ON_EXHAUST|AISHORE_REFINE|false"
+        "run.retries|SESSION_RETRIES|AISHORE_RETRIES|0"
+        "run.limit|SESSION_LIMIT|AISHORE_SESSION_LIMIT|"
+        "run.category|SESSION_CATEGORY|AISHORE_SESSION_CATEGORY|"
         "permissions.developer|CFG_PERMS_DEVELOPER|.|"
         "permissions.validator|CFG_PERMS_VALIDATOR|.|"
         "permissions.reviewer|CFG_PERMS_REVIEWER|.|"
@@ -5829,7 +5883,7 @@ cmd_config_check() {
     local -a _known_top_keys=(
         validation fix models agent notifications auto groom scope
         maturity streaming output merge pr isolation permissions
-        retry project backlog_files
+        retry run project backlog_files
     )
 
     local has_config=false
@@ -6013,16 +6067,13 @@ Options:
   --no-merge            Keep feature branches for PR review
   --pr                  Create GitHub PR (implies --no-merge, requires gh)
   --retries N           Retry attempts on validation failure
-  --max-failures N      Consecutive failures before stopping (default: 5)
-  --refine              Refine spec on exhausted retries, try once more
   --quick               Skip maturity protocol (fast iteration)
-  --warm-retry          Continue existing session on retry
-  --timeout N           Kill agent after N minutes (0 = no limit)
-  --category <name>     Only run items matching this category
-  --auto-review         Run architecture review after completion
-  --limit N             Cap session at N successful items
-  --no-summary          Suppress end-of-session summary table
   --parallel N          Run up to N items concurrently (1-4)
+
+Session tuning (also settable in config.yaml under 'run:'):
+  --max-failures, --refine, --warm-retry, --timeout, --category,
+  --auto-review, --limit, --no-summary
+  See: aishore help --full
 
 Examples:
   aishore run FEAT-001               # Run specific item

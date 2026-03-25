@@ -2,75 +2,6 @@
   "description": "Feature backlog - Product Owner owns priority",
   "items": [
     {
-      "id": "FEAT-051",
-      "title": "Streamline backlog edit flags",
-      "intent": "Reduce backlog edit from 20+ flags to ~10 by collapsing the step/AC/scope array manipulation into simpler patterns — keep flags for scripting safety but remove the redundant clear/remove variants",
-      "description": "",
-      "priority": "must",
-      "category": "simplify",
-      "steps": [
-        "Replace --step/--clear-steps/--remove-step with --steps (JSON array or comma-separated, replaces entire array)",
-        "Replace --ac/--ac-verify/--clear-ac/--remove-ac with --ac (repeatable, replaces entire AC array when used)",
-        "Replace --scope/--clear-scope with --scope (replaces entire array when used)",
-        "Replace --depends-on/--clear-depends-on with --depends-on (replaces entire array when used)",
-        "Keep --title --intent --desc --priority --status --category --ready --no-ready --groomed-notes --groomed-at as-is",
-        "Update cmd_backlog_add to use same simplified patterns",
-        "Update help.txt"
-      ],
-      "acceptanceCriteria": [
-        "backlog edit has ~12 flags (down from 20+)",
-        "backlog edit FEAT-001 --ac 'criterion 1' --ac 'criterion 2' replaces all AC",
-        "backlog edit FEAT-001 --steps 'step 1' --steps 'step 2' replaces all steps",
-        "Existing backlog JSON is never corrupted — validation before write"
-      ],
-      "scope": [
-        ".aishore/aishore",
-        ".aishore/help.txt"
-      ],
-      "dependsOn": [
-        "FEAT-067",
-        "FEAT-070"
-      ],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomedAt": "2026-03-24",
-      "groomingNotes": "FEAT-067 trace complete: Agent backlog-edit usage is limited to scalar flags (--priority, --ready, --groomed-at, --groomed-notes) and --depends-on. No agent uses --step/--ac/--scope/--clear-*/--remove-* via backlog edit. The replace-array semantics proposed by FEAT-051 are fully compatible — no blockers. Only the architect uses --depends-on (already passes full list in one call). See FEAT-067 commit for full trace.",
-      "completedAt": "2026-03-24T21:50:36-07:00"
-    },
-    {
-      "id": "FEAT-052",
-      "title": "Tiered help — compact default, deep per-command",
-      "intent": "New users see a 10-15 line overview by default instead of 100+ lines — help <command> gives the deep dive, help --full gives the current exhaustive output",
-      "description": "",
-      "priority": "must",
-      "category": "simplify",
-      "steps": [
-        "Rewrite default help output to ~15 lines: core commands only (run, backlog, groom, status, init, help)",
-        "Add per-command help: aishore help run, aishore help backlog, etc — shows flags and examples for that command",
-        "Move current full help to aishore help --full",
-        "Update cmd_help to dispatch based on argument"
-      ],
-      "acceptanceCriteria": [
-        "aishore help fits in one terminal screen (< 20 lines)",
-        "aishore help run shows all run flags with descriptions",
-        "aishore help --full shows complete reference"
-      ],
-      "scope": [
-        ".aishore/aishore",
-        ".aishore/help.txt"
-      ],
-      "dependsOn": [
-        "FEAT-070"
-      ],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomedAt": "2026-03-24",
-      "groomingNotes": "High user value — first impression matters. New users currently face 100+ lines of help; a 15-line overview solves a real discoverability problem. AC are user-focused and testable (terminal screen fit, per-command detail, --full escape hatch). Priority must is correct. IMPORTANT: FEAT-053 depends on the --full tier this creates — ensure FEAT-052 ships before FEAT-053.",
-      "completedAt": "2026-03-24T21:55:01-07:00"
-    },
-    {
       "id": "FEAT-056",
       "title": "Extract cmd-config to module",
       "intent": "Extract cmd_config_check (154 lines) to lazy-loaded module — isolated, only reads config",
@@ -96,9 +27,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
-      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared — extraction work is unblocked. Steps and AC are clear and actionable.",
-      "groomedAt": "2026-03-24"
+      "readyForSprint": true,
+      "groomingNotes": "Note: cmd_config_check is dispatched from a NESTED case block (config > check), not a top-level case. The lazy-load goes inside that nested block: 'check) _load_module cmd-config; cmd_config_check \"$@\" ;;'. The outer 'config)' case block with its shift logic stays in core. Also confirm cmd_config_check has no callers other than dispatch (grep confirms only line 6241). Pattern otherwise follows cmd-diagnose exactly.",
+      "groomedAt": "2026-03-25"
     },
     {
       "id": "FEAT-057",
@@ -126,9 +57,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
-      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared — extraction work is unblocked. Steps and AC are clear and actionable.",
-      "groomedAt": "2026-03-24"
+      "readyForSprint": true,
+      "groomingNotes": "CRITICAL: cmd_review is called from TWO places, not just dispatch. Line 6229 (main dispatch) AND line 3808 (inside sprint loop, auto-review feature). Step 3 must update BOTH call sites: (1) dispatch: 'review) _load_module cmd-review; cmd_review \"$@\" ;;' AND (2) line ~3808 sprint loop: add '_load_module cmd-review' before the 'cmd_review || true' call. Failure to update the internal call will cause 'cmd_review: command not found' when --auto-review flag is used. _build_groom_context stays in core (called by sprint loop at line 3516 and by cmd_review itself via the module). Verify: run 'aishore run done --auto-review --dry-run' to exercise the internal call path.",
+      "groomedAt": "2026-03-25"
     },
     {
       "id": "FEAT-058",
@@ -156,9 +87,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
-      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. _compute_metrics_json, cmd_metrics, cmd_report are co-located in source — group them in one module as stated.",
-      "groomedAt": "2026-03-24"
+      "readyForSprint": true,
+      "groomingNotes": "_compute_metrics_json (line 4211) is called only from cmd_metrics — extract to cmd-report.sh along with cmd_metrics (line 4257) and cmd_report (line 4318). Both dispatch entries need updating: 'metrics) _load_module cmd-report; cmd_metrics \"$@\" ;;' and 'report) _load_module cmd-report; cmd_report \"$@\" ;;'. Pattern follows cmd-diagnose.",
+      "groomedAt": "2026-03-25"
     },
     {
       "id": "FEAT-059",
@@ -186,9 +117,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
-      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. _status_output and cmd_status extraction is straightforward — no core dependencies.",
-      "groomedAt": "2026-03-24"
+      "readyForSprint": true,
+      "groomingNotes": "_status_output (line 4371) is called only from cmd_status (lines 4467, 4474) — safe to co-locate in cmd-status.sh. cmd_status (line 4459) is only called from dispatch (line 6232). Dispatch update: 'status) _load_module cmd-status; cmd_status \"$@\" ;;'. Pattern follows cmd-diagnose.",
+      "groomedAt": "2026-03-25"
     },
     {
       "id": "FEAT-060",
@@ -216,9 +147,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
-      "groomingNotes": "Module loader is already in place (FEAT-049 done). Critical constraint in intent: groom helpers stay in core (sprint loop calls them). Only cmd_groom and print_groom_summary move to the module.",
-      "groomedAt": "2026-03-24"
+      "readyForSprint": true,
+      "groomingNotes": "WARNING: _build_groom_context() is defined at line 3923, between cmd_groom and print_groom_summary in the file. Do NOT extract it — it is called from (1) cmd_groom itself, (2) cmd_review (FEAT-057), and (3) the sprint loop auto-groom path at line 3516. It must stay in core. Only extract: cmd_groom (lines 3890-3920) and print_groom_summary (lines 3934-end). Extraction: move both functions to cmd-groom.sh, add dispatch update 'groom) _load_module cmd-groom; cmd_groom \"$@\" ;;'. print_groom_summary is only called from cmd_groom (confirmed via grep), so it safely moves.",
+      "groomedAt": "2026-03-25"
     },
     {
       "id": "FEAT-061",
@@ -246,9 +177,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
-      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. Read commands stay in core per intent — only add/edit/populate move to module.",
-      "groomedAt": "2026-03-24"
+      "readyForSprint": true,
+      "groomingNotes": "cmd_backlog_add (line 5329), cmd_backlog_edit (line 5505), cmd_backlog_populate (line 5174) are all only called from cmd_backlog dispatch — no internal sprint-loop calls. Safe to extract all to cmd-backlog-write.sh. cmd_backlog dispatch (cmd_backlog function, read commands like backlog list/show/check) stays in core. Update the add/edit/populate arms: 'add|new) _load_module cmd-backlog-write; cmd_backlog_add \"$@\" ;;' etc. Pattern follows cmd-diagnose.",
+      "groomedAt": "2026-03-25"
     },
     {
       "id": "FEAT-062",
@@ -276,9 +207,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
-      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. cmd_init and 3 helpers — large extraction (325 lines) but isolated, no sprint-loop dependencies.",
-      "groomedAt": "2026-03-24"
+      "readyForSprint": true,
+      "groomingNotes": "The 3 helper functions are _init_check_prereqs (line 4499), _init_detect_project (line 4531), _init_scaffold_files (line 4634) — all defined before cmd_init (line 4753) in the file. Extract all 4 to cmd-init.sh. All helpers are called only from cmd_init (confirmed via grep). Dispatch update: 'init) _load_module cmd-init; cmd_init \"$@\" ;;'. Pattern follows cmd-diagnose.",
+      "groomedAt": "2026-03-25"
     },
     {
       "id": "FEAT-063",
@@ -306,9 +237,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
-      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. Note: checksums must be updated to glob lib/*.sh after extraction — this is called out in the intent and is critical.",
-      "groomedAt": "2026-03-24"
+      "readyForSprint": true,
+      "groomingNotes": "Note: _fetch_and_stage is a nested function DEFINED INSIDE cmd_update (line 4948, inside cmd_update which starts at 4837). It will move to cmd-update.sh naturally with cmd_update — no separate extraction step needed. cmd_checksums (line 5025) is a standalone function, also extract to cmd-update.sh. Both dispatch entries need updating: 'update) _load_module cmd-update; cmd_update \"$@\" ;;' and 'checksums) _load_module cmd-update; cmd_checksums ;;'. Pattern follows cmd-diagnose.",
+      "groomedAt": "2026-03-25"
     },
     {
       "id": "FEAT-064",
@@ -352,101 +283,6 @@
       "groomedAt": "2026-03-24"
     },
     {
-      "id": "FEAT-065",
-      "title": "Unify run and auto into single run command",
-      "intent": "Eliminate the duplicate command surface — run becomes the only execution command, auto scope behavior (done/p0/p1/p2) moves to run as optional arguments, auto-grooming activates when a scope is given",
-      "description": "",
-      "priority": "must",
-      "category": "simplify",
-      "steps": [
-        "Make cmd_run accept optional scope arg (done/p0/p1/p2) — when present, enables auto-grooming and circuit breaker",
-        "run with no scope defaults to one item (current run behavior)",
-        "run FEAT-001 targets specific item (current run ID behavior)",
-        "run done drains backlog (current auto done behavior)",
-        "Remove cmd_auto — fold its scope validation into cmd_run",
-        "Keep auto as hidden alias for backwards compat",
-        "Update help.txt"
-      ],
-      "acceptanceCriteria": [
-        "aishore run works (one item)",
-        "aishore run FEAT-001 works (specific item)",
-        "aishore run done works (drain backlog, auto-grooms)",
-        "aishore run p1 with limit 5 works (scoped with limit)",
-        "aishore auto done still works (hidden alias)"
-      ],
-      "scope": [
-        ".aishore/aishore",
-        ".aishore/help.txt"
-      ],
-      "dependsOn": [
-        "FEAT-066",
-        "FEAT-070"
-      ],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomingNotes": "cmd_auto still exists (verified). Steps are clear: merge scope validation into cmd_run, keep auto as hidden alias. Backwards compat preserved. No dependencies. Straightforward merge of two functions — cmd_auto already delegates to cmd_run via --_auto flag per CLAUDE.md. Full code trace in docs/FEAT-065-auto-mode-trace.md: 26 auto_mode conditionals mapped, all stay as-is — merge only changes how auto_mode gets set (positional scope arg instead of --_auto flag). Low risk.",
-      "groomedAt": "2026-03-24",
-      "lastFailReason": "Implementation failed",
-      "lastFailAt": "2026-03-24T21:57:27-07:00",
-      "failCount": 1,
-      "completedAt": "2026-03-25T08:39:54-07:00"
-    },
-    {
-      "id": "FEAT-066",
-      "title": "Code trace: map all auto_mode references before run/auto merge",
-      "intent": "Before merging run and auto, trace every reference to auto_mode, the internal _auto flag, and auto_scope to understand exactly which conditionals branch on the run/auto split — prevents blind refactoring of the critical sprint loop",
-      "description": "",
-      "priority": "must",
-      "category": "research",
-      "steps": [
-        "grep -n auto_mode .aishore/aishore and document every conditional that checks it",
-        "grep -n _auto .aishore/aishore and document the internal flag flow",
-        "Map which behaviors activate only in auto mode: auto-groom, circuit breaker, session limit, priority filtering",
-        "Write the exact planned diff as comments before making changes",
-        "Document findings in the FEAT-065 grooming notes"
-      ],
-      "acceptanceCriteria": [
-        "Every auto_mode reference is documented with its purpose",
-        "The planned merge approach is written out before any code changes"
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "completedAt": "2026-03-24T21:36:11-07:00"
-    },
-    {
-      "id": "FEAT-067",
-      "title": "Code trace: verify how groom agents use backlog edit",
-      "intent": "Before changing backlog edit flag semantics, read agent prompts to verify they wont break — agents call backlog edit programmatically during grooming and any semantic change could silently corrupt the backlog",
-      "description": "",
-      "priority": "must",
-      "category": "research",
-      "steps": [
-        "Read all .aishore/agents/*.md prompts for backlog edit usage patterns",
-        "Search for edit, add, step, ac, scope in agent prompts",
-        "Document exactly which flags agents use and how",
-        "Verify new replace-array semantics are compatible with agent usage",
-        "Document findings in the FEAT-051 grooming notes"
-      ],
-      "acceptanceCriteria": [
-        "Every agent prompt that references backlog edit is documented",
-        "Compatibility of new semantics is confirmed or blockers identified"
-      ],
-      "scope": [
-        ".aishore/agents/*.md"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "completedAt": "2026-03-24T21:38:40-07:00"
-    },
-    {
       "id": "FEAT-068",
       "title": "Add module loader infrastructure",
       "intent": "Establish the lazy-loading mechanism so command modules can be sourced on-demand from .aishore/lib/*.sh — no behavior change, just the mechanism",
@@ -474,7 +310,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": false,
+      "groomedAt": null,
+      "groomingNotes": "Marked done by architect: implementation already exists from FEAT-049. _load_module, _LOADED_MODULES, and .aishore/lib/ are all in place at line 418-431 of .aishore/aishore. Dependency of extraction items is met."
     },
     {
       "id": "FEAT-069",
@@ -503,33 +341,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
-    },
-    {
-      "id": "FEAT-070",
-      "title": "Write smoke test script for regression checking",
-      "intent": "Create a simple bash smoke test that runs every command in safe mode — run after every change to catch regressions, required before any refactoring begins",
-      "description": "",
-      "priority": "must",
-      "category": "testing",
-      "steps": [
-        "Create .aishore/tests/smoke.sh that runs bash -n then every command in safe/dry-run mode",
-        "Include: help, version, backlog list, status, config check, diagnose, run --dry-run, auto done --dry-run, metrics, report, update --dry-run, clean --dry-run",
-        "Exit non-zero on first failure with clear error message"
-      ],
-      "acceptanceCriteria": [
-        "bash .aishore/tests/smoke.sh passes on current clean codebase",
-        "Script exits non-zero and names the failing command on any regression",
-        "Script runs in under 5 seconds"
-      ],
-      "scope": [
-        ".aishore/tests/smoke.sh"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
       "readyForSprint": false,
-      "completedAt": "2026-03-24T21:42:04-07:00"
+      "groomedAt": null,
+      "groomingNotes": "Marked done by architect: .aishore/lib/cmd-diagnose.sh already exists and dispatch at line 6236 already calls _load_module cmd-diagnose. Work was completed as part of FEAT-049."
     },
     {
       "id": "FEAT-071",
@@ -552,9 +366,12 @@
         ".aishore/help.txt"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": false
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomedAt": "2026-03-25",
+      "groomingNotes": "Architect review: no dependencies, no blocking work. Item is sprint-ready.",
+      "completedAt": "2026-03-25T09:08:22-07:00"
     }
   ]
 }
