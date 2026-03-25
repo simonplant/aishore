@@ -1519,6 +1519,254 @@
     "completedAt": "2026-03-24T21:55:01-07:00"
   },
   {
+    "id": "FEAT-056",
+    "title": "Extract cmd-config to module",
+    "intent": "Extract cmd_config_check (154 lines) to lazy-loaded module — isolated, only reads config",
+    "description": "",
+    "priority": "must",
+    "category": "modularize",
+    "steps": [
+      "Create .aishore/lib/cmd-config.sh with extracted functions",
+      "Remove functions from main script",
+      "Update dispatch to use _load_module"
+    ],
+    "acceptanceCriteria": [
+      "bash -n on both files passes",
+      "Command works via lazy-load",
+      "Core commands (run, backlog list) unaffected"
+    ],
+    "scope": [
+      ".aishore/aishore",
+      ".aishore/lib/cmd-config.sh"
+    ],
+    "dependsOn": [
+      "FEAT-068"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomingNotes": "Note: cmd_config_check is dispatched from a NESTED case block (config > check), not a top-level case. The lazy-load goes inside that nested block: 'check) _load_module cmd-config; cmd_config_check \"$@\" ;;'. The outer 'config)' case block with its shift logic stays in core. Also confirm cmd_config_check has no callers other than dispatch (grep confirms only line 6241). Pattern otherwise follows cmd-diagnose exactly.",
+    "groomedAt": "2026-03-25",
+    "completedAt": "2026-03-25T15:43:20-07:00"
+  },
+  {
+    "id": "FEAT-057",
+    "title": "Extract cmd-review to module",
+    "intent": "Extract cmd_review (56 lines) to lazy-loaded module — calls run_agent which stays in core",
+    "description": "",
+    "priority": "must",
+    "category": "modularize",
+    "steps": [
+      "Create .aishore/lib/cmd-review.sh with extracted functions",
+      "Remove functions from main script",
+      "Update dispatch to use _load_module"
+    ],
+    "acceptanceCriteria": [
+      "bash -n on both files passes",
+      "Command works via lazy-load",
+      "Core commands (run, backlog list) unaffected"
+    ],
+    "scope": [
+      ".aishore/aishore",
+      ".aishore/lib/cmd-review.sh"
+    ],
+    "dependsOn": [
+      "FEAT-068"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomingNotes": "CRITICAL: cmd_review is called from TWO places, not just dispatch. Line 6229 (main dispatch) AND line 3808 (inside sprint loop, auto-review feature). Step 3 must update BOTH call sites: (1) dispatch: 'review) _load_module cmd-review; cmd_review \"$@\" ;;' AND (2) line ~3808 sprint loop: add '_load_module cmd-review' before the 'cmd_review || true' call. Failure to update the internal call will cause 'cmd_review: command not found' when --auto-review flag is used. _build_groom_context stays in core (called by sprint loop at line 3516 and by cmd_review itself via the module). Verify: run 'aishore run done --auto-review --dry-run' to exercise the internal call path.",
+    "groomedAt": "2026-03-25",
+    "completedAt": "2026-03-25T15:46:08-07:00"
+  },
+  {
+    "id": "FEAT-058",
+    "title": "Extract cmd-report and cmd-metrics to module",
+    "intent": "Extract reporting commands to single module — _compute_metrics_json, cmd_metrics, cmd_report share sprints.jsonl data",
+    "description": "",
+    "priority": "must",
+    "category": "modularize",
+    "steps": [
+      "Create .aishore/lib/cmd-report.sh with extracted functions",
+      "Remove functions from main script",
+      "Update dispatch to use _load_module"
+    ],
+    "acceptanceCriteria": [
+      "bash -n on both files passes",
+      "Command works via lazy-load",
+      "Core commands (run, backlog list) unaffected"
+    ],
+    "scope": [
+      ".aishore/aishore",
+      ".aishore/lib/cmd-report.sh"
+    ],
+    "dependsOn": [
+      "FEAT-068"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomingNotes": "_compute_metrics_json (line 4211) is called only from cmd_metrics — extract to cmd-report.sh along with cmd_metrics (line 4257) and cmd_report (line 4318). Both dispatch entries need updating: 'metrics) _load_module cmd-report; cmd_metrics \"$@\" ;;' and 'report) _load_module cmd-report; cmd_report \"$@\" ;;'. Pattern follows cmd-diagnose.",
+    "groomedAt": "2026-03-25",
+    "completedAt": "2026-03-25T15:49:06-07:00"
+  },
+  {
+    "id": "FEAT-059",
+    "title": "Extract cmd-status to module",
+    "intent": "Extract _status_output and cmd_status (126 lines) to lazy-loaded module",
+    "description": "",
+    "priority": "must",
+    "category": "modularize",
+    "steps": [
+      "Create .aishore/lib/cmd-status.sh with extracted functions",
+      "Remove functions from main script",
+      "Update dispatch to use _load_module"
+    ],
+    "acceptanceCriteria": [
+      "bash -n on both files passes",
+      "Command works via lazy-load",
+      "Core commands (run, backlog list) unaffected"
+    ],
+    "scope": [
+      ".aishore/aishore",
+      ".aishore/lib/cmd-status.sh"
+    ],
+    "dependsOn": [
+      "FEAT-068"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomingNotes": "_status_output (line 4371) is called only from cmd_status (lines 4467, 4474) — safe to co-locate in cmd-status.sh. cmd_status (line 4459) is only called from dispatch (line 6232). Dispatch update: 'status) _load_module cmd-status; cmd_status \"$@\" ;;'. Pattern follows cmd-diagnose.",
+    "groomedAt": "2026-03-25",
+    "completedAt": "2026-03-25T15:52:22-07:00"
+  },
+  {
+    "id": "FEAT-060",
+    "title": "Extract cmd-groom entry to module",
+    "intent": "Extract only cmd_groom and print_groom_summary (46 lines) — groom helpers MUST stay in core (sprint loop calls them)",
+    "description": "",
+    "priority": "must",
+    "category": "modularize",
+    "steps": [
+      "Create .aishore/lib/cmd-groom.sh with extracted functions",
+      "Remove functions from main script",
+      "Update dispatch to use _load_module"
+    ],
+    "acceptanceCriteria": [
+      "bash -n on both files passes",
+      "Command works via lazy-load",
+      "Core commands (run, backlog list) unaffected"
+    ],
+    "scope": [
+      ".aishore/aishore",
+      ".aishore/lib/cmd-groom.sh"
+    ],
+    "dependsOn": [
+      "FEAT-068"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomingNotes": "WARNING: _build_groom_context() is defined at line 3923, between cmd_groom and print_groom_summary in the file. Do NOT extract it — it is called from (1) cmd_groom itself, (2) cmd_review (FEAT-057), and (3) the sprint loop auto-groom path at line 3516. It must stay in core. Only extract: cmd_groom (lines 3890-3920) and print_groom_summary (lines 3934-end). Extraction: move both functions to cmd-groom.sh, add dispatch update 'groom) _load_module cmd-groom; cmd_groom \"$@\" ;;'. print_groom_summary is only called from cmd_groom (confirmed via grep), so it safely moves.",
+    "groomedAt": "2026-03-25",
+    "completedAt": "2026-03-25T15:54:58-07:00"
+  },
+  {
+    "id": "FEAT-061",
+    "title": "Extract cmd-backlog-write to module",
+    "intent": "Extract cmd_backlog_add, cmd_backlog_edit, cmd_backlog_populate (420 lines) — read commands stay in core",
+    "description": "",
+    "priority": "must",
+    "category": "modularize",
+    "steps": [
+      "Create .aishore/lib/cmd-backlog-write.sh with extracted functions",
+      "Remove functions from main script",
+      "Update dispatch to use _load_module"
+    ],
+    "acceptanceCriteria": [
+      "bash -n on both files passes",
+      "Command works via lazy-load",
+      "Core commands (run, backlog list) unaffected"
+    ],
+    "scope": [
+      ".aishore/aishore",
+      ".aishore/lib/cmd-backlog-write.sh"
+    ],
+    "dependsOn": [
+      "FEAT-068"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomingNotes": "cmd_backlog_add (line 5329), cmd_backlog_edit (line 5505), cmd_backlog_populate (line 5174) are all only called from cmd_backlog dispatch — no internal sprint-loop calls. Safe to extract all to cmd-backlog-write.sh. cmd_backlog dispatch (cmd_backlog function, read commands like backlog list/show/check) stays in core. Update the add/edit/populate arms: 'add|new) _load_module cmd-backlog-write; cmd_backlog_add \"$@\" ;;' etc. Pattern follows cmd-diagnose.",
+    "groomedAt": "2026-03-25",
+    "completedAt": "2026-03-25T16:01:20-07:00"
+  },
+  {
+    "id": "FEAT-062",
+    "title": "Extract cmd-init to module",
+    "intent": "Extract cmd_init and 3 helper functions (325 lines) to lazy-loaded module",
+    "description": "",
+    "priority": "must",
+    "category": "modularize",
+    "steps": [
+      "Create .aishore/lib/cmd-init.sh with extracted functions",
+      "Remove functions from main script",
+      "Update dispatch to use _load_module"
+    ],
+    "acceptanceCriteria": [
+      "bash -n on both files passes",
+      "Command works via lazy-load",
+      "Core commands (run, backlog list) unaffected"
+    ],
+    "scope": [
+      ".aishore/aishore",
+      ".aishore/lib/cmd-init.sh"
+    ],
+    "dependsOn": [
+      "FEAT-068"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomingNotes": "The 3 helper functions are _init_check_prereqs (line 4499), _init_detect_project (line 4531), _init_scaffold_files (line 4634) — all defined before cmd_init (line 4753) in the file. Extract all 4 to cmd-init.sh. All helpers are called only from cmd_init (confirmed via grep). Dispatch update: 'init) _load_module cmd-init; cmd_init \"$@\" ;;'. Pattern follows cmd-diagnose.",
+    "groomedAt": "2026-03-25",
+    "completedAt": "2026-03-25T16:06:13-07:00"
+  },
+  {
+    "id": "FEAT-063",
+    "title": "Extract cmd-update to module",
+    "intent": "Extract cmd_update (188 lines with nested _fetch_and_stage) and cmd_checksums — update checksums to glob lib/*.sh",
+    "description": "",
+    "priority": "must",
+    "category": "modularize",
+    "steps": [
+      "Create .aishore/lib/cmd-update.sh with extracted functions",
+      "Remove functions from main script",
+      "Update dispatch to use _load_module"
+    ],
+    "acceptanceCriteria": [
+      "bash -n on both files passes",
+      "Command works via lazy-load",
+      "Core commands (run, backlog list) unaffected"
+    ],
+    "scope": [
+      ".aishore/aishore",
+      ".aishore/lib/cmd-update.sh"
+    ],
+    "dependsOn": [
+      "FEAT-068"
+    ],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomingNotes": "Note: _fetch_and_stage is a nested function DEFINED INSIDE cmd_update (line 4948, inside cmd_update which starts at 4837). It will move to cmd-update.sh naturally with cmd_update — no separate extraction step needed. cmd_checksums (line 5025) is a standalone function, also extract to cmd-update.sh. Both dispatch entries need updating: 'update) _load_module cmd-update; cmd_update \"$@\" ;;' and 'checksums) _load_module cmd-update; cmd_checksums ;;'. Pattern follows cmd-diagnose.",
+    "groomedAt": "2026-03-25",
+    "completedAt": "2026-03-25T16:10:02-07:00"
+  },
+  {
     "id": "FEAT-065",
     "title": "Unify run and auto into single run command",
     "intent": "Eliminate the duplicate command surface — run becomes the only execution command, auto scope behavior (done/p0/p1/p2) moves to run as optional arguments, auto-grooming activates when a scope is given",
@@ -1614,6 +1862,71 @@
     "completedAt": "2026-03-24T21:38:40-07:00"
   },
   {
+    "id": "FEAT-068",
+    "title": "Add module loader infrastructure",
+    "intent": "Establish the lazy-loading mechanism so command modules can be sourced on-demand from .aishore/lib/*.sh — no behavior change, just the mechanism",
+    "description": "",
+    "priority": "must",
+    "category": "modularize",
+    "steps": [
+      "Add declare -A _LOADED_MODULES and _load_module function after UTILITIES header",
+      "Create empty .aishore/lib/ directory",
+      "No dispatch changes yet"
+    ],
+    "acceptanceCriteria": [
+      "bash -n .aishore/aishore passes",
+      "smoke test passes",
+      "All existing commands still work identically"
+    ],
+    "scope": [
+      ".aishore/aishore",
+      ".aishore/lib/**"
+    ],
+    "dependsOn": [
+      "FEAT-051",
+      "FEAT-052",
+      "FEAT-065"
+    ],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": false,
+    "groomedAt": null,
+    "groomingNotes": "Marked done by architect: implementation already exists from FEAT-049. _load_module, _LOADED_MODULES, and .aishore/lib/ are all in place at line 418-431 of .aishore/aishore. Dependency of extraction items is met.",
+    "resolved_at": "2026-03-25T16:19:25Z"
+  },
+  {
+    "id": "FEAT-069",
+    "title": "Extract cmd-diagnose to module",
+    "intent": "First extraction — prove the lazy-load pattern works on the simplest most isolated command (56 lines, zero deps beyond globals)",
+    "description": "",
+    "priority": "must",
+    "category": "modularize",
+    "steps": [
+      "Create .aishore/lib/cmd-diagnose.sh with cmd_diagnose function",
+      "Remove cmd_diagnose from main script",
+      "Update main() dispatch to use _load_module cmd-diagnose",
+      "Run smoke test"
+    ],
+    "acceptanceCriteria": [
+      "bash -n on both files passes",
+      "aishore diagnose works",
+      "smoke test passes"
+    ],
+    "scope": [
+      ".aishore/aishore",
+      ".aishore/lib/cmd-diagnose.sh"
+    ],
+    "dependsOn": [
+      "FEAT-068"
+    ],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": false,
+    "groomedAt": null,
+    "groomingNotes": "Marked done by architect: .aishore/lib/cmd-diagnose.sh already exists and dispatch at line 6236 already calls _load_module cmd-diagnose. Work was completed as part of FEAT-049.",
+    "resolved_at": "2026-03-25T16:19:25Z"
+  },
+  {
     "id": "FEAT-070",
     "title": "Write smoke test script for regression checking",
     "intent": "Create a simple bash smoke test that runs every command in safe mode — run after every change to catch regressions, required before any refactoring begins",
@@ -1638,5 +1951,33 @@
     "passes": true,
     "readyForSprint": false,
     "completedAt": "2026-03-24T21:42:04-07:00"
+  },
+  {
+    "id": "FEAT-071",
+    "title": "Move session tuning flags to config defaults",
+    "intent": "Flags like max-failures, warm-retry, auto-review, no-summary are session preferences — hide from default help, document as config-first with flag override",
+    "description": "",
+    "priority": "should",
+    "category": "simplify",
+    "steps": [
+      "Verify all session flags have config.yaml equivalents",
+      "Remove session flags from default help, keep in help --full",
+      "Make the pr flag imply no-merge automatically"
+    ],
+    "acceptanceCriteria": [
+      "Default help for run shows only essential flags",
+      "Session tuning flags still work as CLI overrides"
+    ],
+    "scope": [
+      ".aishore/aishore",
+      ".aishore/help.txt"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": true,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-25",
+    "groomingNotes": "Architect review: no dependencies, no blocking work. Item is sprint-ready.",
+    "completedAt": "2026-03-25T09:08:22-07:00"
   }
 ]

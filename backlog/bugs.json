@@ -83,6 +83,123 @@
       "readyForSprint": true,
       "groomedAt": "2026-03-24",
       "groomingNotes": "Depends on BUG-072 (must run first). BUG-072 has been marked not-ready pending spec refresh — BUG-127 remains blocked. Steps are defensively written with baseline capture and output-diff verification. Once BUG-072 is specced and passing, this item is ready to sprint. No changes needed to BUG-127's own spec."
+    },
+    {
+      "id": "BUG-129",
+      "title": "Extract cmd-help to lazy-loaded module",
+      "intent": "Extract all help functions (cmd_usage, cmd_help, _help_*) to .aishore/lib/cmd-help.sh — lazy-loaded on demand, ~270 lines removed from main script, dispatch updated, bash -n passes on both files.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Identify all help functions in .aishore/aishore (cmd_usage, cmd_help, _help_compact, _help_run, _help_auto, _help_backlog, _help_groom, _help_review, _help_report, _help_metrics, _help_status, _help_update, _help_clean, _help_config, _help_init)",
+        "Create .aishore/lib/cmd-help.sh with all identified functions, following the same module header pattern as existing modules",
+        "Remove the extracted functions from .aishore/aishore",
+        "Update dispatch table in main to call _load_module cmd-help before invoking cmd_help or cmd_usage",
+        "Run bash -n on both files to verify syntax",
+        "Run .aishore/aishore help and .aishore/aishore help run to verify output is unchanged"
+      ],
+      "acceptanceCriteria": [
+        "bash -n .aishore/aishore and bash -n .aishore/lib/cmd-help.sh both pass",
+        ".aishore/aishore help produces identical output before and after",
+        ".aishore/aishore help run produces identical output before and after",
+        "wc -l .aishore/aishore shows at least 250 fewer lines than before this change"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomingNotes": "Mechanical extraction following the exact same pattern as FEAT-056 through FEAT-063. Help functions are read-only (no side effects), pure output — low risk. AC: bash -n passes, help output unchanged.",
+      "groomedAt": "2026-03-25",
+      "completedAt": "2026-03-25T16:22:38-07:00"
+    },
+    {
+      "id": "BUG-130",
+      "title": "Extract backlog read commands to cmd-backlog-read module",
+      "intent": "Extract cmd_backlog (dispatcher), cmd_backlog_check, _backlog_check_all, cmd_backlog_list, cmd_backlog_show, cmd_backlog_history, cmd_backlog_rm to .aishore/lib/cmd-backlog-read.sh — lazy-loaded, ~260 lines removed from main, dispatch updated, bash -n passes on both files.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Identify all backlog read/check functions in .aishore/aishore (cmd_backlog, cmd_backlog_check, _backlog_check_all, cmd_backlog_list, cmd_backlog_show, cmd_backlog_history, cmd_backlog_rm)",
+        "Create .aishore/lib/cmd-backlog-read.sh with all identified functions, following the same module header pattern as existing modules",
+        "Remove the extracted functions from .aishore/aishore",
+        "Update dispatch table in main to _load_module cmd-backlog-read before any backlog subcommand invocation — verify cmd-backlog-write is still loaded separately for write commands",
+        "Run bash -n on both files to verify syntax",
+        "Run .aishore/aishore backlog list, backlog show, backlog check --all, backlog history, backlog rm --help to verify output is unchanged"
+      ],
+      "acceptanceCriteria": [
+        "bash -n .aishore/aishore and bash -n .aishore/lib/cmd-backlog-read.sh both pass",
+        ".aishore/aishore backlog list produces correct output",
+        ".aishore/aishore backlog show and backlog history work correctly",
+        ".aishore/aishore backlog check --all runs without error",
+        "wc -l .aishore/aishore shows at least 230 fewer lines than before this change"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Follows established extraction pattern. Backlog read commands are stateless (no writes), easier to extract safely than write commands. AC: bash -n passes, all backlog read subcommands produce correct output.",
+      "groomedAt": "2026-03-25"
+    },
+    {
+      "id": "BUG-131",
+      "title": "Extract cmd-clean to lazy-loaded module",
+      "intent": "Extract cmd_clean and _archive_done_items to .aishore/lib/cmd-clean.sh — lazy-loaded on demand, ~70 lines removed from main script, dispatch updated, bash -n passes on both files.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Identify cmd_clean and _archive_done_items in .aishore/aishore",
+        "Create .aishore/lib/cmd-clean.sh with both functions, following the same module header pattern as existing modules",
+        "Remove the extracted functions from .aishore/aishore",
+        "Update dispatch table in main to _load_module cmd-clean before invoking cmd_clean",
+        "Run bash -n on both files to verify syntax",
+        "Run .aishore/aishore clean --dry-run to verify behavior is unchanged"
+      ],
+      "acceptanceCriteria": [
+        "bash -n .aishore/aishore and bash -n .aishore/lib/cmd-clean.sh both pass",
+        ".aishore/aishore clean --dry-run produces correct output",
+        "wc -l .aishore/aishore shows at least 60 fewer lines than before this change"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Smallest of the four extractions (~70 lines). cmd_clean and _archive_done_items are self-contained. AC: bash -n passes, clean --dry-run unchanged.",
+      "groomedAt": "2026-03-25"
+    },
+    {
+      "id": "BUG-132",
+      "title": "Expand cmd-groom module with remaining groom helpers from main",
+      "intent": "Move _build_groom_context, protect_items_from_groom, snapshot_backlogs, enforce_groom_limits, print_groom_diff, and run_groom_flow out of .aishore/aishore and into the existing .aishore/lib/cmd-groom.sh — all groom logic lives in one module, ~150 lines removed from main, bash -n passes on both files.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Identify the six groom helper functions remaining in .aishore/aishore: _build_groom_context, protect_items_from_groom, snapshot_backlogs, enforce_groom_limits, print_groom_diff, run_groom_flow",
+        "Append the six functions to .aishore/lib/cmd-groom.sh in the same order they appear in the main script",
+        "Remove the six functions from .aishore/aishore",
+        "Confirm dispatch table already loads cmd-groom before invocation — no dispatch change needed if _load_module cmd-groom is already wired",
+        "Run bash -n on both files to verify syntax",
+        "Run .aishore/aishore groom --backlog (dry-run context only) to confirm the groom flow is still reachable"
+      ],
+      "acceptanceCriteria": [
+        "bash -n .aishore/aishore and bash -n .aishore/lib/cmd-groom.sh both pass",
+        ".aishore/aishore groom --backlog runs without error (agent invocation is expected)",
+        "wc -l .aishore/aishore shows at least 130 fewer lines than before this change",
+        "All six groom helper functions are absent from .aishore/aishore and present in cmd-groom.sh"
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "Expanding an existing module rather than creating a new one — append-only operation. cmd-groom.sh is currently only 48 lines; all groom logic should live there. Dispatch likely already loads the module. AC: bash -n passes, groom flow is reachable.",
+      "groomedAt": "2026-03-25"
     }
   ]
 }
