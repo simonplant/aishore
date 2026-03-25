@@ -1,31 +1,31 @@
 {
-  "sprintId": "sprint-1774413128",
-  "startedAt": "2026-03-24T21:32:08-07:00",
+  "sprintId": "sprint-1774413372",
+  "startedAt": "2026-03-24T21:36:12-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-066",
-    "title": "Code trace: map all auto_mode references before run/auto merge",
-    "intent": "Before merging run and auto, trace every reference to auto_mode, the internal _auto flag, and auto_scope to understand exactly which conditionals branch on the run/auto split — prevents blind refactoring of the critical sprint loop",
+    "id": "FEAT-067",
+    "title": "Code trace: verify how groom agents use backlog edit",
+    "intent": "Before changing backlog edit flag semantics, read agent prompts to verify they wont break — agents call backlog edit programmatically during grooming and any semantic change could silently corrupt the backlog",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "grep -n auto_mode .aishore/aishore and document every conditional that checks it",
-      "grep -n _auto .aishore/aishore and document the internal flag flow",
-      "Map which behaviors activate only in auto mode: auto-groom, circuit breaker, session limit, priority filtering",
-      "Write the exact planned diff as comments before making changes",
-      "Document findings in the FEAT-065 grooming notes"
+      "Read all .aishore/agents/*.md prompts for backlog edit usage patterns",
+      "Search for edit, add, step, ac, scope in agent prompts",
+      "Document exactly which flags agents use and how",
+      "Verify new replace-array semantics are compatible with agent usage",
+      "Document findings in the FEAT-051 grooming notes"
     ],
     "acceptanceCriteria": [
-      "Every auto_mode reference is documented with its purpose",
-      "The planned merge approach is written out before any code changes"
+      "Every agent prompt that references backlog edit is documented",
+      "Compatibility of new semantics is confirmed or blockers identified"
     ],
     "scope": [
-      ".aishore/aishore"
+      ".aishore/agents/*.md"
     ],
-    "startedAt": "2026-03-24T21:32:08-07:00",
+    "startedAt": "2026-03-24T21:36:12-07:00",
     "status": "passed",
-    "completedAt": "2026-03-24T21:36:11-07:00"
+    "completedAt": "2026-03-24T21:38:40-07:00"
   },
-  "completedAt": "2026-03-24T21:36:11-07:00",
+  "completedAt": "2026-03-24T21:38:40-07:00",
   "attempts": 1
 }
