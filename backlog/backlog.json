@@ -308,11 +308,12 @@
         "FEAT-052",
         "FEAT-065"
       ],
-      "status": "todo",
+      "status": "done",
       "passes": false,
       "readyForSprint": false,
       "groomedAt": null,
-      "groomingNotes": "Marked done by architect: implementation already exists from FEAT-049. _load_module, _LOADED_MODULES, and .aishore/lib/ are all in place at line 418-431 of .aishore/aishore. Dependency of extraction items is met."
+      "groomingNotes": "Marked done by architect: implementation already exists from FEAT-049. _load_module, _LOADED_MODULES, and .aishore/lib/ are all in place at line 418-431 of .aishore/aishore. Dependency of extraction items is met.",
+      "resolved_at": "2026-03-25T16:19:25Z"
     },
     {
       "id": "FEAT-069",
@@ -339,11 +340,12 @@
       "dependsOn": [
         "FEAT-068"
       ],
-      "status": "todo",
+      "status": "done",
       "passes": false,
       "readyForSprint": false,
       "groomedAt": null,
-      "groomingNotes": "Marked done by architect: .aishore/lib/cmd-diagnose.sh already exists and dispatch at line 6236 already calls _load_module cmd-diagnose. Work was completed as part of FEAT-049."
+      "groomingNotes": "Marked done by architect: .aishore/lib/cmd-diagnose.sh already exists and dispatch at line 6236 already calls _load_module cmd-diagnose. Work was completed as part of FEAT-049.",
+      "resolved_at": "2026-03-25T16:19:25Z"
     },
     {
       "id": "FEAT-071",
