@@ -1,32 +1,33 @@
 {
-  "sprintId": "sprint-1774480695",
-  "startedAt": "2026-03-25T16:18:15-07:00",
+  "sprintId": "sprint-1774480960",
+  "startedAt": "2026-03-25T16:22:40-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-129",
-    "title": "Extract cmd-help to lazy-loaded module",
-    "intent": "Extract all help functions (cmd_usage, cmd_help, _help_*) to .aishore/lib/cmd-help.sh — lazy-loaded on demand, ~270 lines removed from main script, dispatch updated, bash -n passes on both files.",
+    "id": "BUG-130",
+    "title": "Extract backlog read commands to cmd-backlog-read module",
+    "intent": "Extract cmd_backlog (dispatcher), cmd_backlog_check, _backlog_check_all, cmd_backlog_list, cmd_backlog_show, cmd_backlog_history, cmd_backlog_rm to .aishore/lib/cmd-backlog-read.sh — lazy-loaded, ~260 lines removed from main, dispatch updated, bash -n passes on both files.",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Identify all help functions in .aishore/aishore (cmd_usage, cmd_help, _help_compact, _help_run, _help_auto, _help_backlog, _help_groom, _help_review, _help_report, _help_metrics, _help_status, _help_update, _help_clean, _help_config, _help_init)",
-      "Create .aishore/lib/cmd-help.sh with all identified functions, following the same module header pattern as existing modules",
+      "Identify all backlog read/check functions in .aishore/aishore (cmd_backlog, cmd_backlog_check, _backlog_check_all, cmd_backlog_list, cmd_backlog_show, cmd_backlog_history, cmd_backlog_rm)",
+      "Create .aishore/lib/cmd-backlog-read.sh with all identified functions, following the same module header pattern as existing modules",
       "Remove the extracted functions from .aishore/aishore",
-      "Update dispatch table in main to call _load_module cmd-help before invoking cmd_help or cmd_usage",
+      "Update dispatch table in main to _load_module cmd-backlog-read before any backlog subcommand invocation — verify cmd-backlog-write is still loaded separately for write commands",
       "Run bash -n on both files to verify syntax",
-      "Run .aishore/aishore help and .aishore/aishore help run to verify output is unchanged"
+      "Run .aishore/aishore backlog list, backlog show, backlog check --all, backlog history, backlog rm --help to verify output is unchanged"
     ],
     "acceptanceCriteria": [
-      "bash -n .aishore/aishore and bash -n .aishore/lib/cmd-help.sh both pass",
-      ".aishore/aishore help produces identical output before and after",
-      ".aishore/aishore help run produces identical output before and after",
-      "wc -l .aishore/aishore shows at least 250 fewer lines than before this change"
+      "bash -n .aishore/aishore and bash -n .aishore/lib/cmd-backlog-read.sh both pass",
+      ".aishore/aishore backlog list produces correct output",
+      ".aishore/aishore backlog show and backlog history work correctly",
+      ".aishore/aishore backlog check --all runs without error",
+      "wc -l .aishore/aishore shows at least 230 fewer lines than before this change"
     ],
     "scope": [],
-    "startedAt": "2026-03-25T16:18:15-07:00",
+    "startedAt": "2026-03-25T16:22:40-07:00",
     "status": "passed",
-    "completedAt": "2026-03-25T16:22:38-07:00"
+    "completedAt": "2026-03-25T16:26:11-07:00"
   },
-  "completedAt": "2026-03-25T16:22:38-07:00",
+  "completedAt": "2026-03-25T16:26:11-07:00",
   "attempts": 1
 }

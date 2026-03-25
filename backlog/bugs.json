@@ -138,11 +138,12 @@
       ],
       "scope": [],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Follows established extraction pattern. Backlog read commands are stateless (no writes), easier to extract safely than write commands. AC: bash -n passes, all backlog read subcommands produce correct output.",
-      "groomedAt": "2026-03-25"
+      "groomedAt": "2026-03-25",
+      "completedAt": "2026-03-25T16:26:11-07:00"
     },
     {
       "id": "BUG-131",
