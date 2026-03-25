@@ -2231,30 +2231,9 @@ print_batch_summary() {
     echo ""
 }
 
+# Hidden backwards-compat alias — scope detection now lives in cmd_run
 cmd_auto() {
-    local scope="${1:-}"
-
-    if [[ -z "$scope" ]]; then
-        log_error "Usage: auto {done|p0|p1|p2} [--parallel N] [--limit N] [--retries N] [--max-failures N] [--timeout N] [--no-merge] [--pr] [--refine] [--quick] [--warm-retry] [--category <name>] [--auto-review] [--no-summary] [--dry-run]"
-        echo "" >&2
-        echo "Scopes:" >&2
-        echo "  done  Drain entire backlog to completion" >&2
-        echo "  p0    Complete all P0 (must) items" >&2
-        echo "  p1    Complete all P0+P1 (must + should) items" >&2
-        echo "  p2    Complete all P0–P2 (must + should + could) items" >&2
-        return 1
-    fi
-
-    case "$scope" in
-        done|p0|p1|p2) ;;
-        *)
-            log_error "Unknown scope: $scope (must be: done, p0, p1, p2)"
-            return 1
-            ;;
-    esac
-    shift
-
-    cmd_run --_auto "$scope" "$@"
+    cmd_run "$@"
 }
 
 # Dry-run handler for cmd_run.
@@ -2265,7 +2244,7 @@ _run_dry_run() {
     [[ "$quick_mode" == "true" ]] && MATURITY_ENABLED="false"
 
     if [[ "$auto_mode" == "true" ]]; then
-        log_header "aishore auto $auto_scope - Dry Run"
+        log_header "aishore run $auto_scope - Dry Run"
         echo "Project: $PROJECT_ROOT"
         echo "Auto-groom: when ready < $AUTO_GROOM_THRESHOLD"
         echo "Circuit breaker: $AUTO_MAX_FAILURES consecutive failures"
@@ -2936,13 +2915,15 @@ cmd_run_parse_args() {
     parse_opts --positional \
         "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:create_pr:--pr" \
         "bool:refine_on_exhaust:--refine" "bool:quick_mode:--quick" "bool:warm_retry:--warm-retry" "bool:auto_review:--auto-review" "bool:no_summary:--no-summary" \
-        "val:auto_scope:--_auto" "val:category_filter:--category" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" "num:parallel_count:--parallel" "num:timeout_minutes:--timeout" \
+        "val:category_filter:--category" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" "num:parallel_count:--parallel" "num:timeout_minutes:--timeout" \
         -- "$@" || return 1
-    [[ -n "$auto_scope" ]] && auto_mode=true
     local _arg
     for _arg in "${_PARSE_REMAINING[@]}"; do
         if [[ "$_arg" =~ ^[0-9]+$ ]]; then
             count="$_arg"
+        elif [[ "$_arg" =~ ^(done|p0|p1|p2)$ ]]; then
+            auto_scope="$_arg"
+            auto_mode=true
         else
             specific_id="$_arg"
             count=1
@@ -3039,7 +3020,7 @@ setup_sprint_environment() {
             p2)   auto_priorities="must should could"; scope_label="P0–P2 (must + should + could)" ;;
             done) auto_priorities="";                  scope_label="all items" ;;
         esac
-        log_header "aishore auto $auto_scope"
+        log_header "aishore run $auto_scope"
     else
         log_header "aishore - Sprint Runner"
     fi
@@ -3831,7 +3812,7 @@ print_sprint_summary() {
             if [[ "$_items_after" -gt "$_items_before" ]]; then
                 local _new_count=$((_items_after - _items_before))
                 echo ""
-                log_info "Hint: $_new_count new item(s) added to the backlog during review. Run '.aishore/aishore auto done' to continue."
+                log_info "Hint: $_new_count new item(s) added to the backlog during review. Run '.aishore/aishore run done' to continue."
             fi
         fi
     fi
@@ -5997,8 +5978,7 @@ aishore - AI Sprint Runner (v${AISHORE_VERSION})
 Usage: aishore <command> [options]
 
 Commands:
-  run [N|ID]       Run sprints (default: 1)
-  auto <scope>     Autonomous mode (done|p0|p1|p2)
+  run [N|ID|scope] Run sprints, or drain backlog with scope (done|p0|p1|p2)
   backlog <sub>    Manage backlog (list|add|show|edit|check|rm|history|populate)
   groom            Groom bugs/features/architecture
   review           Architecture review
@@ -6015,17 +5995,25 @@ _help_run() {
     cat <<EOF
 aishore run — Run sprint items
 
-Usage: aishore run [<count>|<ID>] [options]
+Usage: aishore run [<count>|<ID>|<scope>] [options]
 
   aishore run              Run 1 sprint (next ready item)
   aishore run 3            Run 3 sprints
   aishore run FEAT-001     Run specific item by ID
+  aishore run done         Drain entire backlog (auto-grooms when ready items low)
+  aishore run p0           Complete all P0 (must) items
+  aishore run p1           Complete all P0+P1 (must + should) items
+  aishore run p2           Complete all P0-P2 (must + should + could) items
+
+When a scope (done/p0/p1/p2) is given, auto-grooming and the circuit breaker
+activate automatically.
 
 Options:
   --dry-run             Preview without running agents
   --no-merge            Keep feature branches for PR review
   --pr                  Create GitHub PR (implies --no-merge, requires gh)
   --retries N           Retry attempts on validation failure
+  --max-failures N      Consecutive failures before stopping (default: 5)
   --refine              Refine spec on exhausted retries, try once more
   --quick               Skip maturity protocol (fast iteration)
   --warm-retry          Continue existing session on retry
@@ -6037,47 +6025,21 @@ Options:
   --parallel N          Run up to N items concurrently (1-4)
 
 Examples:
-  aishore run FEAT-001           # Run specific item
-  aishore run --no-merge 3       # Keep branches for PR review
-  aishore run --pr FEAT-001      # Create GitHub PR for review
-  aishore run --quick 5          # Fast iteration, 5 items
+  aishore run FEAT-001               # Run specific item
+  aishore run --no-merge 3           # Keep branches for PR review
+  aishore run --pr FEAT-001          # Create GitHub PR for review
+  aishore run --quick 5              # Fast iteration, 5 items
+  aishore run done                   # Drain entire backlog
+  aishore run done --parallel 2      # Run 2 items concurrently
+  aishore run p1 --retries 2         # Must + should, with retries
+  aishore run done --category docs   # Only documentation items
 EOF
 }
 
 _help_auto() {
-    cat <<EOF
-aishore auto — Autonomous mode, drive backlog to completion
-
-Usage: aishore auto <scope> [options]
-
-Scopes:
-  done    Drain entire backlog
-  p0      Complete all P0 (must) items
-  p1      Complete all P0+P1 (must + should) items
-  p2      Complete all P0-P2 (must + should + could) items
-
-Options:
-  --parallel N          Run up to N items concurrently (1-4, default: 1)
-  --limit N             Cap session at N successful items
-  --max-failures N      Consecutive failures before stopping (default: 5)
-  --retries N           Per-item retry attempts on failure
-  --timeout N           Kill agent after N minutes (0 = no limit)
-  --no-merge            Keep feature branches for PR review
-  --pr                  Create GitHub PR (implies --no-merge, requires gh)
-  --refine              Refine spec on exhausted retries, try once more
-  --quick               Skip maturity protocol (fast iteration)
-  --warm-retry          Continue existing session on retry
-  --category <name>     Only run items matching this category
-  --auto-review         Run architecture review after completion
-  --no-summary          Suppress end-of-session summary table
-  --dry-run             Preview first item without running
-
-Examples:
-  aishore auto done                    # Drain entire backlog
-  aishore auto done --parallel 2       # Run 2 items concurrently
-  aishore auto p1 --retries 2          # Must + should, with retries
-  aishore auto done --category docs    # Only documentation items
-EOF
+    echo "'auto' is now part of 'run'. Use: aishore run <scope> [options]"
+    echo ""
+    _help_run
 }
 
 _help_backlog() {
