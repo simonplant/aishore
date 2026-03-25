@@ -1,15 +1,15 @@
 {
-  "sprintId": "sprint-1774478409",
-  "startedAt": "2026-03-25T15:40:09-07:00",
+  "sprintId": "sprint-1774478602",
+  "startedAt": "2026-03-25T15:43:22-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-056",
-    "title": "Extract cmd-config to module",
-    "intent": "Extract cmd_config_check (154 lines) to lazy-loaded module — isolated, only reads config",
+    "id": "FEAT-057",
+    "title": "Extract cmd-review to module",
+    "intent": "Extract cmd_review (56 lines) to lazy-loaded module — calls run_agent which stays in core",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Create .aishore/lib/cmd-config.sh with extracted functions",
+      "Create .aishore/lib/cmd-review.sh with extracted functions",
       "Remove functions from main script",
       "Update dispatch to use _load_module"
     ],
@@ -20,12 +20,12 @@
     ],
     "scope": [
       ".aishore/aishore",
-      ".aishore/lib/cmd-config.sh"
+      ".aishore/lib/cmd-review.sh"
     ],
-    "startedAt": "2026-03-25T15:40:09-07:00",
+    "startedAt": "2026-03-25T15:43:22-07:00",
     "status": "passed",
-    "completedAt": "2026-03-25T15:43:20-07:00"
+    "completedAt": "2026-03-25T15:46:08-07:00"
   },
-  "completedAt": "2026-03-25T15:43:20-07:00",
+  "completedAt": "2026-03-25T15:46:08-07:00",
   "attempts": 1
 }
