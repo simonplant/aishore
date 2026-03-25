@@ -1,31 +1,30 @@
 {
-  "sprintId": "sprint-1774413372",
-  "startedAt": "2026-03-24T21:36:12-07:00",
+  "sprintId": "sprint-1774413522",
+  "startedAt": "2026-03-24T21:38:42-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-067",
-    "title": "Code trace: verify how groom agents use backlog edit",
-    "intent": "Before changing backlog edit flag semantics, read agent prompts to verify they wont break — agents call backlog edit programmatically during grooming and any semantic change could silently corrupt the backlog",
+    "id": "FEAT-070",
+    "title": "Write smoke test script for regression checking",
+    "intent": "Create a simple bash smoke test that runs every command in safe mode — run after every change to catch regressions, required before any refactoring begins",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Read all .aishore/agents/*.md prompts for backlog edit usage patterns",
-      "Search for edit, add, step, ac, scope in agent prompts",
-      "Document exactly which flags agents use and how",
-      "Verify new replace-array semantics are compatible with agent usage",
-      "Document findings in the FEAT-051 grooming notes"
+      "Create .aishore/tests/smoke.sh that runs bash -n then every command in safe/dry-run mode",
+      "Include: help, version, backlog list, status, config check, diagnose, run --dry-run, auto done --dry-run, metrics, report, update --dry-run, clean --dry-run",
+      "Exit non-zero on first failure with clear error message"
     ],
     "acceptanceCriteria": [
-      "Every agent prompt that references backlog edit is documented",
-      "Compatibility of new semantics is confirmed or blockers identified"
+      "bash .aishore/tests/smoke.sh passes on current clean codebase",
+      "Script exits non-zero and names the failing command on any regression",
+      "Script runs in under 5 seconds"
     ],
     "scope": [
-      ".aishore/agents/*.md"
+      ".aishore/tests/smoke.sh"
     ],
-    "startedAt": "2026-03-24T21:36:12-07:00",
+    "startedAt": "2026-03-24T21:38:42-07:00",
     "status": "passed",
-    "completedAt": "2026-03-24T21:38:40-07:00"
+    "completedAt": "2026-03-24T21:42:04-07:00"
   },
-  "completedAt": "2026-03-24T21:38:40-07:00",
+  "completedAt": "2026-03-24T21:42:04-07:00",
   "attempts": 1
 }
