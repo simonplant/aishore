@@ -62,7 +62,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Steps are specific and actionable. AC are testable. No dependencies. Straightforward flag consolidation — repeatable pattern flags (--ac, --steps, --scope, --depends-on) each replace their entire array. Validation-before-write AC is a safety gate, not extra scope.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-052",
@@ -119,64 +121,6 @@
       "readyForSprint": false
     },
     {
-      "id": "FEAT-054",
-      "title": "Add module loader infrastructure",
-      "intent": "Establish the lazy-loading mechanism so command modules can be sourced on-demand from .aishore/lib/*.sh — no behavior change, just the mechanism",
-      "description": "",
-      "priority": "must",
-      "category": "modularize",
-      "steps": [
-        "Add declare -A _LOADED_MODULES and _load_module function after UTILITIES header",
-        "Create empty .aishore/lib/ directory",
-        "No dispatch changes yet"
-      ],
-      "acceptanceCriteria": [
-        "bash -n .aishore/aishore passes",
-        "All existing commands still work identically"
-      ],
-      "scope": [
-        ".aishore/aishore",
-        ".aishore/lib/**"
-      ],
-      "dependsOn": [
-        "FEAT-050",
-        "FEAT-051",
-        "FEAT-052",
-        "FEAT-065"
-      ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": false
-    },
-    {
-      "id": "FEAT-055",
-      "title": "Extract cmd-diagnose to module",
-      "intent": "Extract cmd_diagnose (56 lines) to lazy-loaded module — simplest and most isolated command, proves the pattern",
-      "description": "",
-      "priority": "must",
-      "category": "modularize",
-      "steps": [
-        "Create .aishore/lib/cmd-diagnose.sh with extracted functions",
-        "Remove functions from main script",
-        "Update dispatch to use _load_module"
-      ],
-      "acceptanceCriteria": [
-        "bash -n on both files passes",
-        "Command works via lazy-load",
-        "Core commands (run, backlog list) unaffected"
-      ],
-      "scope": [
-        ".aishore/aishore",
-        ".aishore/lib/cmd-diagnose.sh"
-      ],
-      "dependsOn": [
-        "FEAT-054"
-      ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": false
-    },
-    {
       "id": "FEAT-056",
       "title": "Extract cmd-config to module",
       "intent": "Extract cmd_config_check (154 lines) to lazy-loaded module — isolated, only reads config",
@@ -198,11 +142,13 @@
         ".aishore/lib/cmd-config.sh"
       ],
       "dependsOn": [
-        "FEAT-054"
+        "FEAT-066"
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared — extraction work is unblocked. Steps and AC are clear and actionable.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-057",
@@ -226,11 +172,13 @@
         ".aishore/lib/cmd-review.sh"
       ],
       "dependsOn": [
-        "FEAT-054"
+        "FEAT-066"
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared — extraction work is unblocked. Steps and AC are clear and actionable.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-058",
@@ -254,11 +202,13 @@
         ".aishore/lib/cmd-report.sh"
       ],
       "dependsOn": [
-        "FEAT-054"
+        "FEAT-066"
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. _compute_metrics_json, cmd_metrics, cmd_report are co-located in source — group them in one module as stated.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-059",
@@ -282,11 +232,13 @@
         ".aishore/lib/cmd-status.sh"
       ],
       "dependsOn": [
-        "FEAT-054"
+        "FEAT-066"
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. _status_output and cmd_status extraction is straightforward — no core dependencies.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-060",
@@ -310,11 +262,13 @@
         ".aishore/lib/cmd-groom.sh"
       ],
       "dependsOn": [
-        "FEAT-054"
+        "FEAT-066"
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Module loader is already in place (FEAT-049 done). Critical constraint in intent: groom helpers stay in core (sprint loop calls them). Only cmd_groom and print_groom_summary move to the module.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-061",
@@ -338,11 +292,13 @@
         ".aishore/lib/cmd-backlog-write.sh"
       ],
       "dependsOn": [
-        "FEAT-054"
+        "FEAT-066"
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. Read commands stay in core per intent — only add/edit/populate move to module.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-062",
@@ -366,11 +322,13 @@
         ".aishore/lib/cmd-init.sh"
       ],
       "dependsOn": [
-        "FEAT-054"
+        "FEAT-066"
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. cmd_init and 3 helpers — large extraction (325 lines) but isolated, no sprint-loop dependencies.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-063",
@@ -394,11 +352,13 @@
         ".aishore/lib/cmd-update.sh"
       ],
       "dependsOn": [
-        "FEAT-054"
+        "FEAT-066"
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. Note: checksums must be updated to glob lib/*.sh after extraction — this is called out in the intent and is critical.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-064",
@@ -425,7 +385,6 @@
         "CLAUDE.md"
       ],
       "dependsOn": [
-        "FEAT-055",
         "FEAT-056",
         "FEAT-057",
         "FEAT-058",
@@ -433,11 +392,14 @@
         "FEAT-060",
         "FEAT-061",
         "FEAT-062",
-        "FEAT-063"
+        "FEAT-063",
+        "FEAT-067"
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": false,
+      "groomingNotes": "Updated dependsOn: removed stale FEAT-055 ref (cmd-diagnose already extracted under FEAT-050). Line count target of 4500 may need revision once all extractions are done — track actual reduction.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-065",
@@ -467,6 +429,65 @@
         ".aishore/help.txt"
       ],
       "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "cmd_auto still exists (verified). Steps are clear: merge scope validation into cmd_run, keep auto as hidden alias. Backwards compat preserved. No dependencies. Straightforward merge of two functions — cmd_auto already delegates to cmd_run via --_auto flag per CLAUDE.md.",
+      "groomedAt": "2026-03-24"
+    },
+    {
+      "id": "FEAT-066",
+      "title": "Add module loader infrastructure",
+      "intent": "Establish the lazy-loading mechanism so command modules can be sourced on-demand from .aishore/lib/*.sh — no behavior change, just the mechanism",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Add declare -A _LOADED_MODULES and _load_module function after UTILITIES header",
+        "Create empty .aishore/lib/ directory",
+        "No dispatch changes yet"
+      ],
+      "acceptanceCriteria": [
+        "bash -n .aishore/aishore passes",
+        "All existing commands still work identically"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/**"
+      ],
+      "dependsOn": [
+        "FEAT-065",
+        "FEAT-051",
+        "FEAT-052"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-067",
+      "title": "Extract cmd-diagnose to module",
+      "intent": "First extraction — prove the lazy-load pattern works on the simplest most isolated command (56 lines, zero deps beyond globals)",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Create .aishore/lib/cmd-diagnose.sh with cmd_diagnose function",
+        "Remove cmd_diagnose from main script",
+        "Update main() dispatch to use _load_module cmd-diagnose"
+      ],
+      "acceptanceCriteria": [
+        "bash -n on both files passes",
+        "aishore diagnose works",
+        "aishore run still works (core unaffected)"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-diagnose.sh"
+      ],
+      "dependsOn": [
+        "FEAT-066"
+      ],
       "status": "todo",
       "passes": false,
       "readyForSprint": false

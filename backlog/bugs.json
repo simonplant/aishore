@@ -4,7 +4,7 @@
     {
       "id": "BUG-072",
       "title": "Trim verbose defensive coding across all functions",
-      "intent": "Error handling is terse and consistent. Redundant null guards, verbose suggestions, unnecessary fallbacks, single-use variables, and redundant return 0 statements are removed. Saves ~200 lines spread across the entire script.",
+      "intent": "Remove 16 redundant terminal return 0 statements from bash functions — these are unreachable and add noise without value",
       "description": "Across 82 functions, the script has accumulated verbose patterns: (1) jq calls with 2>/dev/null || true on caller-guaranteed input. (2) Error messages with full command examples belonging in help text. (3) Existence checks on files just created or caller-validated. (4) Multi-line error blocks where single log_error suffices. (5) ~5 redundant return 0 at end of functions. (6) Per-item dual jq calls in enforce_groom_limits and mark_complete that can be combined into single calls. (7) Variables computed and used exactly once that should be inlined. (8) cmd_diagnose has 6 separate jq -r calls on the same file — consolidate to one.",
       "priority": "should",
       "category": null,
@@ -18,23 +18,26 @@
         "Combine two separate jq calls for priority+category in mark_complete into one",
         "Consolidate 6 separate jq -r calls in cmd_diagnose into one jq invocation",
         "Inline single-use variables where the expression is short and clear",
-        "Run full test: init, backlog add, backlog list, groom, run --dry-run"
+        "Run full test: init, backlog add, backlog list, groom, run --dry-run",
+        "Remove terminal return 0 from: cleanup_exit (line 49), find_claude_md (506), _find_prd (530), load_config (626), _apply_env_overrides (672)",
+        "Remove terminal return 0 from: check_readiness_gates (1047), check_complexity_hints (1073), check_scope_violations (1977), mark_item_failed (2096)",
+        "Remove terminal return 0 from: _run_dry_run (2325), _run_developer_cycle (2525), _run_validation_cycle (2635), _handle_sprint_success (2928)",
+        "Remove terminal return 0 from: _run_parallel_sprint (3267), print_sprint_summary (3866), _backlog_check_all (5190)",
+        "Run bash -n .aishore/aishore to verify syntax",
+        "Run shellcheck .aishore/aishore — zero new warnings",
+        "Smoke test: backlog list, backlog check --all, run --dry-run"
       ],
       "acceptanceCriteria": [
-        "No jq call has 2>/dev/null where input JSON was constructed in the same function",
-        "No error message contains a full command example longer than 60 characters",
-        "No function ends with a redundant return 0",
-        "enforce_groom_limits uses one jq call per item, not two",
-        "mark_complete uses one jq call for priority+category, not two",
-        "cmd_diagnose uses one jq invocation for initial field extraction, not six",
-        "All commands still produce correct error output on bad input",
-        "shellcheck passes"
+        "All 16 terminal return 0 statements removed from the listed functions",
+        "bash -n .aishore/aishore passes",
+        "shellcheck passes with zero new warnings",
+        "backlog list, backlog check --all, and run --dry-run produce correct output"
       ],
       "scope": [
         ".aishore/**"
       ],
       "dependsOn": [],
-      "status": "todo",
+      "status": "skip",
       "passes": false,
       "readyForSprint": true,
       "lastFailReason": "Implementation failed",
@@ -42,7 +45,7 @@
       "failCount": 3,
       "groomedAt": "2026-03-24",
       "groomedNotes": null,
-      "groomingNotes": "Tech Lead review after 3 failures. Assessment: spec is stale. Three specific steps are already implemented in current codebase — mark_complete already uses a single jq call (line 1430, comment 'single jq call'), cmd_diagnose already uses jq -j for all 6 fields (lines 5837-5842), enforce_groom_limits already returns id+priority in one jq call (line 4026). Script is now 6090 lines (was 5282 when spec written). Remaining work is real but the spec needs to be rewritten to target only what remains: (1) 62 instances of '2>/dev/null || true' on jq calls — need to identify which are on locally-constructed JSON vs external files; (2) ~5 truly redundant terminal return 0 (most are early-return guards, not terminal); (3) inline single-use variables; (4) collapse verbose multi-line error blocks. The broad multi-category scope across a 6000-line file with subjective AC is why this keeps failing — the developer cannot reliably determine 'input JSON was constructed in the same function' without reading the entire script. Recommendation: rewrite spec with specific line numbers or function names for each change, or split into 3 focused items targeting one change type each. Do not sprint until spec is refreshed."
+      "groomingNotes": "Spec refreshed after 3 failures. Narrowed scope to ONE safe mechanical change: remove 16 terminal return 0 statements (functions return 0 by default in bash). All 16 target functions identified by line number. jq 2>/dev/null cleanup deferred — requires per-function judgment at 6000-line scale; revisit after modularization when each module is small enough to reason about safely."
     },
     {
       "id": "BUG-127",
@@ -78,7 +81,7 @@
       "dependsOn": [
         "BUG-072"
       ],
-      "status": "todo",
+      "status": "skip",
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-24",
