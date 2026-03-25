@@ -211,11 +211,12 @@
       "dependsOn": [
         "FEAT-068"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "The 3 helper functions are _init_check_prereqs (line 4499), _init_detect_project (line 4531), _init_scaffold_files (line 4634) — all defined before cmd_init (line 4753) in the file. Extract all 4 to cmd-init.sh. All helpers are called only from cmd_init (confirmed via grep). Dispatch update: 'init) _load_module cmd-init; cmd_init \"$@\" ;;'. Pattern follows cmd-diagnose.",
-      "groomedAt": "2026-03-25"
+      "groomedAt": "2026-03-25",
+      "completedAt": "2026-03-25T16:06:13-07:00"
     },
     {
       "id": "FEAT-063",
