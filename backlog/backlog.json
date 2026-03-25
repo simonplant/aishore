@@ -383,7 +383,7 @@
       "status": "todo",
       "passes": false,
       "readyForSprint": true,
-      "groomingNotes": "cmd_auto still exists (verified). Steps are clear: merge scope validation into cmd_run, keep auto as hidden alias. Backwards compat preserved. No dependencies. Straightforward merge of two functions — cmd_auto already delegates to cmd_run via --_auto flag per CLAUDE.md.",
+      "groomingNotes": "cmd_auto still exists (verified). Steps are clear: merge scope validation into cmd_run, keep auto as hidden alias. Backwards compat preserved. No dependencies. Straightforward merge of two functions — cmd_auto already delegates to cmd_run via --_auto flag per CLAUDE.md. Full code trace in docs/FEAT-065-auto-mode-trace.md: 26 auto_mode conditionals mapped, all stay as-is — merge only changes how auto_mode gets set (positional scope arg instead of --_auto flag). Low risk.",
       "groomedAt": "2026-03-24"
     },
     {
