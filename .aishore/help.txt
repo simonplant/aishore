@@ -1,5 +1,5 @@
 aishore - AI Sprint Runner (v__VERSION__)
-Copyright (C) 2026 Simon Plant. Licensed under AGPL-3.0. See LICENSE.
+Copyright (C) 2025-2026 Simon Plant. Licensed under Apache-2.0. See LICENSE.
 
 Usage: .aishore/aishore <command> [options]
        .aishore/aishore auto <scope> [--parallel N] [--limit N] [--retries N] [--max-failures N] [--timeout N] [--no-merge] [--pr] [--refine] [--quick] [--warm-retry] [--category <name>] [--auto-review] [--no-summary] [--dry-run]

@@ -133,7 +133,7 @@ You only edit the agent markdown file. The orchestrator handles injection of con
 
 By submitting a pull request to this project, you agree that:
 
-1. **You grant the project maintainer (Simon Plant) a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license** to use, reproduce, modify, distribute, sublicense, and otherwise exploit your contributions in any form and for any purpose, including under licenses other than the AGPL-3.0.
+1. **You grant the project maintainer (Simon Plant) a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license** to use, reproduce, modify, distribute, sublicense, and otherwise exploit your contributions in any form and for any purpose, including under licenses other than the Apache-2.0.
 
 2. **You confirm that you have the right** to grant this license for all contributions you submit.
 
