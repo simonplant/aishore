@@ -149,11 +149,12 @@
       "dependsOn": [
         "FEAT-068"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "WARNING: _build_groom_context() is defined at line 3923, between cmd_groom and print_groom_summary in the file. Do NOT extract it — it is called from (1) cmd_groom itself, (2) cmd_review (FEAT-057), and (3) the sprint loop auto-groom path at line 3516. It must stay in core. Only extract: cmd_groom (lines 3890-3920) and print_groom_summary (lines 3934-end). Extraction: move both functions to cmd-groom.sh, add dispatch update 'groom) _load_module cmd-groom; cmd_groom \"$@\" ;;'. print_groom_summary is only called from cmd_groom (confirmed via grep), so it safely moves.",
-      "groomedAt": "2026-03-25"
+      "groomedAt": "2026-03-25",
+      "completedAt": "2026-03-25T15:54:58-07:00"
     },
     {
       "id": "FEAT-061",
