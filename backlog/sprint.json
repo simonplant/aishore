@@ -1,15 +1,15 @@
 {
-  "sprintId": "sprint-1774479682",
-  "startedAt": "2026-03-25T16:01:22-07:00",
+  "sprintId": "sprint-1774479974",
+  "startedAt": "2026-03-25T16:06:14-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-062",
-    "title": "Extract cmd-init to module",
-    "intent": "Extract cmd_init and 3 helper functions (325 lines) to lazy-loaded module",
+    "id": "FEAT-063",
+    "title": "Extract cmd-update to module",
+    "intent": "Extract cmd_update (188 lines with nested _fetch_and_stage) and cmd_checksums — update checksums to glob lib/*.sh",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Create .aishore/lib/cmd-init.sh with extracted functions",
+      "Create .aishore/lib/cmd-update.sh with extracted functions",
       "Remove functions from main script",
       "Update dispatch to use _load_module"
     ],
@@ -20,12 +20,12 @@
     ],
     "scope": [
       ".aishore/aishore",
-      ".aishore/lib/cmd-init.sh"
+      ".aishore/lib/cmd-update.sh"
     ],
-    "startedAt": "2026-03-25T16:01:22-07:00",
+    "startedAt": "2026-03-25T16:06:14-07:00",
     "status": "passed",
-    "completedAt": "2026-03-25T16:06:13-07:00"
+    "completedAt": "2026-03-25T16:10:02-07:00"
   },
-  "completedAt": "2026-03-25T16:06:13-07:00",
+  "completedAt": "2026-03-25T16:10:02-07:00",
   "attempts": 1
 }

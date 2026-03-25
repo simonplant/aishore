@@ -242,11 +242,12 @@
       "dependsOn": [
         "FEAT-068"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Note: _fetch_and_stage is a nested function DEFINED INSIDE cmd_update (line 4948, inside cmd_update which starts at 4837). It will move to cmd-update.sh naturally with cmd_update — no separate extraction step needed. cmd_checksums (line 5025) is a standalone function, also extract to cmd-update.sh. Both dispatch entries need updating: 'update) _load_module cmd-update; cmd_update \"$@\" ;;' and 'checksums) _load_module cmd-update; cmd_checksums ;;'. Pattern follows cmd-diagnose.",
-      "groomedAt": "2026-03-25"
+      "groomedAt": "2026-03-25",
+      "completedAt": "2026-03-25T16:10:02-07:00"
     },
     {
       "id": "FEAT-064",
