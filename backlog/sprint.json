@@ -1,31 +1,32 @@
 {
-  "sprintId": "sprint-1774481172",
-  "startedAt": "2026-03-25T16:26:12-07:00",
+  "sprintId": "sprint-1774481335",
+  "startedAt": "2026-03-25T16:28:55-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-131",
-    "title": "Extract cmd-clean to lazy-loaded module",
-    "intent": "Extract cmd_clean and _archive_done_items to .aishore/lib/cmd-clean.sh — lazy-loaded on demand, ~70 lines removed from main script, dispatch updated, bash -n passes on both files.",
+    "id": "BUG-132",
+    "title": "Expand cmd-groom module with remaining groom helpers from main",
+    "intent": "Move _build_groom_context, protect_items_from_groom, snapshot_backlogs, enforce_groom_limits, print_groom_diff, and run_groom_flow out of .aishore/aishore and into the existing .aishore/lib/cmd-groom.sh — all groom logic lives in one module, ~150 lines removed from main, bash -n passes on both files.",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Identify cmd_clean and _archive_done_items in .aishore/aishore",
-      "Create .aishore/lib/cmd-clean.sh with both functions, following the same module header pattern as existing modules",
-      "Remove the extracted functions from .aishore/aishore",
-      "Update dispatch table in main to _load_module cmd-clean before invoking cmd_clean",
+      "Identify the six groom helper functions remaining in .aishore/aishore: _build_groom_context, protect_items_from_groom, snapshot_backlogs, enforce_groom_limits, print_groom_diff, run_groom_flow",
+      "Append the six functions to .aishore/lib/cmd-groom.sh in the same order they appear in the main script",
+      "Remove the six functions from .aishore/aishore",
+      "Confirm dispatch table already loads cmd-groom before invocation — no dispatch change needed if _load_module cmd-groom is already wired",
       "Run bash -n on both files to verify syntax",
-      "Run .aishore/aishore clean --dry-run to verify behavior is unchanged"
+      "Run .aishore/aishore groom --backlog (dry-run context only) to confirm the groom flow is still reachable"
     ],
     "acceptanceCriteria": [
-      "bash -n .aishore/aishore and bash -n .aishore/lib/cmd-clean.sh both pass",
-      ".aishore/aishore clean --dry-run produces correct output",
-      "wc -l .aishore/aishore shows at least 60 fewer lines than before this change"
+      "bash -n .aishore/aishore and bash -n .aishore/lib/cmd-groom.sh both pass",
+      ".aishore/aishore groom --backlog runs without error (agent invocation is expected)",
+      "wc -l .aishore/aishore shows at least 130 fewer lines than before this change",
+      "All six groom helper functions are absent from .aishore/aishore and present in cmd-groom.sh"
     ],
     "scope": [],
-    "startedAt": "2026-03-25T16:26:12-07:00",
+    "startedAt": "2026-03-25T16:28:55-07:00",
     "status": "passed",
-    "completedAt": "2026-03-25T16:28:53-07:00"
+    "completedAt": "2026-03-25T16:34:38-07:00"
   },
-  "completedAt": "2026-03-25T16:28:53-07:00",
+  "completedAt": "2026-03-25T16:34:38-07:00",
   "attempts": 1
 }
