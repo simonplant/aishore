@@ -180,11 +180,12 @@
       "dependsOn": [
         "FEAT-068"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "cmd_backlog_add (line 5329), cmd_backlog_edit (line 5505), cmd_backlog_populate (line 5174) are all only called from cmd_backlog dispatch — no internal sprint-loop calls. Safe to extract all to cmd-backlog-write.sh. cmd_backlog dispatch (cmd_backlog function, read commands like backlog list/show/check) stays in core. Update the add/edit/populate arms: 'add|new) _load_module cmd-backlog-write; cmd_backlog_add \"$@\" ;;' etc. Pattern follows cmd-diagnose.",
-      "groomedAt": "2026-03-25"
+      "groomedAt": "2026-03-25",
+      "completedAt": "2026-03-25T16:01:20-07:00"
     },
     {
       "id": "FEAT-062",

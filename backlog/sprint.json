@@ -1,15 +1,15 @@
 {
-  "sprintId": "sprint-1774479143",
-  "startedAt": "2026-03-25T15:52:23-07:00",
+  "sprintId": "sprint-1774479299",
+  "startedAt": "2026-03-25T15:54:59-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-060",
-    "title": "Extract cmd-groom entry to module",
-    "intent": "Extract only cmd_groom and print_groom_summary (46 lines) — groom helpers MUST stay in core (sprint loop calls them)",
+    "id": "FEAT-061",
+    "title": "Extract cmd-backlog-write to module",
+    "intent": "Extract cmd_backlog_add, cmd_backlog_edit, cmd_backlog_populate (420 lines) — read commands stay in core",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Create .aishore/lib/cmd-groom.sh with extracted functions",
+      "Create .aishore/lib/cmd-backlog-write.sh with extracted functions",
       "Remove functions from main script",
       "Update dispatch to use _load_module"
     ],
@@ -20,12 +20,12 @@
     ],
     "scope": [
       ".aishore/aishore",
-      ".aishore/lib/cmd-groom.sh"
+      ".aishore/lib/cmd-backlog-write.sh"
     ],
-    "startedAt": "2026-03-25T15:52:23-07:00",
+    "startedAt": "2026-03-25T15:54:59-07:00",
     "status": "passed",
-    "completedAt": "2026-03-25T15:54:58-07:00"
+    "completedAt": "2026-03-25T16:01:20-07:00"
   },
-  "completedAt": "2026-03-25T15:54:58-07:00",
+  "completedAt": "2026-03-25T16:01:20-07:00",
   "attempts": 1
 }
