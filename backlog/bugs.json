@@ -36,7 +36,7 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false,
+      "readyForSprint": true,
       "lastFailReason": "Implementation failed",
       "lastFailAt": "2026-03-24T08:51:22-07:00",
       "failCount": 3,

@@ -414,6 +414,22 @@ restore_stash() {
 # UTILITIES (inlined from common.sh)
 # ============================================================================
 
+# Module loader — lazy-load functions from .aishore/lib/*.sh
+declare -A _LOADED_MODULES
+
+_load_module() {
+    local mod="$1"
+    [[ -n "${_LOADED_MODULES[$mod]+x}" ]] && return 0
+    local mod_file="$AISHORE_ROOT/lib/${mod}.sh"
+    if [[ ! -f "$mod_file" ]]; then
+        log_error "Module not found: $mod_file"
+        return 1
+    fi
+    # shellcheck source=/dev/null
+    source "$mod_file"
+    _LOADED_MODULES[$mod]=1
+}
+
 build_context() {
     local agent_role="${AGENT_CONTEXT_ROLE:-developer}"
     local context=""
