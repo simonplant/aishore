@@ -2,6 +2,7 @@
 # Module: cmd-review — architecture review command
 # Lazy-loaded by _load_module; all globals (PROJECT_ROOT, DATA_DIR, MODEL_PRIMARY,
 # PERMS_REVIEWER, PERMS_REVIEWER_DOCS, CFG_PERMS_REVIEWER, colors) come from the main script.
+# _build_groom_context comes from cmd-groom module (loaded via _load_module cmd-groom).
 
 cmd_review() {
     require_tool jq
@@ -12,6 +13,7 @@ cmd_review() {
 
     acquire_lock
     load_config
+    _load_module cmd-groom
     cd "$PROJECT_ROOT"
 
     log_header "Architecture Review"
