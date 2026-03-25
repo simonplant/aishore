@@ -1,1 +1,31 @@
-{"sprintId": null, "status": "idle", "item": null}
+{
+  "sprintId": "sprint-1774411844",
+  "startedAt": "2026-03-24T21:10:44-07:00",
+  "status": "completed",
+  "item": {
+    "id": "FEAT-049",
+    "title": "Add module loader infrastructure",
+    "intent": "Establish the lazy-loading mechanism so subsequent items can extract commands to .aishore/lib/*.sh modules without changing any behavior",
+    "description": "",
+    "sourceBacklog": "backlog.json",
+    "steps": [
+      "Add declare -A _LOADED_MODULES and _load_module function after UTILITIES header",
+      "Create empty .aishore/lib/ directory",
+      "No dispatch changes yet — pure infrastructure"
+    ],
+    "acceptanceCriteria": [
+      "bash -n .aishore/aishore passes",
+      "All existing commands still work identically",
+      "_load_module function exists and can source a file from lib/"
+    ],
+    "scope": [
+      ".aishore/aishore",
+      ".aishore/lib/**"
+    ],
+    "startedAt": "2026-03-24T21:10:44-07:00",
+    "status": "passed",
+    "completedAt": "2026-03-24T21:13:07-07:00"
+  },
+  "completedAt": "2026-03-24T21:13:07-07:00",
+  "attempts": 1
+}

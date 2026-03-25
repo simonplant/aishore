@@ -30,8 +30,8 @@
       "status": "todo",
       "passes": false,
       "readyForSprint": false,
-      "groomedAt": null,
-      "groomingNotes": "Priority 'could' is correct — purely advisory, zero blocking behavior. User value: reduces surprise on hard items by surfacing historical difficulty before the sprint starts. AC are appropriately scoped (no hints when no data, no blocking). Implementation risk is low since it reads existing sprints.jsonl data. No dependency on other items. PO note: the complexity hint must never appear as an error or warning that implies the sprint should be skipped — it is informational only. Batch summary column is a nice addition but secondary to the pre-sprint hint."
+      "groomedAt": "2026-03-24",
+      "groomingNotes": "Priority 'could' is correct — purely advisory, zero blocking behavior. User value: reduces surprise on hard items by surfacing historical difficulty before the sprint starts. The hint must never appear as an error or warning that implies the sprint should be skipped — it is informational only. AC are appropriately scoped. No dependencies. PO note: dependent on the modularization chain completing so that the script is in a stable state before adding new features; consider moving dependsOn to FEAT-059 to enforce this ordering. Batch summary column is secondary to the pre-sprint hint — if implementation time is limited, the hint alone satisfies user value."
     },
     {
       "id": "FEAT-049",
@@ -55,11 +55,12 @@
         ".aishore/lib/**"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Steps are clear and mechanical. Infrastructure-only: add declare -A _LOADED_MODULES and _load_module() after the UTILITIES header (line 414), create empty .aishore/lib/ directory. No dispatch changes. AC are testable: bash -n passes, existing commands still work, _load_module exists. No dependencies. Safe to sprint — zero risk of regressions since it's purely additive.",
-      "groomedAt": "2026-03-24"
+      "groomedAt": "2026-03-24",
+      "completedAt": "2026-03-24T21:13:07-07:00"
     },
     {
       "id": "FEAT-050",
@@ -87,7 +88,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Clear extraction item. cmd_diagnose is 56 lines (confirmed lines 5822-5877). Steps are mechanical: move function to lib/cmd-diagnose.sh, delete from main, update dispatch. AC is testable. Good first extraction to validate the lazy-load pattern.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-051",
@@ -114,7 +117,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Clear extraction. cmd_config_check is ~154 lines. Steps are mechanical. AC testable. No shared state issues — config check only reads config.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-052",
@@ -140,7 +145,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Clear extraction. cmd_review (~56 lines) calls run_agent and _build_groom_context which both stay in core — those are referenced by auto-groom too. AC is testable. Low risk.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-053",
@@ -168,7 +175,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Bundles 3 related functions. _compute_metrics_json, cmd_metrics, cmd_report all read the same sprints.jsonl — correct to keep together. AC covers all command variants. Clear.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-054",
@@ -195,7 +204,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Clear extraction. _status_output and cmd_status only — status --watch AC confirms the watch mode flag is tested. No shared state issues.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-055",
@@ -223,7 +234,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Critical boundary: ONLY cmd_groom (33 lines) and print_groom_summary (13 lines) move to module. All groom engine functions (run_groom_flow, protect_items_from_groom, enforce_groom_limits, auto-groom helpers) must stay in core — they are called directly by sprint loop, not via dispatch. Step 3 explicitly says to verify this. AC covers the auto-groom path via --dry-run. Developer must not accidentally move engine functions.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-056",
@@ -253,7 +266,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Good boundary split. Write commands (add 133, edit 191, populate 96 lines) are the heaviest in cmd_backlog and rarely called in sprint paths. Read commands (list, show, check, rm, history) stay in core and must work without loading module. AC step 4 tests this. Critical: cmd_backlog() becomes a router — only load module for add/edit/populate, everything else falls through to inline code.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-057",
@@ -279,7 +294,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Largest single extraction: 4 functions totaling ~325 lines. All are init-only, no runtime deps on core functions beyond file I/O and log helpers. AC 'aishore init -y in temp dir' is the right smoke test. Low risk — init is never called by sprint loop.",
+      "groomedAt": "2026-03-24"
     },
     {
       "id": "FEAT-058",
@@ -307,135 +324,9 @@
       ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
-    },
-    {
-      "id": "FEAT-059",
-      "title": "Finalize modularization — checksums, docs, version",
-      "intent": "Regenerate checksums with all new lib files included, update CLAUDE.md architecture section to document module layout, bump version",
-      "description": "",
-      "priority": "must",
-      "category": "modularize",
-      "steps": [
-        "Run aishore checksums to regenerate with lib/*.sh included",
-        "Update CLAUDE.md architecture section to document module layout and lib/ directory",
-        "Update help.txt if any command names changed",
-        "Bump version (patch)",
-        "Full smoke test of every command"
-      ],
-      "acceptanceCriteria": [
-        "aishore checksums includes all lib/*.sh files",
-        "CLAUDE.md documents the module structure",
-        "Every command works: help, version, run --dry-run, auto done --dry-run, backlog list, backlog show, backlog add, status, groom, review, report, metrics, diagnose, config check, update --dry-run, init -y",
-        "wc -l .aishore/aishore is approximately 4500 lines (down from 6090)"
-      ],
-      "scope": [
-        ".aishore/**",
-        "CLAUDE.md"
-      ],
-      "dependsOn": [
-        "FEAT-050",
-        "FEAT-051",
-        "FEAT-052",
-        "FEAT-053",
-        "FEAT-054",
-        "FEAT-055",
-        "FEAT-056",
-        "FEAT-057",
-        "FEAT-058"
-      ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": false
-    },
-    {
-      "id": "FEAT-060",
-      "title": "Merge metrics into report command",
-      "intent": "Reduce command surface — add --metrics flag to cmd_report, remove standalone cmd_metrics, one less command for users to discover",
-      "description": "",
-      "priority": "could",
-      "category": "simplify",
-      "steps": [
-        "Add --metrics flag to cmd_report",
-        "Move _compute_metrics_json display logic into cmd_report --metrics branch",
-        "Remove cmd_metrics function and metrics dispatch entry",
-        "Update help.txt"
-      ],
-      "acceptanceCriteria": [
-        "aishore report --metrics produces same output as old aishore metrics",
-        "aishore report --metrics --json works",
-        "aishore metrics is no longer a valid command"
-      ],
-      "scope": [
-        ".aishore/lib/cmd-report.sh",
-        ".aishore/aishore"
-      ],
-      "dependsOn": [
-        "FEAT-059"
-      ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": false
-    },
-    {
-      "id": "FEAT-061",
-      "title": "Merge diagnose into status command",
-      "intent": "Reduce command surface — show last-failure info at the bottom of status output, remove standalone diagnose command",
-      "description": "",
-      "priority": "could",
-      "category": "simplify",
-      "steps": [
-        "Move cmd_diagnose body into a _diagnose_section helper",
-        "Call _diagnose_section from _status_output",
-        "Remove cmd_diagnose function and diagnose dispatch entry",
-        "Update help.txt"
-      ],
-      "acceptanceCriteria": [
-        "aishore status shows last failure details at the bottom",
-        "aishore diagnose is no longer a valid command"
-      ],
-      "scope": [
-        ".aishore/lib/cmd-status.sh",
-        ".aishore/lib/cmd-diagnose.sh",
-        ".aishore/aishore"
-      ],
-      "dependsOn": [
-        "FEAT-059"
-      ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": false
-    },
-    {
-      "id": "FEAT-062",
-      "title": "Clean up minor flags",
-      "intent": "Remove low-value flags that add surface area without meaningful capability — --no-summary (always show), --interval on status (hardcode 30s), --no-archive on clean (always archive), --check alias on update (just use --dry-run)",
-      "description": "",
-      "priority": "could",
-      "category": "simplify",
-      "steps": [
-        "Remove --no-summary flag from run/auto parse_opts and conditional",
-        "Remove --interval flag from status, hardcode 30s",
-        "Remove --no-archive flag from clean, always archive",
-        "Remove --check alias from update (keep --dry-run)",
-        "Update help.txt"
-      ],
-      "acceptanceCriteria": [
-        "All four flags are gone from the codebase",
-        "Summary always shows after sprint session",
-        "Status --watch refreshes at 30s"
-      ],
-      "scope": [
-        ".aishore/aishore",
-        ".aishore/lib/cmd-update.sh",
-        ".aishore/lib/cmd-status.sh"
-      ],
-      "dependsOn": [
-        "FEAT-059"
-      ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomingNotes": "Two functions: cmd_update (~188 lines with nested _fetch_and_stage) and cmd_checksums (~42 lines). Critical addition: cmd_checksums must also glob lib/*.sh so the update system includes module files. AC verifies this. update --dry-run is the right AC for the update path. Never called by sprint loop.",
+      "groomedAt": "2026-03-24"
     }
   ]
 }
