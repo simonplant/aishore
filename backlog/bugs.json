@@ -4,7 +4,7 @@
     {
       "id": "BUG-072",
       "title": "Trim verbose defensive coding across all functions",
-      "intent": "Remove 16 redundant terminal return 0 statements from bash functions — these are unreachable and add noise without value",
+      "intent": "Error handling is terse and consistent. Redundant null guards, verbose suggestions, unnecessary fallbacks, single-use variables, and redundant return 0 statements are removed. Saves ~200 lines spread across the entire script.",
       "description": "Across 82 functions, the script has accumulated verbose patterns: (1) jq calls with 2>/dev/null || true on caller-guaranteed input. (2) Error messages with full command examples belonging in help text. (3) Existence checks on files just created or caller-validated. (4) Multi-line error blocks where single log_error suffices. (5) ~5 redundant return 0 at end of functions. (6) Per-item dual jq calls in enforce_groom_limits and mark_complete that can be combined into single calls. (7) Variables computed and used exactly once that should be inlined. (8) cmd_diagnose has 6 separate jq -r calls on the same file — consolidate to one.",
       "priority": "should",
       "category": null,
@@ -18,20 +18,17 @@
         "Combine two separate jq calls for priority+category in mark_complete into one",
         "Consolidate 6 separate jq -r calls in cmd_diagnose into one jq invocation",
         "Inline single-use variables where the expression is short and clear",
-        "Run full test: init, backlog add, backlog list, groom, run --dry-run",
-        "Remove terminal return 0 from: cleanup_exit (line 49), find_claude_md (506), _find_prd (530), load_config (626), _apply_env_overrides (672)",
-        "Remove terminal return 0 from: check_readiness_gates (1047), check_complexity_hints (1073), check_scope_violations (1977), mark_item_failed (2096)",
-        "Remove terminal return 0 from: _run_dry_run (2325), _run_developer_cycle (2525), _run_validation_cycle (2635), _handle_sprint_success (2928)",
-        "Remove terminal return 0 from: _run_parallel_sprint (3267), print_sprint_summary (3866), _backlog_check_all (5190)",
-        "Run bash -n .aishore/aishore to verify syntax",
-        "Run shellcheck .aishore/aishore — zero new warnings",
-        "Smoke test: backlog list, backlog check --all, run --dry-run"
+        "Run full test: init, backlog add, backlog list, groom, run --dry-run"
       ],
       "acceptanceCriteria": [
-        "All 16 terminal return 0 statements removed from the listed functions",
-        "bash -n .aishore/aishore passes",
-        "shellcheck passes with zero new warnings",
-        "backlog list, backlog check --all, and run --dry-run produce correct output"
+        "No jq call has 2>/dev/null where input JSON was constructed in the same function",
+        "No error message contains a full command example longer than 60 characters",
+        "No function ends with a redundant return 0",
+        "enforce_groom_limits uses one jq call per item, not two",
+        "mark_complete uses one jq call for priority+category, not two",
+        "cmd_diagnose uses one jq invocation for initial field extraction, not six",
+        "All commands still produce correct error output on bad input",
+        "shellcheck passes"
       ],
       "scope": [
         ".aishore/**"

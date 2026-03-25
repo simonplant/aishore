@@ -27,12 +27,15 @@
         ".aishore/aishore",
         ".aishore/help.txt"
       ],
-      "dependsOn": [],
+      "dependsOn": [
+        "FEAT-067",
+        "FEAT-070"
+      ],
       "status": "todo",
       "passes": false,
       "readyForSprint": true,
-      "groomingNotes": "Steps are specific and actionable. AC are testable. No dependencies. Straightforward flag consolidation — repeatable pattern flags (--ac, --steps, --scope, --depends-on) each replace their entire array. Validation-before-write AC is a safety gate, not extra scope.",
-      "groomedAt": "2026-03-24"
+      "groomedAt": "2026-03-24",
+      "groomingNotes": "Steps are specific and actionable. AC are testable. No dependencies. Straightforward flag consolidation — repeatable pattern flags (--ac, --steps, --scope, --depends-on) each replace their entire array. Validation-before-write AC is a safety gate, not extra scope."
     },
     {
       "id": "FEAT-052",
@@ -56,37 +59,14 @@
         ".aishore/aishore",
         ".aishore/help.txt"
       ],
-      "dependsOn": [],
+      "dependsOn": [
+        "FEAT-070"
+      ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
-    },
-    {
-      "id": "FEAT-053",
-      "title": "Move session tuning flags to config defaults",
-      "intent": "Flags like max-failures, warm-retry, auto-review, no-summary are session preferences not per-invocation decisions — hide from default help, document as config-first with flag override",
-      "description": "",
-      "priority": "should",
-      "category": "simplify",
-      "steps": [
-        "Verify all session flags have config.yaml equivalents",
-        "Remove session flags from default help output, keep in help --full",
-        "Make the pr flag imply no-merge automatically",
-        "Update help.txt"
-      ],
-      "acceptanceCriteria": [
-        "Default help for run shows only essential flags",
-        "Session tuning flags still work as CLI overrides",
-        "The pr flag sets no_merge true automatically"
-      ],
-      "scope": [
-        ".aishore/aishore",
-        ".aishore/help.txt"
-      ],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomedAt": "2026-03-24",
+      "groomingNotes": "High user value — first impression matters. New users currently face 100+ lines of help; a 15-line overview solves a real discoverability problem. AC are user-focused and testable (terminal screen fit, per-command detail, --full escape hatch). Priority must is correct. IMPORTANT: FEAT-053 depends on the --full tier this creates — ensure FEAT-052 ships before FEAT-053."
     },
     {
       "id": "FEAT-056",
@@ -109,10 +89,12 @@
         ".aishore/aishore",
         ".aishore/lib/cmd-config.sh"
       ],
-      "dependsOn": [],
+      "dependsOn": [
+        "FEAT-068"
+      ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true,
+      "readyForSprint": false,
       "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared — extraction work is unblocked. Steps and AC are clear and actionable.",
       "groomedAt": "2026-03-24"
     },
@@ -137,10 +119,12 @@
         ".aishore/aishore",
         ".aishore/lib/cmd-review.sh"
       ],
-      "dependsOn": [],
+      "dependsOn": [
+        "FEAT-068"
+      ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true,
+      "readyForSprint": false,
       "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared — extraction work is unblocked. Steps and AC are clear and actionable.",
       "groomedAt": "2026-03-24"
     },
@@ -165,10 +149,12 @@
         ".aishore/aishore",
         ".aishore/lib/cmd-report.sh"
       ],
-      "dependsOn": [],
+      "dependsOn": [
+        "FEAT-068"
+      ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true,
+      "readyForSprint": false,
       "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. _compute_metrics_json, cmd_metrics, cmd_report are co-located in source — group them in one module as stated.",
       "groomedAt": "2026-03-24"
     },
@@ -193,10 +179,12 @@
         ".aishore/aishore",
         ".aishore/lib/cmd-status.sh"
       ],
-      "dependsOn": [],
+      "dependsOn": [
+        "FEAT-068"
+      ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true,
+      "readyForSprint": false,
       "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. _status_output and cmd_status extraction is straightforward — no core dependencies.",
       "groomedAt": "2026-03-24"
     },
@@ -221,10 +209,12 @@
         ".aishore/aishore",
         ".aishore/lib/cmd-groom.sh"
       ],
-      "dependsOn": [],
+      "dependsOn": [
+        "FEAT-068"
+      ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true,
+      "readyForSprint": false,
       "groomingNotes": "Module loader is already in place (FEAT-049 done). Critical constraint in intent: groom helpers stay in core (sprint loop calls them). Only cmd_groom and print_groom_summary move to the module.",
       "groomedAt": "2026-03-24"
     },
@@ -249,10 +239,12 @@
         ".aishore/aishore",
         ".aishore/lib/cmd-backlog-write.sh"
       ],
-      "dependsOn": [],
+      "dependsOn": [
+        "FEAT-068"
+      ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true,
+      "readyForSprint": false,
       "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. Read commands stay in core per intent — only add/edit/populate move to module.",
       "groomedAt": "2026-03-24"
     },
@@ -277,10 +269,12 @@
         ".aishore/aishore",
         ".aishore/lib/cmd-init.sh"
       ],
-      "dependsOn": [],
+      "dependsOn": [
+        "FEAT-068"
+      ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true,
+      "readyForSprint": false,
       "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. cmd_init and 3 helpers — large extraction (325 lines) but isolated, no sprint-loop dependencies.",
       "groomedAt": "2026-03-24"
     },
@@ -305,10 +299,12 @@
         ".aishore/aishore",
         ".aishore/lib/cmd-update.sh"
       ],
-      "dependsOn": [],
+      "dependsOn": [
+        "FEAT-068"
+      ],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true,
+      "readyForSprint": false,
       "groomingNotes": "Module loader is already in place (FEAT-049 done). Dependencies cleared. Note: checksums must be updated to glob lib/*.sh after extraction — this is called out in the intent and is critical.",
       "groomedAt": "2026-03-24"
     },
@@ -345,7 +341,7 @@
         "FEAT-061",
         "FEAT-062",
         "FEAT-063",
-        "FEAT-067"
+        "FEAT-069"
       ],
       "status": "todo",
       "passes": false,
@@ -380,12 +376,176 @@
         ".aishore/aishore",
         ".aishore/help.txt"
       ],
-      "dependsOn": [],
+      "dependsOn": [
+        "FEAT-066",
+        "FEAT-070"
+      ],
       "status": "todo",
       "passes": false,
       "readyForSprint": true,
       "groomingNotes": "cmd_auto still exists (verified). Steps are clear: merge scope validation into cmd_run, keep auto as hidden alias. Backwards compat preserved. No dependencies. Straightforward merge of two functions — cmd_auto already delegates to cmd_run via --_auto flag per CLAUDE.md.",
       "groomedAt": "2026-03-24"
+    },
+    {
+      "id": "FEAT-066",
+      "title": "Code trace: map all auto_mode references before run/auto merge",
+      "intent": "Before merging run and auto, trace every reference to auto_mode, the internal _auto flag, and auto_scope to understand exactly which conditionals branch on the run/auto split — prevents blind refactoring of the critical sprint loop",
+      "description": "",
+      "priority": "must",
+      "category": "research",
+      "steps": [
+        "grep -n auto_mode .aishore/aishore and document every conditional that checks it",
+        "grep -n _auto .aishore/aishore and document the internal flag flow",
+        "Map which behaviors activate only in auto mode: auto-groom, circuit breaker, session limit, priority filtering",
+        "Write the exact planned diff as comments before making changes",
+        "Document findings in the FEAT-065 grooming notes"
+      ],
+      "acceptanceCriteria": [
+        "Every auto_mode reference is documented with its purpose",
+        "The planned merge approach is written out before any code changes"
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-067",
+      "title": "Code trace: verify how groom agents use backlog edit",
+      "intent": "Before changing backlog edit flag semantics, read agent prompts to verify they wont break — agents call backlog edit programmatically during grooming and any semantic change could silently corrupt the backlog",
+      "description": "",
+      "priority": "must",
+      "category": "research",
+      "steps": [
+        "Read all .aishore/agents/*.md prompts for backlog edit usage patterns",
+        "Search for edit, add, step, ac, scope in agent prompts",
+        "Document exactly which flags agents use and how",
+        "Verify new replace-array semantics are compatible with agent usage",
+        "Document findings in the FEAT-051 grooming notes"
+      ],
+      "acceptanceCriteria": [
+        "Every agent prompt that references backlog edit is documented",
+        "Compatibility of new semantics is confirmed or blockers identified"
+      ],
+      "scope": [
+        ".aishore/agents/*.md"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-068",
+      "title": "Add module loader infrastructure",
+      "intent": "Establish the lazy-loading mechanism so command modules can be sourced on-demand from .aishore/lib/*.sh — no behavior change, just the mechanism",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Add declare -A _LOADED_MODULES and _load_module function after UTILITIES header",
+        "Create empty .aishore/lib/ directory",
+        "No dispatch changes yet"
+      ],
+      "acceptanceCriteria": [
+        "bash -n .aishore/aishore passes",
+        "smoke test passes",
+        "All existing commands still work identically"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/**"
+      ],
+      "dependsOn": [
+        "FEAT-051",
+        "FEAT-052",
+        "FEAT-065"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-069",
+      "title": "Extract cmd-diagnose to module",
+      "intent": "First extraction — prove the lazy-load pattern works on the simplest most isolated command (56 lines, zero deps beyond globals)",
+      "description": "",
+      "priority": "must",
+      "category": "modularize",
+      "steps": [
+        "Create .aishore/lib/cmd-diagnose.sh with cmd_diagnose function",
+        "Remove cmd_diagnose from main script",
+        "Update main() dispatch to use _load_module cmd-diagnose",
+        "Run smoke test"
+      ],
+      "acceptanceCriteria": [
+        "bash -n on both files passes",
+        "aishore diagnose works",
+        "smoke test passes"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-diagnose.sh"
+      ],
+      "dependsOn": [
+        "FEAT-068"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-070",
+      "title": "Write smoke test script for regression checking",
+      "intent": "Create a simple bash smoke test that runs every command in safe mode — run after every change to catch regressions, required before any refactoring begins",
+      "description": "",
+      "priority": "must",
+      "category": "testing",
+      "steps": [
+        "Create .aishore/tests/smoke.sh that runs bash -n then every command in safe/dry-run mode",
+        "Include: help, version, backlog list, status, config check, diagnose, run --dry-run, auto done --dry-run, metrics, report, update --dry-run, clean --dry-run",
+        "Exit non-zero on first failure with clear error message"
+      ],
+      "acceptanceCriteria": [
+        "bash .aishore/tests/smoke.sh passes on current clean codebase",
+        "Script exits non-zero and names the failing command on any regression",
+        "Script runs in under 5 seconds"
+      ],
+      "scope": [
+        ".aishore/tests/smoke.sh"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-071",
+      "title": "Move session tuning flags to config defaults",
+      "intent": "Flags like max-failures, warm-retry, auto-review, no-summary are session preferences — hide from default help, document as config-first with flag override",
+      "description": "",
+      "priority": "should",
+      "category": "simplify",
+      "steps": [
+        "Verify all session flags have config.yaml equivalents",
+        "Remove session flags from default help, keep in help --full",
+        "Make the pr flag imply no-merge automatically"
+      ],
+      "acceptanceCriteria": [
+        "Default help for run shows only essential flags",
+        "Session tuning flags still work as CLI overrides"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/help.txt"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
     }
   ]
 }
