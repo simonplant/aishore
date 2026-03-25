@@ -1,1 +1,37 @@
-{"sprintId": null, "status": "idle", "item": null}
+{
+  "sprintId": "sprint-1774452781",
+  "startedAt": "2026-03-25T08:33:01-07:00",
+  "status": "completed",
+  "item": {
+    "id": "FEAT-065",
+    "title": "Unify run and auto into single run command",
+    "intent": "Eliminate the duplicate command surface — run becomes the only execution command, auto scope behavior (done/p0/p1/p2) moves to run as optional arguments, auto-grooming activates when a scope is given",
+    "description": "",
+    "sourceBacklog": "backlog.json",
+    "steps": [
+      "Make cmd_run accept optional scope arg (done/p0/p1/p2) — when present, enables auto-grooming and circuit breaker",
+      "run with no scope defaults to one item (current run behavior)",
+      "run FEAT-001 targets specific item (current run ID behavior)",
+      "run done drains backlog (current auto done behavior)",
+      "Remove cmd_auto — fold its scope validation into cmd_run",
+      "Keep auto as hidden alias for backwards compat",
+      "Update help.txt"
+    ],
+    "acceptanceCriteria": [
+      "aishore run works (one item)",
+      "aishore run FEAT-001 works (specific item)",
+      "aishore run done works (drain backlog, auto-grooms)",
+      "aishore run p1 with limit 5 works (scoped with limit)",
+      "aishore auto done still works (hidden alias)"
+    ],
+    "scope": [
+      ".aishore/aishore",
+      ".aishore/help.txt"
+    ],
+    "startedAt": "2026-03-25T08:33:01-07:00",
+    "status": "passed",
+    "completedAt": "2026-03-25T08:39:54-07:00"
+  },
+  "completedAt": "2026-03-25T08:39:54-07:00",
+  "attempts": 1
+}
