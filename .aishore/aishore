@@ -3558,7 +3558,7 @@ run_sprint_loop() {
             if [[ "$total_ready" -lt "$AUTO_GROOM_THRESHOLD" ]]; then
                 log_info "Auto: ready buffer low ($total_ready < $AUTO_GROOM_THRESHOLD) — grooming"
                 # Auto-clean done items so groom agents see lean backlogs
-                cmd_clean 2>/dev/null || true
+                _load_module cmd-clean; cmd_clean 2>/dev/null || true
                 local -a groom_context
                 # shellcheck disable=SC2034  # used via nameref in run_agent
                 mapfile -t groom_context < <(_build_groom_context)
@@ -4090,7 +4090,7 @@ run_groom_flow() {
     local agent="$1" mode="$2" _gf_ctx_name="$3"
 
     # Clean done items before grooming so agents see lean backlogs
-    cmd_clean 2>/dev/null || true
+    _load_module cmd-clean; cmd_clean 2>/dev/null || true
 
     # Build "Specs That Worked" section from archive so groomers see proven patterns
     local specs_that_worked_section=""
@@ -4177,77 +4177,7 @@ cmd_version() {
 # Write commands (add, edit, populate) in .aishore/lib/cmd-backlog-write.sh
 # ============================================================================
 
-cmd_clean() {
-    require_tool jq
-
-    local dry_run=false no_archive=false
-    parse_opts "bool:dry_run:--dry-run" "bool:no_archive:--no-archive" -- "$@" || return 1
-
-    local total=0
-    local -A file_counts=()
-
-    local f
-    for f in "${BACKLOG_FILES[@]}"; do
-        [[ -f "$BACKLOG_DIR/$f" ]] || continue
-        local cnt
-        cnt=$(count_by_status "$BACKLOG_DIR/$f" "done")
-        file_counts["$f"]="$cnt"
-        total=$((total + cnt))
-    done
-
-    if [[ "$total" -eq 0 ]]; then
-        echo "Nothing to clean"
-    elif [[ "$dry_run" == "true" ]]; then
-        echo "Would remove $total done items across ${#file_counts[@]} file(s)"
-        for f in "${!file_counts[@]}"; do
-            [[ "${file_counts[$f]}" -gt 0 ]] && echo "  $f: ${file_counts[$f]}"
-        done
-    else
-        local cleaned=0
-        for f in "${!file_counts[@]}"; do
-            if [[ "${file_counts[$f]}" -gt 0 ]]; then
-                # Archive done items before removing (unless --no-archive)
-                if [[ "$no_archive" != "true" ]]; then
-                    _archive_done_items "$f" || { log_error "Failed to archive $f"; return 1; }
-                fi
-                remove_items_by_status "$f" "done" || { log_error "Failed to clean $f"; return 1; }
-                cleaned=$((cleaned + ${file_counts[$f]}))
-            fi
-        done
-        if [[ "$no_archive" == "true" ]]; then
-            echo "Cleaned $cleaned done items ($total total removed, not archived)"
-        else
-            echo "Cleaned $cleaned done items ($total total archived and removed)"
-        fi
-    fi
-}
-
-# Archive done items from a backlog file to archive/<basename>_done.json
-_archive_done_items() {
-    local file="$1"
-    local basename="${file%.json}"
-    local archive_file="$ARCHIVE_DIR/${basename}_done.json"
-    local tmp
-
-    mkdir -p "$ARCHIVE_DIR"
-    tmp="$(ensure_tmpdir)/archive_done.json"
-
-    # Extract done items from the source file
-    local done_items
-    done_items=$(jq '[.items[] | select((.status // "todo") == "done")]' "$BACKLOG_DIR/$file") || return 1
-    [[ "$done_items" == "[]" ]] && return 0
-
-    if [[ -f "$archive_file" ]]; then
-        # Merge new done items into existing archive, dedup by id
-        jq --argjson new "$done_items" \
-            '. + $new | unique_by(.id)' "$archive_file" > "$tmp" || return 1
-    else
-        printf '%s\n' "$done_items" > "$tmp"
-    fi
-
-    jq empty "$tmp" || { log_error "Archive file validation failed"; rm -f "$tmp"; return 1; }
-    mv "$tmp" "$archive_file"
-}
+# cmd_clean, _archive_done_items — extracted to .aishore/lib/cmd-clean.sh (lazy-loaded via _load_module)
 
 # cmd_usage, cmd_help, _help_* — extracted to .aishore/lib/cmd-help.sh (lazy-loaded via _load_module)
 
@@ -4276,7 +4206,7 @@ main() {
         status)  _load_module cmd-status; cmd_status "$@" ;;
         update)  _load_module cmd-update; cmd_update "$@" ;;
         checksums) _load_module cmd-update; cmd_checksums ;;
-        clean)   cmd_clean "$@" ;;
+        clean)   _load_module cmd-clean; cmd_clean "$@" ;;
         diagnose) _load_module cmd-diagnose; cmd_diagnose ;;
         config)
             local config_sub="${1:-}"
