@@ -146,4 +146,4 @@ Example:
 
 ### Output
 
-After analysis, write your findings and any items added. Be specific about what's wired up and what isn't. Name the files, the stubs, the mocked connections. The user needs to see exactly where the fragments are.
+After analysis, write your findings and any items added. Be specific about what's wired up and what isn't. Name the files, the stubs, the mocks. The user needs to see exactly where the fragments are.
