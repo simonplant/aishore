@@ -56,11 +56,12 @@
       "dependsOn": [
         "FEAT-068"
       ],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "CRITICAL: cmd_review is called from TWO places, not just dispatch. Line 6229 (main dispatch) AND line 3808 (inside sprint loop, auto-review feature). Step 3 must update BOTH call sites: (1) dispatch: 'review) _load_module cmd-review; cmd_review \"$@\" ;;' AND (2) line ~3808 sprint loop: add '_load_module cmd-review' before the 'cmd_review || true' call. Failure to update the internal call will cause 'cmd_review: command not found' when --auto-review flag is used. _build_groom_context stays in core (called by sprint loop at line 3516 and by cmd_review itself via the module). Verify: run 'aishore run done --auto-review --dry-run' to exercise the internal call path.",
-      "groomedAt": "2026-03-25"
+      "groomedAt": "2026-03-25",
+      "completedAt": "2026-03-25T15:46:08-07:00"
     },
     {
       "id": "FEAT-058",
