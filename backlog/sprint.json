@@ -1,15 +1,15 @@
 {
-  "sprintId": "sprint-1774479299",
-  "startedAt": "2026-03-25T15:54:59-07:00",
+  "sprintId": "sprint-1774479682",
+  "startedAt": "2026-03-25T16:01:22-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-061",
-    "title": "Extract cmd-backlog-write to module",
-    "intent": "Extract cmd_backlog_add, cmd_backlog_edit, cmd_backlog_populate (420 lines) — read commands stay in core",
+    "id": "FEAT-062",
+    "title": "Extract cmd-init to module",
+    "intent": "Extract cmd_init and 3 helper functions (325 lines) to lazy-loaded module",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Create .aishore/lib/cmd-backlog-write.sh with extracted functions",
+      "Create .aishore/lib/cmd-init.sh with extracted functions",
       "Remove functions from main script",
       "Update dispatch to use _load_module"
     ],
@@ -20,12 +20,12 @@
     ],
     "scope": [
       ".aishore/aishore",
-      ".aishore/lib/cmd-backlog-write.sh"
+      ".aishore/lib/cmd-init.sh"
     ],
-    "startedAt": "2026-03-25T15:54:59-07:00",
+    "startedAt": "2026-03-25T16:01:22-07:00",
     "status": "passed",
-    "completedAt": "2026-03-25T16:01:20-07:00"
+    "completedAt": "2026-03-25T16:06:13-07:00"
   },
-  "completedAt": "2026-03-25T16:01:20-07:00",
+  "completedAt": "2026-03-25T16:06:13-07:00",
   "attempts": 1
 }
