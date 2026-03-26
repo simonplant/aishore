@@ -2,38 +2,6 @@
   "description": "Feature backlog - Product Owner owns priority",
   "items": [
     {
-      "id": "FEAT-064",
-      "title": "Finalize modularization — checksums, docs, version",
-      "intent": "Regenerate checksums with lib files, update CLAUDE.md architecture section, bump version, full smoke test",
-      "description": "",
-      "priority": "must",
-      "category": "modularize",
-      "steps": [
-        "Run aishore checksums to regenerate with lib/*.sh",
-        "Update CLAUDE.md architecture section for module layout",
-        "Update help.txt if needed",
-        "Bump version (patch)",
-        "Full smoke test every command"
-      ],
-      "acceptanceCriteria": [
-        "aishore checksums includes all lib/*.sh files",
-        "CLAUDE.md documents module structure",
-        "wc -l .aishore/aishore is approximately 4500 (down from 6090)",
-        "Every command works end-to-end"
-      ],
-      "scope": [
-        ".aishore/**",
-        "CLAUDE.md"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": false,
-      "groomingNotes": "Added BUG-129–132 as dependencies. These four extractions (cmd-help ~250 lines, cmd-backlog-read ~230 lines, cmd-clean ~70 lines, groom helpers ~150 lines) must complete before finalization so that FEAT-064 truly captures the full modularization. Projected main script size after all extractions: ~4114 lines (4824 - 710). FEAT-064's AC of 'approximately 4500' will comfortably be met. No other changes — item remains sprint-ready once deps pass.",
-      "groomedAt": "2026-03-25",
-      "completedAt": "2026-03-25T18:46:19-07:00"
-    },
-    {
       "id": "FEAT-072",
       "title": "Code cleanup: remove dead weight (auto alias, warm-retry, flag aliases, scope checking, box-drawing)",
       "intent": "Remove code that adds complexity without value: cmd_auto alias (3 lines), warm-retry flag and code (32 lines), all flag aliases -y/-f/-n/--step/--check (15 lines), scope checking functions check_scope_violations and scope_overlaps (93 lines), box-drawing summary table replaced with plain ASCII (11 lines)",
@@ -65,9 +33,12 @@
         ".aishore/help.txt"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": false
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "groomedAt": "2026-03-26",
+      "groomingNotes": "All target code verified present: cmd_auto (line 2253, dispatch 3980), WARM_RETRY global + 7 references including --warm-retry parse arg, flag aliases -y/-f/-n/--step/--check all confirmed in parse_opts calls across lib modules, check_scope_violations (lines 1941-1997) and scope_overlaps (2001-2032), SCOPE_MODE global + config, print_session_summary_table (lines 3801-3819) with box-drawing chars. Steps are concrete and ordered safely — each removal is independent. Smoke test after each step as instructed. PO note: Step 7 says 'update all docs' but scope only lists .aishore/aishore, .aishore/lib/**, .aishore/help.txt — CLAUDE.md documents SCOPE_MODE, warm-retry, and flag aliases (-y/-f/-n) and must also be updated. Tech Lead: either expand scope to include CLAUDE.md or confirm FEAT-073 covers it (FEAT-073 scope does include CLAUDE.md).",
+      "completedAt": "2026-03-26T11:33:02-07:00"
     },
     {
       "id": "FEAT-073",
@@ -107,7 +78,9 @@
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomedAt": "2026-03-26",
+      "groomingNotes": "FEAT-072 dependency added (was acknowledged in groomingNotes but not set in dependsOn). FEAT-073 deletes cmd-diagnose.sh — BUG-072 step 8 (consolidate jq calls in cmd_diagnose) is moot once this runs; no action needed on BUG-072 for that step. Tech Lead note: FEAT-072 scope excludes CLAUDE.md but step 7 says 'update all docs' — verify CLAUDE.md is updated for removed flags (-y/-f/-n, SCOPE_MODE, warm-retry) either in FEAT-072 or confirmed covered by FEAT-073."
     }
   ]
 }

@@ -1,34 +1,41 @@
 {
-  "sprintId": "sprint-1774489378",
-  "startedAt": "2026-03-25T18:42:58-07:00",
+  "sprintId": "sprint-1774549389",
+  "startedAt": "2026-03-26T11:23:09-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-064",
-    "title": "Finalize modularization — checksums, docs, version",
-    "intent": "Regenerate checksums with lib files, update CLAUDE.md architecture section, bump version, full smoke test",
+    "id": "FEAT-072",
+    "title": "Code cleanup: remove dead weight (auto alias, warm-retry, flag aliases, scope checking, box-drawing)",
+    "intent": "Remove code that adds complexity without value: cmd_auto alias (3 lines), warm-retry flag and code (32 lines), all flag aliases -y/-f/-n/--step/--check (15 lines), scope checking functions check_scope_violations and scope_overlaps (93 lines), box-drawing summary table replaced with plain ASCII (11 lines)",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Run aishore checksums to regenerate with lib/*.sh",
-      "Update CLAUDE.md architecture section for module layout",
-      "Update help.txt if needed",
-      "Bump version (patch)",
-      "Full smoke test every command"
+      "Remove cmd_auto function and auto dispatch entry from main()",
+      "Remove --warm-retry flag from parse_opts, WARM_RETRY config, and all warm_retry references",
+      "Remove flag aliases: -y (keep --yes), -f (keep --force), -n (keep --limit), --step alias (keep --steps), --check alias (keep --dry-run)",
+      "Remove check_scope_violations and scope_overlaps functions and all call sites",
+      "Remove SCOPE_MODE config and AISHORE_SCOPE_MODE env var",
+      "Replace box-drawing summary table (print_session_summary_table) with plain ASCII",
+      "Update help.txt and all docs to remove references to cut features",
+      "Run smoke test after each removal"
     ],
     "acceptanceCriteria": [
-      "aishore checksums includes all lib/*.sh files",
-      "CLAUDE.md documents module structure",
-      "wc -l .aishore/aishore is approximately 4500 (down from 6090)",
-      "Every command works end-to-end"
+      "bash -n passes on all files",
+      "cmd_auto no longer exists as a function",
+      "grep warm_retry returns zero matches",
+      "grep scope_overlaps returns zero matches",
+      "grep check_scope_violations returns zero matches",
+      "No -y -f -n aliases in parse_opts calls",
+      "smoke test passes"
     ],
     "scope": [
-      ".aishore/**",
-      "CLAUDE.md"
+      ".aishore/aishore",
+      ".aishore/lib/**",
+      ".aishore/help.txt"
     ],
-    "startedAt": "2026-03-25T18:42:58-07:00",
+    "startedAt": "2026-03-26T11:23:09-07:00",
     "status": "passed",
-    "completedAt": "2026-03-25T18:46:19-07:00"
+    "completedAt": "2026-03-26T11:33:02-07:00"
   },
-  "completedAt": "2026-03-25T18:46:19-07:00",
+  "completedAt": "2026-03-26T11:33:02-07:00",
   "attempts": 1
 }

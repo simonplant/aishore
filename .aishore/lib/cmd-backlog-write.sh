@@ -116,7 +116,7 @@ cmd_backlog_add() {
         "val:item_type:--type" "val:title:--title" "val:intent:--intent" \
         "val:desc:--desc" "val:priority:--priority" "val:category:--category" \
         "bool:ready:--ready" "arr:depends_entries:--depends-on" \
-        "arr:step_entries:--steps|--step" "arr:scope_entries:--scope" \
+        "arr:step_entries:--steps" "arr:scope_entries:--scope" \
         "passval:--ac" "passval:--ac-verify" \
         -- "$@" || return 1
 
@@ -266,7 +266,7 @@ cmd_backlog_edit() {
         "val:_e_priority:--priority" "val:_e_status:--status" "val:_e_category:--category" \
         "val:_e_gnotes:--groomed-notes" \
         "bool:_e_ready:--ready" "bool:_e_no_ready:--no-ready" \
-        "arr:scope_vals:--scope" "arr:step_vals:--steps|--step" \
+        "arr:scope_vals:--scope" "arr:step_vals:--steps" \
         "arr:deps_vals:--depends-on" \
         "passval:--ac" "passval:--ac-verify" "passval:--groomed-at" \
         -- "$@" || return 1
