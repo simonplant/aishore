@@ -264,11 +264,10 @@ cmd_backlog_edit() {
     parse_opts \
         "val:_e_title:--title" "val:_e_intent:--intent" "val:_e_desc:--desc" \
         "val:_e_priority:--priority" "val:_e_status:--status" "val:_e_category:--category" \
-        "val:_e_gnotes:--groomed-notes" \
         "bool:_e_ready:--ready" "bool:_e_no_ready:--no-ready" \
         "arr:scope_vals:--scope" "arr:step_vals:--steps" \
         "arr:deps_vals:--depends-on" \
-        "passval:--ac" "passval:--ac-verify" "passval:--groomed-at" \
+        "passval:--ac" "passval:--ac-verify" "passval:--groomed-at" "passval:--groomed-notes" \
         -- "$@" || return 1
 
     # Build jq updates from parsed values
@@ -293,7 +292,6 @@ cmd_backlog_edit() {
         fi
     fi
     [[ -n "$_e_category" ]] && { jq_updates+=" | .category = \$category"; updates+=("--arg" "category" "$_e_category"); }
-    [[ -n "$_e_gnotes" ]] && { jq_updates+=" | .groomingNotes = \$gnotes"; updates+=("--arg" "gnotes" "$_e_gnotes"); }
     [[ "$_e_ready" == "true" ]] && { jq_updates+=" | .readyForSprint = true"; setting_ready=true; }
     [[ "$_e_no_ready" == "true" ]] && jq_updates+=" | .readyForSprint = false"
     # Process custom flags from _PARSE_REMAINING (order-dependent)
@@ -328,6 +326,16 @@ cmd_backlog_edit() {
                 fi
                 jq_updates+=" | .groomedAt = \$gdate"
                 updates+=("--arg" "gdate" "$gdate")
+                ;;
+            --groomed-notes)
+                if [[ -n "${2:-}" && "${2:-}" != --* ]]; then
+                    jq_updates+=" | .groomingNotes = \$gnotes"
+                    updates+=("--arg" "gnotes" "$2")
+                    shift 2
+                else
+                    jq_updates+=" | del(.groomingNotes)"
+                    shift
+                fi
                 ;;
             *) log_error "Unknown option: $1"; return 1 ;;
         esac

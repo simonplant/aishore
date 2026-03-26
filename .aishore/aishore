@@ -676,10 +676,7 @@ pick_item() {
     if [[ -n "$specific_id" ]]; then
         # Pick specific item by ID
         local backlog
-        backlog=$(resolve_backlog_file "$specific_id") || {
-            log_error "Item not found: $specific_id — run 'backlog list' to see valid IDs"
-            return 1
-        }
+        backlog=$(resolve_backlog_file "$specific_id") || return 1
         local full_item
         full_item=$(find_item "$specific_id") || return 1
 
@@ -2100,12 +2097,12 @@ _run_dry_run() {
 
     local item_json
     if ! item_json=$(pick_item "$specific_id" "" "$category_filter"); then
-        if [[ -n "$specific_id" ]]; then
-            log_error "Item not found: $specific_id — check backlog/backlog.json and backlog/bugs.json for valid item IDs"
-        elif [[ -n "$category_filter" ]]; then
-            log_warning "No items found matching --category '$category_filter'"
-        else
-            log_warning "No ready items in backlog. Items need readyForSprint: true AND a commander's intent (>=20 chars). Run '.aishore/aishore groom' to prepare items."
+        if [[ -z "$specific_id" ]]; then
+            if [[ -n "$category_filter" ]]; then
+                log_warning "No items found matching --category '$category_filter'"
+            else
+                log_warning "No ready items in backlog. Items need readyForSprint: true AND a commander's intent (>=20 chars). Run '.aishore/aishore groom' to prepare items."
+            fi
         fi
         return 1
     fi
@@ -2782,20 +2779,7 @@ setup_sprint_environment() {
     # Resolve max_consecutive_failures: flag > config > default
     [[ -z "$max_consecutive_failures" ]] && max_consecutive_failures="$AUTO_MAX_FAILURES"
 
-    # Validate --limit: must be a positive integer
-    if [[ -n "$session_limit" ]]; then
-        if [[ "$session_limit" -le 0 ]] 2>/dev/null; then
-            log_error "limit must be a positive integer (got: $session_limit)"
-            return 1
-        fi
-    fi
-
-    # Validate --parallel: must be 1-4, default 1; parallel > 1 forces worktree mode
-    [[ -z "$parallel_count" ]] && parallel_count=1
-    if [[ "$parallel_count" -lt 1 || "$parallel_count" -gt 4 ]] 2>/dev/null; then
-        log_error "parallel must be 1-4 (got: $parallel_count)"
-        return 1
-    fi
+    # Note: --limit and --parallel are validated in cmd_run before this function
     # Auto mode setup
     scope_label=""
     if [[ "$auto_mode" == "true" ]]; then
@@ -3394,7 +3378,7 @@ run_sprint_loop() {
         local item_json
         if ! item_json=$(pick_item "$specific_id" "$skip_list" "$category_filter"); then
             if [[ -n "$specific_id" ]]; then
-                log_error "Item not found: $specific_id — check backlog/backlog.json and backlog/bugs.json for valid item IDs"
+                : # resolve_backlog_file already printed the error
             elif [[ -n "$category_filter" ]]; then
                 log_warning "No items found matching --category '$category_filter'"
             elif [[ "$auto_mode" == "true" ]]; then
@@ -3631,6 +3615,19 @@ cmd_run() {
     # --timeout N (minutes) overrides AGENT_TIMEOUT; config/env already loaded as TIMEOUT_MINUTES
     if [[ -n "$timeout_minutes" ]]; then
         TIMEOUT_MINUTES="$timeout_minutes"
+    fi
+
+    # Validate --limit and --parallel early (before dry-run branch)
+    if [[ -n "$session_limit" ]]; then
+        if [[ "$session_limit" -le 0 ]] 2>/dev/null; then
+            log_error "limit must be a positive integer (got: $session_limit)"
+            return 1
+        fi
+    fi
+    [[ -z "$parallel_count" ]] && parallel_count=1
+    if [[ "$parallel_count" -lt 1 || "$parallel_count" -gt 4 ]] 2>/dev/null; then
+        log_error "parallel must be 1-4 (got: $parallel_count)"
+        return 1
     fi
 
     if [[ "$dry_run" == "true" ]]; then

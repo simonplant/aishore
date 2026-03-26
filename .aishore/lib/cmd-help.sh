@@ -127,7 +127,6 @@ Subcommands:
     --all             Audit every non-done item
   rm <ID>           Remove an item (--force to skip confirmation)
   history           List recent completed sprint items (--limit N, --all)
-  sync              Detect items completed outside aishore (--dry-run, --auto)
   populate          AI-populate backlog from PRODUCT.md (--preview)
 
 Examples:

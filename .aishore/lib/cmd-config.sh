@@ -13,12 +13,10 @@ cmd_config_check() {
         "agent.timeout|AGENT_TIMEOUT|AISHORE_AGENT_TIMEOUT|3600"
         "timeout_minutes|TIMEOUT_MINUTES|AISHORE_TIMEOUT_MINUTES|0"
         "notifications.on_complete|NOTIFY_CMD|AISHORE_NOTIFY_CMD|"
-        "notifications.system|NOTIFY_SYSTEM|AISHORE_NOTIFY|false"
         "auto.groom_threshold|AUTO_GROOM_THRESHOLD|AISHORE_AUTO_GROOM_THRESHOLD|3"
         "auto.max_failures|AUTO_MAX_FAILURES|AISHORE_AUTO_MAX_FAILURES|5"
         "groom.max_items|GROOM_MAX_ITEMS|AISHORE_GROOM_MAX_ITEMS|10"
         "groom.min_priority|GROOM_MIN_PRIORITY|AISHORE_GROOM_MIN_PRIORITY|should"
-        "maturity.enabled|MATURITY_ENABLED|AISHORE_MATURITY|true"
         "streaming.enabled|STREAMING_ENABLED|AISHORE_STREAMING|true"
         "streaming.max_lines|STREAMING_MAX_LINES|AISHORE_STREAMING_MAX_LINES|20"
         "output.truncate_lines|OUTPUT_TRUNCATE_LINES|AISHORE_OUTPUT_TRUNCATE_LINES|50"
@@ -26,7 +24,6 @@ cmd_config_check() {
         "pr.create|CREATE_PR|AISHORE_CREATE_PR|false"
         "run.auto_review|AUTO_REVIEW|AISHORE_AUTO_REVIEW|false"
         "run.no_summary|NO_SUMMARY|AISHORE_NO_SUMMARY|false"
-        "run.refine|REFINE_ON_EXHAUST|AISHORE_REFINE|false"
         "run.retries|SESSION_RETRIES|AISHORE_RETRIES|0"
         "run.limit|SESSION_LIMIT|AISHORE_SESSION_LIMIT|"
         "run.category|SESSION_CATEGORY|AISHORE_SESSION_CATEGORY|"
@@ -37,9 +34,9 @@ cmd_config_check() {
 
     # Known top-level YAML keys (for unknown-key detection)
     local -a _known_top_keys=(
-        validation fix models agent notifications auto groom scope
-        maturity streaming output merge pr isolation permissions
-        retry run project backlog_files
+        validation fix models agent notifications auto groom
+        streaming output merge pr permissions
+        run project backlog_files
     )
 
     local has_config=false

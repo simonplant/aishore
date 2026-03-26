@@ -27,26 +27,21 @@ jq empty backlog/*.json
 .aishore/aishore backlog rm <ID>    # Remove an item (--force to skip confirmation)
 .aishore/aishore backlog history    # List completed sprint items
 .aishore/aishore backlog populate   # AI-populate backlog from PRODUCT.md
-.aishore/aishore auto done           # Autonomous: drain entire backlog
-.aishore/aishore auto p0             # Autonomous: complete all must items
-.aishore/aishore auto p1             # Autonomous: complete all must + should items
-.aishore/aishore auto p2             # Autonomous: complete all must + should + could items
-.aishore/aishore auto done --retries 2        # With per-item retries
-.aishore/aishore auto p1 --max-failures 3     # Custom circuit breaker
-.aishore/aishore auto done --limit 3           # Cap session at 3 items
-.aishore/aishore auto done --no-merge         # Keep feature branches for PR review
-.aishore/aishore auto p1 --refine            # Refine spec on failure and retry
-.aishore/aishore auto done --quick            # Skip maturity protocol
-.aishore/aishore auto done --auto-review     # Auto-run architecture review on completion
-.aishore/aishore auto done --no-summary       # Suppress end-of-session summary table
-.aishore/aishore auto done --dry-run          # Preview first item without running
 .aishore/aishore run [N]            # Run N sprints (branch, commit, merge, push per item)
 .aishore/aishore run <ID>           # Run specific item (e.g., FEAT-001)
+.aishore/aishore run done           # Drain entire backlog (auto-grooms when ready items low)
+.aishore/aishore run p0             # Complete all P0 (must) items
+.aishore/aishore run p1             # Complete all P0+P1 (must + should) items
+.aishore/aishore run p2             # Complete all P0-P2 (must + should + could) items
+.aishore/aishore run done --retries 2        # With per-item retries
+.aishore/aishore run p1 --max-failures 3     # Custom circuit breaker
+.aishore/aishore run done --limit 3           # Cap session at 3 items
+.aishore/aishore run done --parallel 2       # Run 2 items concurrently
+.aishore/aishore run --no-merge 3            # Keep feature branches for PR review
+.aishore/aishore run --pr FEAT-001           # Create GitHub PR for review
 .aishore/aishore run --dry-run      # Preview without running agents
-.aishore/aishore run --no-merge     # Keep feature branches for PR review
-.aishore/aishore run --retries N    # Allow N retries on validation failure
-.aishore/aishore run --refine       # Refine spec on failure and retry once more
-.aishore/aishore run --quick        # Skip maturity protocol (fast iteration)
+.aishore/aishore run done --auto-review     # Auto-run architecture review on completion
+.aishore/aishore run done --no-summary       # Suppress end-of-session summary table
 .aishore/aishore groom              # Tech lead: groom bugs
 .aishore/aishore groom --backlog    # Product owner: groom features
 .aishore/aishore groom --architect  # Architect: scaffolding review
@@ -67,7 +62,6 @@ jq empty backlog/*.json
 .aishore/aishore update --dry-run   # Check for updates without applying
 .aishore/aishore update --force     # Update even if already on latest
 .aishore/aishore config check        # Validate config and show effective values
-.aishore/aishore diagnose            # Show last sprint failure diagnostics
 .aishore/aishore checksums          # Regenerate checksums after editing .aishore/ files
 .aishore/aishore version            # Show version
 .aishore/aishore help               # Show usage
@@ -82,9 +76,9 @@ No build step — the tool is pure Bash. The core orchestrator lazy-loads comman
 Pick Item → Create Branch (aishore/<ID>) → Developer Agent (with maturity protocol) → Validation Command → Validator Agent → Commit → Merge → Archive
 ```
 
-**Maturity protocol:** By default, the developer agent runs a 3-phase cycle within a single session: (1) Implement — write the code, (2) Critique — shift to reviewer mindset, re-read all changes, verify each AC, hunt bugs/edge cases, fix everything found, (3) Harden — run full validation again, fix regressions, confirm all AC provably met. This keeps quality iteration inside the session where context is hot, rather than relying on external retry loops. Disable with `--quick` flag or `maturity.enabled: false` in config. Env var: `AISHORE_MATURITY`.
+**Maturity protocol:** The developer agent always runs a 3-phase cycle within a single session: (1) Implement — write the code, (2) Critique — shift to reviewer mindset, re-read all changes, verify each AC, hunt bugs/edge cases, fix everything found, (3) Harden — run full validation again, fix regressions, confirm all AC provably met. This keeps quality iteration inside the session where context is hot, rather than relying on external retry loops. Maturity is mandatory and cannot be disabled.
 
-**Autonomous mode (`auto` command):** `auto <scope>` wraps the sprint loop with: priority-scoped item selection (p0/p1/p2/done), auto-grooming when ready items drop below threshold, session failure tracking passed to subsequent developer agents, and a circuit breaker that stops after N consecutive failures. `cmd_auto()` validates the scope and delegates to `cmd_run` via an internal `--_auto` flag — all sprint logic lives in one place. Auto-groom runs the architect first (scaffolding detection), then tech-lead and product-owner.
+**Autonomous mode:** `run <scope>` (where scope is `done`, `p0`, `p1`, or `p2`) wraps the sprint loop with: priority-scoped item selection, auto-grooming when ready items drop below threshold, session failure tracking passed to subsequent developer agents, and a circuit breaker that stops after N consecutive failures. Auto-groom runs the architect first (scaffolding detection), then tech-lead and product-owner.
 
 **Top-down scaffolding enforcement:** The system prevents fragment accumulation — building isolated pieces that never connect into a working whole. The architect agent (`groom --architect`, also runs in auto-groom) detects fragment risk signals (stub entry points, mock-only dependencies, disconnected modules) and creates scaffolding backlog items with `must` priority and `dependsOn` chains. The developer agent is instructed to wire code to real entry points. The validator flags disconnected code as advisory notes. The product-owner watches for feature priorities outrunning the skeleton during grooming.
 
@@ -110,10 +104,9 @@ project/
     ├── config.yaml          # Optional overrides
     ├── lib/                 # Lazy-loaded command modules
     │   ├── cmd-backlog-read.sh   # backlog list/show/check/history
-    │   ├── cmd-backlog-write.sh  # backlog add/edit/rm/populate/sync
+    │   ├── cmd-backlog-write.sh  # backlog add/edit/rm/populate
     │   ├── cmd-clean.sh          # clean command
     │   ├── cmd-config.sh         # config check
-    │   ├── cmd-diagnose.sh       # diagnose command
     │   ├── cmd-groom.sh          # groom (tech-lead, product-owner, architect)
     │   ├── cmd-help.sh           # help/usage
     │   ├── cmd-init.sh           # init wizard
@@ -143,9 +136,9 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 **Concurrency:** Only one aishore process runs at a time, enforced via `flock` on `.aishore/data/status/.aishore.lock`.
 
-**Safe failure recovery:** Pre-existing uncommitted changes are stashed before sprints and restored afterward. Sprint failures delete the feature branch and return to the base branch cleanly. The developer agent commits directly; the orchestrator has a safety net commit if the agent misses it.
+**Safe failure recovery:** Sprint failures delete the feature branch and return to the base branch cleanly. The developer agent commits directly; the orchestrator has a safety net commit if the agent misses it.
 
-**Scope checking:** Items can have a `scope` array of glob patterns (e.g., `["src/**", "tests/**"]`). After the developer agent runs, changed files are checked against scope. `scope.mode: warn` (default) logs warnings; `scope.mode: strict` fails the sprint. Configure in `config.yaml` or `AISHORE_SCOPE_MODE` env var.
+**Scope checking:** Items can have a `scope` array of glob patterns (e.g., `["src/**", "tests/**"]`). Scope is used as an advisory file constraint in the developer prompt.
 
 **Testable acceptance criteria:** AC entries can be plain strings or `{text, verify}` objects. The `verify` field is a shell command run after validation; failures trigger retries. Use `--ac "text" --ac-verify "command"` in `backlog add`/`backlog edit`.
 
@@ -153,7 +146,7 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 **Baseline pre-flight:** Before the developer agent runs, the validation command is executed on the current codebase. If baseline fails, the sprint is aborted immediately.
 
-**Spec refinement:** `run --refine` uses an AI agent to refine the spec (steps + AC) when all retries are exhausted, then attempts one more developer cycle.
+**Spec refinement:** When all retries are exhausted, an AI agent automatically refines the spec (steps + AC) and attempts one more developer cycle.
 
 **Configuration precedence:** env vars > config.yaml > built-in defaults.
 
