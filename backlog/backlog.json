@@ -32,6 +32,82 @@
       "groomingNotes": "Added BUG-129–132 as dependencies. These four extractions (cmd-help ~250 lines, cmd-backlog-read ~230 lines, cmd-clean ~70 lines, groom helpers ~150 lines) must complete before finalization so that FEAT-064 truly captures the full modularization. Projected main script size after all extractions: ~4114 lines (4824 - 710). FEAT-064's AC of 'approximately 4500' will comfortably be met. No other changes — item remains sprint-ready once deps pass.",
       "groomedAt": "2026-03-25",
       "completedAt": "2026-03-25T18:46:19-07:00"
+    },
+    {
+      "id": "FEAT-072",
+      "title": "Code cleanup: remove dead weight (auto alias, warm-retry, flag aliases, scope checking, box-drawing)",
+      "intent": "Remove code that adds complexity without value: cmd_auto alias (3 lines), warm-retry flag and code (32 lines), all flag aliases -y/-f/-n/--step/--check (15 lines), scope checking functions check_scope_violations and scope_overlaps (93 lines), box-drawing summary table replaced with plain ASCII (11 lines)",
+      "description": "",
+      "priority": "must",
+      "category": "simplify",
+      "steps": [
+        "Remove cmd_auto function and auto dispatch entry from main()",
+        "Remove --warm-retry flag from parse_opts, WARM_RETRY config, and all warm_retry references",
+        "Remove flag aliases: -y (keep --yes), -f (keep --force), -n (keep --limit), --step alias (keep --steps), --check alias (keep --dry-run)",
+        "Remove check_scope_violations and scope_overlaps functions and all call sites",
+        "Remove SCOPE_MODE config and AISHORE_SCOPE_MODE env var",
+        "Replace box-drawing summary table (print_session_summary_table) with plain ASCII",
+        "Update help.txt and all docs to remove references to cut features",
+        "Run smoke test after each removal"
+      ],
+      "acceptanceCriteria": [
+        "bash -n passes on all files",
+        "cmd_auto no longer exists as a function",
+        "grep warm_retry returns zero matches",
+        "grep scope_overlaps returns zero matches",
+        "grep check_scope_violations returns zero matches",
+        "No -y -f -n aliases in parse_opts calls",
+        "smoke test passes"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/**",
+        ".aishore/help.txt"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-073",
+      "title": "Simplify: make maturity mandatory, refine automatic, worktree-only, cut diagnose, inline notifications",
+      "intent": "Remove toggles for core behaviors — maturity protocol is always on (delete --quick flag and MATURITY_ENABLED config), spec refinement is automatic on final failure (delete --refine flag), worktree isolation is the only mode (delete stash path and ISOLATION_MODE config), diagnose command deleted (users check logs), notification wrappers inlined",
+      "description": "",
+      "priority": "must",
+      "category": "simplify",
+      "steps": [
+        "Remove --quick flag, MATURITY_ENABLED config, AISHORE_MATURITY env var — maturity protocol always runs",
+        "Remove --refine flag, REFINE_ON_EXHAUST config, AISHORE_REFINE env var — always refine before final failure",
+        "Remove stash isolation path: delete restore_stash, stash-related code in setup_sprint_environment — worktree is the only mode",
+        "Remove ISOLATION_MODE config and AISHORE_ISOLATION env var",
+        "Delete cmd-diagnose.sh module and diagnose dispatch entry",
+        "Inline send_notification: replace wrapper with direct conditional at call sites, simplify send_session_notification to just terminal bell plus log message",
+        "Update help.txt, CONFIGURATION.md, README.md, CLAUDE.md",
+        "Run smoke test and drift check"
+      ],
+      "acceptanceCriteria": [
+        "bash -n passes on all files",
+        "grep MATURITY_ENABLED returns zero matches",
+        "grep ISOLATION_MODE returns zero matches",
+        "grep quick_mode returns zero matches",
+        "cmd-diagnose.sh no longer exists",
+        "Worktree is created for every sprint (no stash path)",
+        "Spec refinement runs automatically when retries exhausted",
+        "smoke test passes",
+        "check-drift.sh reports zero drift"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/**",
+        ".aishore/help.txt",
+        "docs/CONFIGURATION.md",
+        "CLAUDE.md"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
     }
   ]
 }
