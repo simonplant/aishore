@@ -24,7 +24,6 @@ cmd_config_check() {
         "output.truncate_lines|OUTPUT_TRUNCATE_LINES|AISHORE_OUTPUT_TRUNCATE_LINES|50"
         "merge.strategy|MERGE_STRATEGY|AISHORE_MERGE_STRATEGY|merge"
         "pr.create|CREATE_PR|AISHORE_CREATE_PR|false"
-        "isolation.mode|ISOLATION_MODE|AISHORE_ISOLATION|stash"
         "run.auto_review|AUTO_REVIEW|AISHORE_AUTO_REVIEW|false"
         "run.no_summary|NO_SUMMARY|AISHORE_NO_SUMMARY|false"
         "run.refine|REFINE_ON_EXHAUST|AISHORE_REFINE|false"

@@ -1,5 +1,5 @@
 40b8eb4000a913a7791090535f291d3d369874162a89ef3c9e3d4e887a1b9e79  .aishore/VERSION
-2d769ab338c90eac8a015502f52b1c7522aafa329ef3e949ca65f7f20f2c4951  .aishore/aishore
+1b3e53c2f0a34b935efe60aa16f78b302f01c98e954707661e4ab5066046f773  .aishore/aishore
 5bf43178d883b44237e1e5f60a83b60923380ae40fdb2df5b6e4f259e0e79cfd  .aishore/README.md
 23d39914d11e9391a3281df11e7506d739d05fab05cab919d29d623cbedbae25  .aishore/gitignore-entries.txt
 69a9bec220516448361e9b4b4f40c800fa2c73a9892a4e71a2ddd98c72952fd6  .aishore/help.txt
@@ -18,7 +18,7 @@ c1fe7bf121c75a0b33195b146d09bfa411c5c47384d1bf2c96f4980189d327c3  .aishore/templ
 a04ed29d7e3b9bf2d35d59f767619ef28de2c86d61b70018af260c5dd8a9c163  .aishore/lib/cmd-backlog-read.sh
 dc85efd597ce87daedbc4996e82f151ae3be7fe84daeca3ec44909cedfbee960  .aishore/lib/cmd-backlog-write.sh
 86ee2e9acdd9944f7ebfe42e02fdaccfc6a501d951bb4533f7afa9f223294b7d  .aishore/lib/cmd-clean.sh
-8f3f2dd4a9da9f9d967808841a9c6274b975986e3d76ce6601298a1cf24448c7  .aishore/lib/cmd-config.sh
+64e9ab898fd5d6af5ea4377e4e39a853d7ad536740bf2a24315c4d9e93fb1f01  .aishore/lib/cmd-config.sh
 da232969cacea7eb7f10125bb3327b73364eea991aaf64d7e69398f85ef8ff0e  .aishore/lib/cmd-diagnose.sh
 e79a061cb6126a6754ad04f01319f601ed8d72f8a895e1331f8655330b91502d  .aishore/lib/cmd-groom.sh
 a15a17347ee848fa0746d3b4c441d35d92a8622a79c57fd15c0009af9dc09082  .aishore/lib/cmd-help.sh
