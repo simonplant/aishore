@@ -98,6 +98,15 @@ validation:
 # streaming:
 #   enabled: true
 #   max_lines: 20
+
+# Run session defaults (override with CLI flags)
+# run:
+#   retries: 0
+#   refine: false
+#   auto_review: false
+#   no_summary: false
+#   session_limit: 0        # 0 = unlimited
+#   session_category: ""    # empty = all categories
 ```
 
 ### Every Option Explained
@@ -352,6 +361,72 @@ validation:
 | **What it controls** | Maximum number of trailing output lines shown during agent streaming. |
 | **When to change** | Increase to see more live output; decrease to reduce terminal clutter. |
 
+#### `run.retries`
+
+| | |
+|---|---|
+| **Type** | integer |
+| **Default** | `0` (no retries) |
+| **Env var** | `AISHORE_RETRIES` |
+| **CLI flag** | `--retries N` |
+| **What it controls** | Per-item retry attempts when a sprint fails validation. |
+| **When to change** | Set to 1-3 for resilience. Higher values cost more agent time. |
+
+#### `run.refine`
+
+| | |
+|---|---|
+| **Type** | boolean |
+| **Default** | `false` |
+| **Env var** | `AISHORE_REFINE` |
+| **CLI flag** | `--refine` |
+| **What it controls** | When all retries are exhausted, call an AI agent to rewrite the item's steps and AC, then attempt one more developer cycle. |
+| **When to change** | Enable for autonomous runs where you want maximum recovery before giving up. |
+
+#### `run.auto_review`
+
+| | |
+|---|---|
+| **Type** | boolean |
+| **Default** | `false` |
+| **Env var** | `AISHORE_AUTO_REVIEW` |
+| **CLI flag** | `--auto-review` |
+| **What it controls** | Automatically run architecture review after the sprint session completes. |
+| **When to change** | Enable for long autonomous sessions where you want a quality check at the end. |
+
+#### `run.no_summary`
+
+| | |
+|---|---|
+| **Type** | boolean |
+| **Default** | `false` |
+| **Env var** | `AISHORE_NO_SUMMARY` |
+| **CLI flag** | `--no-summary` |
+| **What it controls** | Suppress the end-of-session summary table. |
+| **When to change** | Set in CI/automation where the summary is noise. |
+
+#### `run.session_limit`
+
+| | |
+|---|---|
+| **Type** | integer |
+| **Default** | `0` (unlimited) |
+| **Env var** | `AISHORE_SESSION_LIMIT` |
+| **CLI flag** | `--limit N` |
+| **What it controls** | Cap the session at N successfully completed items, then exit cleanly. |
+| **When to change** | Useful for bounded batch runs (e.g., "do 3 items then stop"). |
+
+#### `run.session_category`
+
+| | |
+|---|---|
+| **Type** | string |
+| **Default** | `""` (all categories) |
+| **Env var** | `AISHORE_SESSION_CATEGORY` |
+| **CLI flag** | `--category <name>` |
+| **What it controls** | Only pick items matching this category tag. |
+| **When to change** | When you want to focus a session on a specific area (e.g., `documentation`, `api`). |
+
 ---
 
 ## Environment Variables
@@ -383,6 +458,12 @@ All `AISHORE_*` environment variables and what they map to:
 | `AISHORE_STREAMING_MAX_LINES` | `streaming.max_lines` | `20` | Max trailing lines during streaming |
 | `AISHORE_TIMEOUT_MINUTES` | `timeout_minutes` | `0` | Agent timeout in minutes (overrides `agent.timeout`; 0 = no override) |
 | `AISHORE_WARM_RETRY` | `retry.warm` | `false` | Resume existing session on retry instead of starting fresh |
+| `AISHORE_RETRIES` | `run.retries` | `0` | Per-item retry attempts on failure |
+| `AISHORE_REFINE` | `run.refine` | `false` | AI-refine spec on exhausted retries |
+| `AISHORE_AUTO_REVIEW` | `run.auto_review` | `false` | Run architecture review after session |
+| `AISHORE_NO_SUMMARY` | `run.no_summary` | `false` | Suppress end-of-session summary table |
+| `AISHORE_SESSION_LIMIT` | `run.session_limit` | `0` | Cap session at N items (0 = unlimited) |
+| `AISHORE_SESSION_CATEGORY` | `run.session_category` | `""` | Only run items matching this category |
 
 ---
 
@@ -401,60 +482,41 @@ All `AISHORE_*` environment variables and what they map to:
 ### `run` — Execute sprints
 
 ```
-.aishore/aishore run [N|ID] [flags]
+.aishore/aishore run [N|ID|scope] [flags]
 ```
 
-| Flag | Argument | Description |
-|------|----------|-------------|
-| *(positional)* | `N` | Number of sprints to run (default: `1`) |
-| *(positional)* | `ID` | Run a specific item by ID (e.g., `FEAT-001`) |
-| `--dry-run` | — | Preview what would run without executing |
-| `--no-merge` | — | Keep feature branches; push instead of merging |
-| `--pr` | — | Create GitHub PR instead of merging |
-| `--retries` | `N` | Retry N times on validation failure (default: `0`) |
-| `--refine` | — | Refine spec when retries exhausted, then retry once more |
-| `--quick` | — | Skip maturity protocol for this run |
-| `--category` | `<name>` | Only run items matching this category |
-| `--auto-review` | — | Run architecture review after completion |
-| `--limit` | `N` | Cap session at N successful items then exit cleanly |
-| `--no-summary` | — | Suppress end-of-session summary table |
-| `--timeout` | `N` | Kill agent after N minutes (default: `0` = no limit) |
-| `--warm-retry` | — | Resume existing session on retry (retains prior context) |
-| `--parallel` | `N` | Run up to N items concurrently in worktrees (1–4, default: `1`) |
+| Positional | Description |
+|------------|-------------|
+| *(none)* | Run 1 sprint (default) |
+| `N` | Run N sprints |
+| `ID` | Run a specific item by ID (e.g., `FEAT-001`) |
+| `done` | Drain entire backlog (enables auto-grooming + circuit breaker) |
+| `p0` | Complete all `must` items |
+| `p1` | Complete all `must` + `should` items |
+| `p2` | Complete all `must` + `should` + `could` items |
 
-### `auto` — Autonomous mode
-
-```
-.aishore/aishore auto <scope> [flags]
-```
-
-**Scopes:**
-
-| Scope | Items included |
-|-------|----------------|
-| `p0` | `must` priority only |
-| `p1` | `must` + `should` |
-| `p2` | `must` + `should` + `could` |
-| `done` | All priorities (drain entire backlog) |
+When a scope (`done`, `p0`, `p1`, `p2`) is given, auto-grooming activates when ready items drop below threshold, and the circuit breaker stops after N consecutive failures.
 
 **Flags:**
 
 | Flag | Argument | Description |
 |------|----------|-------------|
-| `--limit` | `N` | Cap session at N successful items then exit cleanly |
+| `--dry-run` | — | Preview what would run without executing |
+| `--quick` | — | Skip maturity protocol (fast iteration) |
 | `--retries` | `N` | Per-item retries on failure (default: `0`) |
-| `--max-failures` | `N` | Circuit breaker: stop after N consecutive failures (default: `5`) |
-| `--no-merge` | — | Keep feature branches; push instead of merging |
-| `--pr` | — | Create GitHub PR instead of merging |
-| `--refine` | — | Refine spec when retries exhausted, then retry once more |
-| `--quick` | — | Skip maturity protocol |
-| `--auto-review` | — | Run architecture review after all items complete |
-| `--dry-run` | — | Preview first item without running |
-| `--category` | `<name>` | Only run items matching this category |
-| `--no-summary` | — | Suppress end-of-session summary table |
-| `--timeout` | `N` | Kill agent after N minutes (default: `0` = no limit) |
-| `--warm-retry` | — | Resume existing session on retry (retains prior context) |
 | `--parallel` | `N` | Run up to N items concurrently in worktrees (1–4, default: `1`) |
+| `--limit` | `N` | Cap session at N successful items then exit cleanly |
+| `--no-merge` | — | Keep feature branches; push instead of merging |
+| `--pr` | — | Create GitHub PR (implies `--no-merge`) |
+| `--max-failures` | `N` | Circuit breaker: stop after N consecutive failures (default: `5`) |
+| `--timeout` | `N` | Kill agent after N minutes (default: `0` = no limit) |
+| `--refine` | — | Refine spec when retries exhausted, then retry once more |
+| `--category` | `<name>` | Only run items matching this category |
+| `--auto-review` | — | Run architecture review after all items complete |
+| `--warm-retry` | — | Resume existing session on retry (retains prior context) |
+| `--no-summary` | — | Suppress end-of-session summary table |
+
+**Note:** `auto` is accepted as an alias for `run` for backwards compatibility.
 
 ### `groom` — Refine backlog
 
@@ -505,7 +567,7 @@ All `AISHORE_*` environment variables and what they map to:
 | `--priority` | `must` \| `should` \| `could` \| `future` | Priority level (default: `should`) |
 | `--category` | `"text"` | Category tag |
 | `--ready` | — | Mark as sprint-ready immediately |
-| `--step` | `"text"` | Add implementation step *(repeatable, ordered)* |
+| `--steps` | `"text"` | Implementation step *(repeatable, replaces all steps)* |
 | `--ac` | `"text"` | Add acceptance criterion *(repeatable)* |
 | `--ac-verify` | `"cmd"` | Attach verification command to preceding `--ac` |
 | `--depends-on` | `ID` | Add dependency on another item *(repeatable)* |
@@ -528,7 +590,7 @@ All `AISHORE_*` environment variables and what they map to:
 | `--no-ready` | — | Unmark from sprint-ready |
 | `--groomed-at` | `[YYYY-MM-DD]` | Set groomed date (defaults to today) |
 | `--groomed-notes` | `"text"` | Set grooming notes |
-| `--step` | `"text"` | Append implementation step *(repeatable)* |
+| `--steps` | `"text"` | Implementation step *(repeatable, replaces all steps)* |
 | `--remove-step` | `N` | Remove step by 1-based index |
 | `--clear-steps` | — | Reset steps to empty |
 | `--ac` | `"text"` | Add acceptance criterion *(repeatable)* |
@@ -691,8 +753,14 @@ Also available as `-v` or `--version`.
 ### `help` — Show usage
 
 ```
-.aishore/aishore help
+.aishore/aishore help [command]
+.aishore/aishore help --full
 ```
+
+| Flag | Description |
+|------|-------------|
+| *(positional)* | Show detailed help for a specific command (e.g., `help run`, `help backlog`) |
+| `--full` | Show complete reference (all commands, all flags) |
 
 Also available as `-h` or `--help`.
 

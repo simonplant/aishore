@@ -105,15 +105,15 @@ code_commands=$(sed -n '/^main()/,/^}/p' "$CLI" \
     | grep -v '^esac$' \
     | sort -u)
 
-# Extract commands from help output (2-space indented words)
-help_commands=$("$CLI" help 2>&1 \
+# Extract commands from full help output (2-space indented words)
+help_commands=$("$CLI" help --full 2>&1 \
     | grep -oP '^\s{2}(\w[\w-]+)' \
     | awk '{print $1}' \
     | grep -v '^--' \
     | sort -u)
 
 for cmd in $code_commands; do
-    [[ "$cmd" == "usage" || "$cmd" == "check" ]] && continue  # internal/subcommand
+    [[ "$cmd" == "usage" || "$cmd" == "check" || "$cmd" == "auto" ]] && continue  # internal/subcommand/alias
     if has_line "$cmd" "$help_commands"; then
         ok "Command '$cmd' in code and help"
     else
@@ -152,8 +152,15 @@ echo "── Flags: Code vs Help ──"
 # Catches both case-statement patterns (--flag) or --flag|) and == comparisons.
 extract_code_flags() {
     local func_name="$1"
-    local body
-    body=$(sed -n "/^${func_name}()/,/^[a-z_]*() *{*$/p" "$CLI")
+    local body=""
+    local f
+    # Search main script and all module files for the function
+    for f in "$CLI" "$SCRIPT_DIR"/.aishore/lib/*.sh; do
+        [[ -f "$f" ]] || continue
+        local match
+        match=$(sed -n "/^${func_name}()/,/^[a-z_]*() *{*$/p" "$f") || true
+        [[ -n "$match" ]] && { body="$match"; break; }
+    done
     {
         # Unified extraction: --flag preceded by whitespace, |, or : and followed by ), |, ", or '
         # Covers case-statement patterns, parse_opts specs, and equality checks
@@ -166,7 +173,7 @@ extract_code_flags() {
 extract_help_flags() {
     local cmd_label="$1"
     local help_text
-    help_text=$("$CLI" help 2>&1)
+    help_text=$("$CLI" help --full 2>&1)
 
     # For commands like "run", "auto", "review" etc., the help section starts
     # with "  command" and ends at the next "  command" or empty line.
@@ -191,6 +198,7 @@ is_intentionally_undocumented() {
     case "$cmd:$flag" in
         update:--check|update:--no-verify) return 0 ;;
         run:--max-failures) return 0 ;;  # only meaningful via auto pass-through
+        "backlog add:--step"|"backlog edit:--step") return 0 ;;  # alias for --steps, kept for agent compat
         *) return 1 ;;
     esac
 }
@@ -259,7 +267,7 @@ echo ""
 
 echo "── Flags: Help vs CONFIGURATION.md ──"
 
-all_help_flags=$("$CLI" help 2>&1 | grep -oP '\-\-[\w-]+' | sort -u)
+all_help_flags=$("$CLI" help --full 2>&1 | grep -oP '\-\-[\w-]+' | sort -u)
 
 while IFS= read -r flag; do
     [[ -z "$flag" ]] && continue
@@ -279,7 +287,7 @@ echo ""
 
 echo "── Commands: Help vs CLAUDE.md ──"
 
-help_primary_cmds=$("$CLI" help 2>&1 \
+help_primary_cmds=$("$CLI" help --full 2>&1 \
     | grep -oP '^\s{2}(\w[\w-]+)' \
     | awk '{print $1}' \
     | grep -v '^--' \
@@ -304,7 +312,7 @@ if [[ -f "$GUIDE" ]]; then
 
     # Check that primary commands from help appear in the guide
     # (guide is a quick-reference, so we check major commands only)
-    major_cmds="auto run groom review status metrics clean update"
+    major_cmds="run groom review status metrics clean update"
     for cmd in $major_cmds; do
         if grep -Fq "$cmd" "$GUIDE" 2>/dev/null; then
             ok "Guide mentions '$cmd'"
@@ -321,7 +329,16 @@ if [[ -f "$GUIDE" ]]; then
             ok "Guide flag $flag exists in help"
         else
             # Check if it's a valid code flag not in help (like --force for update)
+            # Also search module files
+            found_in_code=false
             if grep -Fq -- "$flag" "$CLI" 2>/dev/null; then
+                found_in_code=true
+            else
+                for f in "$SCRIPT_DIR"/.aishore/lib/*.sh; do
+                    [[ -f "$f" ]] && grep -Fq -- "$flag" "$f" 2>/dev/null && { found_in_code=true; break; }
+                done
+            fi
+            if $found_in_code; then
                 ok "Guide flag $flag exists in code"
             else
                 drift error "Guide mentions $flag but it doesn't exist in code or help"
