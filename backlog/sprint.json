@@ -1,35 +1,35 @@
 {
-  "sprintId": "sprint-1774550549",
-  "startedAt": "2026-03-26T11:42:29-07:00",
+  "sprintId": "sprint-1774550772",
+  "startedAt": "2026-03-26T11:46:12-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-074",
-    "title": "Make maturity mandatory and spec refinement automatic",
-    "intent": "Remove --quick flag and MATURITY_ENABLED config (maturity always runs). Remove --refine flag and REFINE_ON_EXHAUST config (always refine before final failure). Remove AISHORE_MATURITY and AISHORE_REFINE env vars.",
+    "id": "FEAT-075",
+    "title": "Remove stash isolation — worktree is the only mode",
+    "intent": "Delete restore_stash function and all stash-related code paths in setup_sprint_environment. Remove ISOLATION_MODE config and AISHORE_ISOLATION env var. Worktree is always used.",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Remove --quick flag from parse_opts in cmd_run_parse_args and all quick_mode references",
-      "Remove MATURITY_ENABLED config default and conditional in build_agent_prompt — always include maturity phases",
-      "Remove --refine flag from parse_opts and make refine_item_spec always run when retries exhausted",
-      "Remove AISHORE_MATURITY and AISHORE_REFINE from _apply_env_overrides",
-      "Update help text",
+      "Remove restore_stash function from main script",
+      "Remove stash code path from setup_sprint_environment (git stash push, DID_STASH tracking)",
+      "Remove ISOLATION_MODE config default and checks",
+      "Remove AISHORE_ISOLATION from _apply_env_overrides",
+      "Update help and config docs",
       "Run smoke test"
     ],
     "acceptanceCriteria": [
       "bash -n passes on all files",
-      "grep quick_mode .aishore/aishore returns zero matches",
-      "grep MATURITY_ENABLED .aishore/aishore returns zero matches",
-      "grep refine_on_exhaust .aishore/aishore returns zero matches"
+      "grep ISOLATION_MODE .aishore/aishore returns zero matches",
+      "grep restore_stash .aishore/aishore returns zero matches",
+      "grep DID_STASH .aishore/aishore returns zero matches"
     ],
     "scope": [
       ".aishore/aishore",
       ".aishore/lib/cmd-help.sh"
     ],
-    "startedAt": "2026-03-26T11:42:29-07:00",
+    "startedAt": "2026-03-26T11:46:12-07:00",
     "status": "passed",
-    "completedAt": "2026-03-26T11:46:10-07:00"
+    "completedAt": "2026-03-26T11:50:40-07:00"
   },
-  "completedAt": "2026-03-26T11:46:10-07:00",
+  "completedAt": "2026-03-26T11:50:40-07:00",
   "attempts": 1
 }
