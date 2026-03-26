@@ -25,17 +25,7 @@
         ".aishore/**",
         "CLAUDE.md"
       ],
-      "dependsOn": [
-        "FEAT-056",
-        "FEAT-057",
-        "FEAT-058",
-        "FEAT-059",
-        "FEAT-060",
-        "FEAT-061",
-        "FEAT-062",
-        "FEAT-063",
-        "FEAT-069"
-      ],
+      "dependsOn": [],
       "status": "todo",
       "passes": false,
       "readyForSprint": true,
