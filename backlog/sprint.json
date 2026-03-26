@@ -1,32 +1,34 @@
 {
-  "sprintId": "sprint-1774481335",
-  "startedAt": "2026-03-25T16:28:55-07:00",
+  "sprintId": "sprint-1774489378",
+  "startedAt": "2026-03-25T18:42:58-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-132",
-    "title": "Expand cmd-groom module with remaining groom helpers from main",
-    "intent": "Move _build_groom_context, protect_items_from_groom, snapshot_backlogs, enforce_groom_limits, print_groom_diff, and run_groom_flow out of .aishore/aishore and into the existing .aishore/lib/cmd-groom.sh — all groom logic lives in one module, ~150 lines removed from main, bash -n passes on both files.",
+    "id": "FEAT-064",
+    "title": "Finalize modularization — checksums, docs, version",
+    "intent": "Regenerate checksums with lib files, update CLAUDE.md architecture section, bump version, full smoke test",
     "description": "",
-    "sourceBacklog": "bugs.json",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "Identify the six groom helper functions remaining in .aishore/aishore: _build_groom_context, protect_items_from_groom, snapshot_backlogs, enforce_groom_limits, print_groom_diff, run_groom_flow",
-      "Append the six functions to .aishore/lib/cmd-groom.sh in the same order they appear in the main script",
-      "Remove the six functions from .aishore/aishore",
-      "Confirm dispatch table already loads cmd-groom before invocation — no dispatch change needed if _load_module cmd-groom is already wired",
-      "Run bash -n on both files to verify syntax",
-      "Run .aishore/aishore groom --backlog (dry-run context only) to confirm the groom flow is still reachable"
+      "Run aishore checksums to regenerate with lib/*.sh",
+      "Update CLAUDE.md architecture section for module layout",
+      "Update help.txt if needed",
+      "Bump version (patch)",
+      "Full smoke test every command"
     ],
     "acceptanceCriteria": [
-      "bash -n .aishore/aishore and bash -n .aishore/lib/cmd-groom.sh both pass",
-      ".aishore/aishore groom --backlog runs without error (agent invocation is expected)",
-      "wc -l .aishore/aishore shows at least 130 fewer lines than before this change",
-      "All six groom helper functions are absent from .aishore/aishore and present in cmd-groom.sh"
+      "aishore checksums includes all lib/*.sh files",
+      "CLAUDE.md documents module structure",
+      "wc -l .aishore/aishore is approximately 4500 (down from 6090)",
+      "Every command works end-to-end"
     ],
-    "scope": [],
-    "startedAt": "2026-03-25T16:28:55-07:00",
+    "scope": [
+      ".aishore/**",
+      "CLAUDE.md"
+    ],
+    "startedAt": "2026-03-25T18:42:58-07:00",
     "status": "passed",
-    "completedAt": "2026-03-25T16:34:38-07:00"
+    "completedAt": "2026-03-25T18:46:19-07:00"
   },
-  "completedAt": "2026-03-25T16:34:38-07:00",
+  "completedAt": "2026-03-25T18:46:19-07:00",
   "attempts": 1
 }

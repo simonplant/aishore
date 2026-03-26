@@ -26,11 +26,12 @@
         "CLAUDE.md"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
       "groomingNotes": "Added BUG-129–132 as dependencies. These four extractions (cmd-help ~250 lines, cmd-backlog-read ~230 lines, cmd-clean ~70 lines, groom helpers ~150 lines) must complete before finalization so that FEAT-064 truly captures the full modularization. Projected main script size after all extractions: ~4114 lines (4824 - 710). FEAT-064's AC of 'approximately 4500' will comfortably be met. No other changes — item remains sprint-ready once deps pass.",
-      "groomedAt": "2026-03-25"
+      "groomedAt": "2026-03-25",
+      "completedAt": "2026-03-25T18:46:19-07:00"
     }
   ]
 }
