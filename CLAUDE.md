@@ -73,7 +73,7 @@ jq empty backlog/*.json
 .aishore/aishore help               # Show usage
 ```
 
-No build step — the tool is pure Bash.
+No build step — the tool is pure Bash. The core orchestrator lazy-loads command modules from `.aishore/lib/` at dispatch time.
 
 ## Architecture
 
@@ -90,6 +90,8 @@ Pick Item → Create Branch (aishore/<ID>) → Developer Agent (with maturity pr
 
 **Git branching model:** Each sprint item runs on its own feature branch (`aishore/<ITEM-ID>`), created from the current branch. The developer agent commits its own work. On success, the branch is merged back with `--no-ff`, pushed, and the base branch pulls latest before the next item. On failure, the branch is deleted. Use `--no-merge` to keep branches for PR review (they get pushed to origin instead).
 
+**Modular architecture:** The CLI is split into a core orchestrator (`.aishore/aishore`, ~4000 lines) and lazy-loaded command modules in `.aishore/lib/`. Modules are loaded on demand via `_load_module <name>`, which sources `.aishore/lib/<name>.sh` once per process. This keeps startup fast and the main script focused on orchestration (agent invocation, git branching, sprint loop).
+
 **Directory structure:**
 ```
 project/
@@ -101,11 +103,24 @@ project/
 │   └── archive/
 │       └── sprints.jsonl
 └── .aishore/                # Tool (can be updated)
-    ├── aishore              # Single-file CLI (Bash)
+    ├── aishore              # Core orchestrator (Bash)
     ├── VERSION              # Version (single source of truth)
     ├── checksums.sha256     # SHA-256 checksums for update verification
     ├── agents/*.md          # Agent prompts
     ├── config.yaml          # Optional overrides
+    ├── lib/                 # Lazy-loaded command modules
+    │   ├── cmd-backlog-read.sh   # backlog list/show/check/history
+    │   ├── cmd-backlog-write.sh  # backlog add/edit/rm/populate/sync
+    │   ├── cmd-clean.sh          # clean command
+    │   ├── cmd-config.sh         # config check
+    │   ├── cmd-diagnose.sh       # diagnose command
+    │   ├── cmd-groom.sh          # groom (tech-lead, product-owner, architect)
+    │   ├── cmd-help.sh           # help/usage
+    │   ├── cmd-init.sh           # init wizard
+    │   ├── cmd-report.sh         # report + metrics
+    │   ├── cmd-review.sh         # review command
+    │   ├── cmd-status.sh         # status command
+    │   └── cmd-update.sh         # update + checksums
     └── data/                # Runtime (logs, status)
         ├── logs/
         └── status/
@@ -121,6 +136,8 @@ project/
 The orchestrator polls for this file, then proceeds to the next step.
 
 **Context auto-detection:** aishore automatically finds and uses `CLAUDE.md`, `PRODUCT.md`, and `ARCHITECTURE.md` from the project root (or `docs/` directory) as agent context.
+
+**Module loading:** Command implementations are extracted into `.aishore/lib/cmd-*.sh` modules. The core script lazy-loads them via `_load_module <name>` at dispatch time — each module is sourced at most once per process. The core retains orchestration logic (sprint loop, agent invocation, git operations) while modules handle individual commands. All lib files are included in `checksums.sha256` for update verification.
 
 **Agent invocation:** All agent invocations go through `run_agent()`, which assembles the prompt, appends the completion contract (and validation command hint for developers), and delegates to `run_agent_process()`. Permissions vary by role: developer gets `Bash,Edit,Write,Read,Glob,Grep`; validator gets `Bash,Read,Write,Glob,Grep`; reviewer gets `Read,Glob,Grep` (or with `Edit,Write` when `--update-docs` is used). Permissions are configurable in `config.yaml`.
 
