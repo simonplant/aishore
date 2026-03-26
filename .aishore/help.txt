@@ -2,7 +2,7 @@ aishore - AI Sprint Runner (v__VERSION__)
 Copyright (C) 2025-2026 Simon Plant. Licensed under Apache-2.0. See LICENSE.
 
 Usage: .aishore/aishore <command> [options]
-       .aishore/aishore run [<count>|<ID>|<scope>] [--parallel N] [--limit N] [--retries N] [--max-failures N] [--timeout N] [--no-merge] [--pr] [--refine] [--quick] [--warm-retry] [--category <name>] [--auto-review] [--no-summary] [--dry-run]
+       .aishore/aishore run [<count>|<ID>|<scope>] [--parallel N] [--limit N] [--retries N] [--max-failures N] [--timeout N] [--no-merge] [--pr] [--refine] [--quick] [--category <name>] [--auto-review] [--no-summary] [--dry-run]
 
 Commands:
   backlog list      List all items (features + bugs)
@@ -59,7 +59,6 @@ Commands:
     --pr            Create GitHub PR (implies --no-merge, requires gh CLI)
     --refine        Refine spec on exhausted retries and try once more
     --quick         Skip maturity protocol (fast iteration)
-    --warm-retry    Continue existing session on retry (retains prior context)
     --category <name>  Only run items matching this category
     --auto-review   Run architecture review automatically after completion
     --no-summary    Suppress end-of-session summary table

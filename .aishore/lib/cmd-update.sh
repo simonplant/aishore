@@ -6,7 +6,7 @@
 
 cmd_update() {
     local dry_run=false force=false no_verify=false
-    parse_opts "bool:dry_run:--dry-run|--check" "bool:force:--force" "bool:no_verify:--no-verify" -- "$@" || return 1
+    parse_opts "bool:dry_run:--dry-run" "bool:force:--force" "bool:no_verify:--no-verify" -- "$@" || return 1
 
     if [[ "$no_verify" == "true" && "$force" != "true" ]]; then
         log_error "--no-verify requires --force"

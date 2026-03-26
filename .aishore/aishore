@@ -107,7 +107,6 @@ AUTO_MAX_FAILURES="5"
 GROOM_MAX_ITEMS="10"
 GROOM_MIN_PRIORITY="should"
 readonly GROOM_SAFE_FIELDS=(title intent description steps acceptanceCriteria)
-SCOPE_MODE="warn"
 MATURITY_ENABLED="true"
 STREAMING_ENABLED="true"
 STREAMING_MAX_LINES="20"
@@ -116,7 +115,6 @@ MERGE_STRATEGY="merge"
 CREATE_PR="false"
 ISOLATION_MODE="stash"
 NOTIFY_SYSTEM="false"
-WARM_RETRY="false"
 TIMEOUT_MINUTES="0"
 AUTO_REVIEW="false"
 NO_SUMMARY="false"
@@ -578,7 +576,6 @@ load_config() {
             ".auto.max_failures     AUTO_MAX_FAILURES"
             ".groom.max_items       GROOM_MAX_ITEMS"
             ".groom.min_priority    GROOM_MIN_PRIORITY"
-            ".scope.mode            SCOPE_MODE"
             ".maturity.enabled      MATURITY_ENABLED"
             ".streaming.enabled    STREAMING_ENABLED"
             ".streaming.max_lines  STREAMING_MAX_LINES"
@@ -587,7 +584,6 @@ load_config() {
             ".pr.create             CREATE_PR"
             ".isolation.mode        ISOLATION_MODE"
             ".notifications.system NOTIFY_SYSTEM"
-            ".retry.warm           WARM_RETRY"
             ".timeout_minutes      TIMEOUT_MINUTES"
             ".run.auto_review      AUTO_REVIEW"
             ".run.no_summary       NO_SUMMARY"
@@ -651,7 +647,6 @@ _apply_env_overrides() {
         "AISHORE_AUTO_MAX_FAILURES  AUTO_MAX_FAILURES"
         "AISHORE_GROOM_MAX_ITEMS    GROOM_MAX_ITEMS"
         "AISHORE_GROOM_MIN_PRIORITY GROOM_MIN_PRIORITY"
-        "AISHORE_SCOPE_MODE        SCOPE_MODE"
         "AISHORE_MATURITY          MATURITY_ENABLED"
         "AISHORE_STREAMING         STREAMING_ENABLED"
         "AISHORE_STREAMING_MAX_LINES STREAMING_MAX_LINES"
@@ -660,7 +655,6 @@ _apply_env_overrides() {
         "AISHORE_CREATE_PR         CREATE_PR"
         "AISHORE_ISOLATION         ISOLATION_MODE"
         "AISHORE_NOTIFY            NOTIFY_SYSTEM"
-        "AISHORE_WARM_RETRY       WARM_RETRY"
         "AISHORE_TIMEOUT_MINUTES  TIMEOUT_MINUTES"
         "AISHORE_AUTO_REVIEW      AUTO_REVIEW"
         "AISHORE_NO_SUMMARY       NO_SUMMARY"
@@ -1248,14 +1242,11 @@ pick_parallel_batch() {
         scope_len=$(jq 'length' <<< "$scope_json")
         [[ "$scope_len" -eq 0 ]] && continue
 
-        # Check overlap against all already-picked items
+        # Check overlap against already-picked items (simple string-equality check)
         local overlaps=false
         local bs
         for bs in "${batch_scopes[@]}"; do
-            if scope_overlaps "$scope_json" "$bs"; then
-                overlaps=true
-                break
-            fi
+            [[ "$scope_json" == "$bs" ]] && { overlaps=true; break; }
         done
         [[ "$overlaps" == "true" ]] && continue
 
@@ -1740,21 +1731,12 @@ The \`intent\` field in sprint.json is a non-negotiable directive — what must 
         if [[ -n "$item_scope_json" ]] && [[ "$(jq 'length' <<< "$item_scope_json")" -gt 0 ]]; then
             local scope_list
             scope_list=$(jq -r '.[]' <<< "$item_scope_json" | sed 's/^/- `/' | sed 's/$/`/')
-            if [[ "$SCOPE_MODE" == "strict" ]]; then
-                validate_hint="$validate_hint
-
-## File Scope Constraint (STRICT)
-You may ONLY create or modify files matching these globs:
-${scope_list}
-Any modifications outside this scope will cause the sprint to fail. Do not touch files outside these paths."
-            else
-                validate_hint="$validate_hint
+            validate_hint="$validate_hint
 
 ## File Scope Advisory
 The following file globs define the preferred scope for this item:
 ${scope_list}
 Try to keep your changes within these paths. Out-of-scope changes will be flagged in review."
-            fi
         fi
 
         if [[ -n "$FIX_CMD" ]]; then
@@ -1936,99 +1918,6 @@ check_result() {
         show_failure_log_tail
         return 1
     fi
-}
-
-check_scope_violations() {
-    local sprint_file="$BACKLOG_DIR/sprint.json"
-    [[ ! -f "$sprint_file" ]] && return 0
-
-    local scope_json
-    scope_json=$(jq -r '.item.scope // empty' "$sprint_file" 2>/dev/null)
-    [[ -z "$scope_json" || "$scope_json" == "null" || "$scope_json" == "[]" ]] && return 0
-
-    # Read scope globs into array in one pass (also handles empty check)
-    local -a globs=()
-    while IFS= read -r glob; do
-        globs+=("$glob")
-    done < <(jq -r '.[]' <<< "$scope_json" 2>/dev/null)
-    [[ ${#globs[@]} -eq 0 ]] && return 0
-
-    # Get changed files against base branch (developer may have multiple commits)
-    local base_branch="$AISHORE_BASE_BRANCH"
-    [[ -z "$base_branch" ]] && return 0
-
-    local changed_files
-    changed_files=$(git diff --name-only "$base_branch"...HEAD 2>/dev/null || true)
-    [[ -z "$changed_files" ]] && return 0
-
-    local violations=""
-    local violation_count=0
-    while IFS= read -r file; do
-        local in_scope=false
-        for glob in "${globs[@]}"; do
-            # Convert ** to * for bash pattern matching (simplistic but functional)
-            local pattern="${glob//\*\*/*}"
-            # shellcheck disable=SC2254,SC2053
-            if [[ "$file" == $pattern ]]; then
-                in_scope=true
-                break
-            fi
-        done
-        if [[ "$in_scope" != "true" ]]; then
-            violations+="  - $file"$'\n'
-            violation_count=$((violation_count + 1))
-        fi
-    done <<< "$changed_files"
-
-    if [[ "$violation_count" -gt 0 ]]; then
-        printf '%s\n%s' "$violation_count file(s) outside declared scope:" "$violations"
-        if [[ "$SCOPE_MODE" == "strict" ]]; then
-            log_error "Scope violation (strict mode): $violation_count file(s) outside scope"
-            printf '%b\n' "$violations" >&2
-            return 1
-        else
-            log_warning "Scope violation: $violation_count file(s) outside scope" >&2
-            printf '%b\n' "$violations" >&2
-            return 0
-        fi
-    fi
-    return 0
-}
-
-# Check if two scope arrays overlap (share any files).
-# Returns 0 (true) if scopes overlap or either is empty/null, 1 (false) if disjoint.
-# Args: $1 = scope JSON array, $2 = scope JSON array
-scope_overlaps() {
-    local scope_a="$1" scope_b="$2"
-
-    # Empty/null scope = unbounded = always overlaps
-    [[ -z "$scope_a" || "$scope_a" == "null" || "$scope_a" == "[]" ]] && return 0
-    [[ -z "$scope_b" || "$scope_b" == "null" || "$scope_b" == "[]" ]] && return 0
-
-    # Expand both scope arrays to file lists via git ls-files, then check intersection
-    local tmp_a tmp_b
-    tmp_a="$(ensure_tmpdir)/scope_a.txt"
-    tmp_b="$(ensure_tmpdir)/scope_b.txt"
-    : > "$tmp_a"
-    : > "$tmp_b"
-
-    local glob
-    while IFS= read -r glob; do
-        git ls-files "$glob" 2>/dev/null >> "$tmp_a"
-    done < <(jq -r '.[]' <<< "$scope_a" 2>/dev/null)
-
-    while IFS= read -r glob; do
-        git ls-files "$glob" 2>/dev/null >> "$tmp_b"
-    done < <(jq -r '.[]' <<< "$scope_b" 2>/dev/null)
-
-    # If either expands to zero files, treat as unbounded
-    [[ ! -s "$tmp_a" || ! -s "$tmp_b" ]] && return 0
-
-    # Sort and check intersection
-    local overlap
-    overlap=$(comm -12 <(sort -u "$tmp_a") <(sort -u "$tmp_b") | head -1)
-    [[ -n "$overlap" ]] && return 0
-    return 1
 }
 
 run_ac_verification() {
@@ -2249,11 +2138,6 @@ print_batch_summary() {
     echo ""
 }
 
-# Hidden backwards-compat alias — scope detection now lives in cmd_run
-cmd_auto() {
-    cmd_run "$@"
-}
-
 # Dry-run handler for cmd_run.
 # Uses outer-scope locals: auto_mode, auto_scope, specific_id, quick_mode, category_filter
 _run_dry_run() {
@@ -2470,39 +2354,8 @@ _run_developer_cycle() {
         fi
     fi
 
-    # Run developer agent (warm retry resumes existing session on retries)
-    if [[ "$warm_retry" == "true" && $attempt -gt 0 && -n "$_warm_session_id" ]]; then
-        # Warm retry: resume the existing session with failure context only
-        log_info "Warm retry: resuming session $_warm_session_id (attempt $attempt)"
-        rm -f "$STATUS_DIR/result.json"
-        local warm_prompt="$dev_extra_prompt
-
-You are continuing from a previous attempt that failed. Fix the issues described above. All your previous code changes are still in the working directory. Ensure all acceptance criteria pass."
-
-        local agent_perms="${CFG_PERMS_DEVELOPER:-$PERMS_DEVELOPER}"
-        AGENT_RESUME_SESSION="$_warm_session_id" AGENT_MODE="implement" \
-            run_agent_process "developer" "$MODEL_PRIMARY" "$agent_perms" "text" "$warm_prompt" || true
-
-        # Check if session resume actually worked (agent produced meaningful output)
-        if [[ ! -f "$STATUS_DIR/result.json" && -n "$LAST_AGENT_LOG" ]]; then
-            local _agent_log_size=0
-            [[ -f "$LAST_AGENT_LOG" ]] && _agent_log_size=$(wc -c < "$LAST_AGENT_LOG" 2>/dev/null || echo "0")
-            if [[ "$_agent_log_size" -lt 50 ]]; then
-                # Session resume likely failed — fall back to cold retry
-                log_warning "Warm retry failed (session may have expired) — falling back to cold retry"
-                _warm_session_id=""
-                run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
-            fi
-        fi
-    else
-        # Cold start (first attempt, or warm retry disabled)
-        if [[ -n "$_warm_session_id" ]]; then
-            # First invocation: pin session ID for later warm resume
-            AGENT_SESSION_ID="$_warm_session_id" run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
-        else
-            run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
-        fi
-    fi
+    # Run developer agent
+    run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
 
     if ! check_result; then
         log_error "Implementation failed"
@@ -2529,19 +2382,6 @@ You are continuing from a previous attempt that failed. Fix the issues described
 _run_validation_cycle() {
     _validation_failure=""
     local validate_output=""
-
-    # Check scope violations (report returned via stdout)
-    local scope_report
-    scope_report=$(check_scope_violations)
-    local scope_rc=$?
-    if [[ "$scope_rc" -ne 0 ]]; then
-        retry_extra_prompt="Previous attempt modified files outside the declared scope. Scope violations:
-${scope_report}
-Only modify files matching the declared scope globs. Fix the issues."
-        log_error "Scope violation detected"
-        _validation_failure="Scope violation"
-        return 1
-    fi
 
     # Run validation command (if configured)
     if [[ -n "$VALIDATE_CMD" ]]; then
@@ -2731,17 +2571,10 @@ ${body}"
 #   retry_extra_prompt, retry_failure_history, initial_dev_context, item_source, sprint_start, ITEM_ID
 _run_retry_loop() {
     local attempt=0
-    local _warm_session_id=""
     sprint_passed=false
     initial_dev_context="$retry_extra_prompt"
     retry_extra_prompt=""
     retry_failure_history=()
-
-    # Generate session ID for warm retry on first attempt
-    if [[ "$warm_retry" == "true" ]]; then
-        _warm_session_id=$(_generate_uuid)
-        log_info "Warm retry enabled: session $_warm_session_id"
-    fi
 
     if ! _run_preflight; then
         _record_sprint_failure "Pre-flight failed" "Baseline validation failed before developer ran"
@@ -2932,7 +2765,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
 cmd_run_parse_args() {
     parse_opts --positional \
         "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:create_pr:--pr" \
-        "bool:refine_on_exhaust:--refine" "bool:quick_mode:--quick" "bool:warm_retry:--warm-retry" "bool:auto_review:--auto-review" "bool:no_summary:--no-summary" \
+        "bool:refine_on_exhaust:--refine" "bool:quick_mode:--quick" "bool:auto_review:--auto-review" "bool:no_summary:--no-summary" \
         "val:category_filter:--category" "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" "num:parallel_count:--parallel" "num:timeout_minutes:--timeout" \
         -- "$@" || return 1
     local _arg
@@ -2966,11 +2799,6 @@ setup_sprint_environment() {
     if [[ "${TIMEOUT_MINUTES:-0}" -gt 0 ]]; then
         AGENT_TIMEOUT=$((TIMEOUT_MINUTES * 60))
         log_info "Agent timeout set to ${TIMEOUT_MINUTES} minutes (${AGENT_TIMEOUT}s)"
-    fi
-
-    # Config-driven warm retry (--warm-retry flag overrides)
-    if [[ "$warm_retry" != "true" && "$WARM_RETRY" == "true" ]]; then
-        warm_retry=true
     fi
 
     # Config-driven PR creation (--pr flag overrides)
@@ -3805,16 +3633,16 @@ print_session_summary_table() {
     local attempted=$((passed + failed))
 
     echo ""
-    echo -e "${CYAN}╔══════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║         Session Summary              ║${NC}"
-    echo -e "${CYAN}╠══════════════════════════════════════╣${NC}"
-    echo -e "${CYAN}║${NC}  Items attempted   $(printf '%14s' "$attempted")  ${CYAN}║${NC}"
-    echo -e "${CYAN}║${NC}  Items passed      $(printf '%14s' "$passed")  ${CYAN}║${NC}"
-    echo -e "${CYAN}║${NC}  Items failed      $(printf '%14s' "$failed")  ${CYAN}║${NC}"
-    echo -e "${CYAN}║${NC}  Total duration    $(printf '%14s' "${total_mins}m ${total_secs}s")  ${CYAN}║${NC}"
-    echo -e "${CYAN}║${NC}  Lines added       $(printf '%14s' "+${session_lines_added}")  ${CYAN}║${NC}"
-    echo -e "${CYAN}║${NC}  Lines removed     $(printf '%14s' "-${session_lines_removed}")  ${CYAN}║${NC}"
-    echo -e "${CYAN}╚══════════════════════════════════════╝${NC}"
+    echo -e "${CYAN}--------------------------------------${NC}"
+    echo -e "${CYAN}  Session Summary${NC}"
+    echo -e "${CYAN}--------------------------------------${NC}"
+    echo "  Items attempted   $(printf '%14s' "$attempted")"
+    echo "  Items passed      $(printf '%14s' "$passed")"
+    echo "  Items failed      $(printf '%14s' "$failed")"
+    echo "  Total duration    $(printf '%14s' "${total_mins}m ${total_secs}s")"
+    echo "  Lines added       $(printf '%14s' "+${session_lines_added}")"
+    echo "  Lines removed     $(printf '%14s' "-${session_lines_removed}")"
+    echo -e "${CYAN}--------------------------------------${NC}"
     echo ""
 }
 
@@ -3902,7 +3730,7 @@ cmd_run() {
 
     local count=1 dry_run=false specific_id="" retries=0
     local no_merge=false create_pr=false
-    local refine_on_exhaust=false quick_mode=false warm_retry=false
+    local refine_on_exhaust=false quick_mode=false
     local auto_mode=false auto_scope="" auto_priorities=""
     local auto_review=false max_consecutive_failures=""
     local category_filter="" session_limit="" no_summary=false parallel_count=""
@@ -3977,8 +3805,7 @@ main() {
     shift || true
 
     case "$cmd" in
-        auto)    cmd_auto "$@" ;;
-        run)     cmd_run "$@" ;;
+        run|auto) cmd_run "$@" ;;
         backlog) _load_module cmd-backlog-read; cmd_backlog "$@" ;;
         groom)   _load_module cmd-groom; cmd_groom "$@" ;;
         review)  _load_module cmd-review; cmd_review "$@" ;;

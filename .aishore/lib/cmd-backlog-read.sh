@@ -207,7 +207,7 @@ cmd_backlog_show() {
 cmd_backlog_history() {
     local limit=20 all=false
 
-    parse_opts "num:limit:--limit|-n" "bool:all:--all" -- "$@" || return 1
+    parse_opts "num:limit:--limit" "bool:all:--all" -- "$@" || return 1
 
     local sprints_file="$ARCHIVE_DIR/sprints.jsonl"
     if [[ ! -f "$sprints_file" || ! -s "$sprints_file" ]]; then
@@ -236,7 +236,7 @@ cmd_backlog_rm() {
     [[ -z "$id" ]] && { log_error "Usage: backlog rm <ID> [--force]"; return 1; }
     shift || true
 
-    parse_opts "bool:force:--force|-f" -- "$@" || return 1
+    parse_opts "bool:force:--force" -- "$@" || return 1
 
     local title
     title=$(find_item "$id" | jq -r '.title') || return 1

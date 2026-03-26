@@ -74,7 +74,7 @@ Options:
   --parallel N          Run up to N items concurrently (1-4)
 
 Session tuning (also settable in config.yaml under 'run:'):
-  --max-failures, --refine, --warm-retry, --timeout, --category,
+  --max-failures, --refine, --timeout, --category,
   --auto-review, --limit, --no-summary
   See: aishore help --full
 
