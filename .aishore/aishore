@@ -1625,6 +1625,18 @@ run_agent_process() {
                     _stream_lines_seen=$(wc -l < "$_stream_log_file" 2>/dev/null || echo "$_stream_lines_seen")
                 fi
             fi
+            # Detect agent crash: process exited but no result.json written
+            if [[ ! -f "$STATUS_DIR/result.json" ]]; then
+                local _exit_code=0
+                wait "$agent_pid" 2>/dev/null || _exit_code=$?
+                local _log_size=0
+                [[ -f "$agent_log" ]] && _log_size=$(wc -c < "$agent_log" 2>/dev/null || echo 0)
+                log_error "Agent process exited (code $_exit_code) without writing result.json (log: ${_log_size} bytes)"
+                local _crash_detail="Agent crashed or was killed (exit code $_exit_code)"
+                [[ "$_log_size" -lt 100 ]] && _crash_detail="$_crash_detail — empty log suggests startup failure or resource limit"
+                printf '{"status":"fail","reason":"CRASH: %s"}\n' "$_crash_detail" \
+                    > "$STATUS_DIR/result.json"
+            fi
             break
         fi
         if [[ -f "$STATUS_DIR/result.json" ]]; then
