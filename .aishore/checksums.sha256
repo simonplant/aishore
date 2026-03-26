@@ -25,4 +25,4 @@ e5013d05f4cc6df9b7409c0472e3302be332f878b69fd5642bcd3ec08bc9fc48  .aishore/lib/c
 21c8096bfcf6ef33cfc2d2adfe8c88a002bdf63c4a7ac8206cad31c81080c5f2  .aishore/lib/cmd-report.sh
 cc3681c72876e8cac492676400f26847df5c20018dae053c97dc4d03a8bd6f5d  .aishore/lib/cmd-review.sh
 9d3b8b220df8ff5778fcf12c710c779a2cde92e6b3b61056f80de0a7b7a0595b  .aishore/lib/cmd-status.sh
-3e2ab496d79c7e43075820bd0a0e33254ed5ef5c104115507e26d59930ff3c3b  .aishore/lib/cmd-update.sh
+c9cf0f28f5bde21a31f49d2ad20d7ba71d7622315e26e1ab35361a7b856bc654  .aishore/lib/cmd-update.sh
