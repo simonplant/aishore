@@ -23,7 +23,6 @@
 set -euo pipefail
 
 AISHORE_TMPDIR=""
-AISHORE_DID_STASH=""
 AISHORE_BASE_BRANCH=""
 AISHORE_FEATURE_BRANCH=""
 AISHORE_WORKTREE_DIR=""
@@ -34,16 +33,6 @@ cleanup_exit() {
         _remove_worktree "$AISHORE_WORKTREE_DIR" "$AISHORE_FEATURE_BRANCH"
         AISHORE_WORKTREE_DIR=""
         AISHORE_FEATURE_BRANCH=""
-    elif [[ -n "$AISHORE_FEATURE_BRANCH" && -n "$AISHORE_BASE_BRANCH" ]]; then
-        # Clean up feature branch on unexpected exit (stash mode)
-        git checkout "$AISHORE_BASE_BRANCH" >/dev/null 2>&1 || true
-        git branch -D "$AISHORE_FEATURE_BRANCH" >/dev/null 2>&1 || true
-        AISHORE_FEATURE_BRANCH=""
-    fi
-    # Restore stashed changes on unexpected exit
-    if [[ "$AISHORE_DID_STASH" == "true" ]]; then
-        AISHORE_DID_STASH=""
-        restore_stash || true
     fi
     [[ -n "$AISHORE_TMPDIR" && -d "$AISHORE_TMPDIR" ]] && rm -rf "$AISHORE_TMPDIR"
     return 0
@@ -112,7 +101,6 @@ STREAMING_MAX_LINES="20"
 OUTPUT_TRUNCATE_LINES="50"
 MERGE_STRATEGY="merge"
 CREATE_PR="false"
-ISOLATION_MODE="stash"
 NOTIFY_SYSTEM="false"
 TIMEOUT_MINUTES="0"
 AUTO_REVIEW="false"
@@ -393,25 +381,6 @@ _remove_worktree() {
     [[ -n "$branch" ]] && git branch -D "$branch" 2>/dev/null || true
 }
 
-restore_stash() {
-    local pop_output
-    if pop_output=$(git stash pop 2>&1); then
-        return 0
-    fi
-    # Show the git error output (conflicts, etc.)
-    [[ -n "$pop_output" ]] && printf '%s\n' "$pop_output"
-    log_warning "Failed to restore stashed changes (likely due to conflicts)"
-    local stash_contents
-    stash_contents=$(git stash show 2>/dev/null) || true
-    if [[ -n "$stash_contents" ]]; then
-        log_warning "Stashed files:"
-        printf '%s\n' "$stash_contents"
-    fi
-    log_warning "To resolve: run 'git stash show' to see files, then 'git stash pop' and fix conflicts"
-    log_error "Stash restore failed"
-    return 1
-}
-
 # ============================================================================
 # UTILITIES (inlined from common.sh)
 # ============================================================================
@@ -579,7 +548,6 @@ load_config() {
             ".output.truncate_lines OUTPUT_TRUNCATE_LINES"
             ".merge.strategy        MERGE_STRATEGY"
             ".pr.create             CREATE_PR"
-            ".isolation.mode        ISOLATION_MODE"
             ".notifications.system NOTIFY_SYSTEM"
             ".timeout_minutes      TIMEOUT_MINUTES"
             ".run.auto_review      AUTO_REVIEW"
@@ -648,7 +616,6 @@ _apply_env_overrides() {
         "AISHORE_OUTPUT_TRUNCATE_LINES OUTPUT_TRUNCATE_LINES"
         "AISHORE_MERGE_STRATEGY    MERGE_STRATEGY"
         "AISHORE_CREATE_PR         CREATE_PR"
-        "AISHORE_ISOLATION         ISOLATION_MODE"
         "AISHORE_NOTIFY            NOTIFY_SYSTEM"
         "AISHORE_TIMEOUT_MINUTES  TIMEOUT_MINUTES"
         "AISHORE_AUTO_REVIEW      AUTO_REVIEW"
@@ -2047,7 +2014,7 @@ handle_sprint_failure() {
         _cleanup_worktree
         [[ -n "$fb" ]] && git branch -D "$fb" 2>/dev/null || true
     elif [[ -n "$AISHORE_FEATURE_BRANCH" && -n "$AISHORE_BASE_BRANCH" ]]; then
-        # Stash mode: switch back to base and delete the branch
+        # Fallback: switch back to base and delete the branch
         # (base branch still has backlog state from earlier successful sprints)
         local fb="$AISHORE_FEATURE_BRANCH"
         AISHORE_FEATURE_BRANCH=""
@@ -2780,9 +2747,9 @@ cmd_run_parse_args() {
     done
 }
 
-# Acquire lock, load config, stash changes, resolve settings, print header,
+# Acquire lock, load config, resolve settings, print header,
 # initialize tracking variables, and build the item queue.
-# Sets outer-scope locals: did_stash, scope_label, auto_priorities, base_branch,
+# Sets outer-scope locals: scope_label, auto_priorities, base_branch,
 #   passed, failed, batch_start, consecutive_failures, groom_exhausted,
 #   sprint_results, sprint_items, sprint_times, session_failures, queued_ids, skipped_ids
 setup_sprint_environment() {
@@ -2835,26 +2802,6 @@ setup_sprint_environment() {
         fi
     fi
 
-    # Validate isolation mode
-    if [[ "$ISOLATION_MODE" != "stash" && "$ISOLATION_MODE" != "worktree" ]]; then
-        log_error "Invalid isolation mode: $ISOLATION_MODE (expected 'stash' or 'worktree')"
-        return 1
-    fi
-
-    # Stash pre-existing uncommitted changes so sprints don't destroy them
-    # (skipped in worktree mode — uncommitted changes stay untouched in original tree)
-    did_stash=false
-    if [[ "$ISOLATION_MODE" == "stash" ]]; then
-        if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
-            log_warning "Stashing pre-existing uncommitted changes"
-            git stash push -u -m "aishore: pre-sprint stash" >/dev/null 2>&1
-            did_stash=true
-            AISHORE_DID_STASH=true
-        fi
-    elif [[ "$ISOLATION_MODE" == "worktree" ]]; then
-        log_info "Isolation: worktree (uncommitted changes untouched)"
-    fi
-
     # Resolve max_consecutive_failures: flag > config > default
     [[ -z "$max_consecutive_failures" ]] && max_consecutive_failures="$AUTO_MAX_FAILURES"
 
@@ -2872,10 +2819,6 @@ setup_sprint_environment() {
         log_error "parallel must be 1-4 (got: $parallel_count)"
         return 1
     fi
-    if [[ "$parallel_count" -gt 1 ]]; then
-        ISOLATION_MODE="worktree"
-    fi
-
     # Auto mode setup
     scope_label=""
     if [[ "$auto_mode" == "true" ]]; then
@@ -2902,7 +2845,6 @@ setup_sprint_environment() {
     [[ -n "$session_limit" ]] && echo "Session limit: $session_limit items"
     [[ -n "$category_filter" ]] && echo "Category: $category_filter"
     [[ "$parallel_count" -gt 1 ]] && echo "Parallel: $parallel_count"
-    [[ "$ISOLATION_MODE" != "stash" ]] && echo "Isolation: $ISOLATION_MODE"
     [[ "$no_merge" == "true" ]] && echo "Merge: disabled (branches kept for review)"
     [[ "$retries" -gt 0 ]] && echo "Retries: $retries"
     echo ""
@@ -2934,9 +2876,6 @@ setup_sprint_environment() {
     # Category filter: exit early with clear message if no items match
     if [[ -n "$category_filter" && ${#queued_ids[@]} -eq 0 && -z "$specific_id" ]]; then
         log_warning "No items found matching --category '$category_filter'"
-        if [[ "$did_stash" == "true" ]]; then
-            git stash pop >/dev/null 2>&1 || true
-        fi
         return 1
     fi
 
@@ -2945,9 +2884,6 @@ setup_sprint_environment() {
         local total=${#queued_ids[@]}
         if [[ "$total" -eq 0 ]]; then
             log_info "No items to run"
-            if [[ "$did_stash" == "true" ]]; then
-                git stash pop >/dev/null 2>&1 || true
-            fi
             return 0
         fi
 
@@ -3090,7 +3026,6 @@ _run_parallel_sprint() {
     AISHORE_WORKTREE_DIR=""
     AISHORE_FEATURE_BRANCH=""
     AISHORE_BASE_BRANCH=""
-    AISHORE_DID_STASH=""
 
     # Write initial result (fail) in case of unexpected exit
     jq -n --arg id "$p_item_id" --arg src "$p_item_source" \
@@ -3516,35 +3451,27 @@ run_sprint_loop() {
         branch_name=$(printf '%s\n' "$branch_name" | sed 's/[^a-zA-Z0-9/_-]/-/g')
         log_info "Creating branch: $branch_name"
 
-        if [[ "$ISOLATION_MODE" == "worktree" ]]; then
-            # Worktree isolation: create a separate working directory for the sprint
-            local wt_dir
-            wt_dir=$(mktemp -d "${TMPDIR:-/tmp}/aishore-wt-XXXXXX")
-            rmdir "$wt_dir"  # git worktree add needs a non-existing path
-            git branch -D "$branch_name" 2>/dev/null || true
-            git worktree add "$wt_dir" -b "$branch_name"
-            AISHORE_WORKTREE_DIR="$wt_dir"
-            AISHORE_FEATURE_BRANCH="$branch_name"
+        # Worktree isolation: create a separate working directory for the sprint
+        local wt_dir
+        wt_dir=$(mktemp -d "${TMPDIR:-/tmp}/aishore-wt-XXXXXX")
+        rmdir "$wt_dir"  # git worktree add needs a non-existing path
+        git branch -D "$branch_name" 2>/dev/null || true
+        git worktree add "$wt_dir" -b "$branch_name"
+        AISHORE_WORKTREE_DIR="$wt_dir"
+        AISHORE_FEATURE_BRANCH="$branch_name"
 
-            # Redirect paths into the worktree so agents and polling work there
-            STATUS_DIR="$wt_dir/.aishore/data/status"
-            LOGS_DIR="$wt_dir/.aishore/data/logs"
-            BACKLOG_DIR="$wt_dir/backlog"
-            ARCHIVE_DIR="$BACKLOG_DIR/archive"
-            mkdir -p "$STATUS_DIR" "$LOGS_DIR" "$ARCHIVE_DIR"
+        # Redirect paths into the worktree so agents and polling work there
+        STATUS_DIR="$wt_dir/.aishore/data/status"
+        LOGS_DIR="$wt_dir/.aishore/data/logs"
+        BACKLOG_DIR="$wt_dir/backlog"
+        ARCHIVE_DIR="$BACKLOG_DIR/archive"
+        mkdir -p "$STATUS_DIR" "$LOGS_DIR" "$ARCHIVE_DIR"
 
-            # Copy current sprint.json into worktree backlog (create_sprint wrote to original)
-            cp "$PROJECT_ROOT/backlog/sprint.json" "$BACKLOG_DIR/sprint.json"
+        # Copy current sprint.json into worktree backlog (create_sprint wrote to original)
+        cp "$PROJECT_ROOT/backlog/sprint.json" "$BACKLOG_DIR/sprint.json"
 
-            cd "$wt_dir"
-            log_info "Worktree created: $wt_dir"
-        else
-            git checkout -b "$branch_name" 2>/dev/null || {
-                git branch -D "$branch_name" 2>/dev/null || true
-                git checkout -b "$branch_name"
-            }
-            AISHORE_FEATURE_BRANCH="$branch_name"
-        fi
+        cd "$wt_dir"
+        log_info "Worktree created: $wt_dir"
 
         # Developer → validation → validator (with retries)
         local sprint_passed=false
@@ -3634,7 +3561,7 @@ print_session_summary_table() {
     echo ""
 }
 
-# Print batch summary, restore stash, offer architecture review, and print final status.
+# Print batch summary, offer architecture review, and print final status.
 # Uses outer-scope locals from cmd_run and setup_sprint_environment.
 print_sprint_summary() {
     # Print batch summary for auto mode or multi-sprint runs
@@ -3645,13 +3572,6 @@ print_sprint_summary() {
     # Print end-of-session summary table (unless suppressed)
     if [[ "$no_summary" != "true" && $((passed + failed)) -gt 0 ]]; then
         print_session_summary_table
-    fi
-
-    # Restore pre-existing uncommitted changes
-    if [[ "$did_stash" == "true" ]]; then
-        log_info "Restoring pre-existing uncommitted changes"
-        AISHORE_DID_STASH=""
-        restore_stash || true
     fi
 
     # Auto mode: offer architecture review when backlog is fully drained
@@ -3735,7 +3655,7 @@ cmd_run() {
         return $?
     fi
 
-    local did_stash=false scope_label="" base_branch
+    local scope_label="" base_branch
     local session_lines_added=0 session_lines_removed=0
     local passed=0 failed=0
     declare -A FAILED_IDS
