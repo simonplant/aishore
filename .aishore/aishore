@@ -16,7 +16,6 @@
 #   metrics         Show sprint metrics
 #   update          Update aishore from upstream (with checksum verification)
 #   checksums       Regenerate checksums.sha256
-#   diagnose        Show extended diagnostics from last sprint failure
 #   init            Setup wizard (prerequisites, config, backlog)
 #   help            Show this help
 
@@ -101,7 +100,6 @@ STREAMING_MAX_LINES="20"
 OUTPUT_TRUNCATE_LINES="50"
 MERGE_STRATEGY="merge"
 CREATE_PR="false"
-NOTIFY_SYSTEM="false"
 TIMEOUT_MINUTES="0"
 AUTO_REVIEW="false"
 NO_SUMMARY="false"
@@ -548,7 +546,6 @@ load_config() {
             ".output.truncate_lines OUTPUT_TRUNCATE_LINES"
             ".merge.strategy        MERGE_STRATEGY"
             ".pr.create             CREATE_PR"
-            ".notifications.system NOTIFY_SYSTEM"
             ".timeout_minutes      TIMEOUT_MINUTES"
             ".run.auto_review      AUTO_REVIEW"
             ".run.no_summary       NO_SUMMARY"
@@ -616,7 +613,6 @@ _apply_env_overrides() {
         "AISHORE_OUTPUT_TRUNCATE_LINES OUTPUT_TRUNCATE_LINES"
         "AISHORE_MERGE_STRATEGY    MERGE_STRATEGY"
         "AISHORE_CREATE_PR         CREATE_PR"
-        "AISHORE_NOTIFY            NOTIFY_SYSTEM"
         "AISHORE_TIMEOUT_MINUTES  TIMEOUT_MINUTES"
         "AISHORE_AUTO_REVIEW      AUTO_REVIEW"
         "AISHORE_NO_SUMMARY       NO_SUMMARY"
@@ -659,34 +655,11 @@ _validate_backlog_files() {
 # NOTIFICATIONS
 # ============================================================================
 
-send_notification() {
-    local status="$1"
-    local item_id="$2"
-    if [[ -n "$NOTIFY_CMD" ]]; then
-        if ! bash -c "$NOTIFY_CMD" -- "$status" "$item_id" 2>/dev/null; then
-            log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
-        fi
-    fi
-}
-
 send_session_notification() {
     local message="$1"
-    local is_failure="${2:-false}"
-
-    # Terminal bell — always fires, no config needed
+    # Terminal bell
     tput bel 2>/dev/null || printf '\a'
-
-    # System notification — opt-in via notifications.system / AISHORE_NOTIFY
-    if [[ "$NOTIFY_SYSTEM" == "true" ]]; then
-        local title="aishore"
-        if [[ "$(uname -s)" == "Darwin" ]]; then
-            osascript -e "display notification \"${message//\"/\\\"}\" with title \"$title\"" 2>/dev/null || true
-        elif command -v notify-send &>/dev/null; then
-            local urgency="normal"
-            [[ "$is_failure" == "true" ]] && urgency="critical"
-            notify-send -u "$urgency" "$title" "$message" 2>/dev/null || true
-        fi
-    fi
+    log_info "Session notification: $message"
 }
 
 # ============================================================================
@@ -2616,7 +2589,9 @@ _handle_sprint_success() {
             session_lines_removed=$((session_lines_removed + _lr))
         fi
 
-        send_notification "pass" "$ITEM_ID"
+        if [[ -n "$NOTIFY_CMD" ]]; then
+            bash -c "$NOTIFY_CMD" -- "pass" "$ITEM_ID" 2>/dev/null || log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
+        fi
 
         # Record compact success summary for groom agents
         local _ss_title _ss_ac_count
@@ -2630,7 +2605,9 @@ _handle_sprint_success() {
         sprint_results+=("fail")
         sprint_items+=("$ITEM_ID")
         sprint_times+=("$(( $(date +%s) - sprint_start ))")
-        send_notification "fail" "$ITEM_ID"
+        if [[ -n "$NOTIFY_CMD" ]]; then
+            bash -c "$NOTIFY_CMD" -- "fail" "$ITEM_ID" 2>/dev/null || log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
+        fi
         # Return to base branch so subsequent sprints branch correctly
         log_warning "Abandoning feature branch $AISHORE_FEATURE_BRANCH due to archival failure"
         git checkout "$base_branch" >/dev/null 2>&1 || true
@@ -2998,7 +2975,9 @@ _record_sprint_failure() {
     # Store failure context for later diagnosis
     _store_failure_context "$ITEM_ID" "$reason" "$detail"
 
-    send_notification "fail" "$ITEM_ID"
+    if [[ -n "$NOTIFY_CMD" ]]; then
+        bash -c "$NOTIFY_CMD" -- "fail" "$ITEM_ID" 2>/dev/null || log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
+    fi
     handle_sprint_failure
 }
 
@@ -3240,7 +3219,9 @@ _run_parallel_batch() {
             sprint_times+=("$r_elapsed")
             session_lines_added=$((session_lines_added + r_la))
             session_lines_removed=$((session_lines_removed + r_lr))
-            send_notification "pass" "$r_id"
+            if [[ -n "$NOTIFY_CMD" ]]; then
+                bash -c "$NOTIFY_CMD" -- "pass" "$r_id" 2>/dev/null || log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
+            fi
 
             # Record compact success summary for groom agents
             local _pss_title _pss_ac_count
@@ -3259,7 +3240,9 @@ _run_parallel_batch() {
             sprint_results+=("fail")
             sprint_items+=("$r_id")
             sprint_times+=("$r_elapsed")
-            send_notification "fail" "$r_id"
+            if [[ -n "$NOTIFY_CMD" ]]; then
+                bash -c "$NOTIFY_CMD" -- "fail" "$r_id" 2>/dev/null || log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
+            fi
         fi
     done
 
@@ -3614,13 +3597,13 @@ print_sprint_summary() {
     if [[ "$auto_mode" == "true" ]]; then
         if [[ $failed -eq 0 && $passed -gt 0 ]]; then
             log_header "Mission complete: $passed items done"
-            send_session_notification "Sprint session complete: $passed items done" "false"
+            send_session_notification "Sprint session complete: $passed items done"
         elif [[ "$consecutive_failures" -ge "$max_consecutive_failures" ]]; then
             log_header "Mission aborted: circuit breaker ($passed passed, $failed failed)"
-            send_session_notification "Sprint session stopped: $consecutive_failures consecutive failures ($passed passed, $failed failed)" "true"
+            send_session_notification "Sprint session stopped: $consecutive_failures consecutive failures ($passed passed, $failed failed)"
         else
             log_header "Mission ended: $passed passed, $failed failed"
-            send_session_notification "Sprint session ended: $passed passed, $failed failed" "$( [[ $failed -gt 0 ]] && echo true || echo false )"
+            send_session_notification "Sprint session ended: $passed passed, $failed failed"
         fi
     else
         log_header "Results: $passed passed, $failed failed"
@@ -3697,8 +3680,6 @@ cmd_version() {
 
 # cmd_usage, cmd_help, _help_* — extracted to .aishore/lib/cmd-help.sh (lazy-loaded via _load_module)
 
-# cmd_diagnose — extracted to .aishore/lib/cmd-diagnose.sh (lazy-loaded via _load_module)
-
 # cmd_config_check — extracted to .aishore/lib/cmd-config.sh (lazy-loaded via _load_module)
 
 # ============================================================================
@@ -3722,7 +3703,6 @@ main() {
         update)  _load_module cmd-update; cmd_update "$@" ;;
         checksums) _load_module cmd-update; cmd_checksums ;;
         clean)   _load_module cmd-clean; cmd_clean "$@" ;;
-        diagnose) _load_module cmd-diagnose; cmd_diagnose ;;
         config)
             local config_sub="${1:-}"
             shift || true
