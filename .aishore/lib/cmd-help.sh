@@ -44,7 +44,7 @@ Commands:
   help <command>   Show detailed help for a command
   help --full      Show complete reference
 
-Other: report, metrics, clean, update, config, diagnose, checksums, version
+Other: report, metrics, clean, update, config, checksums, version
 EOF
 }
 

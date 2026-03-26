@@ -1,35 +1,37 @@
 {
-  "sprintId": "sprint-1774550772",
-  "startedAt": "2026-03-26T11:46:12-07:00",
+  "sprintId": "sprint-1774551043",
+  "startedAt": "2026-03-26T11:50:43-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-075",
-    "title": "Remove stash isolation — worktree is the only mode",
-    "intent": "Delete restore_stash function and all stash-related code paths in setup_sprint_environment. Remove ISOLATION_MODE config and AISHORE_ISOLATION env var. Worktree is always used.",
+    "id": "FEAT-076",
+    "title": "Cut diagnose command and inline notification wrappers",
+    "intent": "Delete cmd-diagnose.sh module and diagnose dispatch entry. Replace send_notification wrapper with direct conditional at call sites. Simplify send_session_notification to terminal bell plus log message only.",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Remove restore_stash function from main script",
-      "Remove stash code path from setup_sprint_environment (git stash push, DID_STASH tracking)",
-      "Remove ISOLATION_MODE config default and checks",
-      "Remove AISHORE_ISOLATION from _apply_env_overrides",
-      "Update help and config docs",
-      "Run smoke test"
+      "Delete .aishore/lib/cmd-diagnose.sh",
+      "Remove diagnose dispatch entry from main()",
+      "Inline send_notification: at each call site replace with direct if-NOTIFY_CMD-then-run check",
+      "Simplify send_session_notification: remove macOS osascript and Linux notify-send branches, keep terminal bell plus log",
+      "Update help text to remove diagnose",
+      "Run smoke test and drift check"
     ],
     "acceptanceCriteria": [
-      "bash -n passes on all files",
-      "grep ISOLATION_MODE .aishore/aishore returns zero matches",
-      "grep restore_stash .aishore/aishore returns zero matches",
-      "grep DID_STASH .aishore/aishore returns zero matches"
+      "cmd-diagnose.sh does not exist",
+      "aishore diagnose produces unknown command error",
+      "send_notification function no longer exists",
+      "check-drift.sh reports zero drift"
     ],
     "scope": [
       ".aishore/aishore",
-      ".aishore/lib/cmd-help.sh"
+      ".aishore/lib/cmd-diagnose.sh",
+      ".aishore/lib/cmd-help.sh",
+      "scripts/check-drift.sh"
     ],
-    "startedAt": "2026-03-26T11:46:12-07:00",
+    "startedAt": "2026-03-26T11:50:43-07:00",
     "status": "passed",
-    "completedAt": "2026-03-26T11:50:40-07:00"
+    "completedAt": "2026-03-26T11:56:47-07:00"
   },
-  "completedAt": "2026-03-26T11:50:40-07:00",
+  "completedAt": "2026-03-26T11:56:47-07:00",
   "attempts": 1
 }

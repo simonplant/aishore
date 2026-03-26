@@ -18,7 +18,7 @@ validation:
   command: "npm test && npm run lint"   # Your stack's test/lint command
 ```
 
-Other config: `models.primary`, `models.fast`, `agent.timeout`, `maturity.enabled`, `scope.mode`. Env vars override config (e.g., `AISHORE_VALIDATE_CMD`).
+Other config: `models.primary`, `models.fast`, `agent.timeout`. Env vars override config (e.g., `AISHORE_VALIDATE_CMD`).
 
 ## The Intent-Driven Model
 
@@ -80,7 +80,6 @@ Grooming doesn't guarantee readiness — check with `backlog check <ID>` if item
 .aishore/aishore run 5              # Run 5 back-to-back
 .aishore/aishore run FEAT-001       # Run specific item
 .aishore/aishore run --retries 2    # Retry on failure
-.aishore/aishore run --quick        # Skip maturity protocol (fast iteration)
 .aishore/aishore run --no-merge     # Keep branches for PR review
 .aishore/aishore run --pr           # Create GitHub PR (implies --no-merge)
 .aishore/aishore run --dry-run      # Preview without executing
@@ -141,8 +140,7 @@ Only `.aishore/` is replaced. Your `backlog/` and `config.yaml` are never touche
 
 **Sprint failing?**
 - Pre-flight fails = your baseline is broken. Run validation command manually and fix.
-- Use `--retries 2 --refine` to let AI iterate on the spec
-- Run `diagnose` for detailed failure context
+- Use `--retries 2` to let AI retry on failure
 
 **Stuck state?**
 - `rm .aishore/data/status/result.json` — clears completion signal
