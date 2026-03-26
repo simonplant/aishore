@@ -76,11 +76,106 @@
         "CLAUDE.md"
       ],
       "dependsOn": [],
-      "status": "todo",
+      "status": "skip",
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-03-26",
-      "groomingNotes": "FEAT-072 dependency added (was acknowledged in groomingNotes but not set in dependsOn). FEAT-073 deletes cmd-diagnose.sh — BUG-072 step 8 (consolidate jq calls in cmd_diagnose) is moot once this runs; no action needed on BUG-072 for that step. Tech Lead note: FEAT-072 scope excludes CLAUDE.md but step 7 says 'update all docs' — verify CLAUDE.md is updated for removed flags (-y/-f/-n, SCOPE_MODE, warm-retry) either in FEAT-072 or confirmed covered by FEAT-073."
+      "groomingNotes": "FEAT-072 dependency added (was acknowledged in groomingNotes but not set in dependsOn). FEAT-073 deletes cmd-diagnose.sh — BUG-072 step 8 (consolidate jq calls in cmd_diagnose) is moot once this runs; no action needed on BUG-072 for that step. Tech Lead note: FEAT-072 scope excludes CLAUDE.md but step 7 says 'update all docs' — verify CLAUDE.md is updated for removed flags (-y/-f/-n, SCOPE_MODE, warm-retry) either in FEAT-072 or confirmed covered by FEAT-073.",
+      "lastFailReason": "Implementation failed",
+      "lastFailAt": "2026-03-26T11:36:54-07:00",
+      "failCount": 1
+    },
+    {
+      "id": "FEAT-074",
+      "title": "Make maturity mandatory and spec refinement automatic",
+      "intent": "Remove --quick flag and MATURITY_ENABLED config (maturity always runs). Remove --refine flag and REFINE_ON_EXHAUST config (always refine before final failure). Remove AISHORE_MATURITY and AISHORE_REFINE env vars.",
+      "description": "",
+      "priority": "must",
+      "category": "simplify",
+      "steps": [
+        "Remove --quick flag from parse_opts in cmd_run_parse_args and all quick_mode references",
+        "Remove MATURITY_ENABLED config default and conditional in build_agent_prompt — always include maturity phases",
+        "Remove --refine flag from parse_opts and make refine_item_spec always run when retries exhausted",
+        "Remove AISHORE_MATURITY and AISHORE_REFINE from _apply_env_overrides",
+        "Update help text",
+        "Run smoke test"
+      ],
+      "acceptanceCriteria": [
+        "bash -n passes on all files",
+        "grep quick_mode .aishore/aishore returns zero matches",
+        "grep MATURITY_ENABLED .aishore/aishore returns zero matches",
+        "grep refine_on_exhaust .aishore/aishore returns zero matches"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-help.sh"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-075",
+      "title": "Remove stash isolation — worktree is the only mode",
+      "intent": "Delete restore_stash function and all stash-related code paths in setup_sprint_environment. Remove ISOLATION_MODE config and AISHORE_ISOLATION env var. Worktree is always used.",
+      "description": "",
+      "priority": "must",
+      "category": "simplify",
+      "steps": [
+        "Remove restore_stash function from main script",
+        "Remove stash code path from setup_sprint_environment (git stash push, DID_STASH tracking)",
+        "Remove ISOLATION_MODE config default and checks",
+        "Remove AISHORE_ISOLATION from _apply_env_overrides",
+        "Update help and config docs",
+        "Run smoke test"
+      ],
+      "acceptanceCriteria": [
+        "bash -n passes on all files",
+        "grep ISOLATION_MODE .aishore/aishore returns zero matches",
+        "grep restore_stash .aishore/aishore returns zero matches",
+        "grep DID_STASH .aishore/aishore returns zero matches"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-help.sh"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-076",
+      "title": "Cut diagnose command and inline notification wrappers",
+      "intent": "Delete cmd-diagnose.sh module and diagnose dispatch entry. Replace send_notification wrapper with direct conditional at call sites. Simplify send_session_notification to terminal bell plus log message only.",
+      "description": "",
+      "priority": "must",
+      "category": "simplify",
+      "steps": [
+        "Delete .aishore/lib/cmd-diagnose.sh",
+        "Remove diagnose dispatch entry from main()",
+        "Inline send_notification: at each call site replace with direct if-NOTIFY_CMD-then-run check",
+        "Simplify send_session_notification: remove macOS osascript and Linux notify-send branches, keep terminal bell plus log",
+        "Update help text to remove diagnose",
+        "Run smoke test and drift check"
+      ],
+      "acceptanceCriteria": [
+        "cmd-diagnose.sh does not exist",
+        "aishore diagnose produces unknown command error",
+        "send_notification function no longer exists",
+        "check-drift.sh reports zero drift"
+      ],
+      "scope": [
+        ".aishore/aishore",
+        ".aishore/lib/cmd-diagnose.sh",
+        ".aishore/lib/cmd-help.sh",
+        "scripts/check-drift.sh"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
     }
   ]
 }
