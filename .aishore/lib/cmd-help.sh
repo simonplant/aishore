@@ -70,11 +70,10 @@ Options:
   --no-merge            Keep feature branches for PR review
   --pr                  Create GitHub PR (implies --no-merge, requires gh)
   --retries N           Retry attempts on validation failure
-  --quick               Skip maturity protocol (fast iteration)
   --parallel N          Run up to N items concurrently (1-4)
 
 Session tuning (also settable in config.yaml under 'run:'):
-  --max-failures, --refine, --timeout, --category,
+  --max-failures, --timeout, --category,
   --auto-review, --limit, --no-summary
   See: aishore help --full
 
@@ -82,7 +81,6 @@ Examples:
   aishore run FEAT-001               # Run specific item
   aishore run --no-merge 3           # Keep branches for PR review
   aishore run --pr FEAT-001          # Create GitHub PR for review
-  aishore run --quick 5              # Fast iteration, 5 items
   aishore run done                   # Drain entire backlog
   aishore run done --parallel 2      # Run 2 items concurrently
   aishore run p1 --retries 2         # Must + should, with retries
