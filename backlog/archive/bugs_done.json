@@ -1999,6 +1999,50 @@
     "groomedNotes": null
   },
   {
+    "id": "BUG-072",
+    "title": "Trim verbose defensive coding across all functions",
+    "intent": "Error handling is terse and consistent. Redundant null guards, verbose suggestions, unnecessary fallbacks, single-use variables, and redundant return 0 statements are removed. Saves ~200 lines spread across the entire script.",
+    "description": "Across 82 functions, the script has accumulated verbose patterns: (1) jq calls with 2>/dev/null || true on caller-guaranteed input. (2) Error messages with full command examples belonging in help text. (3) Existence checks on files just created or caller-validated. (4) Multi-line error blocks where single log_error suffices. (5) ~5 redundant return 0 at end of functions. (6) Per-item dual jq calls in enforce_groom_limits and mark_complete that can be combined into single calls. (7) Variables computed and used exactly once that should be inlined. (8) cmd_diagnose has 6 separate jq -r calls on the same file — consolidate to one.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "Remove 2>/dev/null from jq calls where input JSON was constructed in the same function",
+      "Shorten error messages: remove inline command examples and suggestions",
+      "Remove redundant file existence checks where the caller already validated",
+      "Collapse multi-line error blocks into single log_error calls",
+      "Remove ~5 redundant return 0 at end of functions (load_config, _apply_env_overrides, etc.)",
+      "Combine per-item dual jq calls in enforce_groom_limits (id+priority in one call)",
+      "Combine two separate jq calls for priority+category in mark_complete into one",
+      "Consolidate 6 separate jq -r calls in cmd_diagnose into one jq invocation",
+      "Inline single-use variables where the expression is short and clear",
+      "Run full test: init, backlog add, backlog list, groom, run --dry-run"
+    ],
+    "acceptanceCriteria": [
+      "No jq call has 2>/dev/null where input JSON was constructed in the same function",
+      "No error message contains a full command example longer than 60 characters",
+      "No function ends with a redundant return 0",
+      "enforce_groom_limits uses one jq call per item, not two",
+      "mark_complete uses one jq call for priority+category, not two",
+      "cmd_diagnose uses one jq invocation for initial field extraction, not six",
+      "All commands still produce correct error output on bad input",
+      "shellcheck passes"
+    ],
+    "scope": [
+      ".aishore/**"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "lastFailReason": "Implementation failed",
+    "lastFailAt": "2026-03-24T08:51:22-07:00",
+    "failCount": 3,
+    "groomedAt": "2026-03-24",
+    "groomedNotes": null,
+    "groomingNotes": "Spec refreshed after 3 failures. Narrowed scope to ONE safe mechanical change: remove 16 terminal return 0 statements (functions return 0 by default in bash). All 16 target functions identified by line number. jq 2>/dev/null cleanup deferred — requires per-function judgment at 6000-line scale; revisit after modularization when each module is small enough to reason about safely.",
+    "resolved_at": "2026-03-28T08:04:05Z"
+  },
+  {
     "id": "BUG-073",
     "title": "Extract _find_prd and unify product/arch detection in init flow",
     "intent": "The PRD candidate list exists in one place. Product and architecture doc paths are detected once, not three times with three variable names. Init flow loses ~35 lines of copy-paste.",
@@ -3601,6 +3645,47 @@
     "groomedNotes": null
   },
   {
+    "id": "BUG-127",
+    "title": "Reduce and refactor the 5000+ line single-file CLI",
+    "intent": "The single-file CLI must be reduced in size and better organized WITHOUT breaking any existing behavior — after 126+ bugs fixed and 40+ features shipped, a refactor that introduces regressions is unacceptable. Every change must be provably safe.",
+    "description": "aishore is 5282 lines in one file, which is intentional for portability. But it has grown organically and contains dead code, verbose defensive patterns, duplicated logic, and oversized functions. Refactor within the single file: extract repeated jq patterns into helpers, collapse verbose guard clauses, remove dead branches (see BUG-072), consolidate duplicated option parsing, and add clear section headers. Goal: reduce to under 4000 lines without losing functionality.",
+    "priority": "should",
+    "category": "maintainability",
+    "steps": [
+      "Before any changes, capture baseline output for ALL commands: help, version, status, backlog list, backlog check --all, clean --dry-run, metrics, config check, diagnose — save to a reference file",
+      "Audit all functions for dead code: unreachable branches, unused variables, functions never called — remove ONLY after confirming no indirect invocation via eval, variable expansion, or agent callbacks",
+      "Identify repeated jq filter patterns and extract into named helper functions — verify each extraction produces identical output by diffing before/after on real backlog data",
+      "Collapse verbose guard clauses and defensive patterns that add lines without value (see BUG-072) — but DO NOT remove guards that protect against edge cases discovered in prior bug fixes",
+      "Consolidate duplicated option parsing logic across cmd_run, cmd_auto, and cmd_groom — test each command with all flag combinations after consolidation",
+      "Merge small single-use utility functions back into their callers ONLY when the function has no semantic value as a named abstraction",
+      "Ensure section headers and function grouping follow a logical order: constants, utils, backlog, sprint, groom, review, CLI",
+      "After ALL changes, diff baseline output against current output for every command — zero differences allowed",
+      "Run shellcheck — zero new warnings",
+      "Run a full dry-run sprint (aishore run --dry-run) to verify the orchestration path is intact"
+    ],
+    "acceptanceCriteria": [
+      "The script is under 4500 lines while retaining ALL existing functionality — zero regressions",
+      "Every CLI command produces byte-identical output before and after the refactor (verified by baseline diff)",
+      "No dead code remains: every function is reachable, every branch is exercised",
+      "Repeated jq patterns are consolidated into named helpers",
+      "No guards or defensive code from prior bug fixes (BUG-001 through BUG-126) are removed unless provably redundant",
+      "shellcheck passes with zero new warnings",
+      "A dry-run sprint completes without error"
+    ],
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "dependsOn": [
+      "BUG-072"
+    ],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "groomedAt": "2026-03-24",
+    "groomingNotes": "Depends on BUG-072 (must run first). BUG-072 has been marked not-ready pending spec refresh — BUG-127 remains blocked. Steps are defensively written with baseline capture and output-diff verification. Once BUG-072 is specced and passing, this item is ready to sprint. No changes needed to BUG-127's own spec.",
+    "resolved_at": "2026-03-28T08:04:05Z"
+  },
+  {
     "id": "BUG-128",
     "title": "Groom agents silently generate specs repeating known-bad patterns",
     "intent": "Groom agents must receive proven successful spec examples from the archive alongside failure patterns so they generate specs modeled on what actually works — not just avoiding what failed.",
@@ -3753,5 +3838,52 @@
     "groomingNotes": "Expanding an existing module rather than creating a new one — append-only operation. cmd-groom.sh is currently only 48 lines; all groom logic should live there. Dispatch likely already loads the module. AC: bash -n passes, groom flow is reachable.",
     "groomedAt": "2026-03-25",
     "completedAt": "2026-03-25T16:34:38-07:00"
+  },
+  {
+    "id": "BUG-133",
+    "title": "Test bug item",
+    "intent": "Verify bug items work with the correct ID prefix and target file",
+    "description": "",
+    "priority": "should",
+    "category": null,
+    "steps": [],
+    "acceptanceCriteria": [
+      "Bug is filed"
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": false,
+    "groomedAt": "2026-03-28",
+    "groomingNotes": "Reviewed during testing",
+    "resolved_at": "2026-03-28T07:55:43Z"
+  },
+  {
+    "id": "BUG-134",
+    "title": "Dry-run shows scope advisory from stale sprint.json",
+    "intent": "Dry-run must show the scope advisory for the item it picked, not from a leftover sprint.json from a previous completed sprint",
+    "description": "build_agent_prompt reads scope from backlog/sprint.json, but _run_dry_run never writes a sprint.json for its picked item. So the developer prompt shows the scope from whatever sprint last ran (FEAT-076) instead of the item dry-run selected.",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "In _run_dry_run, create a temporary sprint.json (or pass the item data directly to build_agent_prompt) before calling it",
+      "Clean up the temporary sprint.json after dry-run completes",
+      "Verify scope advisory matches the picked item, not the last completed sprint"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "run --dry-run FEAT-X shows FEAT-X scope in File Scope Advisory, not a different item",
+        "verify": ".aishore/aishore backlog add --type feat --title 'scope test' --intent 'test scope advisory shows correct item scope in dry run' --scope 'src/**' --ready && .aishore/aishore run --dry-run FEAT-079 2>&1 | grep -A2 'File Scope' | grep 'src/\\*\\*' && .aishore/aishore backlog rm FEAT-079 --force"
+      }
+    ],
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "resolved_at": "2026-03-28T08:03:30Z"
   }
 ]

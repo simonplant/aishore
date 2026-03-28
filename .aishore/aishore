@@ -2125,7 +2125,15 @@ _run_dry_run() {
     load_config
     cd "$PROJECT_ROOT"
 
+    # Resolve auto_priorities from auto_scope (normally done in setup_sprint_environment)
+    local auto_priorities=""
     if [[ "$auto_mode" == "true" ]]; then
+        case "$auto_scope" in
+            p0)   auto_priorities="must" ;;
+            p1)   auto_priorities="must should" ;;
+            p2)   auto_priorities="must should could" ;;
+            done) auto_priorities="" ;;
+        esac
         log_header "aishore run $auto_scope - Dry Run"
         echo "Project: $PROJECT_ROOT"
         echo "Auto-groom: when ready < $AUTO_GROOM_THRESHOLD"
@@ -2144,6 +2152,16 @@ _run_dry_run() {
         return 1
     fi
 
+    # Auto mode: check if picked item is within priority scope
+    if [[ "$auto_mode" == "true" && -n "$auto_priorities" && -z "$specific_id" ]]; then
+        local item_priority
+        item_priority=$(jq -r '.priority // "should"' <<< "$item_json")
+        if [[ " $auto_priorities " != *" $item_priority "* ]]; then
+            log_warning "No items matching $auto_scope scope — next ready item is $item_priority priority"
+            return 1
+        fi
+    fi
+
     local item_id item_title
     IFS=$'\t' read -r item_id item_title < <(printf '%s\n' "$item_json" | jq -r '[.id, (.title // .description)] | @tsv')
 
@@ -2159,9 +2177,23 @@ _run_dry_run() {
         echo ""
     fi
 
+    # Create temporary sprint.json so build_agent_prompt reads scope from the picked item
+    local item_source
+    item_source=$(cat "$STATUS_DIR/.item_source" 2>/dev/null || echo "backlog.json")
+    local _orig_sprint=""
+    [[ -f "$BACKLOG_DIR/sprint.json" ]] && _orig_sprint=$(cat "$BACKLOG_DIR/sprint.json")
+    create_sprint "$item_json" "$item_source"
+
     log_subheader "Developer Prompt"
     build_agent_prompt "developer" "implement"
     echo ""
+
+    # Restore original sprint.json (or remove if there wasn't one)
+    if [[ -n "$_orig_sprint" ]]; then
+        printf '%s\n' "$_orig_sprint" > "$BACKLOG_DIR/sprint.json"
+    else
+        rm -f "$BACKLOG_DIR/sprint.json"
+    fi
 
     log_subheader "Validation Command"
     if [[ -n "$VALIDATE_CMD" ]]; then
