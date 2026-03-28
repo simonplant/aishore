@@ -10,7 +10,7 @@ Settings are resolved in this order (first match wins):
 2. **Config file** (`.aishore/config.yaml`)
 3. **Built-in defaults**
 
-Example: if `AISHORE_SCOPE_MODE=strict` is set and `config.yaml` has `scope.mode: warn`, the environment variable wins and scope checking is strict.
+Example: if `AISHORE_VALIDATE_CMD="pytest"` is set and `config.yaml` has `validation.command: "npm test"`, the environment variable wins and `pytest` is used.
 
 ---
 
@@ -51,13 +51,9 @@ validation:
 
 # Permissions (restrict for tighter sandbox)
 # permissions:
-#   developer: "Bash,Edit,Write,Read,Glob,Grep"
+#   developer: "Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode"
 #   validator: "Bash,Read,Write,Glob,Grep"
 #   reviewer: "Read,Glob,Grep"
-
-# Scope checking: "warn" or "strict"
-# scope:
-#   mode: warn
 
 # Merge strategy: "merge" (default, --no-ff) or "squash" (single commit per item)
 # merge:
@@ -66,7 +62,6 @@ validation:
 # Notifications on sprint completion
 # notifications:
 #   on_complete: "notify-send 'aishore' \"Sprint $1: $2\""
-#   system: false      # System notification on auto session end (osascript/notify-send)
 
 # Auto-groom settings
 # auto:
@@ -86,10 +81,6 @@ validation:
 # pr:
 #   create: false
 
-# Isolation mode: "stash" (default) or "worktree"
-# isolation:
-#   mode: stash
-
 # Output streaming
 # streaming:
 #   enabled: true
@@ -98,7 +89,6 @@ validation:
 # Run session defaults (override with CLI flags)
 # run:
 #   retries: 0
-#   refine: false
 #   auto_review: false
 #   no_summary: false
 #   session_limit: 0        # 0 = unlimited
@@ -192,9 +182,9 @@ validation:
 | | |
 |---|---|
 | **Type** | string (comma-separated tool names) |
-| **Default** | `Bash,Edit,Write,Read,Glob,Grep` |
+| **Default** | `Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode` |
 | **Env var** | — |
-| **What it controls** | Claude Code tools available to the developer agent. Full access by default. |
+| **What it controls** | Claude Code tools available to the developer agent. Full access by default, including plan mode for structured implementation planning. |
 | **When to change** | Remove `Bash` to prevent shell commands, or restrict further for a tighter sandbox. |
 
 #### `permissions.validator`
@@ -217,16 +207,6 @@ validation:
 | **What it controls** | Claude Code tools available to the architecture reviewer agent. Read-only by default. When `review --update-docs` is used, `Edit,Write` are added automatically. |
 | **When to change** | Rarely. The `--update-docs` flag handles the common case. |
 
-#### `scope.mode`
-
-| | |
-|---|---|
-| **Type** | `warn` \| `strict` |
-| **Default** | `warn` |
-| **Env var** | `AISHORE_SCOPE_MODE` |
-| **What it controls** | Behavior when the developer agent changes files outside an item's `scope` globs. `warn` logs a warning; `strict` fails the sprint. |
-| **When to change** | Set to `strict` when you need hard boundaries on what an agent can touch. |
-
 #### `merge.strategy`
 
 | | |
@@ -246,16 +226,6 @@ validation:
 | **Env var** | `AISHORE_NOTIFY_CMD` |
 | **What it controls** | Command run when a sprint completes. Receives the item ID as `$1` and status as `$2`. |
 | **When to change** | Set to send desktop notifications, Slack messages, etc. Example: `notify-send 'aishore' "Sprint $1: $2"` |
-
-#### `notifications.system`
-
-| | |
-|---|---|
-| **Type** | boolean |
-| **Default** | `false` |
-| **Env var** | `AISHORE_NOTIFY` |
-| **What it controls** | When `true`, sends a platform-native system notification when an auto session ends. Uses `osascript` on macOS and `notify-send` on Linux. A terminal bell (`tput bel`) always fires regardless of this setting. |
-| **When to change** | Enable when you run long autonomous sessions and want a desktop notification when the session completes or hits the circuit breaker. |
 
 #### `auto.groom_threshold`
 
@@ -317,16 +287,6 @@ validation:
 | **What it controls** | When `true`, creates a GitHub pull request instead of merging the feature branch. Equivalent to using the `--pr` flag on every run. |
 | **When to change** | Enable for teams that require PR review before merging. |
 
-#### `isolation.mode`
-
-| | |
-|---|---|
-| **Type** | `stash` \| `worktree` |
-| **Default** | `stash` |
-| **Env var** | `AISHORE_ISOLATION` |
-| **What it controls** | How aishore isolates sprint work from uncommitted changes. `stash` uses `git stash`; `worktree` uses `git worktree` for full isolation. |
-| **When to change** | Use `worktree` if you want to keep working in the main tree while sprints run. |
-
 #### `streaming.enabled`
 
 | | |
@@ -357,17 +317,6 @@ validation:
 | **CLI flag** | `--retries N` |
 | **What it controls** | Per-item retry attempts when a sprint fails validation. |
 | **When to change** | Set to 1-3 for resilience. Higher values cost more agent time. |
-
-#### `run.refine`
-
-| | |
-|---|---|
-| **Type** | boolean |
-| **Default** | `false` |
-| **Env var** | `AISHORE_REFINE` |
-| **CLI flag** | `--refine` |
-| **What it controls** | When all retries are exhausted, call an AI agent to rewrite the item's steps and AC, then attempt one more developer cycle. |
-| **When to change** | Enable for autonomous runs where you want maximum recovery before giving up. |
 
 #### `run.auto_review`
 
@@ -428,7 +377,6 @@ All `AISHORE_*` environment variables and what they map to:
 | `AISHORE_MODEL_PRIMARY` | `models.primary` | `claude-opus-4-6` | Primary AI model |
 | `AISHORE_MODEL_FAST` | `models.fast` | `claude-sonnet-4-6` | Fast AI model |
 | `AISHORE_AGENT_TIMEOUT` | `agent.timeout` | `3600` | Agent timeout (seconds) |
-| `AISHORE_SCOPE_MODE` | `scope.mode` | `warn` | Scope checking mode |
 | `AISHORE_MERGE_STRATEGY` | `merge.strategy` | `merge` | Merge strategy |
 | `AISHORE_NOTIFY_CMD` | `notifications.on_complete` | `""` | Completion notification command |
 | `AISHORE_AUTO_GROOM_THRESHOLD` | `auto.groom_threshold` | `3` | Auto-groom item threshold |
@@ -492,7 +440,6 @@ When a scope (`done`, `p0`, `p1`, `p2`) is given, auto-grooming activates when r
 | `--timeout` | `N` | Kill agent after N minutes (default: `0` = no limit) |
 | `--category` | `<name>` | Only run items matching this category |
 | `--auto-review` | — | Run architecture review after all items complete |
-| `--warm-retry` | — | Resume existing session on retry (retains prior context) |
 | `--no-summary` | — | Suppress end-of-session summary table |
 
 **Note:** `auto` is accepted as an alias for `run` for backwards compatibility.
@@ -633,8 +580,8 @@ Validates: title, commander's intent (>= 20 chars, must be a directive), steps, 
 
 | Flag | Argument | Description |
 |------|----------|-------------|
-| `--since` | `YYYY-MM-DD` | Show items completed on or after date |
-| `--failed` | — | Show only failed items |
+| `--limit` | `N` | Show last N items (default: 20) |
+| `--all` | — | Show all items (no limit) |
 
 ### `backlog populate` — AI-populate backlog
 
@@ -647,17 +594,6 @@ Validates: title, commander's intent (>= 20 chars, must be a directive), steps, 
 | `--preview` | Show proposed items without modifying backlog |
 
 Reads `PRODUCT.md` (or `PRD.md`, `README.md`) and uses a product owner agent to create backlog items.
-
-### `backlog sync` — Detect completed items
-
-```
-.aishore/aishore backlog sync [flags]
-```
-
-| Flag | Description |
-|------|-------------|
-| `--dry-run` | Preview without marking items |
-| `--auto` | Auto-mark detected items as done |
 
 ### `clean` — Remove done items
 
@@ -678,7 +614,7 @@ Reads `PRODUCT.md` (or `PRD.md`, `README.md`) and uses a product owner agent to 
 
 | Flag | Description |
 |------|-------------|
-| `--dry-run`, `--check` | Check for updates without applying |
+| `--dry-run` | Check for updates without applying |
 | `--force` | Update even if already on latest |
 | `--no-verify` | Skip checksum verification (requires `--force`) |
 
@@ -704,14 +640,6 @@ Reads `PRODUCT.md` (or `PRD.md`, `README.md`) and uses a product owner agent to 
 | `--interval` | `N` | Refresh interval in seconds (default: `30`) |
 
 Shows backlog summary and sprint readiness.
-
-### `diagnose` — Failure diagnostics
-
-```
-.aishore/aishore diagnose
-```
-
-No flags. Shows last sprint failure details.
 
 ### `checksums` — Regenerate checksums
 
@@ -751,9 +679,9 @@ Agents run with restricted Claude Code tool permissions. Each role has a default
 
 ### Developer Agent
 
-**Default:** `Bash,Edit,Write,Read,Glob,Grep`
+**Default:** `Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode`
 
-Full access. The developer agent can run shell commands, read and write files, and search the codebase. This is the most permissive role because it needs to implement features.
+Full access. The developer agent can run shell commands, read and write files, search the codebase, and enter plan mode for structured implementation planning. This is the most permissive role because it needs to implement features.
 
 **Security note:** The developer agent can execute arbitrary shell commands. If your project has sensitive credentials accessible via the shell, consider removing `Bash` from the permission set.
 
@@ -775,9 +703,9 @@ Override in `config.yaml`:
 
 ```yaml
 permissions:
-  developer: "Read,Edit,Write,Glob,Grep"    # No Bash — no shell access
+  developer: "Read,Edit,Write,Glob,Grep,EnterPlanMode,ExitPlanMode"  # No Bash — no shell access
   validator: "Bash,Read,Glob,Grep"           # No Write
   reviewer: "Read,Glob,Grep"                 # Default (read-only)
 ```
 
-Permissions are comma-separated Claude Code tool names. Available tools: `Bash`, `Edit`, `Write`, `Read`, `Glob`, `Grep`.
+Permissions are comma-separated Claude Code tool names. Available tools: `Bash`, `Edit`, `Write`, `Read`, `Glob`, `Grep`, `EnterPlanMode`, `ExitPlanMode`.
