@@ -226,7 +226,7 @@ show_next_steps() {
         echo "     .aishore/aishore run"
     else
         echo "  .aishore/aishore help      # Show commands"
-        echo "  .aishore/aishore metrics   # Show metrics"
+        echo "  .aishore/aishore status    # Backlog overview"
         echo "  .aishore/aishore run       # Run sprint"
     fi
     echo ""

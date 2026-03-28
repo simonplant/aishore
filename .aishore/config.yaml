@@ -23,11 +23,8 @@ validation:
 
 # Session tuning defaults for 'run'. CLI flags override these.
 # run:
-#   auto_review: false     # Run architecture review after completion
-#   no_summary: false      # Suppress end-of-session summary table
 #   retries: 0             # Per-item retry attempts
 #   limit:                 # Cap session at N items
-#   category:              # Only run items matching this category
 
 # notifications:
 #   on_complete: "notify-send 'aishore' \"Sprint $1: $2\""

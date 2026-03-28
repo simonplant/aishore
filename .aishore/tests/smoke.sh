@@ -25,8 +25,6 @@ run_cmd "help"              "$AISHORE" help
 run_cmd "version"           "$AISHORE" version
 run_cmd "backlog list"      "$AISHORE" backlog list
 run_cmd "status"            "$AISHORE" status
-run_cmd "diagnose"          "$AISHORE" diagnose
-run_cmd "report"            "$AISHORE" report
 run_cmd "clean --dry-run"   "$AISHORE" clean --dry-run
 
 # Phase 3: slow commands (parallel — each >250ms)
@@ -34,10 +32,6 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
 slow_cmds=(
-  "config check"
-  "metrics"
-  "run --dry-run"
-  "auto done --dry-run"
   "update --dry-run"
 )
 

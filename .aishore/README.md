@@ -40,9 +40,6 @@ The developer follows intent when the spec is ambiguous. The validator probes th
 ## Create Backlog Items
 
 ```bash
-# AI-populate from PRODUCT.md (non-interactive)
-.aishore/aishore backlog populate
-
 # With flags
 .aishore/aishore backlog add --title "Add health check" \
   --intent "Ops must know instantly if the service is alive or dead." \
@@ -55,7 +52,7 @@ The developer follows intent when the spec is ambiguous. The validator probes th
   --ac "Has configurable rate per endpoint"
 ```
 
-Key flags: `--title`, `--intent`, `--type feat|bug`, `--desc`, `--priority must|should|could|future`, `--category`, `--steps "..."` (repeatable), `--ac "..."` (repeatable), `--ac-verify "cmd"` (attaches to preceding `--ac`), `--depends-on ID` (repeatable), `--scope "glob"` (repeatable), `--ready`
+Key flags: `--title`, `--intent`, `--type feat|bug`, `--desc`, `--priority must|should|could|future`, `--steps "..."` (repeatable), `--ac "..."` (repeatable), `--ac-verify "cmd"` (attaches to preceding `--ac`), `--depends-on ID` (repeatable), `--scope "glob"` (repeatable), `--ready`
 
 Edit: `.aishore/aishore backlog edit <ID> --intent "..." --priority must --steps "step 1" --steps "step 2" --ac "criterion" --ready`
 
@@ -91,8 +88,6 @@ Grooming doesn't guarantee readiness — check with `backlog check <ID>` if item
 .aishore/aishore run --no-merge     # Keep branches for PR review
 .aishore/aishore run --pr           # Create GitHub PR (implies --no-merge)
 .aishore/aishore run --dry-run      # Preview without executing
-.aishore/aishore run --timeout 30   # Kill agent after 30 minutes
-.aishore/aishore run --category api # Only run items tagged "api"
 ```
 
 ### Autonomous Mode (scoped runs)
@@ -103,7 +98,6 @@ Grooming doesn't guarantee readiness — check with `backlog check <ID>` if item
 .aishore/aishore run p1             # Must + should
 .aishore/aishore run p2             # Must + should + could
 .aishore/aishore run done --retries 2 --max-failures 3
-.aishore/aishore run done --parallel 2  # Run 2 items concurrently
 ```
 
 When a scope is given (`done`, `p0`, `p1`, `p2`), auto-grooming activates when ready items drop below threshold, and the circuit breaker stops after N consecutive failures (default 5).
@@ -122,9 +116,6 @@ When a scope is given (`done`, `p0`, `p1`, `p2`), auto-grooming activates when r
 
 ```bash
 .aishore/aishore status             # Backlog overview and sprint readiness
-.aishore/aishore status --watch     # Live refresh until sprint completes
-.aishore/aishore report             # Sprint activity summary
-.aishore/aishore metrics            # Sprint velocity, pass rates, trends
 .aishore/aishore clean              # Archive and remove done items
 .aishore/aishore clean --dry-run    # Preview what would be removed
 ```
@@ -153,6 +144,6 @@ Only `.aishore/` is replaced. Your `backlog/` and `config.yaml` are never touche
 
 **Stuck state?**
 - `rm .aishore/data/status/result.json` — clears completion signal
-- `rm .aishore/data/status/.aishore.lock` — clears concurrency lock
+- `rm -rf .aishore/data/status/.aishore.lock` — clears concurrency lock
 
 **Quick reference:** `.aishore/aishore help` (compact) or `.aishore/aishore help --full` (complete)

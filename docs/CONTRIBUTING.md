@@ -54,13 +54,10 @@ bash -n install.sh
 # Smoke test
 .aishore/aishore help
 .aishore/aishore version
-.aishore/aishore metrics
 
 # Validate JSON
 jq empty backlog/*.json
 
-# Regenerate checksums (if you changed any .aishore/ files)
-.aishore/aishore checksums
 ```
 
 ## Pull Request Process
@@ -69,8 +66,7 @@ jq empty backlog/*.json
 2. Create a feature branch: `git checkout -b feat/my-feature`
 3. Make your changes
 4. Run shellcheck and smoke tests (see above)
-5. Regenerate checksums if you changed files in `.aishore/`
-6. Commit using conventional commits (see below)
+5. Commit using conventional commits (see below)
 7. Push and open a PR
 
 ## Commit Convention
@@ -118,8 +114,7 @@ You only edit the agent markdown file. The orchestrator handles injection of con
 ### Modifying agent prompts
 
 1. Edit the relevant file in `.aishore/agents/`
-2. Run `.aishore/aishore checksums` to update checksums
-3. Test by running a sprint: `.aishore/aishore run FEAT-XXX` (target a specific item for focused testing)
+2. Test by running a sprint: `.aishore/aishore run FEAT-XXX` (target a specific item for focused testing)
 4. Review the agent's output in `.aishore/data/logs/`
 
 ### Guidelines

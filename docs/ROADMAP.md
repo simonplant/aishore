@@ -4,26 +4,17 @@ Where aishore is, where it's going, and what's missing.
 
 ## Current Version (v0.3.x)
 
-aishore v0.3.x is a working sprint runner that can autonomously drain a backlog:
+aishore v0.3.x is a working tool for iterative intent-based development that can autonomously drain a backlog:
 
 - **Autonomous mode** — `auto done` drives the backlog to completion with priority scoping, auto-grooming, failure tracking, and circuit breaker
 - **Sprint orchestration** — branch, implement, validate, commit, merge per item
 - **Maturity protocol** — implement → critique → harden cycle keeps quality inside the session
-- **Backlog management** — full CLI CRUD, AI-powered `backlog populate` from PRODUCT.md
+- **Backlog management** — full CLI CRUD
 - **Grooming** — tech-lead (bugs) and product-owner (features) agents
 - **Architecture review** — on-demand or post-sprint with optional doc updates
 - **Checksum-verified updates** — self-update from GitHub releases
 - **Scope checking** — warn or fail when changes land outside declared scope
 - **Testable acceptance criteria** — AC entries with `verify` shell commands
-
-## Now
-
-Active work in the current sprint cycle:
-
-- Unified architecture document (`docs/ARCHITECTURE.md`)
-- This roadmap (`docs/ROADMAP.md`)
-- Docs consolidation — move CONTRIBUTING.md into `docs/` (CHANGELOG.md done)
-- Slim README.md to storefront format (problem, solution, quickstart, links)
 
 ## Next
 
@@ -52,11 +43,10 @@ Honest constraints of the current version:
 
 - **Claude Code dependency** — requires the `claude` CLI; no other LLM backend supported
 - **Bash-only** — the entire tool is a single Bash script; no Windows support
-- **macOS/Linux only** — relies on POSIX tools and `flock` for concurrency
+- **macOS/Linux only** — relies on POSIX tools
 - **Single-repo** — one backlog, one repo; no cross-repo orchestration
 - **No remote/CI mode** — requires a local terminal session with Claude Code installed
 - **No plugin system** — agent prompts and validation are configurable but not extensible
-- **Sequential execution** — one sprint item at a time; no parallel agent runs
 
 ## Want to help?
 

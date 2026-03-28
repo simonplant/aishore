@@ -5,9 +5,9 @@
 #   1. Syntax & integrity (bash -n, jq, checksums)
 #   2. Version consistency (VERSION file, CLI, help, README badge)
 #   3. Command routing (main() case vs help)
-#   4. Environment variables (_apply_env_overrides vs README)
+#   4. Environment variables (_apply_env_overrides vs CONFIGURATION.md)
 #   5. Flag parity — code vs help (per-command case-statement flags)
-#   6. Flag parity — help vs README (all documented flags)
+#   6. Flag parity — help vs CONFIGURATION.md (all documented flags)
 #   7. Command parity — help vs CLAUDE.md
 #
 # Usage: bash scripts/check-drift.sh
@@ -74,7 +74,7 @@ fi
 if sha256sum -c "$SCRIPT_DIR/.aishore/checksums.sha256" >/dev/null 2>&1; then
     ok "Checksums match"
 else
-    drift error "Checksums out of date — run: .aishore/aishore checksums"
+    drift error "Checksums out of date — regenerate checksums.sha256"
 fi
 
 echo ""
@@ -197,7 +197,6 @@ is_intentionally_undocumented() {
     local cmd="$1" flag="$2"
     case "$cmd:$flag" in
         update:--check|update:--no-verify) return 0 ;;
-        run:--max-failures) return 0 ;;  # only meaningful via auto pass-through
         "backlog add:--step"|"backlog edit:--step") return 0 ;;  # alias for --steps, kept for agent compat
         *) return 1 ;;
     esac
@@ -232,26 +231,12 @@ check_command_flags() {
     while IFS= read -r flag; do
         [[ -z "$flag" ]] && continue
         if ! has_line "$flag" "$code_flags"; then
-            # Auto flags are parsed in cmd_run/cmd_run_parse_args (pass-through via --_auto)
-            if [[ "$cmd_label" == "auto" ]]; then
-                local run_flags fn_flags
-                run_flags=""
-                for fn_flags in cmd_run cmd_run_parse_args; do
-                    run_flags=$(printf '%s\n%s' "$run_flags" "$(extract_code_flags "$fn_flags")")
-                done
-                run_flags=$(echo "$run_flags" | sort -u | sed '/^$/d')
-                if has_line "$flag" "$run_flags"; then
-                    ok "$cmd_label $flag parsed via run pass-through"
-                    continue
-                fi
-            fi
             drift error "$cmd_label $flag in help but not parsed in code"
         fi
     done <<< "$help_flags"
 }
 
 check_command_flags "cmd_run cmd_run_parse_args" "run"
-check_command_flags "cmd_auto" "auto"
 check_command_flags "cmd_update" "update"
 check_command_flags "cmd_init" "init"
 check_command_flags "cmd_backlog_add" "backlog add"
@@ -312,7 +297,7 @@ if [[ -f "$GUIDE" ]]; then
 
     # Check that primary commands from help appear in the guide
     # (guide is a quick-reference, so we check major commands only)
-    major_cmds="run groom review status metrics clean update"
+    major_cmds="run groom review status clean update"
     for cmd in $major_cmds; do
         if grep -Fq "$cmd" "$GUIDE" 2>/dev/null; then
             ok "Guide mentions '$cmd'"

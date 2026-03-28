@@ -340,7 +340,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`checksums` command**: Regenerate `checksums.sha256` for update verification
 - **Concurrency guard**: `flock`-based locking prevents concurrent aishore processes
 - **Setup wizard**: `init` is now an interactive 6-step wizard that checks prerequisites (git, claude, jq), detects project name and validation command, and scaffolds all files
-- **Validation command execution**: Sprint runner now executes `validation.command` from config between developer and validator agents
+- **Validation command execution**: aishore now executes `validation.command` from config between developer and validator agents
 - **Failed item skipping**: When running multiple sprints, failed items are excluded from subsequent picks
 - **Temp directory management**: All temp files use a single cleaned-up `mktemp` directory
 - **Refactored agent execution**: Shared `run_agent_process()` with `AGENT_OUTPUT_FILE` support for capturing `--print` output

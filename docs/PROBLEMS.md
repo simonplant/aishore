@@ -45,7 +45,7 @@ The workaround is breaking work into smaller prompts manually, but then you're b
 - Developers report reverting to manual step-by-step prompting for anything non-trivial, effectively becoming a human orchestrator
 
 **How aishore addresses this:**
-aishore's backlog items decompose complex work into structured steps with explicit acceptance criteria. Instead of one massive prompt, each feature gets a specification with a commander's intent (the non-negotiable outcome), ordered implementation steps, and verifiable acceptance criteria. The grooming agents (`groom`, `groom --backlog`) break rough ideas into sprint-ready items with the right granularity. The `backlog populate` command can decompose an entire product requirements document into individual backlog items. Each item runs as a complete sprint — branched, implemented, validated, and merged — so complex projects progress as a sequence of well-defined, achievable units rather than one impossible prompt.
+aishore's backlog items decompose complex work into structured steps with explicit acceptance criteria. Instead of one massive prompt, each feature gets a specification with a commander's intent (the non-negotiable outcome), ordered implementation steps, and verifiable acceptance criteria. The grooming agents (`groom`, `groom --backlog`) break rough ideas into sprint-ready items with the right granularity. Each item runs as a complete sprint — branched, implemented, validated, and merged — so complex projects progress as a sequence of well-defined, achievable units rather than one impossible prompt.
 
 ---
 
@@ -60,7 +60,7 @@ This makes debugging, onboarding, and handoffs painful. Nobody can reconstruct w
 - Teams using AI coding tools report difficulty tracing implementation decisions back to product requirements
 
 **How aishore addresses this:**
-Every sprint produces a structured trail: the original backlog item (with intent, steps, and acceptance criteria) is archived in `backlog/archive/sprints.jsonl` along with the completion timestamp, pass/fail status, and summary. Feature branches are named by item ID (`aishore/FEAT-001`), and commits reference the item. The sprint history (`backlog history`) shows what was done, when, and whether it succeeded. The commander's intent field preserves *why* something was built, not just what was built. If a feature breaks, you can trace from the code change back to the branch, back to the archived item, back to the original intent and acceptance criteria that were (or weren't) met.
+Every sprint produces a structured trail: the original backlog item (with intent, steps, and acceptance criteria) is archived in `backlog/archive/sprints.jsonl` along with the completion timestamp, pass/fail status, and summary. Feature branches are named by item ID (`aishore/FEAT-001`), and commits reference the item. The commander's intent field preserves *why* something was built, not just what was built. If a feature breaks, you can trace from the code change back to the branch, back to the archived item, back to the original intent and acceptance criteria that were (or weren't) met.
 
 ---
 

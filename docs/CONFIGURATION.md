@@ -89,10 +89,7 @@ validation:
 # Run session defaults (override with CLI flags)
 # run:
 #   retries: 0
-#   auto_review: false
-#   no_summary: false
 #   session_limit: 0        # 0 = unlimited
-#   session_category: ""    # empty = all categories
 ```
 
 ### Every Option Explained
@@ -318,28 +315,6 @@ validation:
 | **What it controls** | Per-item retry attempts when a sprint fails validation. |
 | **When to change** | Set to 1-3 for resilience. Higher values cost more agent time. |
 
-#### `run.auto_review`
-
-| | |
-|---|---|
-| **Type** | boolean |
-| **Default** | `false` |
-| **Env var** | `AISHORE_AUTO_REVIEW` |
-| **CLI flag** | `--auto-review` |
-| **What it controls** | Automatically run architecture review after the sprint session completes. |
-| **When to change** | Enable for long autonomous sessions where you want a quality check at the end. |
-
-#### `run.no_summary`
-
-| | |
-|---|---|
-| **Type** | boolean |
-| **Default** | `false` |
-| **Env var** | `AISHORE_NO_SUMMARY` |
-| **CLI flag** | `--no-summary` |
-| **What it controls** | Suppress the end-of-session summary table. |
-| **When to change** | Set in CI/automation where the summary is noise. |
-
 #### `run.session_limit`
 
 | | |
@@ -350,17 +325,6 @@ validation:
 | **CLI flag** | `--limit N` |
 | **What it controls** | Cap the session at N successfully completed items, then exit cleanly. |
 | **When to change** | Useful for bounded batch runs (e.g., "do 3 items then stop"). |
-
-#### `run.session_category`
-
-| | |
-|---|---|
-| **Type** | string |
-| **Default** | `""` (all categories) |
-| **Env var** | `AISHORE_SESSION_CATEGORY` |
-| **CLI flag** | `--category <name>` |
-| **What it controls** | Only pick items matching this category tag. |
-| **When to change** | When you want to focus a session on a specific area (e.g., `documentation`, `api`). |
 
 ---
 
@@ -389,10 +353,7 @@ All `AISHORE_*` environment variables and what they map to:
 | `AISHORE_STREAMING_MAX_LINES` | `streaming.max_lines` | `20` | Max trailing lines during streaming |
 | `AISHORE_TIMEOUT_MINUTES` | `timeout_minutes` | `0` | Agent timeout in minutes (overrides `agent.timeout`; 0 = no override) |
 | `AISHORE_RETRIES` | `run.retries` | `0` | Per-item retry attempts on failure |
-| `AISHORE_AUTO_REVIEW` | `run.auto_review` | `false` | Run architecture review after session |
-| `AISHORE_NO_SUMMARY` | `run.no_summary` | `false` | Suppress end-of-session summary table |
 | `AISHORE_SESSION_LIMIT` | `run.session_limit` | `0` | Cap session at N items (0 = unlimited) |
-| `AISHORE_SESSION_CATEGORY` | `run.session_category` | `""` | Only run items matching this category |
 
 ---
 
@@ -432,15 +393,10 @@ When a scope (`done`, `p0`, `p1`, `p2`) is given, auto-grooming activates when r
 |------|----------|-------------|
 | `--dry-run` | — | Preview what would run without executing |
 | `--retries` | `N` | Per-item retries on failure (default: `0`) |
-| `--parallel` | `N` | Run up to N items concurrently in worktrees (1–4, default: `1`) |
 | `--limit` | `N` | Cap session at N successful items then exit cleanly |
 | `--no-merge` | — | Keep feature branches; push instead of merging |
 | `--pr` | — | Create GitHub PR (implies `--no-merge`) |
 | `--max-failures` | `N` | Circuit breaker: stop after N consecutive failures (default: `5`) |
-| `--timeout` | `N` | Kill agent after N minutes (default: `0` = no limit) |
-| `--category` | `<name>` | Only run items matching this category |
-| `--auto-review` | — | Run architecture review after all items complete |
-| `--no-summary` | — | Suppress end-of-session summary table |
 
 **Note:** `auto` is accepted as an alias for `run` for backwards compatibility.
 
@@ -466,18 +422,6 @@ When a scope (`done`, `p0`, `p1`, `p2`) is given, auto-grooming activates when r
 | `--update-docs` | — | Allow reviewer to update docs and add backlog items |
 | `--since` | `<commit>` | Review changes since a specific commit |
 
-### `report` — Sprint activity summary
-
-```
-.aishore/aishore report [flags]
-```
-
-| Flag | Argument | Description |
-|------|----------|-------------|
-| `--since` | `<date>` | Only include items completed on or after YYYY-MM-DD |
-| `--output` | `<file>` | Write report to file instead of stdout |
-| `--format` | `json` | Emit JSON array instead of markdown (default: `markdown`) |
-
 ### `backlog add` — Add item
 
 ```
@@ -491,7 +435,7 @@ When a scope (`done`, `p0`, `p1`, `p2`) is given, auto-grooming activates when r
 | `--type` | `feat` \| `bug` | Item type (default: `feat`) |
 | `--desc` | `"text"` | Full description |
 | `--priority` | `must` \| `should` \| `could` \| `future` | Priority level (default: `should`) |
-| `--category` | `"text"` | Category tag |
+| `--category` | `"text"` | Category label |
 | `--ready` | — | Mark as sprint-ready immediately |
 | `--steps` | `"text"` | Implementation step *(repeatable, replaces all steps)* |
 | `--ac` | `"text"` | Add acceptance criterion *(repeatable)* |
@@ -510,8 +454,8 @@ When a scope (`done`, `p0`, `p1`, `p2`) is given, auto-grooming activates when r
 | `--intent` | `"text"` | Set commander's intent |
 | `--desc` | `"text"` | Change description |
 | `--priority` | `must` \| `should` \| `could` \| `future` | Change priority |
-| `--status` | `todo` \| `in-progress` \| `done` | Change status |
 | `--category` | `"text"` | Change category |
+| `--status` | `todo` \| `in-progress` \| `done` | Change status |
 | `--ready` | — | Mark as sprint-ready |
 | `--no-ready` | — | Unmark from sprint-ready |
 | `--groomed-at` | `[YYYY-MM-DD]` | Set groomed date (defaults to today) |
@@ -572,29 +516,6 @@ Validates: title, commander's intent (>= 20 chars, must be a directive), steps, 
 |------|-------------|
 | `--force`, `-f` | Skip confirmation prompt |
 
-### `backlog history` — Completed items
-
-```
-.aishore/aishore backlog history [flags]
-```
-
-| Flag | Argument | Description |
-|------|----------|-------------|
-| `--limit` | `N` | Show last N items (default: 20) |
-| `--all` | — | Show all items (no limit) |
-
-### `backlog populate` — AI-populate backlog
-
-```
-.aishore/aishore backlog populate [flags]
-```
-
-| Flag | Description |
-|------|-------------|
-| `--preview` | Show proposed items without modifying backlog |
-
-Reads `PRODUCT.md` (or `PRD.md`, `README.md`) and uses a product owner agent to create backlog items.
-
 ### `clean` — Remove done items
 
 ```
@@ -618,16 +539,6 @@ Reads `PRODUCT.md` (or `PRD.md`, `README.md`) and uses a product owner agent to 
 | `--force` | Update even if already on latest |
 | `--no-verify` | Skip checksum verification (requires `--force`) |
 
-### `metrics` — Sprint metrics
-
-```
-.aishore/aishore metrics [flags]
-```
-
-| Flag | Description |
-|------|-------------|
-| `--json` | Output metrics as JSON |
-
 ### `status` — Backlog overview
 
 ```
@@ -640,14 +551,6 @@ Reads `PRODUCT.md` (or `PRD.md`, `README.md`) and uses a product owner agent to 
 | `--interval` | `N` | Refresh interval in seconds (default: `30`) |
 
 Shows backlog summary and sprint readiness.
-
-### `checksums` — Regenerate checksums
-
-```
-.aishore/aishore checksums
-```
-
-No flags. Regenerates `.aishore/checksums.sha256` after editing files in `.aishore/`.
 
 ### `version` — Show version
 

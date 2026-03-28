@@ -1,5 +1,7 @@
 # FEAT-065 Code Trace: auto_mode / _auto / auto_scope References
 
+> **Status: COMPLETED.** The run/auto merge is done — `auto` now dispatches to `cmd_run`. This document is preserved as a historical reference for the merge design.
+
 This document maps every reference to `auto_mode`, the internal `--_auto` flag, and `auto_scope` in `.aishore/aishore` to support the FEAT-065 run/auto merge. Line numbers are approximate — verify before editing.
 
 ## 1. Entry Point: `cmd_auto()` (line ~2234)

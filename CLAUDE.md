@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**aishore** is an AI Sprint Runner — a drop-in sprint orchestration tool for Claude Code that autonomously runs development sprints. It picks features from a backlog, has an AI developer implement them, validates the implementation, and archives completed work.
+**aishore** is an iterative intent-based development tool with evals — a drop-in orchestration layer for Claude Code. It picks features from a backlog, has an AI developer implement them, validates the implementation against acceptance criteria, and archives completed work.
 
 The tool is self-contained in `.aishore/` and user content lives in `backlog/` at project level.
 
@@ -25,8 +25,6 @@ jq empty backlog/*.json
 .aishore/aishore backlog check <ID> # Check readiness gates for an item
 .aishore/aishore backlog check --all # Audit all non-done items in one pass
 .aishore/aishore backlog rm <ID>    # Remove an item (--force to skip confirmation)
-.aishore/aishore backlog history    # List completed sprint items
-.aishore/aishore backlog populate   # AI-populate backlog from PRODUCT.md
 .aishore/aishore run [N]            # Run N sprints (branch, commit, merge, push per item)
 .aishore/aishore run <ID>           # Run specific item (e.g., FEAT-001)
 .aishore/aishore run done           # Drain entire backlog (auto-grooms when ready items low)
@@ -36,33 +34,21 @@ jq empty backlog/*.json
 .aishore/aishore run done --retries 2        # With per-item retries
 .aishore/aishore run p1 --max-failures 3     # Custom circuit breaker
 .aishore/aishore run done --limit 3           # Cap session at 3 items
-.aishore/aishore run done --parallel 2       # Run 2 items concurrently
 .aishore/aishore run --no-merge 3            # Keep feature branches for PR review
 .aishore/aishore run --pr FEAT-001           # Create GitHub PR for review
 .aishore/aishore run --dry-run      # Preview without running agents
-.aishore/aishore run done --auto-review     # Auto-run architecture review on completion
-.aishore/aishore run done --no-summary       # Suppress end-of-session summary table
 .aishore/aishore groom              # Tech lead: groom bugs
 .aishore/aishore groom --backlog    # Product owner: groom features
 .aishore/aishore groom --architect  # Architect: scaffolding review
 .aishore/aishore review             # Architecture review
 .aishore/aishore review --update-docs          # Review and update docs
 .aishore/aishore review --since <commit>       # Review changes since commit
-.aishore/aishore metrics            # Sprint metrics
-.aishore/aishore metrics --json     # Metrics as JSON
-.aishore/aishore report             # Sprint activity summary (markdown)
-.aishore/aishore report --since 2026-03-01  # Filter by date
-.aishore/aishore report --format json       # JSON output
-.aishore/aishore report --output report.md  # Write to file
 .aishore/aishore clean              # Remove done items from backlogs
 .aishore/aishore clean --dry-run    # Show what would be removed
 .aishore/aishore status             # Show backlog overview and sprint readiness
-.aishore/aishore status --watch    # Live refresh until sprint completes
 .aishore/aishore update             # Update from upstream (checksum-verified)
 .aishore/aishore update --dry-run   # Check for updates without applying
 .aishore/aishore update --force     # Update even if already on latest
-.aishore/aishore config check        # Validate config and show effective values
-.aishore/aishore checksums          # Regenerate checksums after editing .aishore/ files
 .aishore/aishore version            # Show version
 .aishore/aishore help               # Show usage
 ```
@@ -84,7 +70,7 @@ Pick Item → Create Branch (aishore/<ID>) → Developer Agent (with maturity pr
 
 **Git branching model:** Each sprint item runs on its own feature branch (`aishore/<ITEM-ID>`), created from the current branch. The developer agent commits its own work. On success, the branch is merged back with `--no-ff`, pushed, and the base branch pulls latest before the next item. On failure, the branch is deleted. Use `--no-merge` to keep branches for PR review (they get pushed to origin instead).
 
-**Modular architecture:** The CLI is split into a core orchestrator (`.aishore/aishore`, ~4000 lines) and lazy-loaded command modules in `.aishore/lib/`. Modules are loaded on demand via `_load_module <name>`, which sources `.aishore/lib/<name>.sh` once per process. This keeps startup fast and the main script focused on orchestration (agent invocation, git branching, sprint loop).
+**Modular architecture:** The CLI is split into a core orchestrator (`.aishore/aishore`) and lazy-loaded command modules in `.aishore/lib/`. Modules are loaded on demand via `_load_module <name>`, which sources `.aishore/lib/<name>.sh` once per process. This keeps startup fast and the main script focused on orchestration (agent invocation, git branching, sprint loop).
 
 **Directory structure:**
 ```
@@ -104,23 +90,21 @@ project/
     ├── agents/*.md          # Agent prompts
     ├── config.yaml          # Optional overrides
     ├── lib/                 # Lazy-loaded command modules
-    │   ├── cmd-backlog-read.sh   # backlog list/show/check/history
-    │   ├── cmd-backlog-write.sh  # backlog add/edit/rm/populate
+    │   ├── cmd-backlog-read.sh   # backlog list/show/check/rm
+    │   ├── cmd-backlog-write.sh  # backlog add/edit
     │   ├── cmd-clean.sh          # clean command
-    │   ├── cmd-config.sh         # config check
     │   ├── cmd-groom.sh          # groom (tech-lead, product-owner, architect)
     │   ├── cmd-help.sh           # help/usage
     │   ├── cmd-init.sh           # init wizard
-    │   ├── cmd-report.sh         # report + metrics
     │   ├── cmd-review.sh         # review command
     │   ├── cmd-status.sh         # status command
-    │   └── cmd-update.sh         # update + checksums
+    │   └── cmd-update.sh         # update command
     └── data/                # Runtime (logs, status)
         ├── logs/
         └── status/
             ├── result.json      # Agent completion signal
             ├── .item_source     # Tracks which backlog file the current item came from
-            └── .aishore.lock    # flock-based concurrency guard
+            └── .aishore.lock/   # mkdir+PID-based concurrency guard
 ```
 
 **Completion contract:** Agents signal completion by writing to `.aishore/data/status/result.json`:
@@ -135,7 +119,7 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 **Agent invocation:** All agent invocations go through `run_agent()`, which assembles the prompt, appends the completion contract (and validation command hint for developers), and delegates to `run_agent_process()`. Permissions vary by role: developer gets `Bash,Edit,Write,Read,Glob,Grep`; validator gets `Bash,Read,Write,Glob,Grep`; reviewer gets `Read,Glob,Grep` (or with `Edit,Write` when `--update-docs` is used). Permissions are configurable in `config.yaml`.
 
-**Concurrency:** Only one aishore process runs at a time, enforced via `flock` on `.aishore/data/status/.aishore.lock`.
+**Concurrency:** Only one aishore process runs at a time, enforced via a mkdir+PID lock at `.aishore/data/status/.aishore.lock/`. The lock is self-healing — stale locks from crashed processes are detected via PID liveness check and automatically cleaned up.
 
 **Safe failure recovery:** Sprint failures delete the feature branch and return to the base branch cleanly. The developer agent commits directly; the orchestrator has a safety net commit if the agent misses it.
 
@@ -155,7 +139,7 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 **Configuration precedence:** env vars > config.yaml > built-in defaults.
 
-**Update integrity:** Both `install.sh` and `cmd_update()` resolve the latest GitHub release tag via the API, then fetch files from that tagged snapshot (falling back to `main` if no release exists). The file list is discovered dynamically from the remote `checksums.sha256` manifest. All paths are validated (must start with `.aishore/`, no `..` traversal, no absolute paths) and `config.yaml` is explicitly skipped to protect user config. Files are staged to a temp directory, verified against SHA-256 checksums, and only installed if all checks pass. Adding a new distributable file requires only dropping the file and running `aishore checksums`.
+**Update integrity:** Both `install.sh` and `cmd_update()` resolve the latest GitHub release tag via the API, then fetch files from that tagged snapshot (falling back to `main` if no release exists). The file list is discovered dynamically from the remote `checksums.sha256` manifest. All paths are validated (must start with `.aishore/`, no `..` traversal, no absolute paths) and `config.yaml` is explicitly skipped to protect user config. Files are staged to a temp directory, verified against SHA-256 checksums, and only installed if all checks pass.
 
 **Version management:** `.aishore/VERSION` is the single source of truth. The CLI reads it at runtime.
 
@@ -181,7 +165,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:
 
 ## Sprint Orchestration (aishore)
 
-AI sprint runner. Backlog lives in `backlog/`, tool lives in `.aishore/`. Run `.aishore/aishore help` for full usage.
+Iterative intent-based development with evals. Backlog lives in `backlog/`, tool lives in `.aishore/`. Run `.aishore/aishore help` for full usage.
 
 ```bash
 .aishore/aishore run [N|ID]         # Run sprints (branch, commit, merge, push per item)
@@ -189,5 +173,3 @@ AI sprint runner. Backlog lives in `backlog/`, tool lives in `.aishore/`. Run `.
 .aishore/aishore review             # Architecture review
 .aishore/aishore status             # Backlog overview
 ```
-
-After modifying `.aishore/` files, run `.aishore/aishore checksums` before committing.

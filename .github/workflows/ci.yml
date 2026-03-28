@@ -43,8 +43,11 @@ jobs:
       - name: Syntax check
         run: bash -n install.sh && bash -n scripts/check-drift.sh
 
-      - name: Test metrics command
-        run: .aishore/aishore metrics
+      - name: Test help command
+        run: .aishore/aishore help
+
+      - name: Test version command
+        run: .aishore/aishore version
 
   macos:
     name: macOS Compatibility
@@ -61,6 +64,3 @@ jobs:
 
       - name: Test version command
         run: .aishore/aishore version
-
-      - name: Test metrics command
-        run: .aishore/aishore metrics

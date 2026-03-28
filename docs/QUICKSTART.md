@@ -225,19 +225,6 @@ Sprint complete: 1 passed, 0 failed
 
 ## 8. Verify Success
 
-Check that the sprint completed:
-
-```bash
-.aishore/aishore backlog history
-```
-
-Expected output:
-
-```
-Completed sprints:
-  FEAT-001  complete  Add health check endpoint  (2026-03-20)
-```
-
 Check the git log to see the merge:
 
 ```bash
@@ -279,7 +266,7 @@ npm test && npm run lint   # or whatever your validation command is
 **Stuck state?**
 ```bash
 rm .aishore/data/status/result.json     # Clear completion signal
-rm .aishore/data/status/.aishore.lock   # Clear concurrency lock
+rm -rf .aishore/data/status/.aishore.lock   # Clear concurrency lock
 ```
 
 **Reinstall (preserves backlog):**

@@ -54,7 +54,7 @@ aishore models a real sprint team with five specialized AI agents, each with a d
 | **Developer** | Implements features following project conventions and the maturity protocol | `run` | `Bash,Edit,Write,Read,Glob,Grep` |
 | **Validator** | Checks acceptance criteria and commander's intent against actual changes | `run` | `Bash,Read,Write,Glob,Grep` |
 | **Tech Lead** | Grooms bugs and features for technical clarity — adds steps, testable AC, marks items ready | `groom` | CLI commands |
-| **Product Owner** | Grooms features for value alignment, sets priorities, populates backlog from requirements | `groom --backlog`, `backlog populate` | CLI commands |
+| **Product Owner** | Grooms features for value alignment, sets priorities | `groom --backlog` | CLI commands |
 | **Architect** | Reviews patterns and risks; detects fragment risk and injects scaffolding items | `review`, `groom --architect` | `Read,Glob,Grep` (+ `Edit,Write` with `--update-docs`; full permissions in groom mode) |
 
 ### Data flow between agents
@@ -111,7 +111,7 @@ project/
         └── status/
             ├── result.json      # Agent completion signal
             ├── .item_source     # Tracks which backlog the current item came from
-            └── .aishore.lock    # flock-based concurrency guard
+            └── .aishore.lock/   # mkdir+PID-based concurrency guard (self-healing)
 ```
 
 The separation between `backlog/` (user content) and `.aishore/` (tool) is fundamental. Updates replace `.aishore/` files but never touch `backlog/` or `config.yaml`. This means the tool can be upgraded without risk to user data.
@@ -120,7 +120,7 @@ The separation between `backlog/` (user content) and `.aishore/` (tool) is funda
 
 ### Single-file CLI
 
-All orchestration logic lives in one Bash script. This keeps the tool zero-dependency (beyond Bash 4.4+, jq, git, and the Claude CLI), makes installation a single `cp`, and ensures the entire system can be understood by reading one file.
+The core orchestrator is a single Bash script with lazy-loaded modules. This keeps the tool zero-dependency (beyond Bash 4.4+, jq, git, and the Claude CLI), makes installation a single `cp`, and ensures the entire system can be understood by reading one directory.
 
 ### Separation of tool and content
 
@@ -140,11 +140,11 @@ aishore automatically finds and injects `CLAUDE.md`, `PRODUCT.md`, and `ARCHITEC
 
 ### Concurrency guard
 
-Only one aishore process runs at a time, enforced via `flock` on `.aishore/data/status/.aishore.lock`. This prevents race conditions on shared state files (sprint.json, result.json) without requiring a database or external coordinator.
+Only one aishore process runs at a time, enforced via `mkdir` on `.aishore/data/status/.aishore.lock/`. The lock directory contains a PID file; if the owning process is no longer running, the lock self-heals automatically. This prevents race conditions on shared state files (sprint.json, result.json) without requiring a database, external coordinator, or platform-specific tools like `flock`.
 
 ### Checksum-verified updates
 
-The `update` command resolves the latest GitHub release tag, fetches files listed in the remote `checksums.sha256` manifest, validates all paths (must start with `.aishore/`, no `..` traversal, no absolute paths), stages to a temp directory, verifies SHA-256 checksums, and installs only if all checks pass. Adding a new distributable file requires only dropping the file and running `aishore checksums`.
+The `update` command resolves the latest GitHub release tag, fetches files listed in the remote `checksums.sha256` manifest, validates all paths (must start with `.aishore/`, no `..` traversal, no absolute paths), stages to a temp directory, verifies SHA-256 checksums, and installs only if all checks pass.
 
 ## Quality Gates
 
