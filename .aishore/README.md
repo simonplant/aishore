@@ -48,7 +48,7 @@ The developer agent follows intent when the spec is ambiguous or steps seem wron
   --ac "Has configurable rate per endpoint"
 ```
 
-Key flags: `--title`, `--intent`, `--type feat|bug`, `--desc`, `--priority must|should|could|future`, `--category`, `--steps "..."` (repeatable, replaces all), `--ac "..."` (repeatable, replaces all), `--depends-on ID` (repeatable, replaces all), `--scope "glob"` (repeatable, replaces all), `--ready`
+Key flags: `--title`, `--intent`, `--type feat|bug`, `--desc`, `--priority must|should|could|future`, `--category`, `--steps "..."` (repeatable), `--ac "..."` (repeatable), `--ac-verify "cmd"` (attaches to preceding `--ac`), `--depends-on ID` (repeatable), `--scope "glob"` (repeatable), `--ready`
 
 Edit: `.aishore/aishore backlog edit <ID> --intent "..." --priority must --steps "step 1" --steps "step 2" --ac "criterion" --ready`
 
@@ -84,6 +84,8 @@ Grooming doesn't guarantee readiness — check with `backlog check <ID>` if item
 .aishore/aishore run --no-merge     # Keep branches for PR review
 .aishore/aishore run --pr           # Create GitHub PR (implies --no-merge)
 .aishore/aishore run --dry-run      # Preview without executing
+.aishore/aishore run --timeout 30   # Kill agent after 30 minutes
+.aishore/aishore run --category api # Only run items tagged "api"
 ```
 
 ### Autonomous Mode (scoped runs)
@@ -99,7 +101,7 @@ Grooming doesn't guarantee readiness — check with `backlog check <ID>` if item
 
 When a scope is given (`done`, `p0`, `p1`, `p2`), auto-grooming activates when ready items drop below threshold, and the circuit breaker stops after N consecutive failures (default 5).
 
-**What happens:** Each item gets a feature branch (`aishore/<ID>`). The developer agent implements through 3 phases (implement → critique → harden), your validation command runs, then the validator agent checks AC + intent. On success: merge, push, archive. On failure: branch deleted, clean state restored.
+**What happens:** Each item gets a feature branch (`aishore/<ID>`). The regression suite runs as pre-flight (all verify commands from prior sprints). The developer agent implements through 3 phases (implement → critique → harden). Your validation command runs, AC verify commands execute, then the validator agent probes the implementation and checks AC + intent. On success: merge, push, archive (verify commands saved to regression suite). On failure: branch deleted, clean state restored.
 
 ## Review
 

@@ -40,12 +40,12 @@ You provide three things per item: **what to build** (title + steps), **why it m
 **For each item, the orchestrator:**
 
 1. **Picks** the highest-priority ready item and creates a feature branch
-2. **Pre-flights** your test suite against the unmodified codebase (catches broken baselines before wasting a sprint)
+2. **Pre-flights** your test suite and the regression suite against the unmodified codebase (catches broken baselines and regressions from prior sprints before wasting a sprint)
 3. **Develops** through a 3-phase maturity protocol — all in one session while context is hot:
    - **Implement** — write the code
    - **Critique** — stop, re-read everything, verify each AC, hunt bugs and edge cases, fix what's found
    - **Harden** — run validation again, fix regressions, confirm all AC are provably met
-4. **Validates** — runs your test suite, checks scope, then an independent Validator agent reviews the diff against acceptance criteria and commander's intent
+4. **Validates** — runs your test suite, executes AC verify commands, then an independent Validator agent probes the implementation and reviews against acceptance criteria and commander's intent
 5. **Merges** the feature branch, pushes, and archives the completed item with full metadata
 
 Failed items retry with failure context fed back to the developer. If all retries exhaust, an AI agent refines the spec and tries once more. A circuit breaker stops the session if failures cascade.
