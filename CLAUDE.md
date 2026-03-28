@@ -95,7 +95,8 @@ project/
 │   ├── sprint.json
 │   ├── DEFINITIONS.md       # DoR, DoD, priority/size definitions
 │   └── archive/
-│       └── sprints.jsonl
+│       ├── sprints.jsonl
+│       └── regression.jsonl
 └── .aishore/                # Tool (can be updated)
     ├── aishore              # Core orchestrator (Bash)
     ├── VERSION              # Version (single source of truth)
@@ -140,7 +141,11 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 **Scope checking:** Items can have a `scope` array of glob patterns (e.g., `["src/**", "tests/**"]`). Scope is used as an advisory file constraint in the developer prompt.
 
-**Testable acceptance criteria:** AC entries can be plain strings or `{text, verify}` objects. The `verify` field is a shell command run after validation; failures trigger retries. Use `--ac "text" --ac-verify "command"` in `backlog add`/`backlog edit`.
+**Testable acceptance criteria:** AC entries can be plain strings or `{text, verify}` objects. The `verify` field is a shell command run after validation; failures trigger retries. Use `--ac "text" --ac-verify "command"` in `backlog add`/`backlog edit`. Groom agents are instructed to generate `--ac-verify` commands for every AC where behavior is observable via shell command. Items with 0% verify coverage trigger advisory warnings during sprint.
+
+**Regression suite:** When a sprint completes successfully, all `verify` commands from its AC are saved to `backlog/archive/regression.jsonl`. Before every subsequent sprint, the full regression suite runs as part of pre-flight — if any prior sprint's verify command fails, the sprint is aborted. This ensures sprints cannot silently break work completed by earlier sprints. The regression suite compounds automatically and requires no manual maintenance.
+
+**Adversarial validation:** The validator agent is instructed by the orchestrator to actively probe implementations using Bash commands, not just read diffs. When AC claims observable behavior, the validator must execute commands to verify it. This is injected at runtime by the orchestrator, not in the agent prompt.
 
 **Readiness gates:** `backlog check <ID>` validates an item has a title, commander's intent (>=20 chars, must be a directive not a label), steps, acceptance criteria, and no too-short steps. `backlog edit <ID> --ready` warns on gate failures but doesn't block. **Intent is a hard gate at sprint time** — items without intent (or with intent <20 chars) are silently skipped by auto-pick and explicitly rejected when run by ID.
 

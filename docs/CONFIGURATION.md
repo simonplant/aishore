@@ -59,10 +59,6 @@ validation:
 # scope:
 #   mode: warn
 
-# Maturity protocol (implement -> critique -> harden). Disable with --quick flag.
-# maturity:
-#   enabled: true
-
 # Merge strategy: "merge" (default, --no-ff) or "squash" (single commit per item)
 # merge:
 #   strategy: merge
@@ -230,16 +226,6 @@ validation:
 | **Env var** | `AISHORE_SCOPE_MODE` |
 | **What it controls** | Behavior when the developer agent changes files outside an item's `scope` globs. `warn` logs a warning; `strict` fails the sprint. |
 | **When to change** | Set to `strict` when you need hard boundaries on what an agent can touch. |
-
-#### `maturity.enabled`
-
-| | |
-|---|---|
-| **Type** | boolean |
-| **Default** | `true` |
-| **Env var** | `AISHORE_MATURITY` |
-| **What it controls** | Whether the developer agent runs the 3-phase maturity protocol (implement, critique, harden). The `--quick` flag overrides this to `false` per-run. |
-| **When to change** | Set to `false` globally for fast iteration on low-risk items. Prefer the `--quick` flag for one-off skips. |
 
 #### `merge.strategy`
 
@@ -443,23 +429,18 @@ All `AISHORE_*` environment variables and what they map to:
 | `AISHORE_MODEL_FAST` | `models.fast` | `claude-sonnet-4-6` | Fast AI model |
 | `AISHORE_AGENT_TIMEOUT` | `agent.timeout` | `3600` | Agent timeout (seconds) |
 | `AISHORE_SCOPE_MODE` | `scope.mode` | `warn` | Scope checking mode |
-| `AISHORE_MATURITY` | `maturity.enabled` | `true` | Maturity protocol toggle |
 | `AISHORE_MERGE_STRATEGY` | `merge.strategy` | `merge` | Merge strategy |
 | `AISHORE_NOTIFY_CMD` | `notifications.on_complete` | `""` | Completion notification command |
-| `AISHORE_NOTIFY` | `notifications.system` | `false` | System notification on auto session end |
 | `AISHORE_AUTO_GROOM_THRESHOLD` | `auto.groom_threshold` | `3` | Auto-groom item threshold |
 | `AISHORE_AUTO_MAX_FAILURES` | `auto.max_failures` | `5` | Circuit breaker limit |
 | `AISHORE_GROOM_MAX_ITEMS` | `groom.max_items` | `10` | Max items per groom session |
 | `AISHORE_GROOM_MIN_PRIORITY` | `groom.min_priority` | `should` | Min priority for grooming |
 | `AISHORE_OUTPUT_TRUNCATE_LINES` | `output.truncate_lines` | `50` | Log truncation lines |
 | `AISHORE_CREATE_PR` | `pr.create` | `false` | Create PR instead of merging |
-| `AISHORE_ISOLATION` | `isolation.mode` | `stash` | Isolation mode |
 | `AISHORE_STREAMING` | `streaming.enabled` | `true` | Enable/disable output streaming |
 | `AISHORE_STREAMING_MAX_LINES` | `streaming.max_lines` | `20` | Max trailing lines during streaming |
 | `AISHORE_TIMEOUT_MINUTES` | `timeout_minutes` | `0` | Agent timeout in minutes (overrides `agent.timeout`; 0 = no override) |
-| `AISHORE_WARM_RETRY` | `retry.warm` | `false` | Resume existing session on retry instead of starting fresh |
 | `AISHORE_RETRIES` | `run.retries` | `0` | Per-item retry attempts on failure |
-| `AISHORE_REFINE` | `run.refine` | `false` | AI-refine spec on exhausted retries |
 | `AISHORE_AUTO_REVIEW` | `run.auto_review` | `false` | Run architecture review after session |
 | `AISHORE_NO_SUMMARY` | `run.no_summary` | `false` | Suppress end-of-session summary table |
 | `AISHORE_SESSION_LIMIT` | `run.session_limit` | `0` | Cap session at N items (0 = unlimited) |
@@ -502,7 +483,6 @@ When a scope (`done`, `p0`, `p1`, `p2`) is given, auto-grooming activates when r
 | Flag | Argument | Description |
 |------|----------|-------------|
 | `--dry-run` | — | Preview what would run without executing |
-| `--quick` | — | Skip maturity protocol (fast iteration) |
 | `--retries` | `N` | Per-item retries on failure (default: `0`) |
 | `--parallel` | `N` | Run up to N items concurrently in worktrees (1–4, default: `1`) |
 | `--limit` | `N` | Cap session at N successful items then exit cleanly |
@@ -510,7 +490,6 @@ When a scope (`done`, `p0`, `p1`, `p2`) is given, auto-grooming activates when r
 | `--pr` | — | Create GitHub PR (implies `--no-merge`) |
 | `--max-failures` | `N` | Circuit breaker: stop after N consecutive failures (default: `5`) |
 | `--timeout` | `N` | Kill agent after N minutes (default: `0` = no limit) |
-| `--refine` | — | Refine spec when retries exhausted, then retry once more |
 | `--category` | `<name>` | Only run items matching this category |
 | `--auto-review` | — | Run architecture review after all items complete |
 | `--warm-retry` | — | Resume existing session on retry (retains prior context) |

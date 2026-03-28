@@ -18,8 +18,8 @@
 | 1 | Implementation matches AC |
 | 2 | All tests pass (existing + new) |
 | 3 | Type-check, lint, tests all pass |
-| 4 | Each AC verified |
-| 5 | No regressions |
+| 4 | Each AC verified (verify commands pass, validator confirms) |
+| 5 | Regression suite passes (no prior sprint's guarantees broken) |
 
 ## Priority Levels
 
@@ -63,9 +63,23 @@ A non-negotiable directive — what must be true when done. The developer follow
   "description": "Context and technical notes",
   "priority": "should",
   "steps": ["Step 1", "Step 2"],
-  "acceptanceCriteria": ["AC 1", "AC 2"],
+  "acceptanceCriteria": [
+    "Plain string AC (validated by judgment)",
+    {"text": "CLI prints usage on --help", "verify": ".aishore/aishore help | grep -q Usage"}
+  ],
   "scope": ["src/**", "tests/**"],
   "status": "todo",
   "readyForSprint": false
 }
+```
+
+## Executable AC (Verify Commands)
+
+AC entries with a `verify` field are **evals** — shell commands that prove the criterion is met. They are:
+
+1. **Run after each sprint** as part of validation (failures trigger retries)
+2. **Saved to the regression suite** on sprint success (`backlog/archive/regression.jsonl`)
+3. **Run before every future sprint** as pre-flight (protects prior work from regressions)
+
+Prefer verify commands over plain-string AC wherever behavior is observable via shell command. Plain-string AC are validated by the Validator agent's judgment; verify commands are validated deterministically.
 ```

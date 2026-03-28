@@ -72,7 +72,7 @@ curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh |
 .aishore/aishore run
 
 # Or drain the entire backlog autonomously
-.aishore/aishore auto done --retries 2 --refine
+.aishore/aishore run done --retries 2
 ```
 
 See the [full quickstart guide](docs/QUICKSTART.md) for detailed setup and your first sprint walkthrough.
@@ -93,7 +93,9 @@ Intent is a **hard gate**. Items without it are skipped. When the spec is ambigu
 
 **Autonomous batch execution.** `auto done` drains the backlog. `auto p0` does just the must-haves. Set `--limit 10` for a capped session. Walk away; come back to merged code.
 
-**Quality that survives scale.** The maturity protocol (implement, critique, harden) runs inside each session while the AI still holds full context. This isn't "retry until tests pass" — it's structured self-review that catches edge cases, intent drift, and regressions before the code ever leaves the developer session.
+**Quality that survives scale.** The maturity protocol (implement, critique, harden) runs inside each session while the AI still holds full context. The Validator agent actively probes implementations — running commands to verify behavior, not just reading diffs. Acceptance criteria with verify commands are deterministic evals, not opinions.
+
+**Evals that compound.** Every sprint's verify commands are saved to a regression suite. Before each subsequent sprint, the full suite runs as pre-flight — sprint 51 cannot silently break what sprint 12 proved worked. The regression suite grows automatically from the specs groom agents write. No manual test maintenance.
 
 **Full sprint lifecycle.** Feature branches, pre-flight checks, scope enforcement, independent validation, merge, push, and archival. Every completed item is recorded with its original spec, outcome, duration, and line count.
 

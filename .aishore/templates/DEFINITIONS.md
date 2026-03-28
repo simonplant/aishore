@@ -22,8 +22,8 @@ An item is done when:
 | 1 | **Code Complete**     | Implementation matches acceptance criteria         |
 | 2 | **Tests Pass**        | All tests pass (existing + new)                   |
 | 3 | **Validation Pass**   | Type-check, lint, tests all pass                  |
-| 4 | **AC Verified**       | Each acceptance criterion is met                  |
-| 5 | **No Regressions**    | Existing functionality still works                |
+| 4 | **AC Verified**       | Each AC met (verify commands pass, validator confirms) |
+| 5 | **No Regressions**    | Regression suite passes (prior sprints' guarantees hold) |
 
 ## Priority Levels
 
@@ -65,7 +65,10 @@ See the full examples in this file after updating via groom or manually.
   "priority": "should",
   "category": "core",
   "steps": ["Step 1", "Step 2"],
-  "acceptanceCriteria": ["AC 1", "AC 2"],
+  "acceptanceCriteria": [
+    "Plain string AC (validated by judgment)",
+    {"text": "CLI exits non-zero on bad input", "verify": "! ./app bad-input 2>/dev/null"}
+  ],
   "scope": ["src/**", "tests/**"],
   "status": "todo",
   "passes": false,

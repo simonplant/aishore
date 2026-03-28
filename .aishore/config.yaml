@@ -21,16 +21,10 @@ validation:
 # agent:
 #   timeout: 3600
 
-# Maturity protocol: developer runs implement → critique → harden phases.
-# Disable with --quick flag or set to false here.
-# maturity:
-#   enabled: true
-
 # Session tuning defaults for 'run'. CLI flags override these.
 # run:
 #   auto_review: false     # Run architecture review after completion
 #   no_summary: false      # Suppress end-of-session summary table
-#   refine: false          # Refine spec on exhausted retries
 #   retries: 0             # Per-item retry attempts
 #   limit:                 # Cap session at N items
 #   category:              # Only run items matching this category

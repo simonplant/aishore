@@ -119,7 +119,7 @@ You only edit the agent markdown file. The orchestrator handles injection of con
 
 1. Edit the relevant file in `.aishore/agents/`
 2. Run `.aishore/aishore checksums` to update checksums
-3. Test by running a sprint: `.aishore/aishore run --quick` (use `--quick` to skip the maturity protocol for faster iteration)
+3. Test by running a sprint: `.aishore/aishore run FEAT-XXX` (target a specific item for focused testing)
 4. Review the agent's output in `.aishore/data/logs/`
 
 ### Guidelines

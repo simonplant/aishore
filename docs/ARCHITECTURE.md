@@ -43,7 +43,7 @@ Every developer session runs three phases:
 
 **Why this exists:** One-shot AI implementation produces code that works for the happy path but often misses edge cases, introduces subtle bugs, or drifts from the stated intent. The critique phase forces the AI to shift from "writer" to "reviewer" mindset while it still holds the full implementation context. The harden phase catches anything the critique introduced. This three-phase cycle consistently produces higher quality output than implement-then-retry.
 
-The protocol is enabled by default. Disable it with the `--quick` flag or `maturity.enabled: false` in config when fast iteration matters more than thoroughness (e.g., during prototyping). The `AISHORE_MATURITY` environment variable also controls this.
+The maturity protocol is always on. It is a non-optional part of the quality model — skipping it produces measurably worse outcomes.
 
 ## Agent System
 
@@ -93,7 +93,8 @@ project/
 │   ├── sprint.json          # Current sprint state
 │   ├── DEFINITIONS.md       # DoR, DoD, priority/size definitions
 │   └── archive/
-│       └── sprints.jsonl    # Completed sprint history
+│       ├── sprints.jsonl    # Completed sprint history
+│       └── regression.jsonl # Accumulated verify commands (regression suite)
 └── .aishore/                # Tool (can be updated independently)
     ├── aishore              # Single-file CLI (Bash)
     ├── VERSION              # Version (single source of truth)
@@ -190,10 +191,30 @@ The orchestrator polls for this file. On `"pass"`, it proceeds to the next pipel
 
 Items can declare a `scope` array of glob patterns (e.g., `["src/**", "tests/**"]`). After the Developer agent runs, changed files are checked against these patterns. In `warn` mode (default), out-of-scope changes are logged. In `strict` mode, they fail the sprint. This prevents feature creep and unintended side effects.
 
-### Testable Acceptance Criteria
+### Executable Acceptance Criteria
 
-AC entries can be plain strings or `{text, verify}` objects. The `verify` field is a shell command run after validation; failures trigger retries. This allows automated verification of criteria that would otherwise require human judgment.
+AC entries can be plain strings or `{text, verify}` objects. The `verify` field is a shell command — a concrete eval that proves the AC is met. Groom agents are instructed to generate verify commands for every AC where behavior is observable via shell command. Items with 0% verify coverage trigger advisory warnings.
+
+```json
+{"text": "CLI prints usage on --help", "verify": ".aishore/aishore help | grep -q Usage"}
+```
+
+Plain-string AC are validated by the Validator agent's judgment. Verify commands are validated by the orchestrator deterministically. The gap between these two modes is the gap between opinion and proof.
+
+### Regression Suite
+
+When a sprint completes, all verify commands from its AC are saved to `backlog/archive/regression.jsonl`. Before every subsequent sprint, the full regression suite runs as pre-flight — if any prior sprint's verify command fails, the sprint is aborted. This means:
+
+- Sprint 1 passes with 3 verify commands → 3 regression checks
+- Sprint 50 passes → 150+ regression checks run before every sprint
+- Sprint 51 cannot silently break what sprint 12 proved worked
+
+The regression suite grows automatically from the specs groom agents write. No manual test maintenance required.
+
+### Adversarial Validation
+
+The Validator agent has Bash access and is instructed by the orchestrator to actively probe implementations — not just read diffs. When AC claims observable behavior, the validator must execute commands to verify it. This is injected at runtime by the orchestrator, keeping the agent prompt simple.
 
 ### Spec Refinement
 
-When all retries are exhausted, `--refine` invokes an AI agent to improve the item's steps and acceptance criteria based on what went wrong, then attempts one more developer cycle. This closes the loop between failure and specification quality.
+When all retries are exhausted, the orchestrator automatically invokes an AI agent to refine the item's steps and acceptance criteria based on what went wrong, then attempts one more developer cycle. This closes the loop between failure and specification quality.

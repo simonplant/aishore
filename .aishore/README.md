@@ -41,10 +41,11 @@ The developer agent follows intent when the spec is ambiguous or steps seem wron
   --intent "Ops must know instantly if the service is alive or dead." \
   --priority must --type feat --desc "GET /health returns 200"
 
-# With testable acceptance criteria
+# With executable acceptance criteria (verify commands = evals)
 .aishore/aishore backlog add --title "Rate limiting" \
   --intent "API stays responsive under load. Abusers throttled, legit users unaffected." \
-  --ac "Returns 429 when limit exceeded" --ac "Has configurable rate per endpoint"
+  --ac "Returns 429 when limit exceeded" --ac-verify "curl -s -o /dev/null -w '%{http_code}' localhost:3000/api | grep -q 429" \
+  --ac "Has configurable rate per endpoint"
 ```
 
 Key flags: `--title`, `--intent`, `--type feat|bug`, `--desc`, `--priority must|should|could|future`, `--category`, `--steps "..."` (repeatable, replaces all), `--ac "..."` (repeatable, replaces all), `--depends-on ID` (repeatable, replaces all), `--scope "glob"` (repeatable, replaces all), `--ready`
@@ -115,7 +116,6 @@ When a scope is given (`done`, `p0`, `p1`, `p2`), auto-grooming activates when r
 .aishore/aishore status --watch     # Live refresh until sprint completes
 .aishore/aishore report             # Sprint activity summary
 .aishore/aishore metrics            # Sprint velocity, pass rates, trends
-.aishore/aishore diagnose           # Last sprint failure details
 .aishore/aishore clean              # Archive and remove done items
 .aishore/aishore clean --dry-run    # Preview what would be removed
 ```

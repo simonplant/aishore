@@ -995,11 +995,15 @@ check_complexity_hints() {
     local item_id="$1"
     local item
     item=$(find_item "$item_id") || return 0
-    local step_count has_scope
-    IFS=$'\t' read -r step_count has_scope < <(
+    local step_count has_scope ac_total ac_with_verify title item_intent
+    IFS=$'\t' read -r step_count has_scope ac_total ac_with_verify title item_intent < <(
         printf '%s\n' "$item" | jq -r '[
             ([.steps // [] | .[]] | length | tostring),
-            ([.scope // [] | .[]] | length | tostring)
+            ([.scope // [] | .[]] | length | tostring),
+            ([.acceptanceCriteria // [] | .[]] | length | tostring),
+            ([.acceptanceCriteria // [] | .[] | select(type == "object" and .verify != null)] | length | tostring),
+            (.title // ""),
+            (.intent // "")
         ] | @tsv'
     )
     local hints=""
@@ -1008,6 +1012,21 @@ check_complexity_hints() {
     fi
     if [[ "$has_scope" -eq 0 ]]; then
         hints="${hints}    • No scope defined — add file path globs to constrain where changes land\n"
+    fi
+    # AC verify coverage: executable evals are the difference between testing and hoping
+    if [[ "$ac_total" -gt 0 && "$ac_with_verify" -eq 0 ]]; then
+        hints="${hints}    • 0/$ac_total AC have verify commands — without executable checks, validation is just opinion. Use --ac-verify \"command\" to make AC testable\n"
+    elif [[ "$ac_total" -gt 2 && "$ac_with_verify" -gt 0 && "$ac_with_verify" -lt "$ac_total" ]]; then
+        hints="${hints}    • $ac_with_verify/$ac_total AC have verify commands — consider adding --ac-verify for the rest\n"
+    fi
+    # Intent quality: intent that duplicates the title adds zero signal
+    if [[ -n "$item_intent" && -n "$title" ]]; then
+        local norm_intent norm_title
+        norm_intent=$(printf '%s' "$item_intent" | tr '[:upper:]' '[:lower:]' | sed 's/[[:space:]]*$//' | sed 's/^[[:space:]]*//')
+        norm_title=$(printf '%s' "$title" | tr '[:upper:]' '[:lower:]' | sed 's/[[:space:]]*$//' | sed 's/^[[:space:]]*//')
+        if [[ "$norm_intent" == "$norm_title" ]]; then
+            hints="${hints}    • Intent is identical to title — intent should be a directive (\"users must be able to X and see Y\"), not a label\n"
+        fi
     fi
     if [[ -n "$hints" ]]; then
         printf '  - Item may be under-specified (advisory):\n%b\n' "$hints"
@@ -1703,6 +1722,19 @@ Output phase markers: \`═══ PHASE 2: CRITIQUE ═══\` / \`═══ PH
 ## Validation Command
 The orchestrator runs \`$VALIDATE_CMD\` before you. If results are provided below, trust them — do not re-run the command."
         fi
+        validate_hint="$validate_hint
+
+## Adversarial Probing (MANDATORY)
+You have Bash access. USE IT. Reading diffs tells you what changed — running commands tells you if it works.
+
+For every AC that claims observable behavior (\"error messages are clear\", \"command outputs X\", \"handles invalid input\"), **run a command to verify it**. Examples:
+- AC says \"clear error messages\" → run the command with bad input, check stderr
+- AC says \"new CLI flag works\" → run the command with the flag, check output
+- AC says \"handles edge case\" → construct the edge case and run it
+
+**When you cannot verify an AC from the diff alone, say so explicitly in your ac_results.** Write: \`\"issue\": \"cannot verify from diff — no verify command provided and manual probing inconclusive\"\`. This is not a fail, but it flags the gap.
+
+Do not just grep the code for error strings and call it verified. Execute the code path."
     elif [[ "$agent_name" == "tech-lead" || "$agent_name" == "product-owner" || ("$agent_name" == "architect" && "$mode" == "groom") ]]; then
         # CLI commands: shared preamble + role-specific examples
         local cli_role_lines
@@ -1732,6 +1764,21 @@ ${cli_role_lines}
 
 ## Commander's Intent
 Every item should have an \`intent\` field — a non-negotiable directive stating what must be true when done. Use \`--intent \"...\"\` when adding/editing items. Write it like an order, not a description.
+
+**Intent quality bar:** Intent must NOT be a restatement of the title. It must describe an observable outcome a user or system can verify. Bad: \"Implement error handling.\" Good: \"Every CLI command that fails must print a human-readable error message to stderr and exit non-zero — no stack traces, no silent failures.\"
+
+## Executable Acceptance Criteria (MANDATORY)
+Every AC you write MUST have an \`--ac-verify\` command wherever the outcome is testable by a shell command. This is what separates an eval from an opinion.
+
+\`\`\`bash
+# Pattern: --ac \"what it does\" --ac-verify \"command that proves it\"
+--ac \"CLI prints usage on --help\" --ac-verify \".aishore/aishore help | grep -q Usage\"
+--ac \"Invalid input returns exit code 1\" --ac-verify \"! .aishore/aishore backlog show NONEXISTENT\"
+--ac \"Output contains expected field\" --ac-verify \".aishore/aishore status | grep -q 'Ready:'\"
+--ac \"Config validation catches missing key\" --ac-verify \"echo '{}' > /tmp/bad.yaml && ! .aishore/aishore config check 2>/dev/null\"
+\`\`\`
+
+If you genuinely cannot write a verify command for an AC (e.g., \"code is readable\"), use a plain string AC — but this should be rare. Most real acceptance criteria describe observable behavior that a command can check. **If you cannot write a verify command, ask yourself whether the AC is specific enough to be useful.**
 
 ## Grooming Limits
 - **Maximum items per session:** $GROOM_MAX_ITEMS — stop adding new items after this cap. Focus on the highest-value items first.
@@ -1904,6 +1951,84 @@ run_ac_verification() {
 
     [[ -n "$report" ]] && printf '%s\n' "$report"
     [[ "$all_passed" == "true" ]] && return 0 || return 1
+}
+
+# ============================================================================
+# REGRESSION SUITE — verify commands compound across sprints
+# ============================================================================
+
+# Save verify commands from a completed sprint into the persistent regression file.
+# Called after mark_complete — only passing items contribute to the regression suite.
+_save_regression_entries() {
+    local sprint_file="$1"
+    local regression_file="$ARCHIVE_DIR/regression.jsonl"
+    [[ ! -f "$sprint_file" ]] && return 0
+
+    local item_id
+    item_id=$(jq -r '.item.id // ""' "$sprint_file" 2>/dev/null)
+    [[ -z "$item_id" ]] && return 0
+
+    # Extract AC entries that have verify commands
+    local entries
+    entries=$(jq -c --arg id "$item_id" --arg date "$(date +%Y-%m-%d)" '
+        [.item.acceptanceCriteria // [] | .[] | select(type == "object" and .verify != null)] |
+        .[] | {itemId: $id, date: $date, text: .text, verify: .verify}
+    ' "$sprint_file" 2>/dev/null) || return 0
+
+    [[ -z "$entries" ]] && return 0
+
+    mkdir -p "$ARCHIVE_DIR"
+    printf '%s\n' "$entries" >> "$regression_file"
+    local count
+    count=$(printf '%s\n' "$entries" | wc -l)
+    log_info "Regression suite: $count check(s) saved from $item_id"
+}
+
+# Run the accumulated regression suite — all verify commands from prior completed sprints.
+# Returns 0 if all pass (or no suite exists), 1 if any fail.
+_run_regression_suite() {
+    local regression_file="$ARCHIVE_DIR/regression.jsonl"
+    [[ ! -f "$regression_file" ]] && return 0
+    [[ ! -s "$regression_file" ]] && return 0
+
+    local total
+    total=$(wc -l < "$regression_file")
+    [[ "$total" -eq 0 ]] && return 0
+
+    log_info "Regression suite: running $total check(s) from prior sprints"
+
+    local failed=0 passed_count=0 line_num=0
+    while IFS= read -r entry; do
+        line_num=$((line_num + 1))
+        local cmd text reg_item_id
+        cmd=$(printf '%s' "$entry" | jq -r '.verify' 2>/dev/null) || continue
+        text=$(printf '%s' "$entry" | jq -r '.text // "unnamed"' 2>/dev/null)
+        reg_item_id=$(printf '%s' "$entry" | jq -r '.itemId // "?"' 2>/dev/null)
+
+        [[ -z "$cmd" || "$cmd" == "null" ]] && continue
+
+        local reg_tmpfile
+        reg_tmpfile="$(ensure_tmpdir)/regression_${line_num}.txt"
+        if run_validated_command "$cmd" "$reg_tmpfile"; then
+            rm -f "$reg_tmpfile"
+            passed_count=$((passed_count + 1))
+        else
+            failed=$((failed + 1))
+            local reg_output
+            reg_output=$(truncate_output "$reg_tmpfile")
+            rm -f "$reg_tmpfile"
+            log_error "Regression FAIL [$reg_item_id]: $text"
+            log_error "  Command: $cmd"
+            [[ -n "$reg_output" ]] && log_error "  Output (truncated): $reg_output"
+        fi
+    done < "$regression_file"
+
+    if [[ "$failed" -gt 0 ]]; then
+        log_error "Regression suite: $failed/$total check(s) failed — prior work may be broken"
+        return 1
+    fi
+    log_success "Regression suite: $total check(s) passed"
+    return 0
 }
 
 # ============================================================================
@@ -2239,6 +2364,13 @@ Output ONLY the JSON object, no markdown fences, no explanation."
 # Pre-flight: run validation command on the baseline before developer touches anything.
 # Returns 0 if preflight passes (or no VALIDATE_CMD configured), 1 on failure.
 _run_preflight() {
+    # Regression suite: run accumulated verify commands from prior sprints
+    # This runs even when VALIDATE_CMD is empty — the regression suite IS the eval
+    if ! _run_regression_suite; then
+        log_error "Pre-flight: regression suite failed — a prior sprint's guarantees are broken"
+        return 1
+    fi
+
     [[ -z "$VALIDATE_CMD" ]] && return 0
     log_info "Pre-flight: running validation on baseline"
     local preflight_tmpfile
@@ -2574,6 +2706,9 @@ _handle_sprint_success() {
         sprint_results+=("pass")
         sprint_items+=("$ITEM_ID")
         sprint_times+=("$(( $(date +%s) - sprint_start ))")
+
+        # Save verify commands to regression suite — evals compound across sprints
+        _save_regression_entries "$BACKLOG_DIR/sprint.json"
 
         # Accumulate line stats from the archive entry just written
         local _archive_lines
@@ -3044,9 +3179,16 @@ _run_parallel_sprint() {
     if [[ "$sprint_passed" == "true" ]]; then
         _safety_commit "$p_item_id_actual"
 
+        # Save regression entries before worktree destruction
+        _save_regression_entries "$BACKLOG_DIR/sprint.json"
+
         # Capture archive entry before worktree destruction
         local archive_entry=""
         [[ -f "$ARCHIVE_DIR/sprints.jsonl" ]] && archive_entry=$(tail -1 "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null || true)
+
+        # Capture regression entries before worktree destruction
+        local regression_entries=""
+        [[ -f "$ARCHIVE_DIR/regression.jsonl" ]] && regression_entries=$(cat "$ARCHIVE_DIR/regression.jsonl" 2>/dev/null || true)
 
         local lines_added=0 lines_removed=0
         if [[ -n "$archive_entry" ]]; then
@@ -3058,10 +3200,11 @@ _run_parallel_sprint() {
             --arg branch "$branch_name" --arg wt "$wt_dir" \
             --argjson elapsed "$p_elapsed" --argjson attempts "$total_attempts" \
             --argjson la "$lines_added" --argjson lr "$lines_removed" \
-            --arg archive "$archive_entry" \
+            --arg archive "$archive_entry" --arg regression "$regression_entries" \
             '{"item_id": $id, "source": $src, "status": "pass", "branch": $branch,
               "worktree": $wt, "elapsed": $elapsed, "attempts": $attempts,
-              "lines_added": $la, "lines_removed": $lr, "archive_entry": $archive}' > "$result_file"
+              "lines_added": $la, "lines_removed": $lr, "archive_entry": $archive,
+              "regression_entries": $regression}' > "$result_file"
 
         log_success "Parallel slot $slot: $p_item_id_actual passed (${p_elapsed}s)"
     else
@@ -3163,6 +3306,14 @@ _run_parallel_batch() {
             if [[ -n "$r_archive" && "$r_archive" != "" ]]; then
                 mkdir -p "$ARCHIVE_DIR"
                 printf '%s\n' "$r_archive" >> "$ARCHIVE_DIR/sprints.jsonl"
+            fi
+
+            # Append regression entries from parallel worktree to main repo
+            local r_regression
+            r_regression=$(jq -r '.regression_entries // ""' "$rf")
+            if [[ -n "$r_regression" && "$r_regression" != "" ]]; then
+                mkdir -p "$ARCHIVE_DIR"
+                printf '%s\n' "$r_regression" >> "$ARCHIVE_DIR/regression.jsonl"
             fi
 
             # Remove worktree, keep branch for merge
