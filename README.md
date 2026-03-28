@@ -9,23 +9,31 @@
 [![Last Commit](https://img.shields.io/github/last-commit/simonplant/aishore)](https://github.com/simonplant/aishore/commits/main)
 [![GitHub Stars](https://img.shields.io/github/stars/simonplant/aishore?style=flat)](https://github.com/simonplant/aishore/stargazers)
 
-**Queue 50 features. Walk away. Come back to merged, validated code.**
+**Iterative intent-based development with evals for Claude Code.**
 
-aishore is the sprint orchestration layer for Claude Code. You define what to build and why. It picks items from your backlog, develops each one through a quality protocol, validates against your intent, and merges the result — autonomously, in batch, with full git workflow.
+Say what must be true, not how to build it. Attach executable checks that prove it. Let the machine iterate until the evals pass — then protect that work forever with a regression suite that grows automatically.
 
 ```bash
 .aishore/aishore run done   # drain the entire backlog, hands-off
 ```
 
+## Why Intent + Evals
+
+"Build me a login page" is an instruction. "Users authenticate securely or are told exactly why they cannot — never a blank screen" is **intent**. `--ac-verify "curl -s localhost:3000/login | grep -q 'Sign in'"` is an **eval**.
+
+The difference matters. Instructions tell the AI *what to type*. Intent tells it *what must be true when done*. Evals prove it. When you combine all three — intent drives the implementation, evals gate the merge, and the regression suite compounds across sprints — you get software that converges on correct, not software that happens to pass on the first try.
+
+aishore is the orchestration layer that makes this loop work at scale with Claude Code: pick items from a backlog, develop each through a quality protocol, validate against intent and evals, merge, and protect all prior work with accumulated regression checks.
+
 ## The Problem
 
 AI coding tools are single-session. You prompt, it codes, the session ends. To ship 20 features you sit through 20 sessions — managing branches, reviewing output, catching regressions, re-prompting on failures. There's no batch execution, no quality gates between items, no memory of what was already built.
 
-**aishore is the layer between "AI can write code" and "AI can run a sprint."**
+**aishore is the layer between "AI can write code" and "AI can ship a sprint."**
 
 ## How It Works
 
-You provide three things per item: **what to build** (title + steps), **why it matters** (commander's intent), and **how to verify it** (acceptance criteria + your test suite). aishore handles the rest.
+You provide three things per item: **what must be true** (commander's intent), **how to verify it** (acceptance criteria with verify commands), and **what to build** (steps). aishore handles the rest.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐

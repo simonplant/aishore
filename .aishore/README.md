@@ -1,6 +1,8 @@
 # aishore — Quick Guide
 
-AI sprint runner for Claude Code. Tell it what must be true, it builds it right.
+**Iterative intent-based development with evals for Claude Code.**
+
+Define what must be true (intent). Attach shell commands that prove it (evals). aishore iterates until the evals pass, then protects that work with a regression suite that compounds across every sprint.
 
 Full docs: https://github.com/simonplant/aishore
 
@@ -20,15 +22,20 @@ validation:
 
 Other config: `models.primary`, `models.fast`, `agent.timeout`. Env vars override config (e.g., `AISHORE_VALIDATE_CMD`).
 
-## The Intent-Driven Model
+## Intent + Evals
 
-Every backlog item needs a **commander's intent** — a non-negotiable directive that defines what must be true when done. This is the single most important field. Without it (or with <20 chars), items **cannot enter a sprint**.
+Every backlog item needs two things:
 
-Write intent like an order, not a description:
-- **Good:** "Ops must know instantly if the service is alive or dead. No false positives."
-- **Bad:** "Add health check endpoint" ← that's implementation, not outcome
+**Intent** — a non-negotiable directive stating what must be true when done. Not what to build; the outcome. Without it (or with <20 chars), items **cannot enter a sprint**.
 
-The developer agent follows intent when the spec is ambiguous or steps seem wrong. The validator checks intent was actually fulfilled, not just that AC passed mechanically.
+**Evals** — AC with `--ac-verify` commands that prove the intent is fulfilled. These run after every sprint, and accumulate into a regression suite that protects all prior work.
+
+```
+Intent:  "Ops must know instantly if the service is alive or dead. No false positives."
+Eval:    --ac "Health endpoint returns 200" --ac-verify "curl -sf localhost:3000/health"
+```
+
+The developer follows intent when the spec is ambiguous. The validator probes the implementation with Bash commands. The evals gate the merge. The regression suite prevents future sprints from breaking past work.
 
 ## Create Backlog Items
 
