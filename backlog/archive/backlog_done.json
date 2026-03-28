@@ -2191,5 +2191,21 @@
     "passes": true,
     "readyForSprint": false,
     "completedAt": "2026-03-26T11:56:47-07:00"
+  },
+  {
+    "id": "FEAT-077",
+    "title": "Clean test item",
+    "intent": "Verify clean archives done items and removes them from active backlog",
+    "description": "",
+    "priority": "should",
+    "category": null,
+    "steps": [],
+    "acceptanceCriteria": [],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": false,
+    "resolved_at": "2026-03-28T08:07:21Z"
   }
 ]
