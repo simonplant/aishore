@@ -144,7 +144,7 @@ Those are AI agents that solve individual tasks. aishore manages the *sprint*, n
 
 ## Status
 
-**v0.3.8 — Alpha.** Battle-tested on its own codebase, used daily on real projects.
+**Alpha** (see `.aishore/VERSION` for current version). Battle-tested on its own codebase, used daily on real projects.
 
 Works well: sprint orchestration, maturity protocol, autonomous mode, backlog grooming, scaffolding detection, architecture review, scope checking, spec refinement, checksum-verified updates.
 
