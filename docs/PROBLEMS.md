@@ -45,7 +45,7 @@ The workaround is breaking work into smaller prompts manually, but then you're b
 - Developers report reverting to manual step-by-step prompting for anything non-trivial, effectively becoming a human orchestrator
 
 **How aishore addresses this:**
-aishore's backlog items decompose complex work into structured steps with explicit acceptance criteria. Instead of one massive prompt, each feature gets a specification with a commander's intent (the non-negotiable outcome), ordered implementation steps, and verifiable acceptance criteria. The grooming agents (`groom`, `groom --backlog`) break rough ideas into sprint-ready items with the right granularity. Each item runs as a complete sprint — branched, implemented, validated, and merged — so complex projects progress as a sequence of well-defined, achievable units rather than one impossible prompt.
+aishore's backlog items decompose complex work into structured steps with explicit acceptance criteria. Instead of one massive prompt, each feature gets a specification with a commander's intent (the non-negotiable outcome), ordered implementation steps, and verifiable acceptance criteria. The grooming agent (`groom`) breaks rough ideas into sprint-ready items with the right granularity. Each item runs as a complete sprint — branched, implemented, validated, and merged — so complex projects progress as a sequence of well-defined, achievable units rather than one impossible prompt.
 
 ---
 

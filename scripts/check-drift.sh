@@ -198,6 +198,7 @@ is_intentionally_undocumented() {
     case "$cmd:$flag" in
         update:--check|update:--no-verify) return 0 ;;
         "backlog add:--step"|"backlog edit:--step") return 0 ;;  # alias for --steps, kept for agent compat
+        groom:--backlog|groom:--architect) return 0 ;;  # legacy flags, redirected with deprecation messages
         *) return 1 ;;
     esac
 }

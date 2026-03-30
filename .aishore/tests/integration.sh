@@ -137,7 +137,7 @@ assert_contains "help mentions backlog"     "backlog" "$AISHORE" help
 assert_contains "help branding"             "iterative intent-based development" "$AISHORE" help
 
 # All help topics
-for topic in run backlog groom review status update clean init; do
+for topic in run backlog groom scaffold review status update clean init; do
     assert_ok "help $topic" "$AISHORE" help "$topic"
 done
 

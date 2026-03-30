@@ -105,7 +105,7 @@ Intent is a **hard gate**. Items without it are skipped. When the spec is ambigu
 
 **Self-healing failures.** Retries carry full failure context (prior diff, validator feedback, error logs). Spec refinement rewrites the steps and AC based on what went wrong. Circuit breaker stops runaway sessions.
 
-**AI-powered grooming.** Tech Lead, Product Owner, and Architect agents decompose rough ideas into sprint-ready items. `groom --architect` detects when a project is building fragments without a working top-down skeleton and injects scaffolding items. Auto-groom keeps the pipeline filled during long autonomous runs.
+**AI-powered grooming.** The groomer agent decomposes rough ideas into sprint-ready items. `scaffold` detects when a project is building fragments without a working top-down skeleton and injects scaffolding items. Auto-groom keeps the pipeline filled during long autonomous runs.
 
 **Zero config.** Pure Bash, no build step. `init -y` detects your project type and test command. Works out of the box. Customize later via `config.yaml` or environment variables.
 

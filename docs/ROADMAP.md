@@ -10,7 +10,7 @@ aishore v0.3.x is a working tool for iterative intent-based development that can
 - **Sprint orchestration** — branch, implement, validate, commit, merge per item
 - **Maturity protocol** — implement → critique → harden cycle keeps quality inside the session
 - **Backlog management** — full CLI CRUD
-- **Grooming** — tech-lead (bugs) and product-owner (features) agents
+- **Grooming** — unified groomer agent for bugs, features, and tech debt
 - **Architecture review** — on-demand or post-sprint with optional doc updates
 - **Checksum-verified updates** — self-update from GitHub releases
 - **Scope checking** — warn or fail when changes land outside declared scope

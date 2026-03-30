@@ -53,15 +53,14 @@ aishore models a real sprint team with five specialized AI agents, each with a d
 |-------|------|------------|-------------|
 | **Developer** | Implements features following project conventions and the maturity protocol | `run` | `Bash,Edit,Write,Read,Glob,Grep` |
 | **Validator** | Checks acceptance criteria and commander's intent against actual changes | `run` | `Bash,Read,Write,Glob,Grep` |
-| **Tech Lead** | Grooms bugs and features for technical clarity — adds steps, testable AC, marks items ready | `groom` | CLI commands |
-| **Product Owner** | Grooms features for value alignment, sets priorities | `groom --backlog` | CLI commands |
-| **Architect** | Reviews patterns and risks; detects fragment risk and injects scaffolding items | `review`, `groom --architect` | `Read,Glob,Grep` (+ `Edit,Write` with `--update-docs`; full permissions in groom mode) |
+| **Groomer** | Grooms bugs and features — adds steps, testable AC, sets priorities, marks items ready | `groom` | CLI commands |
+| **Architect** | Reviews patterns and risks; detects fragment risk and injects scaffolding items | `review`, `scaffold` | `Read,Glob,Grep` (+ `Edit,Write` with `--update-docs`; full permissions in scaffold mode) |
 
 ### Data flow between agents
 
 The agents communicate through files, not directly:
 
-- **Backlog files** (`backlog.json`, `bugs.json`) are the shared work queue. The Product Owner and Tech Lead write to them (via CLI); the orchestrator reads from them to pick items.
+- **Backlog files** (`backlog.json`, `bugs.json`) are the shared work queue. The Groomer and Architect write to them (via CLI); the orchestrator reads from them to pick items.
 - **Sprint file** (`sprint.json`) carries the current item's spec. The orchestrator writes it; the Developer and Validator read it.
 - **Result file** (`result.json`) is the completion contract. Agents write `{"status": "pass", "summary": "..."}` or `{"status": "fail", "reason": "..."}` to signal they are done. The orchestrator polls for this file.
 - **Project context** (`CLAUDE.md`, `PRODUCT.md`, `ARCHITECTURE.md`) is auto-detected and injected into every agent's prompt for project awareness.
@@ -102,8 +101,7 @@ project/
     ├── agents/              # Agent prompts (one per role)
     │   ├── architect.md
     │   ├── developer.md
-    │   ├── product-owner.md
-    │   ├── tech-lead.md
+    │   ├── groomer.md
     │   └── validator.md
     ├── config.yaml          # Optional overrides
     └── data/                # Runtime (not version controlled)
@@ -159,7 +157,7 @@ An item must pass these gates before it can enter a sprint:
 | **AC** | Acceptance criteria are verifiable |
 | **No blockers** | Dependencies are resolved |
 | **Right size** | Completable in one sprint |
-| **readyForSprint** | Tech Lead has marked it ready |
+| **readyForSprint** | Groomer has marked it ready |
 
 Intent is a **hard gate at sprint time** — items without intent (or with intent shorter than 20 characters) are silently skipped by auto-pick and explicitly rejected when run by ID.
 

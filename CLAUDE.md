@@ -37,9 +37,8 @@ jq empty backlog/*.json
 .aishore/aishore run --no-merge 3            # Keep feature branches for PR review
 .aishore/aishore run --pr FEAT-001           # Create GitHub PR for review
 .aishore/aishore run --dry-run      # Preview without running agents
-.aishore/aishore groom              # Tech lead: groom bugs
-.aishore/aishore groom --backlog    # Product owner: groom features
-.aishore/aishore groom --architect  # Architect: scaffolding review
+.aishore/aishore groom              # Groom bugs, features, and tech debt
+.aishore/aishore scaffold           # Scaffolding review (detect fragment risk)
 .aishore/aishore review             # Architecture review
 .aishore/aishore review --update-docs          # Review and update docs
 .aishore/aishore review --since <commit>       # Review changes since commit
@@ -64,9 +63,9 @@ Pick Item → Create Branch (aishore/<ID>) → Developer Agent (with maturity pr
 
 **Maturity protocol:** The developer agent always runs a 3-phase cycle within a single session: (1) Implement — write the code, (2) Critique — shift to reviewer mindset, re-read all changes, verify each AC, hunt bugs/edge cases, fix everything found, (3) Harden — run full validation again, fix regressions, confirm all AC provably met. This keeps quality iteration inside the session where context is hot, rather than relying on external retry loops. Maturity is mandatory and cannot be disabled.
 
-**Autonomous mode:** `run <scope>` (where scope is `done`, `p0`, `p1`, or `p2`) wraps the sprint loop with: priority-scoped item selection, auto-grooming when ready items drop below threshold, session failure tracking passed to subsequent developer agents, and a circuit breaker that stops after N consecutive failures. Auto-groom runs the architect first (scaffolding detection), then tech-lead and product-owner.
+**Autonomous mode:** `run <scope>` (where scope is `done`, `p0`, `p1`, or `p2`) wraps the sprint loop with: priority-scoped item selection, auto-grooming when ready items drop below threshold, session failure tracking passed to subsequent developer agents, and a circuit breaker that stops after N consecutive failures. Auto-groom runs the architect first (scaffolding detection), then the groomer.
 
-**Top-down scaffolding enforcement:** The system prevents fragment accumulation — building isolated pieces that never connect into a working whole. The architect agent (`groom --architect`, also runs in auto-groom) detects fragment risk signals (stub entry points, mock-only dependencies, disconnected modules) and creates scaffolding backlog items with `must` priority and `dependsOn` chains. The developer agent is instructed to wire code to real entry points. The validator flags disconnected code as advisory notes. The product-owner watches for feature priorities outrunning the skeleton during grooming.
+**Top-down scaffolding enforcement:** The system prevents fragment accumulation — building isolated pieces that never connect into a working whole. The architect agent (`scaffold`, also runs in auto-groom) detects fragment risk signals (stub entry points, mock-only dependencies, disconnected modules) and creates scaffolding backlog items with `must` priority and `dependsOn` chains. The developer agent is instructed to wire code to real entry points. The validator flags disconnected code as advisory notes. The groomer watches for feature priorities outrunning the skeleton during grooming.
 
 **Git branching model:** Each sprint item runs on its own feature branch (`aishore/<ITEM-ID>`), created from the current branch. The developer agent commits its own work. On success, the branch is merged back with `--no-ff`, pushed, and the base branch pulls latest before the next item. On failure, the branch is deleted. Use `--no-merge` to keep branches for PR review (they get pushed to origin instead).
 
@@ -93,7 +92,8 @@ project/
     │   ├── cmd-backlog-read.sh   # backlog list/show/check/rm
     │   ├── cmd-backlog-write.sh  # backlog add/edit
     │   ├── cmd-clean.sh          # clean command
-    │   ├── cmd-groom.sh          # groom (tech-lead, product-owner, architect)
+    │   ├── cmd-groom.sh          # groom command
+    │   ├── cmd-scaffold.sh       # scaffold command (architect agent)
     │   ├── cmd-help.sh           # help/usage
     │   ├── cmd-init.sh           # init wizard
     │   ├── cmd-review.sh         # review command
@@ -169,7 +169,8 @@ Iterative intent-based development with evals. Backlog lives in `backlog/`, tool
 
 ```bash
 .aishore/aishore run [N|ID]         # Run sprints (branch, commit, merge, push per item)
-.aishore/aishore groom [--backlog]  # Groom bugs or features
+.aishore/aishore groom              # Groom bugs, features, and tech debt
+.aishore/aishore scaffold           # Scaffolding review
 .aishore/aishore review             # Architecture review
 .aishore/aishore status             # Backlog overview
 ```
