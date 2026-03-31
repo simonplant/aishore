@@ -1,0 +1,2 @@
+{"itemId":"FEAT-077","date":"2026-03-31","text":"Validator agent is invoked with MODEL_FAST model","verify":"grep -n 'run_agent.*validator.*validate' .aishore/aishore | grep -q 'MODEL_FAST'"}
+{"itemId":"FEAT-077","date":"2026-03-31","text":"No other agent invocations are changed — developer still uses MODEL_PRIMARY","verify":"grep -n 'run_agent.*developer.*implement' .aishore/aishore | grep -q 'MODEL_PRIMARY'"}
