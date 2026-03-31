@@ -1631,9 +1631,17 @@ After you finish, the orchestrator will automatically run \`$FIX_CMD\` to fix li
 
         validate_hint="$validate_hint
 
+## Documentation Maintenance
+When your changes affect the project's public interface — CLI commands, flags, environment variables, configuration keys, or observable behavior — update the relevant documentation in the same commit. Common targets:
+- Help text / usage output
+- README, CLAUDE.md, CONFIGURATION.md, ARCHITECTURE.md
+- Inline --help strings
+
+Do not create new documentation files. Only update existing docs that already cover the area you changed. If no relevant docs exist, skip this.
+
 ## Maturity Protocol (MANDATORY — complete all phases)
 **Phase 1 — Implement:** Write the code. Follow spec, match patterns.${VALIDATE_CMD:+ Run \`$VALIDATE_CMD\` and fix failures.}
-**Phase 2 — Critique:** STOP coding. Re-read every changed file. Verify intent is fulfilled and each AC is provably met. Hunt bugs, edge cases, dead code, missing error handling. Fix everything found.
+**Phase 2 — Critique:** STOP coding. Re-read every changed file. Verify intent is fulfilled and each AC is provably met. Check if your changes affect any documented interface (help text, README, config docs) and update them if so. Hunt bugs, edge cases, dead code, missing error handling. Fix everything found.
 **Phase 3 — Harden:**${VALIDATE_CMD:+ Run \`$VALIDATE_CMD\` and fix any failures.} Re-verify all AC. Fix regressions. Only then commit and signal done.
 Output phase markers: \`═══ PHASE 2: CRITIQUE ═══\` / \`═══ PHASE 3: HARDEN ═══\`"
     elif [[ "$agent_name" == "validator" ]]; then
@@ -1654,6 +1662,8 @@ For every AC that claims observable behavior (\"error messages are clear\", \"co
 - AC says \"handles edge case\" → construct the edge case and run it
 
 **When you cannot verify an AC from the diff alone, say so explicitly in your ac_results.** Write: \`\"issue\": \"cannot verify from diff — no verify command provided and manual probing inconclusive\"\`. This is not a fail, but it flags the gap.
+
+If the change added or modified CLI flags, commands, or configuration, check that help text and documentation files reflect the change.
 
 Do not just grep the code for error strings and call it verified. Execute the code path."
     elif [[ "$agent_name" == "groomer" || "$agent_name" == "tech-lead" || "$agent_name" == "product-owner" || ("$agent_name" == "architect" && "$mode" == "groom") ]]; then

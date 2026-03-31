@@ -1,4 +1,233 @@
 {
   "description": "Feature backlog - Product Owner owns priority",
-  "items": []
+  "items": [
+    {
+      "id": "FEAT-077",
+      "title": "Downgrade validator agent to MODEL_FAST (sonnet)",
+      "intent": "Validation costs 5x less without quality loss — validators do read-only verification, not code generation, so opus is dramatically overqualified.",
+      "description": "The validator agent currently runs on MODEL_PRIMARY (opus). Validators read diffs, run AC verify commands, and write a pass/fail verdict. This is read-only analytical work that sonnet handles well. Change the validator invocation in _run_validation_cycle() to use MODEL_FAST instead of MODEL_PRIMARY.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "In _run_validation_cycle(), change the run_agent call for validator from MODEL_PRIMARY to MODEL_FAST",
+        "Update docs/CONFIGURATION.md if it references which model the validator uses"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "Validator agent is invoked with MODEL_FAST model",
+          "verify": "grep -n 'run_agent.*validator.*validate' .aishore/aishore | grep -q 'MODEL_FAST'"
+        },
+        {
+          "text": "No other agent invocations are changed — developer still uses MODEL_PRIMARY",
+          "verify": "grep -n 'run_agent.*developer.*implement' .aishore/aishore | grep -q 'MODEL_PRIMARY'"
+        }
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-078",
+      "title": "Add --max-turns to agent invocations",
+      "intent": "Prevent runaway agents from spinning indefinitely within the timeout, burning tokens on repetitive tool calls without making progress.",
+      "description": "run_agent_process() builds claude args but never sets --max-turns. A stuck agent can loop tool calls until the timeout kills it. Add per-role max-turns defaults: developer ~25, validator ~10, groomer ~15. Make configurable via config.yaml and env overrides.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "Add MAX_TURNS_DEVELOPER, MAX_TURNS_VALIDATOR, MAX_TURNS_GROOMER defaults in the defaults section",
+        "Add config.yaml keys (agent.max_turns.developer, etc.) and AISHORE_ env overrides",
+        "In run_agent_process(), accept a max_turns parameter and add --max-turns to claude_args",
+        "Pass the appropriate max_turns from run_agent() based on agent_name",
+        "Update CONFIGURATION.md with the new config keys and env vars"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "Developer agent invocation includes --max-turns flag",
+          "verify": ".aishore/aishore run --dry-run 2>&1 | grep -q 'max.turns' || grep -q 'max_turns' .aishore/aishore"
+        },
+        {
+          "text": "Default max-turns values exist in the defaults section",
+          "verify": "grep -E 'MAX_TURNS_(DEVELOPER|VALIDATOR|GROOMER)' .aishore/aishore | grep -c '=' | grep -q '[3-9]'"
+        },
+        {
+          "text": "Max-turns is configurable via env var",
+          "verify": "grep -q 'AISHORE_MAX_TURNS' .aishore/aishore"
+        },
+        {
+          "text": "New config keys documented in CONFIGURATION.md",
+          "verify": "grep -q 'max_turns' docs/CONFIGURATION.md"
+        }
+      ],
+      "scope": [
+        ".aishore/aishore",
+        "docs/CONFIGURATION.md"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-079",
+      "title": "Add --bare flag to all agent invocations",
+      "intent": "Every agent invocation must be reproducible across machines — no local hooks, MCP servers, skills, or auto-memory leaking into orchestrated agents and causing non-deterministic behavior.",
+      "description": "run_agent_process() spawns claude without --bare. This means agents pick up local config (hooks, MCP servers, plugins, MEMORY.md) that differ between environments. Add --bare to the claude_args array in run_agent_process(). This saves 7-13k tokens per invocation and guarantees consistent behavior.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "Add --bare to the claude_args array in run_agent_process()",
+        "Verify that the orchestrator's own CLAUDE.md loading still works (it passes context explicitly via -p, not via auto-discovery)"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "All agent invocations include the --bare flag",
+          "verify": "grep -A5 'local claude_args' .aishore/aishore | grep -q '\\-\\-bare'"
+        },
+        {
+          "text": "Agents still receive CLAUDE.md content via explicit context passing",
+          "verify": "grep -q 'CLAUDE.md\\|claude\\.md' .aishore/aishore"
+        }
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-080",
+      "title": "Remove Write permission from validator agent",
+      "intent": "Validators must report problems, never fix them — Write access lets the validator silently modify files instead of failing the sprint and giving the developer targeted retry context.",
+      "description": "PERMS_VALIDATOR currently includes Write (Bash,Read,Write,Glob,Grep). The validator only needs Write for result.json (completion contract). Remove Write from PERMS_VALIDATOR. The validator can still write result.json via Bash (echo/jq to file). This enforces the separation: developers fix, validators judge.",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "Change PERMS_VALIDATOR from 'Bash,Read,Write,Glob,Grep' to 'Bash,Read,Glob,Grep'",
+        "Verify the validator can still write result.json via Bash tool",
+        "Update CONFIGURATION.md if it documents validator permissions"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "Validator permissions do not include Write tool",
+          "verify": "grep 'PERMS_VALIDATOR=' .aishore/aishore | head -1 | grep -v 'CFG_' | grep -vq 'Write'"
+        },
+        {
+          "text": "Validator permissions still include Bash for running commands and writing result.json",
+          "verify": "grep 'PERMS_VALIDATOR=' .aishore/aishore | head -1 | grep -v 'CFG_' | grep -q 'Bash'"
+        }
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-081",
+      "title": "Revert redundant doc check from Maturity Protocol Phase 2",
+      "intent": "The developer prompt must be concise and non-repetitive — saying the same instruction twice wastes context tokens and dilutes signal.",
+      "description": "We added a doc check to Phase 2 of the Maturity Protocol that duplicates the Documentation Maintenance section injected 10 lines earlier. Phase 2 should stay focused on its core job: bugs, AC verification, edge cases. Remove the doc-check clause from Phase 2 while keeping the standalone Documentation Maintenance section.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In build_agent_prompt(), revert the Phase 2 Critique text to remove the doc-check clause",
+        "Keep the standalone Documentation Maintenance section intact (lines 1634-1640)"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "Phase 2 text does not mention documentation or docs",
+          "verify": "grep 'Phase 2.*Critique' .aishore/aishore | grep -vq 'documented interface'"
+        },
+        {
+          "text": "Documentation Maintenance section still exists as a separate injection",
+          "verify": "grep -q 'Documentation Maintenance' .aishore/aishore"
+        }
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-082",
+      "title": "Add session continuity between developer and validator agents",
+      "intent": "The validator must have full context of what the developer did and why — continuing the session eliminates cold-start context reconstruction from diffs and produces dramatically better validation verdicts.",
+      "description": "Each agent currently starts a fresh Claude session. The validator has to re-discover everything by reading git diffs. If the developer's session ID is captured and passed to the validator via --continue/--session-id, the validator inherits the full implementation context. Implementation: capture session_id from developer's --output-format json output, store it, pass to validator invocation. Requires switching to --output-format json in run_agent_process() or extracting session_id from claude's output.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In run_agent_process(), switch default output format to json when no AGENT_OUTPUT_FILE is set",
+        "After developer agent completes, extract and store session_id from json output",
+        "Before validator invocation, set AGENT_SESSION_ID to the developer's session_id and add --continue flag",
+        "Ensure session continuity is opt-out (add config key to disable if needed)",
+        "Test that validator receives implementation context without needing to re-read diffs"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "Developer agent output is parsed as JSON to extract session_id",
+          "verify": "grep -q 'session_id\\|session.id' .aishore/aishore"
+        },
+        {
+          "text": "Validator invocation uses --continue or --session-id from developer session",
+          "verify": "grep -B5 -A5 'run_agent.*validator' .aishore/aishore | grep -q 'SESSION\\|continue\\|session'"
+        }
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-083",
+      "title": "Add per-sprint cost tracking via --output-format json",
+      "intent": "Every sprint must report its token usage and estimated cost — without visibility into per-sprint costs, autonomous run-done sessions can burn through budgets silently.",
+      "description": "run_agent_process() currently uses --output-format text, discarding token usage metadata. Switch to --output-format json and extract usage.input_tokens + usage.output_tokens from each agent invocation. Accumulate per-sprint and per-session totals. Report in session summary and archive entry (sprints.jsonl).",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In run_agent_process(), use --output-format json (when not using --print) and parse the JSON result",
+        "Extract usage.input_tokens and usage.output_tokens from each agent run",
+        "Accumulate token counts per sprint (developer + validator) and per session",
+        "Add token counts to the sprint archive entry in sprints.jsonl",
+        "Display token summary in the end-of-session report"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "Agent runs produce JSON output that includes token usage",
+          "verify": "grep -q 'output.format.*json\\|output_format.*json' .aishore/aishore || grep -q 'input_tokens\\|output_tokens' .aishore/aishore"
+        },
+        {
+          "text": "Sprint archive entries include token usage",
+          "verify": "grep -q 'tokens\\|token_count\\|input_tokens' .aishore/aishore"
+        },
+        {
+          "text": "Session summary reports total tokens used",
+          "verify": "grep -q 'token' .aishore/aishore"
+        }
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [
+        "FEAT-082"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    }
+  ]
 }
