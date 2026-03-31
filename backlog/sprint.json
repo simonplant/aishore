@@ -1,37 +1,30 @@
 {
-  "sprintId": "sprint-1774551043",
-  "startedAt": "2026-03-26T11:50:43-07:00",
-  "status": "completed",
+  "sprintId": "sprint-1775001421",
+  "startedAt": "2026-03-31T16:57:01-07:00",
+  "status": "in_progress",
   "item": {
-    "id": "FEAT-076",
-    "title": "Cut diagnose command and inline notification wrappers",
-    "intent": "Delete cmd-diagnose.sh module and diagnose dispatch entry. Replace send_notification wrapper with direct conditional at call sites. Simplify send_session_notification to terminal bell plus log message only.",
-    "description": "",
+    "id": "FEAT-077",
+    "title": "Downgrade validator agent to MODEL_FAST (sonnet)",
+    "intent": "Validation costs 5x less without quality loss — validators do read-only verification, not code generation, so opus is dramatically overqualified.",
+    "description": "The validator agent currently runs on MODEL_PRIMARY (opus). Validators read diffs, run AC verify commands, and write a pass/fail verdict. This is read-only analytical work that sonnet handles well. Change the validator invocation in _run_validation_cycle() to use MODEL_FAST instead of MODEL_PRIMARY.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Delete .aishore/lib/cmd-diagnose.sh",
-      "Remove diagnose dispatch entry from main()",
-      "Inline send_notification: at each call site replace with direct if-NOTIFY_CMD-then-run check",
-      "Simplify send_session_notification: remove macOS osascript and Linux notify-send branches, keep terminal bell plus log",
-      "Update help text to remove diagnose",
-      "Run smoke test and drift check"
+      "In _run_validation_cycle(), change the run_agent call for validator from MODEL_PRIMARY to MODEL_FAST",
+      "Update docs/CONFIGURATION.md if it references which model the validator uses"
     ],
     "acceptanceCriteria": [
-      "cmd-diagnose.sh does not exist",
-      "aishore diagnose produces unknown command error",
-      "send_notification function no longer exists",
-      "check-drift.sh reports zero drift"
+      {
+        "text": "Validator agent is invoked with MODEL_FAST model",
+        "verify": "grep -n 'run_agent.*validator.*validate' .aishore/aishore | grep -q 'MODEL_FAST'"
+      },
+      {
+        "text": "No other agent invocations are changed — developer still uses MODEL_PRIMARY",
+        "verify": "grep -n 'run_agent.*developer.*implement' .aishore/aishore | grep -q 'MODEL_PRIMARY'"
+      }
     ],
     "scope": [
-      ".aishore/aishore",
-      ".aishore/lib/cmd-diagnose.sh",
-      ".aishore/lib/cmd-help.sh",
-      "scripts/check-drift.sh"
+      ".aishore/aishore"
     ],
-    "startedAt": "2026-03-26T11:50:43-07:00",
-    "status": "passed",
-    "completedAt": "2026-03-26T11:56:47-07:00"
-  },
-  "completedAt": "2026-03-26T11:56:47-07:00",
-  "attempts": 1
+    "startedAt": "2026-03-31T16:57:01-07:00"
+  }
 }
