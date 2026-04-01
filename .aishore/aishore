@@ -371,7 +371,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 # Remove a git worktree and optionally its branch
 _remove_worktree() {
     local wt_dir="$1" branch="${2:-}"
-    cd "$PROJECT_ROOT" 2>/dev/null || true
+    cd "$PROJECT_ROOT" || { log_error "Cannot cd to $PROJECT_ROOT"; return 1; }
     git worktree remove "$wt_dir" --force 2>/dev/null || true
     [[ -d "$wt_dir" ]] && rm -rf "$wt_dir" 2>/dev/null || true
     [[ -n "$branch" ]] && git branch -D "$branch" 2>/dev/null || true
@@ -2166,7 +2166,7 @@ print_batch_summary() {
 # Uses outer-scope locals: auto_mode, auto_scope, specific_id
 _run_dry_run() {
     load_config
-    cd "$PROJECT_ROOT"
+    cd "$PROJECT_ROOT" || { log_error "Cannot cd to $PROJECT_ROOT"; return 1; }
 
     # Resolve auto_priorities from auto_scope (normally done in setup_sprint_environment)
     local auto_priorities=""
@@ -2857,7 +2857,7 @@ cmd_run_parse_args() {
 setup_sprint_environment() {
     acquire_lock
     load_config
-    cd "$PROJECT_ROOT"
+    cd "$PROJECT_ROOT" || { log_error "Cannot cd to $PROJECT_ROOT"; return 1; }
 
     # Apply timeout_minutes: config/env > default (0 = no override)
     if [[ "${TIMEOUT_MINUTES:-0}" -gt 0 ]]; then
@@ -3234,7 +3234,7 @@ run_sprint_loop() {
         # Copy current sprint.json into worktree backlog (create_sprint wrote to original)
         cp "$PROJECT_ROOT/backlog/sprint.json" "$BACKLOG_DIR/sprint.json"
 
-        cd "$wt_dir"
+        cd "$wt_dir" || { log_error "Cannot cd to $wt_dir"; return 1; }
         log_info "Worktree created: $wt_dir"
 
         # Developer → validation → validator (with retries)
