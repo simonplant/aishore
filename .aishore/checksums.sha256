@@ -14,8 +14,8 @@ dadd254e64f5d0fdc5a7e47eb907cd7d23335c03ab0ebafc2781dcbb406194b6  .aishore/templ
 e8a2532e1e7824b4c9184ce68bb1739170df39613dc1b0fdeb065c701b7422f6  .aishore/templates/config.yaml.tmpl
 5398e6fa589440bf85452a9f23dc0f5f523a04b4272061ad0920957b832639d4  .aishore/templates/DEFINITIONS.md
 537f5df11dc02f983344d0d1e1be577fd1c1283d3d91d40904671b44fba95ad2  .aishore/templates/PRODUCT.md.tmpl
-4130db2a23b23c4b04606fc75a79b97efddd2cb6a890344a53c5b3340facb7d8  .aishore/lib/cmd-backlog-read.sh
-073df1cd30e554b155cdbbe0367d9dd9910c35e8f6097f0a8ab5eaa7261dd090  .aishore/lib/cmd-backlog-write.sh
+d335f6e5acd5ed1cfeb8ca2d6c4d201856b13c0ce0b6af51860459be05e4978c  .aishore/lib/cmd-backlog-read.sh
+debfd6fd1ed13e7b351c30f0555329b94ce0cd03ab27e70e7c87c0145fc593f4  .aishore/lib/cmd-backlog-write.sh
 b5ce2140352828eaec5e9f6767b12f0f3e599e71c05983950853aa23a808f46c  .aishore/lib/cmd-clean.sh
 f87efee9b8cf68f168d54b266dea63f526dcf2cd38141946da9c2b7aef1fe895  .aishore/lib/cmd-groom.sh
 9db2bd802692527260a871ae3c05b649a5788c98cfaebb12c73a895aec5ec566  .aishore/lib/cmd-help.sh

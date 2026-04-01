@@ -5,6 +5,137 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-04-01
+
+### Added
+
+- **Maturity protocol enforcement** — `check_result("developer")` rejects pass results missing `.phases` evidence. Developer must prove critique findings and harden verification counts.
+- **Mandatory validator ac_results** — validator prompt injection requires structured per-AC results. Warning logged when missing.
+- **AC verify deduplication** — validator told to trust orchestrator AC results, not re-run. Focus redirected to intent and integration.
+- **Integration enforcement** — disconnected code is a hard failure when item has verify commands, advisory for scaffolding items.
+- **Scope enforcement** — post-commit `_check_scope_warnings()` compares changed files against declared scope globs, logs warnings.
+- **Regression suite management** — `clean --regression` with backup, `regression-skip.json` to skip entries by item ID.
+- **`--clear-depends` flag for `backlog edit`** — clear all dependencies from an item.
+- **Stale dependency cleanup** — `backlog rm` now removes the deleted item from `dependsOn` arrays in all other items.
+
+### Changed
+
+- **Retry context** — cap increased from 2000 to 4000 chars. `_capture_retry_failure` extracts file:line from ac_results. Truncated entries preserve compact failure summaries.
+- **Validator prompt** — "run every one of them" replaced with "trust orchestrator results."
+- **All docs** — PRODUCT.md, ROADMAP.md, README.md, CLAUDE.md rewritten to carry core philosophy: "Ship working code, not evidence of process."
+
+### Fixed
+
+- Guard `git commit` after squash merge — previously commit failure left worktree in bad state.
+- Guard `cp` before `rm` in regression clean — previously backup failure still deleted original.
+- Clarify AC verify command schema in developer maturity protocol injection.
+
+## [0.5.1] - 2026-04-01
+
+### Changed
+
+- 3x max_turns defaults (75/45/45 for developer/validator/groomer)
+
+## [0.5.0] - 2026-03-31
+
+### Changed
+
+- Purged regression suite — all 17 prior checks were structure tests (grep-based), not behavior tests
+- Philosophy shift — execute behavior, not grep for structure
+
+## [0.4.4] - 2026-03-31
+
+### Fixed
+
+- Guard cd and git checkout in lib modules and sprint success path
+- Spec refinement runs without worktree, groom crash on bad JSON, sed stat capture
+- Safety commit crash, worktree path, sprint item shape
+- Sed injection, git error handling, jq masking, worktree TOCTOU race
+- Unbound sprint_file in refine_item_spec
+- Add Agent to developer permissions for Claude Code parallelism
+
+## [0.4.3] - 2026-03-28
+
+### Changed
+
+- No feature changes (patch release)
+
+## [0.4.2] - 2026-03-27
+
+### Added
+
+- Doc maintenance in sprint pipeline — developer updates docs in same commit
+- Backlog sprint quality optimizations
+
+### Changed
+
+- Merge tech-lead + product-owner into unified groomer agent
+- Promote scaffold to top-level command
+- Downgrade validator from Opus to Sonnet (MODEL_FAST)
+
+### Fixed
+
+- Resolve worktree merge conflicts on sprint tracking files
+- Dry-run priority scope and stale scope advisory
+
+## [0.4.1] - 2026-03-26
+
+### Fixed
+
+- Dry-run priority scope and stale scope advisory, clean backlog
+
+## [0.4.0] - 2026-03-25
+
+### Added
+
+- **Regression suite** — AC verify commands saved to regression.jsonl, run as pre-flight before every sprint
+- **Adversarial validation** — validator probes implementations with Bash commands, not just diff review
+- **Executable AC enforcement** — groomer agents write verify commands for every testable AC
+- **Modular architecture** — CLI split into core orchestrator + lazy-loaded lib modules
+- Per-file checksum verification in update output
+
+### Changed
+
+- Rebrand: remove CLI theatre, kill parallel mode, fix lock mechanism
+- Complete documentation overhaul for modularized codebase
+
+### Fixed
+
+- 35 stale doc references removed
+- Hardcoded version removed from README
+
+## [0.3.10] - 2026-03-25
+
+### Added
+
+- Module loader infrastructure for lazy-loaded lib modules
+- Modularization backlog — plan for extracting commands to lib/
+
+## [0.3.9] - 2026-03-24
+
+### Added
+
+- Architect scaffolding detection and top-down backlog ordering
+- Top-down scaffolding enforcement across all agents
+
+### Fixed
+
+- Copyright headers aligned with Apache-2.0 LICENSE
+- Checksum paths regenerated with correct .aishore/ prefix
+- Terminology aligned — "mock-only infrastructure" → "mock-only dependencies"
+
+## [0.3.8] - 2026-03-23
+
+### Added
+
+- Warn when auto-pick skips items with missing or too-short intent
+- Promote validator agent to Opus for stronger quality gate
+
+### Changed
+
+- README rewritten as value-focused pitch
+- Deduplicate shared patterns across CLI
+
 ## [0.3.7] - 2026-03-21
 
 ### Added

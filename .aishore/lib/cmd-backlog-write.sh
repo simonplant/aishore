@@ -162,10 +162,11 @@ cmd_backlog_edit() {
     local _e_ready=false _e_no_ready=false
     local -a scope_vals=() step_vals=() ac_entries=() deps_vals=()
 
+    local _e_clear_deps=false
     parse_opts \
         "val:_e_title:--title" "val:_e_intent:--intent" "val:_e_desc:--desc" \
         "val:_e_priority:--priority" "val:_e_status:--status" "val:_e_category:--category" \
-        "bool:_e_ready:--ready" "bool:_e_no_ready:--no-ready" \
+        "bool:_e_ready:--ready" "bool:_e_no_ready:--no-ready" "bool:_e_clear_deps:--clear-depends" \
         "arr:scope_vals:--scope" "arr:step_vals:--steps" \
         "arr:deps_vals:--depends-on" \
         "passval:--ac" "passval:--ac-verify" "passval:--groomed-at" "passval:--groomed-notes" \
@@ -255,7 +256,9 @@ cmd_backlog_edit() {
         jq_updates+=" | .steps = \$newsteps"
         updates+=("--argjson" "newsteps" "$steps_json")
     fi
-    if [[ ${#deps_vals[@]} -gt 0 ]]; then
+    if [[ "$_e_clear_deps" == "true" ]]; then
+        jq_updates+=" | .dependsOn = []"
+    elif [[ ${#deps_vals[@]} -gt 0 ]]; then
         # Expand comma-separated entries for backward compat
         local -a expanded_deps=()
         local _dep_entry
