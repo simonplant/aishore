@@ -1,39 +1,6 @@
 {
-  "sprintId": "sprint-1775007110",
-  "startedAt": "2026-03-31T18:31:50-07:00",
-  "status": "completed",
-  "item": {
-    "id": "FEAT-085",
-    "title": "Remove dead product-owner.md and tech-lead.md agent files and orchestrator code paths",
-    "intent": "Dead agent files and unreachable code paths must be removed — they cause false positives in reviews and drift further from reality over time.",
-    "description": "d3571ad merged tech-lead+product-owner into groomer.md but left both files on disk. build_agent_prompt() still has dead branches for product-owner and tech-lead at lines 1607, 1684, 1691, 1785, 1799.",
-    "sourceBacklog": "backlog.json",
-    "steps": [
-      "Delete .aishore/agents/product-owner.md and .aishore/agents/tech-lead.md",
-      "Remove product-owner and tech-lead branches from build_agent_prompt()",
-      "Remove from permissions and max-turns case statements",
-      "Remove from checksums.sha256"
-    ],
-    "acceptanceCriteria": [
-      {
-        "text": "product-owner.md and tech-lead.md do not exist",
-        "verify": "test ! -f .aishore/agents/product-owner.md && test ! -f .aishore/agents/tech-lead.md"
-      },
-      {
-        "text": "Orchestrator does not reference product-owner or tech-lead",
-        "verify": "! grep -q 'product-owner\\|tech-lead' .aishore/aishore"
-      }
-    ],
-    "scope": [
-      ".aishore/agents/product-owner.md",
-      ".aishore/agents/tech-lead.md",
-      ".aishore/aishore",
-      ".aishore/checksums.sha256"
-    ],
-    "startedAt": "2026-03-31T18:31:50-07:00",
-    "status": "passed",
-    "completedAt": "2026-03-31T18:34:30-07:00"
-  },
-  "completedAt": "2026-03-31T18:34:30-07:00",
-  "attempts": 1
+  "sprintId": null,
+  "startedAt": null,
+  "status": "idle",
+  "item": null
 }

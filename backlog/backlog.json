@@ -74,35 +74,6 @@
       "completedAt": "2026-03-31T17:05:34-07:00"
     },
     {
-      "id": "FEAT-079",
-      "title": "Add --bare flag to all agent invocations",
-      "intent": "Every agent invocation must be reproducible across machines — no local hooks, MCP servers, skills, or auto-memory leaking into orchestrated agents and causing non-deterministic behavior.",
-      "description": "run_agent_process() spawns claude without --bare. This means agents pick up local config (hooks, MCP servers, plugins, MEMORY.md) that differ between environments. Add --bare to the claude_args array in run_agent_process(). This saves 7-13k tokens per invocation and guarantees consistent behavior.",
-      "priority": "must",
-      "category": null,
-      "steps": [
-        "Add --bare to the claude_args array in run_agent_process()",
-        "Verify that the orchestrator's own CLAUDE.md loading still works (it passes context explicitly via -p, not via auto-discovery)"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "All agent invocations include the --bare flag",
-          "verify": "grep -A5 'local claude_args' .aishore/aishore | grep -q '\\-\\-bare'"
-        },
-        {
-          "text": "Agents still receive CLAUDE.md content via explicit context passing",
-          "verify": "grep -q 'CLAUDE.md\\|claude\\.md' .aishore/aishore"
-        }
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
-    },
-    {
       "id": "FEAT-080",
       "title": "Remove Write permission from validator agent",
       "intent": "Validators must report problems, never fix them — Write access lets the validator silently modify files instead of failing the sprint and giving the developer targeted retry context.",
@@ -229,6 +200,194 @@
       "dependsOn": [
         "FEAT-082"
       ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-084",
+      "title": "Add --bare flag to all agent invocations",
+      "intent": "Every agent invocation must be reproducible across machines — no local hooks, MCP servers, skills, or auto-memory leaking into orchestrated agents.",
+      "description": "run_agent_process() spawns claude without --bare. Agents pick up local config that differs between environments. Add --bare to the claude_args array in run_agent_process().",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "In run_agent_process(), add '--bare' to the claude_args array after the initial declaration",
+        "Verify the orchestrator still passes CLAUDE.md content explicitly via -p prompt injection",
+        "Update checksums.sha256 if the main script changes"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "claude_args array includes --bare",
+          "verify": "grep -A15 'local claude_args' .aishore/aishore | grep -q 'bare'"
+        },
+        {
+          "text": "CLAUDE.md content is still loaded and passed via prompt",
+          "verify": "grep -q 'find_claude_md\\|CLAUDE.md\\|claude_md' .aishore/aishore"
+        }
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomingNotes": "bare-skips-keychain-oauth"
+    },
+    {
+      "id": "FEAT-085",
+      "title": "Remove dead product-owner.md and tech-lead.md agent files and orchestrator code paths",
+      "intent": "Dead agent files and unreachable code paths must be removed — they cause false positives in reviews and drift further from reality over time.",
+      "description": "d3571ad merged tech-lead+product-owner into groomer.md but left both files on disk. build_agent_prompt() still has dead branches for product-owner and tech-lead at lines 1607, 1684, 1691, 1785, 1799.",
+      "priority": "should",
+      "category": "agents",
+      "steps": [
+        "Delete .aishore/agents/product-owner.md and .aishore/agents/tech-lead.md",
+        "Remove product-owner and tech-lead branches from build_agent_prompt()",
+        "Remove from permissions and max-turns case statements",
+        "Remove from checksums.sha256"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "product-owner.md and tech-lead.md do not exist",
+          "verify": "test ! -f .aishore/agents/product-owner.md && test ! -f .aishore/agents/tech-lead.md"
+        },
+        {
+          "text": "Orchestrator does not reference product-owner or tech-lead",
+          "verify": "! grep -q 'product-owner\\|tech-lead' .aishore/aishore"
+        }
+      ],
+      "scope": [
+        ".aishore/agents/product-owner.md",
+        ".aishore/agents/tech-lead.md",
+        ".aishore/aishore",
+        ".aishore/checksums.sha256"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-086",
+      "title": "Clarify developer scope rule for entry-point wiring",
+      "intent": "The developer must know exactly when wiring to entry points is in-scope — ambiguity causes retry loops when the validator rejects either interpretation.",
+      "description": "developer.md says 'implement ONLY your assigned item' but also 'wire to real entry points.' Add explicit guidance that entry-point wiring is always in-scope.",
+      "priority": "should",
+      "category": "agents",
+      "steps": [
+        "In developer.md, add clarifying paragraph: entry-point wiring necessary for integration is in-scope",
+        "In validator.md, clarify scope violations for wiring are acceptable"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "Developer prompt states entry-point wiring is in-scope",
+          "verify": "grep -q 'entry.point.*in.scope\\|wiring.*in.scope\\|integration.*scope' .aishore/agents/developer.md"
+        }
+      ],
+      "scope": [
+        ".aishore/agents/developer.md",
+        ".aishore/agents/validator.md"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-087",
+      "title": "Resolve circular scaffolding gate dependency between groomer and architect",
+      "intent": "Scaffolding detection must run before readiness gating — the groomer cannot gate on missing scaffolding if the architect hasn't created the items yet.",
+      "description": "Groomer blocks feature readiness if scaffolding is missing, but Architect creates scaffolding items. Add explicit guidance that gating only applies to existing scaffolding items.",
+      "priority": "could",
+      "category": "agents",
+      "steps": [
+        "In groomer.md, clarify scaffolding gating applies to existing items only"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "Groomer prompt clarifies scaffolding gating applies to existing items",
+          "verify": "grep -A10 -i 'scaffold' .aishore/agents/groomer.md | grep -iq 'existing\\|already\\|present'"
+        }
+      ],
+      "scope": [
+        ".aishore/agents/groomer.md"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-088",
+      "title": "Add notification command exit code capture and stderr logging",
+      "intent": "Notification failures must be diagnosable — suppressing stderr and reporting the wrong exit code makes webhook debugging impossible.",
+      "description": "NOTIFY_CMD execution suppresses stderr and the warning references wrong $?. Capture exit code immediately and log stderr to sprint log.",
+      "priority": "could",
+      "category": "robustness",
+      "steps": [
+        "Capture exit code: local rc=$? immediately after bash -c",
+        "Redirect stderr to sprint log instead of /dev/null"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "Exit code is captured correctly",
+          "verify": "grep -A3 'NOTIFY_CMD' .aishore/aishore | grep -q 'rc=\\$?\\|exit_code=\\$?'"
+        }
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-089",
+      "title": "Quote _HASH_CMD variable in cmd-update.sh",
+      "intent": "The hash command must work regardless of path — unquoted command variables break when paths contain spaces.",
+      "description": "cmd-update.sh uses $_HASH_CMD unquoted. Quote it to prevent word splitting.",
+      "priority": "could",
+      "category": "robustness",
+      "steps": [
+        "Quote all uses of $_HASH_CMD in cmd-update.sh"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "_HASH_CMD is quoted in all usage",
+          "verify": "! grep '_HASH_CMD' .aishore/lib/cmd-update.sh | grep -v '#' | grep -v '\"' | grep -v '=' | grep -q '_HASH_CMD'"
+        }
+      ],
+      "scope": [
+        ".aishore/lib/cmd-update.sh"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-090",
+      "title": "Add groomer populate mode trigger clarity",
+      "intent": "The groomer must know when to use Populate Mode vs normal grooming — without a trigger, it may populate a non-empty backlog or groom an empty one.",
+      "description": "groomer.md has both modes but no guidance on when each applies. Add conditional: Populate Mode when PRD attached and backlog near-empty, otherwise normal grooming.",
+      "priority": "could",
+      "category": "agents",
+      "steps": [
+        "Add explicit criteria for Populate Mode vs normal grooming to groomer.md"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "Groomer prompt has criteria for mode selection",
+          "verify": "grep -A5 -i 'populate mode' .aishore/agents/groomer.md | grep -iq 'when\\|if\\|condition\\|empty\\|PRD'"
+        }
+      ],
+      "scope": [
+        ".aishore/agents/groomer.md"
+      ],
+      "dependsOn": [],
       "status": "todo",
       "passes": false,
       "readyForSprint": true

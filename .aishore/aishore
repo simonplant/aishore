@@ -393,7 +393,7 @@ _load_module() {
         return 1
     fi
     # shellcheck source=/dev/null
-    source "$mod_file"
+    source "$mod_file" || { log_error "Failed to load module $mod from $mod_file"; return 1; }
     _LOADED_MODULES[$mod]=1
 }
 
@@ -1260,7 +1260,11 @@ create_sprint() {
                 scope: ($item.scope // []),
                 startedAt: $startedAt
             }
-        }' > "$tmp_sprint"
+        }' > "$tmp_sprint" || {
+        log_error "Failed to create sprint JSON"
+        rm -f "$tmp_sprint"
+        return 1
+    }
     mv "$tmp_sprint" "$BACKLOG_DIR/sprint.json"
 
     ITEM_ID=$(jq -r '.item.id' "$BACKLOG_DIR/sprint.json")
@@ -2782,6 +2786,12 @@ _handle_sprint_success() {
         merge_summary="${merge_summary:0:500}"
         local merge_msg="merge: $ITEM_ID ${merge_summary:-sprint branch}"
 
+        # Stash all uncommitted changes before checkout+merge
+        local _had_stash=false
+        if ! git diff --quiet 2>/dev/null; then
+            git stash push -q && _had_stash=true
+        fi
+
         git checkout "$base_branch"
 
         if [[ "$MERGE_STRATEGY" == "squash" ]]; then
@@ -2792,6 +2802,7 @@ _handle_sprint_success() {
 Co-Authored-By: Claude <noreply@anthropic.com>"
             else
                 log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
+                [[ "$_had_stash" == "true" ]] && git stash pop -q 2>/dev/null || true
                 AISHORE_FEATURE_BRANCH=""
                 return 1
             fi
@@ -2801,6 +2812,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 Co-Authored-By: Claude <noreply@anthropic.com>"; then
                 log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
+                [[ "$_had_stash" == "true" ]] && git stash pop -q 2>/dev/null || true
                 AISHORE_FEATURE_BRANCH=""
                 return 1
             fi
@@ -2811,6 +2823,12 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
         [[ "$MERGE_STRATEGY" == "squash" ]] && delete_flag="-D"
         git branch "$delete_flag" "$AISHORE_FEATURE_BRANCH" 2>/dev/null || true
         log_success "Merged and cleaned up $AISHORE_FEATURE_BRANCH"
+
+        # Restore stashed backlog/tracking changes after merge
+        if [[ "$_had_stash" == "true" ]]; then
+            git stash pop -q 2>/dev/null || log_warning "Failed to restore stashed backlog changes — may need manual git stash pop"
+        fi
+
         _sync_remote "$base_branch"
     fi
     AISHORE_FEATURE_BRANCH=""

@@ -50,7 +50,7 @@ validation:
 #   timeout: 3600
 #   max_turns:
 #     developer: 25
-#     validator: 10
+#     validator: 15
 #     groomer: 15
 
 # Permissions (restrict for tighter sandbox)
