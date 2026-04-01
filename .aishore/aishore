@@ -2963,6 +2963,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>" || {
                 }
             else
                 log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
+                if ! git merge --abort 2>/dev/null; then
+                    log_warning "git merge --abort failed — worktree may need manual cleanup"
+                fi
                 [[ "$_had_stash" == "true" ]] && git stash pop -q 2>/dev/null || true
                 AISHORE_FEATURE_BRANCH=""
                 return 1
@@ -2973,6 +2976,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>" || {
 
 Co-Authored-By: Claude <noreply@anthropic.com>"; then
                 log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
+                if ! git merge --abort 2>/dev/null; then
+                    log_warning "git merge --abort failed — worktree may need manual cleanup"
+                fi
                 [[ "$_had_stash" == "true" ]] && git stash pop -q 2>/dev/null || true
                 AISHORE_FEATURE_BRANCH=""
                 return 1
