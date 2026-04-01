@@ -101,6 +101,9 @@ CREATE_PR="false"
 TIMEOUT_MINUTES="0"
 SESSION_RETRIES="0"
 SESSION_LIMIT=""
+MAX_TURNS_DEVELOPER="25"
+MAX_TURNS_VALIDATOR="10"
+MAX_TURNS_GROOMER="15"
 
 # Detect timeout command once at startup (macOS uses gtimeout from coreutils)
 if command -v timeout &>/dev/null; then
@@ -565,6 +568,9 @@ load_config() {
             ".timeout_minutes      TIMEOUT_MINUTES"
             ".run.retries          SESSION_RETRIES"
             ".run.limit            SESSION_LIMIT"
+            ".agent.max_turns.developer MAX_TURNS_DEVELOPER"
+            ".agent.max_turns.validator MAX_TURNS_VALIDATOR"
+            ".agent.max_turns.groomer   MAX_TURNS_GROOMER"
             ".permissions.developer CFG_PERMS_DEVELOPER"
             ".permissions.validator CFG_PERMS_VALIDATOR"
             ".permissions.reviewer  CFG_PERMS_REVIEWER"
@@ -629,6 +635,9 @@ _apply_env_overrides() {
         "AISHORE_TIMEOUT_MINUTES  TIMEOUT_MINUTES"
         "AISHORE_RETRIES          SESSION_RETRIES"
         "AISHORE_SESSION_LIMIT    SESSION_LIMIT"
+        "AISHORE_MAX_TURNS_DEVELOPER MAX_TURNS_DEVELOPER"
+        "AISHORE_MAX_TURNS_VALIDATOR MAX_TURNS_VALIDATOR"
+        "AISHORE_MAX_TURNS_GROOMER   MAX_TURNS_GROOMER"
     )
     local _env_name _target_var
     for _entry in "${_env_map[@]}"; do
@@ -1412,8 +1421,9 @@ run_agent_process() {
     local allowed_tools="$3"
     local output_format="$4"
     local prompt="$5"
+    local max_turns="${6:-}"
 
-    log_agent "$agent_label" "Starting (model: $model, timeout: ${AGENT_TIMEOUT}s)"
+    log_agent "$agent_label" "Starting (model: $model, timeout: ${AGENT_TIMEOUT}s${max_turns:+, max_turns: $max_turns})"
     local start_time
     start_time=$(date +%s)
 
@@ -1432,6 +1442,11 @@ run_agent_process() {
         --permission-mode acceptEdits
         --allowedTools "$allowed_tools"
     )
+
+    # Max turns limit
+    if [[ -n "$max_turns" ]] && [[ "$max_turns" -gt 0 ]] 2>/dev/null; then
+        claude_args+=(--max-turns "$max_turns")
+    fi
 
     # Session continuation support (warm retries)
     if [[ -n "${AGENT_RESUME_SESSION:-}" ]]; then
@@ -1774,6 +1789,19 @@ run_agent() {
             agent_perms="${CFG_PERMS_DEVELOPER:-$PERMS_DEVELOPER}" ;;
     esac
 
+    # Resolve max_turns based on agent role
+    local max_turns
+    case "$agent_name" in
+        developer)
+            max_turns="$MAX_TURNS_DEVELOPER" ;;
+        validator)
+            max_turns="$MAX_TURNS_VALIDATOR" ;;
+        groomer|tech-lead|product-owner|architect)
+            max_turns="$MAX_TURNS_GROOMER" ;;
+        *)
+            max_turns="$MAX_TURNS_DEVELOPER" ;;
+    esac
+
     local prompt
     prompt=$(build_agent_prompt "$agent_name" "$mode" "$extra_prompt")
 
@@ -1781,12 +1809,12 @@ run_agent() {
         AGENT_OUTPUT_FILE="$output_file" AGENT_MODE="$mode" run_agent_process "$agent_name" "$model" \
             "$agent_perms" "" \
             "$context_files
-$prompt"
+$prompt" "$max_turns"
     else
         AGENT_MODE="$mode" run_agent_process "$agent_name" "$model" \
             "$agent_perms" "text" \
             "$context_files
-$prompt"
+$prompt" "$max_turns"
     fi
 }
 

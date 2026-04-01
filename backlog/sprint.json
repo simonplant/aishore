@@ -1,7 +1,7 @@
 {
   "sprintId": "sprint-1775001599",
   "startedAt": "2026-03-31T16:59:59-07:00",
-  "status": "in_progress",
+  "status": "completed",
   "item": {
     "id": "FEAT-078",
     "title": "Add --max-turns to agent invocations",
@@ -37,6 +37,10 @@
       ".aishore/aishore",
       "docs/CONFIGURATION.md"
     ],
-    "startedAt": "2026-03-31T16:59:59-07:00"
-  }
+    "startedAt": "2026-03-31T16:59:59-07:00",
+    "status": "passed",
+    "completedAt": "2026-03-31T17:05:34-07:00"
+  },
+  "completedAt": "2026-03-31T17:05:34-07:00",
+  "attempts": 1
 }
