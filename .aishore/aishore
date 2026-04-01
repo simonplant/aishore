@@ -1659,7 +1659,7 @@ Do not create new documentation files. Only update existing docs that already co
 ## Maturity Protocol (MANDATORY — complete all phases)
 **Phase 1 — Implement:** Write the code. Follow spec, match conventions.${VALIDATE_CMD:+ Run \`$VALIDATE_CMD\` and fix failures.}
 **Phase 2 — Critique:** STOP coding. Re-read every changed file. Verify intent is fulfilled and each AC is provably met. Hunt bugs, edge cases, dead code, missing error handling. Fix everything found.
-**Phase 3 — Harden:**${VALIDATE_CMD:+ Run \`$VALIDATE_CMD\` and fix any failures.} **Run every AC verify command from the item spec and fix failures.** For AC without verify commands, manually execute the behavior. Fix regressions. Only then commit and signal done.
+**Phase 3 — Harden:**${VALIDATE_CMD:+ Run \`$VALIDATE_CMD\` and fix any failures.} **Run every AC verify command and fix failures.** AC verify commands are in sprint.json under \`acceptanceCriteria\` — entries with a \`verify\` field (e.g. \`{\"text\": \"...\", \"verify\": \"shell command\"}\`). Run each \`.verify\` command. For AC without verify commands, manually execute the behavior. Fix regressions. Only then commit and signal done.
 Output phase markers: \`═══ PHASE 2: CRITIQUE ═══\` / \`═══ PHASE 3: HARDEN ═══\`
 
 ## Maturity Evidence (REQUIRED in result.json)
