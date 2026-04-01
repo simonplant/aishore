@@ -48,6 +48,10 @@ validation:
 # Agent settings
 # agent:
 #   timeout: 3600
+#   max_turns:
+#     developer: 25
+#     validator: 10
+#     groomer: 15
 
 # Permissions (restrict for tighter sandbox)
 # permissions:
@@ -173,6 +177,36 @@ validation:
 | **Env var** | `AISHORE_AGENT_TIMEOUT` |
 | **What it controls** | Maximum time an agent process can run before being killed. |
 | **When to change** | Increase for large features; decrease to bound costs. |
+
+#### `agent.max_turns.developer`
+
+| | |
+|---|---|
+| **Type** | integer |
+| **Default** | `25` |
+| **Env var** | `AISHORE_MAX_TURNS_DEVELOPER` |
+| **What it controls** | Maximum conversation turns for the developer agent. Limits how many tool-call round trips the agent can make within a single invocation. |
+| **When to change** | Increase for complex features that need more iteration; decrease to bound token costs. |
+
+#### `agent.max_turns.validator`
+
+| | |
+|---|---|
+| **Type** | integer |
+| **Default** | `10` |
+| **Env var** | `AISHORE_MAX_TURNS_VALIDATOR` |
+| **What it controls** | Maximum conversation turns for the validator agent. Validators typically need fewer turns since they run checks and report results. |
+| **When to change** | Increase if validation involves complex multi-step probing. |
+
+#### `agent.max_turns.groomer`
+
+| | |
+|---|---|
+| **Type** | integer |
+| **Default** | `15` |
+| **Env var** | `AISHORE_MAX_TURNS_GROOMER` |
+| **What it controls** | Maximum conversation turns for grooming agents (groomer, tech-lead, product-owner, architect). |
+| **When to change** | Increase for larger grooming sessions; decrease to keep grooming focused. |
 
 #### `permissions.developer`
 
@@ -354,6 +388,9 @@ All `AISHORE_*` environment variables and what they map to:
 | `AISHORE_TIMEOUT_MINUTES` | `timeout_minutes` | `0` | Agent timeout in minutes (overrides `agent.timeout`; 0 = no override) |
 | `AISHORE_RETRIES` | `run.retries` | `0` | Per-item retry attempts on failure |
 | `AISHORE_SESSION_LIMIT` | `run.session_limit` | `0` | Cap session at N items (0 = unlimited) |
+| `AISHORE_MAX_TURNS_DEVELOPER` | `agent.max_turns.developer` | `25` | Max turns for developer agent |
+| `AISHORE_MAX_TURNS_VALIDATOR` | `agent.max_turns.validator` | `10` | Max turns for validator agent |
+| `AISHORE_MAX_TURNS_GROOMER` | `agent.max_turns.groomer` | `15` | Max turns for grooming agents |
 
 ---
 

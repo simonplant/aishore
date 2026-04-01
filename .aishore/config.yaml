@@ -20,6 +20,10 @@ validation:
 
 # agent:
 #   timeout: 3600
+#   max_turns:
+#     developer: 25
+#     validator: 10
+#     groomer: 15
 
 # Session tuning defaults for 'run'. CLI flags override these.
 # run:
