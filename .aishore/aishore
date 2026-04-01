@@ -2734,7 +2734,7 @@ _handle_sprint_success() {
         return 0
     fi
 
-    _safety_commit "$ITEM_ID"
+    _safety_commit "$ITEM_ID" || log_warning "Safety commit failed — continuing with merge"
 
     # Worktree mode: copy result.json back, then remove worktree and restore paths
     # The feature branch (with all commits) is shared via git, so merge works from original dir
@@ -3230,7 +3230,7 @@ run_sprint_loop() {
 
         # Worktree isolation: create a separate working directory for the sprint
         local wt_dir
-        wt_dir=$(mktemp -u "${TMPDIR:-/tmp}/aishore-wt-XXXXXX")
+        wt_dir="${TMPDIR:-/tmp}/aishore-wt-${ITEM_ID}-$$"
         git branch -D "$branch_name" 2>/dev/null || true
         git worktree add "$wt_dir" -b "$branch_name"
         AISHORE_WORKTREE_DIR="$wt_dir"
@@ -3245,6 +3245,10 @@ run_sprint_loop() {
 
         # Copy current sprint.json into worktree backlog (create_sprint wrote to original)
         cp "$PROJECT_ROOT/backlog/sprint.json" "$BACKLOG_DIR/sprint.json"
+
+        # Capture sprint-shaped item for spec refinement (before sprint reset wipes it)
+        local sprint_item_json
+        sprint_item_json=$(jq -c '.item' "$BACKLOG_DIR/sprint.json" 2>/dev/null || echo "")
 
         cd "$wt_dir" || { log_error "Cannot cd to $wt_dir"; return 1; }
         log_info "Worktree created: $wt_dir"
@@ -3265,7 +3269,7 @@ run_sprint_loop() {
             done
             [[ -n "$retry_extra_prompt" ]] && failure_ctx="${failure_ctx}Last failure context: ${retry_extra_prompt}"
 
-            if refine_item_spec "$ITEM_ID" "$failure_ctx" "$item_json"; then
+            if refine_item_spec "$ITEM_ID" "$failure_ctx" "$sprint_item_json"; then
                 log_info "Running one more developer → validate → validator cycle with refined spec"
                 # Reset failure tracking for this single refinement attempt
                 local saved_retries=$retries
