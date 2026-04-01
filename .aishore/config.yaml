@@ -7,6 +7,11 @@ validation:
   command: ""
   timeout: 120
 
+# Setup command runs in each worktree before the sprint starts.
+# Use this to install dependencies that aren't in git (node_modules, venv, etc.)
+# setup:
+#   command: "npm install"
+
 # Backlog files to read from (relative to backlog/ directory).
 # Omit to use the default: [backlog.json, bugs.json]
 # backlog_files:

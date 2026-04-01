@@ -88,6 +88,7 @@ MODEL_FAST="claude-sonnet-4-6"
 AGENT_TIMEOUT="3600"
 VALIDATE_CMD=""
 VALIDATE_TIMEOUT="120"
+SETUP_CMD=""
 FIX_CMD=""
 NOTIFY_CMD=""
 AUTO_GROOM_THRESHOLD="3"
@@ -578,6 +579,7 @@ load_config() {
         local -a _cfg_map=(
             ".validation.command    VALIDATE_CMD"
             ".validation.timeout    VALIDATE_TIMEOUT"
+            ".setup.command         SETUP_CMD"
             ".fix.command           FIX_CMD"
             ".models.primary        MODEL_PRIMARY"
             ".models.fast           MODEL_FAST"
@@ -648,6 +650,7 @@ _apply_env_overrides() {
         "AISHORE_AGENT_TIMEOUT      AGENT_TIMEOUT"
         "AISHORE_VALIDATE_CMD       VALIDATE_CMD"
         "AISHORE_VALIDATE_TIMEOUT   VALIDATE_TIMEOUT"
+        "AISHORE_SETUP_CMD          SETUP_CMD"
         "AISHORE_FIX_CMD            FIX_CMD"
         "AISHORE_NOTIFY_CMD         NOTIFY_CMD"
         "AISHORE_AUTO_GROOM_THRESHOLD AUTO_GROOM_THRESHOLD"
@@ -3406,6 +3409,23 @@ run_sprint_loop() {
 
         cd "$wt_dir" || { log_error "Cannot cd to $wt_dir"; return 1; }
         log_info "Worktree created: $wt_dir"
+
+        # Run setup command in worktree (e.g., npm install, pip install)
+        if [[ -n "$SETUP_CMD" ]]; then
+            log_info "Running setup: $SETUP_CMD"
+            if ! bash -c "$SETUP_CMD" 2>&1; then
+                log_error "Setup command failed — aborting sprint"
+                _record_sprint_failure "$ITEM_ID" "$item_source" "Setup failed" "Setup command '$SETUP_CMD' failed in worktree"
+                _cleanup_worktree
+                cd "$PROJECT_ROOT" || true
+                failed=$((failed + 1))
+                FAILED_IDS["$ITEM_ID"]="Setup failed"
+                sprint_results+=("fail")
+                sprint_items+=("$ITEM_ID")
+                sprint_times+=("$(( $(date +%s) - sprint_start ))")
+                continue
+            fi
+        fi
 
         # Developer → validation → validator (with retries)
         local sprint_passed=false
