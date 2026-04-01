@@ -136,6 +136,11 @@ cmd_backlog_add() {
 
     log_success "Created $new_id: $title"
 
+    # Advisory warning for short intent (hard gate is at sprint time, but warn early)
+    if [[ -n "$intent" && ${#intent} -lt 20 ]]; then
+        log_warning "Intent is only ${#intent} chars — items with intent <20 chars are skipped at sprint time"
+    fi
+
     # Run readiness gates when setting --ready (warn but don't block)
     if [[ "$ready" == "true" ]]; then
         local gates_warnings
@@ -148,7 +153,7 @@ cmd_backlog_add() {
 
 cmd_backlog_edit() {
     local id="${1:-}"
-    [[ -z "$id" ]] && { log_error "Usage: backlog edit <ID> [--title ...] [--intent ...] [--priority ...] [--status ...] [--desc ...] [--category ...] [--steps ...] [--ac ...] [--ac-verify ...] [--scope ...] [--depends-on ...] [--ready] [--no-ready] [--groomed-at ...] [--groomed-notes ...]"; return 1; }
+    [[ -z "$id" ]] && { log_error "Usage: backlog edit <ID> [--title ...] [--intent ...] [--priority ...] [--status ...] [--desc ...] [--category ...] [--steps ...] [--ac ...] [--ac-verify ...] [--scope ...] [--depends-on ...] [--clear-depends] [--ready] [--no-ready] [--groomed-at ...] [--groomed-notes ...]"; return 1; }
     shift
 
     # Verify item exists

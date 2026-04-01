@@ -43,7 +43,7 @@ Commands:
   help <command>   Show detailed help for a command
   help --full      Show complete reference
 
-Other: clean, update, version
+Other: clean, update, checksums, version
 EOF
 }
 
