@@ -2742,14 +2742,21 @@ _handle_sprint_success() {
     if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
         # Preserve result.json for PR body / squash message
         [[ -f "$STATUS_DIR/result.json" ]] && cp "$STATUS_DIR/result.json" "$DATA_DIR/status/result.json"
-        # Capture archive entry before worktree is destroyed
+        # Capture archive entry before worktree is destroyed (needed for --no-merge)
         local _wt_archive_entry
         _wt_archive_entry=$(tail -1 "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null || true)
         _cleanup_worktree
-        # Append the captured archive entry to the main repo's sprints.jsonl
-        if [[ -n "$_wt_archive_entry" ]]; then
-            mkdir -p "$ARCHIVE_DIR"
-            printf '%s\n' "$_wt_archive_entry" >> "$ARCHIVE_DIR/sprints.jsonl"
+        if [[ "$no_merge" == "true" ]]; then
+            # No merge will happen — manually replicate tracking data to main
+            if [[ -n "$_wt_archive_entry" ]]; then
+                mkdir -p "$ARCHIVE_DIR"
+                printf '%s\n' "$_wt_archive_entry" >> "$ARCHIVE_DIR/sprints.jsonl"
+            fi
+        else
+            # Merge will bring all worktree changes — discard stale uncommitted
+            # tracking files on main so the merge applies cleanly
+            git checkout -- "$BACKLOG_DIR/sprint.json" 2>/dev/null || true
+            git checkout -- "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null || true
         fi
     fi
 
