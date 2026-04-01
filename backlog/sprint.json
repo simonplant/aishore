@@ -1,34 +1,46 @@
 {
-  "sprintId": "sprint-1775001421",
-  "startedAt": "2026-03-31T16:57:01-07:00",
+  "sprintId": "sprint-1775001599",
+  "startedAt": "2026-03-31T16:59:59-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-077",
-    "title": "Downgrade validator agent to MODEL_FAST (sonnet)",
-    "intent": "Validation costs 5x less without quality loss — validators do read-only verification, not code generation, so opus is dramatically overqualified.",
-    "description": "The validator agent currently runs on MODEL_PRIMARY (opus). Validators read diffs, run AC verify commands, and write a pass/fail verdict. This is read-only analytical work that sonnet handles well. Change the validator invocation in _run_validation_cycle() to use MODEL_FAST instead of MODEL_PRIMARY.",
+    "id": "FEAT-078",
+    "title": "Add --max-turns to agent invocations",
+    "intent": "Prevent runaway agents from spinning indefinitely within the timeout, burning tokens on repetitive tool calls without making progress.",
+    "description": "run_agent_process() builds claude args but never sets --max-turns. A stuck agent can loop tool calls until the timeout kills it. Add per-role max-turns defaults: developer ~25, validator ~10, groomer ~15. Make configurable via config.yaml and env overrides.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "In _run_validation_cycle(), change the run_agent call for validator from MODEL_PRIMARY to MODEL_FAST",
-      "Update docs/CONFIGURATION.md if it references which model the validator uses"
+      "Add MAX_TURNS_DEVELOPER, MAX_TURNS_VALIDATOR, MAX_TURNS_GROOMER defaults in the defaults section",
+      "Add config.yaml keys (agent.max_turns.developer, etc.) and AISHORE_ env overrides",
+      "In run_agent_process(), accept a max_turns parameter and add --max-turns to claude_args",
+      "Pass the appropriate max_turns from run_agent() based on agent_name",
+      "Update CONFIGURATION.md with the new config keys and env vars"
     ],
     "acceptanceCriteria": [
       {
-        "text": "Validator agent is invoked with MODEL_FAST model",
-        "verify": "grep -n 'run_agent.*validator.*validate' .aishore/aishore | grep -q 'MODEL_FAST'"
+        "text": "Developer agent invocation includes --max-turns flag",
+        "verify": ".aishore/aishore run --dry-run 2>&1 | grep -q 'max.turns' || grep -q 'max_turns' .aishore/aishore"
       },
       {
-        "text": "No other agent invocations are changed — developer still uses MODEL_PRIMARY",
-        "verify": "grep -n 'run_agent.*developer.*implement' .aishore/aishore | grep -q 'MODEL_PRIMARY'"
+        "text": "Default max-turns values exist in the defaults section",
+        "verify": "grep -E 'MAX_TURNS_(DEVELOPER|VALIDATOR|GROOMER)' .aishore/aishore | grep -c '=' | grep -q '[3-9]'"
+      },
+      {
+        "text": "Max-turns is configurable via env var",
+        "verify": "grep -q 'AISHORE_MAX_TURNS' .aishore/aishore"
+      },
+      {
+        "text": "New config keys documented in CONFIGURATION.md",
+        "verify": "grep -q 'max_turns' docs/CONFIGURATION.md"
       }
     ],
     "scope": [
-      ".aishore/aishore"
+      ".aishore/aishore",
+      "docs/CONFIGURATION.md"
     ],
-    "startedAt": "2026-03-31T16:57:01-07:00",
+    "startedAt": "2026-03-31T16:59:59-07:00",
     "status": "passed",
-    "completedAt": "2026-03-31T16:58:23-07:00"
+    "completedAt": "2026-03-31T17:05:34-07:00"
   },
-  "completedAt": "2026-03-31T16:58:23-07:00",
+  "completedAt": "2026-03-31T17:05:34-07:00",
   "attempts": 1
 }
