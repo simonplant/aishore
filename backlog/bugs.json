@@ -99,31 +99,6 @@
       "status": "todo",
       "passes": false,
       "readyForSprint": true
-    },
-    {
-      "id": "BUG-145",
-      "title": "Spec refinement fails with 'sprint item spec is empty' after sprint failure",
-      "intent": "Spec refinement must work when items fail — it exists specifically for failed items, so it must have access to the item spec at refinement time.",
-      "description": "After sprint failure, the orchestrator attempts spec refinement but reports 'Cannot refine: sprint item spec is empty'. The sprint.json appears to be reset before refinement runs, losing the item data needed for refinement.",
-      "priority": "should",
-      "category": "correctness",
-      "steps": [
-        "Ensure sprint.json still contains the item spec when spec refinement is invoked",
-        "Move sprint.json reset to after refinement completes, not before"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "Spec refinement has access to sprint item data",
-          "verify": "grep -B20 'Cannot refine' .aishore/aishore | grep -q 'sprint_file\\|item'"
-        }
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
     }
   ]
 }
