@@ -213,7 +213,7 @@ validation:
 | | |
 |---|---|
 | **Type** | string (comma-separated tool names) |
-| **Default** | `Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode` |
+| **Default** | `Agent,Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode` |
 | **Env var** | — |
 | **What it controls** | Claude Code tools available to the developer agent. Full access by default, including plan mode for structured implementation planning. |
 | **When to change** | Remove `Bash` to prevent shell commands, or restrict further for a tighter sandbox. |
@@ -619,9 +619,9 @@ Agents run with restricted Claude Code tool permissions. Each role has a default
 
 ### Developer Agent
 
-**Default:** `Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode`
+**Default:** `Agent,Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode`
 
-Full access. The developer agent can run shell commands, read and write files, search the codebase, and enter plan mode for structured implementation planning. This is the most permissive role because it needs to implement features.
+Full access. The developer agent can run shell commands, read and write files, search the codebase, spawn sub-agents for parallel work, and enter plan mode for structured implementation planning. This is the most permissive role because it needs to implement features.
 
 **Security note:** The developer agent can execute arbitrary shell commands. If your project has sensitive credentials accessible via the shell, consider removing `Bash` from the permission set.
 
