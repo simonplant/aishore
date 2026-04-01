@@ -1604,8 +1604,6 @@ build_agent_prompt() {
     local prompt_content
     if [[ "$agent_name" == "groomer" && "$mode" != "populate" ]]; then
         prompt_content="$(sed '/^## Populate Mode/,$d' "$prompt_file" | sed -e :a -e '/^[[:space:]]*$/{ $d; N; ba; }')"
-    elif [[ "$agent_name" == "product-owner" && "$mode" != "populate" ]]; then
-        prompt_content="$(sed '/^## Populate Mode/,$d' "$prompt_file" | sed -e :a -e '/^[[:space:]]*$/{ $d; N; ba; }')"
     elif [[ "$agent_name" == "architect" && "$mode" == "groom" ]]; then
         # Strip Review Mode section, keep Groom Mode section
         prompt_content="$(sed '/^## Review Mode/,/^## Groom Mode/{/^## Groom Mode/!d}' "$prompt_file")"
@@ -1681,24 +1679,17 @@ For every AC that claims observable behavior (\"error messages are clear\", \"co
 If the change added or modified CLI flags, commands, or configuration, check that help text and documentation files reflect the change.
 
 Do not just grep the code for error strings and call it verified. Execute the code path."
-    elif [[ "$agent_name" == "groomer" || "$agent_name" == "tech-lead" || "$agent_name" == "product-owner" || ("$agent_name" == "architect" && "$mode" == "groom") ]]; then
+    elif [[ "$agent_name" == "groomer" || ("$agent_name" == "architect" && "$mode" == "groom") ]]; then
         # CLI commands: shared preamble + role-specific examples
         local cli_role_lines
         if [[ "$agent_name" == "groomer" ]]; then
             cli_role_lines=".aishore/aishore backlog add --type feat --title \"...\" --desc \"...\" --priority should
 .aishore/aishore backlog add --type bug --title \"...\" --desc \"...\" --priority should
 .aishore/aishore backlog edit <ID> --ready --priority must --groomed-at --groomed-notes \"...\""
-        elif [[ "$agent_name" == "product-owner" ]]; then
-            cli_role_lines=".aishore/aishore backlog add --type feat --title \"...\" --desc \"...\" --priority should
-.aishore/aishore backlog edit <ID> --priority must --groomed-at --groomed-notes \"...\""
-        elif [[ "$agent_name" == "architect" ]]; then
+        else
             cli_role_lines=".aishore/aishore backlog add --type feat --title \"...\" --intent \"...\" --desc \"...\" --priority must --ready --step \"...\" --step \"...\" --ac \"...\" --ac \"...\"
 .aishore/aishore backlog edit <ID> --ready --groomed-at --groomed-notes \"...\"
 .aishore/aishore backlog edit <ID> --depends-on FEAT-XXX,FEAT-YYY"
-        else
-            cli_role_lines=".aishore/aishore backlog add --type bug --title \"...\" --desc \"...\" --priority should
-.aishore/aishore backlog edit <ID> --ready --groomed-at --groomed-notes \"...\"
-.aishore/aishore backlog edit <ID> --priority must"
         fi
         validate_hint="
 ## CLI Commands
@@ -1782,7 +1773,7 @@ run_agent() {
             else
                 agent_perms="${CFG_PERMS_REVIEWER:-$PERMS_REVIEWER}"
             fi ;;
-        groomer|tech-lead|product-owner)
+        groomer)
             # Groom agents need full permissions to update backlog files
             agent_perms="${CFG_PERMS_DEVELOPER:-$PERMS_DEVELOPER}" ;;
         *)
@@ -1796,7 +1787,7 @@ run_agent() {
             max_turns="$MAX_TURNS_DEVELOPER" ;;
         validator)
             max_turns="$MAX_TURNS_VALIDATOR" ;;
-        groomer|tech-lead|product-owner|architect)
+        groomer|architect)
             max_turns="$MAX_TURNS_GROOMER" ;;
         *)
             max_turns="$MAX_TURNS_DEVELOPER" ;;
