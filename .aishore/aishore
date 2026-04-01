@@ -157,7 +157,7 @@ _generate_uuid() {
 
 # Default permission sets per agent role
 PERMS_DEVELOPER="Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode"
-PERMS_VALIDATOR="Bash,Read,Write,Glob,Grep"
+PERMS_VALIDATOR="Bash,Read,Glob,Grep"
 PERMS_REVIEWER="Read,Glob,Grep"
 PERMS_REVIEWER_DOCS="Read,Glob,Grep,Edit,Write"
 

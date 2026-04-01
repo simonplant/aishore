@@ -4,3 +4,5 @@
 {"itemId":"FEAT-078","date":"2026-03-31","text":"Default max-turns values exist in the defaults section","verify":"grep -E 'MAX_TURNS_(DEVELOPER|VALIDATOR|GROOMER)' .aishore/aishore | grep -c '=' | grep -q '[3-9]'"}
 {"itemId":"FEAT-078","date":"2026-03-31","text":"Max-turns is configurable via env var","verify":"grep -q 'AISHORE_MAX_TURNS' .aishore/aishore"}
 {"itemId":"FEAT-078","date":"2026-03-31","text":"New config keys documented in CONFIGURATION.md","verify":"grep -q 'max_turns' docs/CONFIGURATION.md"}
+{"itemId":"FEAT-080","date":"2026-03-31","text":"Validator permissions do not include Write tool","verify":"grep 'PERMS_VALIDATOR=' .aishore/aishore | head -1 | grep -v 'CFG_' | grep -vq 'Write'"}
+{"itemId":"FEAT-080","date":"2026-03-31","text":"Validator permissions still include Bash for running commands and writing result.json","verify":"grep 'PERMS_VALIDATOR=' .aishore/aishore | head -1 | grep -v 'CFG_' | grep -q 'Bash'"}
