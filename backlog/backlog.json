@@ -76,39 +76,6 @@
       "groomingNotes": "Blocked: FEAT-082 must complete first. Both are future priority — do not sprint until FEAT-082 is done and merged. Token metadata extraction depends on session JSON output being available."
     },
     {
-      "id": "FEAT-084",
-      "title": "Add --bare flag to all agent invocations",
-      "intent": "Every agent invocation must be reproducible across machines — no local hooks, MCP servers, skills, or auto-memory leaking into orchestrated agents.",
-      "description": "run_agent_process() spawns claude without --bare. Agents pick up local config that differs between environments. Add --bare to the claude_args array in run_agent_process().",
-      "priority": "must",
-      "category": null,
-      "steps": [
-        "In run_agent_process(), add '--bare' to the claude_args array BEFORE any other flags — this is the ONLY change needed in run_agent_process()",
-        "In refine_item_spec(), add '--bare' to the _refine_cmd array for the spec refinement agent",
-        "Update checksums.sha256 with the new hash for .aishore/aishore",
-        "CRITICAL: Do NOT modify find_claude_md(), build_context(), or any CLAUDE.md-related code — only add --bare flags"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "claude_args array includes --bare",
-          "verify": "grep -A20 'local claude_args' .aishore/aishore | grep -q \"\\-\\-bare\""
-        },
-        {
-          "text": "CLAUDE.md content is still loaded and injected into agent prompts",
-          "verify": "grep -q 'find_claude_md\\|claude_md' .aishore/aishore"
-        }
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
-      "groomingNotes": "Must-priority. Single-change item: add --bare to claude_args and refine_item_spec cmd array. Note: --bare skips keychain/OAuth, so ensure CLAUDE.md context injection path (find_claude_md) is not removed — it's the intentional workaround.",
-      "groomedAt": "2026-03-31"
-    },
-    {
       "id": "FEAT-086",
       "title": "Clarify developer scope rule for entry-point wiring",
       "intent": "The developer must know exactly when wiring to entry points is in-scope — ambiguity causes retry loops when the validator rejects either interpretation.",
