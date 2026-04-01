@@ -1,1 +1,35 @@
-{"sprintId": null, "status": "idle", "item": null}
+{
+  "sprintId": "sprint-1775005206",
+  "startedAt": "2026-03-31T18:00:06-07:00",
+  "status": "completed",
+  "item": {
+    "id": "BUG-134",
+    "title": "Unchecked cd commands silently continue in wrong directory",
+    "intent": "Every cd in the orchestrator must fail loudly — silently running git or file operations in the wrong directory can corrupt repos or lose work.",
+    "description": "Several cd commands use '2>/dev/null || true', suppressing errors. If cd fails, subsequent git/file operations execute in the wrong directory. Affected lines: cd $PROJECT_ROOT, cd $wt_dir, and others. Replace with explicit error checks that return/exit on failure.",
+    "sourceBacklog": "bugs.json",
+    "steps": [
+      "Find all cd commands in .aishore/aishore that use || true or 2>/dev/null",
+      "Replace with: cd \"$dir\" || { log_error \"Cannot cd to $dir\"; return 1; }",
+      "Verify no cd command silently ignores failure"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "No cd command uses || true or suppresses stderr without an error handler",
+        "verify": "! grep -n 'cd .*|| true' .aishore/aishore | grep -qv '#'"
+      },
+      {
+        "text": "All cd commands have explicit failure handling",
+        "verify": "! grep -En '^\\s+cd ' .aishore/aishore | grep -v '|| {' | grep -v 'log_error' | grep -v '|| return' | grep -v '|| exit' | grep -qv '#'"
+      }
+    ],
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "startedAt": "2026-03-31T18:00:06-07:00",
+    "status": "passed",
+    "completedAt": "2026-03-31T18:02:29-07:00"
+  },
+  "completedAt": "2026-03-31T18:02:29-07:00",
+  "attempts": 1
+}

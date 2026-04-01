@@ -8,3 +8,5 @@
 {"itemId":"FEAT-080","date":"2026-03-31","text":"Validator permissions still include Bash for running commands and writing result.json","verify":"grep 'PERMS_VALIDATOR=' .aishore/aishore | head -1 | grep -v 'CFG_' | grep -q 'Bash'"}
 {"itemId":"FEAT-081","date":"2026-03-31","text":"Phase 2 text does not mention documentation or docs","verify":"grep 'Phase 2.*Critique' .aishore/aishore | grep -vq 'documented interface'"}
 {"itemId":"FEAT-081","date":"2026-03-31","text":"Documentation Maintenance section still exists as a separate injection","verify":"grep -q 'Documentation Maintenance' .aishore/aishore"}
+{"itemId":"BUG-134","date":"2026-03-31","text":"No cd command uses || true or suppresses stderr without an error handler","verify":"! grep -n 'cd .*|| true' .aishore/aishore | grep -qv '#'"}
+{"itemId":"BUG-134","date":"2026-03-31","text":"All cd commands have explicit failure handling","verify":"! grep -En '^\\s+cd ' .aishore/aishore | grep -v '|| {' | grep -v 'log_error' | grep -v '|| return' | grep -v '|| exit' | grep -qv '#'"}
