@@ -9,27 +9,27 @@
 [![Last Commit](https://img.shields.io/github/last-commit/simonplant/aishore)](https://github.com/simonplant/aishore/commits/main)
 [![GitHub Stars](https://img.shields.io/github/stars/simonplant/aishore?style=flat)](https://github.com/simonplant/aishore/stargazers)
 
-**Iterative intent-based development with evals for Claude Code.**
+**Ship working code, not evidence of process.**
 
-Say what must be true, not how to build it. Attach executable checks that prove it. Let the machine iterate until the evals pass — then protect that work forever with a regression suite that grows automatically.
+Humans own what to build. Machines own how fast and how correctly. You write intent and priority. An AI implements, critiques its own work, and hardens it — all in one session while context is hot. A separate AI validates against intent. A regression suite compounds proof that prior work still holds. The result is merged, working code.
 
 ```bash
 .aishore/aishore run done   # drain the entire backlog, hands-off
 ```
 
-## Why Intent + Evals
-
-"Build me a login page" is an instruction. "Users authenticate securely or are told exactly why they cannot — never a blank screen" is **intent**. `--ac-verify "curl -s localhost:3000/login | grep -q 'Sign in'"` is an **eval**.
-
-The difference matters. Instructions tell the AI *what to type*. Intent tells it *what must be true when done*. Evals prove it. When you combine all three — intent drives the implementation, evals gate the merge, and the regression suite compounds across sprints — you get software that converges on correct, not software that happens to pass on the first try.
-
-aishore is the orchestration layer that makes this loop work at scale with Claude Code: pick items from a backlog, develop each through a quality protocol, validate against intent and evals, merge, and protect all prior work with accumulated regression checks.
-
 ## The Problem
 
 AI coding tools are single-session. You prompt, it codes, the session ends. To ship 20 features you sit through 20 sessions — managing branches, reviewing output, catching regressions, re-prompting on failures. There's no batch execution, no quality gates between items, no memory of what was already built.
 
+TDD and agile ceremony don't help — they produce green tests on broken products, velocity metrics on stalled deliveries, and approved PRs that nobody actually ran. The process becomes the product.
+
 **aishore is the layer between "AI can write code" and "AI can ship a sprint."**
+
+## Why Intent + Evals
+
+"Build me a login page" is an instruction. "Users authenticate securely or are told exactly why they cannot — never a blank screen" is **intent**. `--ac-verify "curl -s localhost:3000/login | grep -q 'Sign in'"` is an **eval**.
+
+Instructions tell the AI *what to type*. Intent tells it *what must be true when done*. Evals prove it. When you combine all three — intent drives the implementation, evals gate the merge, and the regression suite compounds across sprints — you get software that converges on correct, not software that happens to pass on the first try.
 
 ## How It Works
 
@@ -48,13 +48,10 @@ You provide three things per item: **what must be true** (commander's intent), *
 **For each item, the orchestrator:**
 
 1. **Picks** the highest-priority ready item and creates a feature branch
-2. **Pre-flights** your test suite and the regression suite against the unmodified codebase (catches broken baselines and regressions from prior sprints before wasting a sprint)
-3. **Develops** through a 3-phase maturity protocol — all in one session while context is hot:
-   - **Implement** — write the code
-   - **Critique** — stop, re-read everything, verify each AC, hunt bugs and edge cases, fix what's found
-   - **Harden** — run validation again, fix regressions, confirm all AC are provably met
-4. **Validates** — runs your test suite, executes AC verify commands, then an independent Validator agent probes the implementation and reviews against acceptance criteria and commander's intent
-5. **Merges** the feature branch, pushes, and archives the completed item with full metadata
+2. **Pre-flights** your test suite and the regression suite against the unmodified codebase (catches broken baselines and regressions before wasting a sprint)
+3. **Develops** through a maturity protocol — implement, critique, harden — all in one session while the AI still holds full context
+4. **Validates** — runs your test suite, executes AC verify commands, then an independent Validator agent probes the implementation against acceptance criteria and commander's intent
+5. **Merges** the feature branch, pushes, and archives the completed item
 
 Failed items retry with failure context fed back to the developer. If all retries exhaust, an AI agent refines the spec and tries once more. A circuit breaker stops the session if failures cascade.
 
@@ -97,17 +94,15 @@ Intent is a **hard gate**. Items without it are skipped. When the spec is ambigu
 
 **Autonomous batch execution.** `run done` drains the backlog. `run p0` does just the must-haves. Set `--limit 10` for a capped session. Walk away; come back to merged code.
 
-**Quality that survives scale.** The maturity protocol (implement, critique, harden) runs inside each session while the AI still holds full context. The Validator agent actively probes implementations — running commands to verify behavior, not just reading diffs. Acceptance criteria with verify commands are deterministic evals, not opinions.
+**Quality through execution, not ceremony.** The maturity protocol keeps quality iteration inside the session where the AI holds full context. The Validator agent runs commands to probe behavior. AC verify commands are executable checks that prove the feature works — not opinions, not coverage metrics, not green badges on broken software.
 
-**Evals that compound.** Every sprint's verify commands are saved to a regression suite. Before each subsequent sprint, the full suite runs as pre-flight — sprint 51 cannot silently break what sprint 12 proved worked. The regression suite grows automatically from the specs groom agents write. No manual test maintenance.
+**Evals that compound.** Every sprint's verify commands are saved to a regression suite. Before each subsequent sprint, the full suite runs as pre-flight. Sprint 51 cannot silently break what sprint 12 proved. The regression suite grows automatically. No manual test maintenance.
 
-**Full sprint lifecycle.** Feature branches, pre-flight checks, scope enforcement, independent validation, merge, push, and archival. Every completed item is recorded with its original spec, outcome, duration, and line count.
+**Full sprint lifecycle.** Feature branches, pre-flight checks, independent validation, merge, push, and archival. Every completed item is recorded with its original spec, outcome, and metadata.
 
 **Self-healing failures.** Retries carry full failure context (prior diff, validator feedback, error logs). Spec refinement rewrites the steps and AC based on what went wrong. Circuit breaker stops runaway sessions.
 
-**AI-powered grooming.** The groomer agent decomposes rough ideas into sprint-ready items. `scaffold` detects when a project is building fragments without a working top-down skeleton and injects scaffolding items. Auto-groom keeps the pipeline filled during long autonomous runs.
-
-**Zero config.** Pure Bash, no build step. `init -y` detects your project type and test command. Works out of the box. Customize later via `config.yaml` or environment variables.
+**Top-down wiring.** The scaffolding detector prevents fragment accumulation — building isolated pieces that never connect. Code must be reachable from real entry points. Auto-groom keeps the pipeline filled during long autonomous runs.
 
 ## Built by aishore
 
@@ -115,11 +110,10 @@ This project builds itself. Nearly every commit was generated by aishore's own s
 
 | Metric | Value |
 |--------|-------|
-| Sprints completed | 305 |
-| Commits generated | 731 (96% of repo history) |
-| Bugs fixed autonomously | 215 |
-| Features shipped | 75 |
-| Days of development | 63 |
+| Total commits | 823 |
+| Features shipped | 31 |
+| Bugs fixed autonomously | 54 |
+| Days of development | 66 |
 
 Browse the [git history](https://github.com/simonplant/aishore/commits/main) — the conventional commit messages, feature branches, and merge commits are all aishore's work.
 
@@ -129,7 +123,7 @@ Browse the [git history](https://github.com/simonplant/aishore/commits/main) —
 Those are session tools. aishore is the sprint layer on top. It handles what happens *between* sessions: backlog priority, git branching, quality gates, failure recovery, batch execution, and result archival. You keep your AI coding tool — aishore orchestrates it.
 
 **"Can't I just loop over prompts in a shell script?"**
-You'd need to build: git branching per item, baseline pre-flight, a maturity protocol, retries with failure context, scope enforcement, auto-grooming, circuit breakers, spec refinement, independent validation, a regression suite, and sprint archival. That's what aishore is — already built, tested across 305 sprints.
+You'd need to build: git branching per item, baseline pre-flight, a maturity protocol, retries with failure context, auto-grooming, circuit breakers, spec refinement, independent validation, a regression suite, and sprint archival. That's what aishore is.
 
 **"What about SWE-agent / OpenHands / Devin?"**
 Those are AI agents that solve individual tasks. aishore manages the *sprint*, not the *task*. It handles item selection, quality gates, batch execution, and the workflow around the agent. It could wrap any coding agent; it currently uses Claude Code because it's the most capable for full-repo work.
@@ -141,16 +135,15 @@ Those are AI agents that solve individual tasks. aishore manages the *sprint*, n
 | **[Quickstart](docs/QUICKSTART.md)** | Install, configure, run your first sprint |
 | **[Architecture](docs/ARCHITECTURE.md)** | Pipeline, agents, quality model, design decisions |
 | **[Configuration](docs/CONFIGURATION.md)** | Config file, env vars, CLI flags |
+| **[Product](docs/PRODUCT.md)** | Vision, target users, non-goals |
 | **[Problems](docs/PROBLEMS.md)** | Problems aishore solves |
-| **[Roadmap](docs/ROADMAP.md)** | What's next |
+| **[Roadmap](docs/ROADMAP.md)** | What's next and what's not worth building |
 | **[Contributing](docs/CONTRIBUTING.md)** | Dev setup, code style, PR process |
 | **[Changelog](docs/CHANGELOG.md)** | Release history |
 
 ## Status
 
-**Alpha** (see `.aishore/VERSION` for current version). Battle-tested on its own codebase, used daily on real projects.
-
-Works well: sprint orchestration, maturity protocol, autonomous mode, backlog grooming, scaffolding detection, architecture review, regression suite, adversarial validation, executable AC, spec refinement, checksum-verified updates.
+**Alpha** (v0.5.1). Battle-tested on its own codebase, used daily on real projects.
 
 Known limits: single-repo only, Claude Code CLI as the only AI backend, macOS/Linux only.
 

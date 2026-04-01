@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**aishore** is an iterative intent-based development tool with evals — a drop-in orchestration layer for Claude Code. It picks features from a backlog, has an AI developer implement them, validates the implementation against acceptance criteria, and archives completed work.
+**aishore** ships working code, not evidence of process. It is an autonomous sprint orchestration layer for Claude Code — humans own what to build (intent, priority), machines own how fast and how correctly (implementation, validation, regression protection).
+
+The tool picks items from a backlog, has an AI developer implement them through a quality protocol, validates against intent and executable checks, and merges the result. The proof is that it runs — not that tests pass, not that a reviewer approved, not that coverage hit a number.
 
 The tool is self-contained in `.aishore/` and user content lives in `backlog/` at project level.
 
@@ -58,10 +60,10 @@ No build step — the tool is pure Bash. The core orchestrator lazy-loads comman
 
 **Sprint execution flow:**
 ```
-Pick Item → Create Branch (aishore/<ID>) → Developer Agent (with maturity protocol) → Validation Command → Validator Agent → Commit → Merge → Archive
+Pick Item → Create Branch (aishore/<ID>) → Preflight (regression + baseline) → Developer Agent (with maturity protocol) → Validation Command → AC Verify Commands → Validator Agent → Commit → Merge → Archive
 ```
 
-**Maturity protocol:** The developer agent always runs a 3-phase cycle within a single session: (1) Implement — write the code, (2) Critique — shift to reviewer mindset, re-read all changes, verify each AC, hunt bugs/edge cases, fix everything found, (3) Harden — run full validation again, fix regressions, confirm all AC provably met. This keeps quality iteration inside the session where context is hot, rather than relying on external retry loops. Maturity is mandatory and cannot be disabled.
+**Maturity protocol:** The developer agent is instructed to run a 3-phase cycle within a single session: (1) Implement — write the code, (2) Critique — shift to reviewer mindset, re-read all changes, verify each AC, hunt bugs/edge cases, fix everything found, (3) Harden — run full validation again, fix regressions, confirm all AC provably met. This keeps quality iteration inside the session where context is hot, rather than relying on external retry loops. The protocol is enforced via prompt instruction; the orchestrator verifies the final result (pass/fail + validation), not phase execution.
 
 **Autonomous mode:** `run <scope>` (where scope is `done`, `p0`, `p1`, or `p2`) wraps the sprint loop with: priority-scoped item selection, auto-grooming when ready items drop below threshold, session failure tracking passed to subsequent developer agents, and a circuit breaker that stops after N consecutive failures. Auto-groom runs the architect first (scaffolding detection), then the groomer.
 
@@ -87,7 +89,7 @@ project/
     ├── VERSION              # Version (single source of truth)
     ├── checksums.sha256     # SHA-256 checksums for update verification
     ├── agents/*.md          # Agent prompts
-    ├── config.yaml          # Optional overrides
+    ├── config.yaml          # Optional overrides (requires yq for full support)
     ├── lib/                 # Lazy-loaded command modules
     │   ├── cmd-backlog-read.sh   # backlog list/show/check/rm
     │   ├── cmd-backlog-write.sh  # backlog add/edit
@@ -123,21 +125,23 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 **Safe failure recovery:** Sprint failures delete the feature branch and return to the base branch cleanly. The developer agent commits directly; the orchestrator has a safety net commit if the agent misses it.
 
-**Scope checking:** Items can have a `scope` array of glob patterns (e.g., `["src/**", "tests/**"]`). Scope is used as an advisory file constraint in the developer prompt.
+**Scope checking:** Items can have a `scope` array of glob patterns (e.g., `["src/**", "tests/**"]`). Scope is advisory — injected into the developer prompt as preferred file constraints but not mechanically enforced post-commit.
 
-**Testable acceptance criteria:** AC entries can be plain strings or `{text, verify}` objects. The `verify` field is a shell command run after validation; failures trigger retries. Use `--ac "text" --ac-verify "command"` in `backlog add`/`backlog edit`. Groom agents are instructed to generate `--ac-verify` commands for every AC where behavior is observable via shell command. Items with 0% verify coverage trigger advisory warnings during sprint.
+**Testable acceptance criteria:** AC entries can be plain strings or `{text, verify}` objects. The `verify` field is a shell command run by the orchestrator after development; failures trigger retries. Use `--ac "text" --ac-verify "command"` in `backlog add`/`backlog edit`. Groom agents are instructed to generate verify commands that prove behavior works — not commands that grep for code structure. Items with 0% verify coverage trigger advisory warnings during sprint.
 
 **Regression suite:** When a sprint completes successfully, all `verify` commands from its AC are saved to `backlog/archive/regression.jsonl`. Before every subsequent sprint, the full regression suite runs as part of pre-flight — if any prior sprint's verify command fails, the sprint is aborted. This ensures sprints cannot silently break work completed by earlier sprints. The regression suite compounds automatically and requires no manual maintenance.
 
 **Adversarial validation:** The validator agent is instructed by the orchestrator to actively probe implementations using Bash commands, not just read diffs. When AC claims observable behavior, the validator must execute commands to verify it. This is injected at runtime by the orchestrator, not in the agent prompt.
 
+**Validation sequence:** After the developer finishes, the orchestrator runs three checks in order: (1) validation command (your test suite/linter), (2) all AC verify commands from the item, (3) the Validator agent with AC results passed as context. All three must pass. The validator receives the AC verification report but may also re-run commands independently.
+
 **Readiness gates:** `backlog check <ID>` validates an item has a title, commander's intent (>=20 chars, must be a directive not a label), steps, acceptance criteria, and no too-short steps. `backlog edit <ID> --ready` warns on gate failures but doesn't block. **Intent is a hard gate at sprint time** — items without intent (or with intent <20 chars) are silently skipped by auto-pick and explicitly rejected when run by ID.
 
 **Baseline pre-flight:** Before the developer agent runs, the validation command is executed on the current codebase. If baseline fails, the sprint is aborted immediately.
 
-**Spec refinement:** When all retries are exhausted, an AI agent automatically refines the spec (steps + AC) and attempts one more developer cycle.
+**Spec refinement:** When all retries are exhausted, an AI agent automatically refines the spec (steps + AC, not intent) and attempts one more developer cycle.
 
-**Configuration precedence:** env vars > config.yaml > built-in defaults.
+**Configuration precedence:** env vars > config.yaml > built-in defaults. Note: full config.yaml support requires `yq`; without it, only `validation.command` is parsed via grep fallback.
 
 **Update integrity:** Both `install.sh` and `cmd_update()` resolve the latest GitHub release tag via the API, then fetch files from that tagged snapshot (falling back to `main` if no release exists). The file list is discovered dynamically from the remote `checksums.sha256` manifest. All paths are validated (must start with `.aishore/`, no `..` traversal, no absolute paths) and `config.yaml` is explicitly skipped to protect user config. Files are staged to a temp directory, verified against SHA-256 checksums, and only installed if all checks pass.
 
@@ -157,6 +161,7 @@ The orchestrator polls for this file, then proceeds to the next step.
 - jq
 - git
 - claude (Claude Code CLI)
+- yq (optional, for full config.yaml support)
 - On macOS: `brew install coreutils` (for `gtimeout`)
 
 ## Commit Convention
@@ -165,7 +170,15 @@ Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:
 
 ## Sprint Orchestration (aishore)
 
-Iterative intent-based development with evals. Backlog lives in `backlog/`, tool lives in `.aishore/`. Run `.aishore/aishore help` for full usage.
+This project uses aishore for autonomous sprint execution. Backlog lives in `backlog/`, tool lives in `.aishore/`. Run `.aishore/aishore help` for full usage.
+
+**How it works:** aishore picks items from the backlog by priority, implements each on a feature branch, validates against commander's intent and executable acceptance criteria, and merges. Quality comes from execution — code must run and prove it works, not just pass review or hit coverage numbers.
+
+**What this means for you (if you're an AI agent in this project):**
+- **Intent is the north star.** Every item has a commander's intent field. When steps or AC are ambiguous, follow intent.
+- **Prove it runs.** Wire code to real entry points. If the build command exists, run it. If a verify command exists, execute it. Working code that's reachable beats tested code that's isolated.
+- **No mocks or stubs.** Never use mocks or stubs unless the item explicitly requests them. Connect to the real system.
+- **Stay in scope.** Implement the item you're assigned. Don't fix unrelated code, add unrequested features, or refactor surrounding code.
 
 ```bash
 .aishore/aishore run [N|ID]         # Run sprints (branch, commit, merge, push per item)
