@@ -6,3 +6,5 @@
 {"itemId":"FEAT-078","date":"2026-03-31","text":"New config keys documented in CONFIGURATION.md","verify":"grep -q 'max_turns' docs/CONFIGURATION.md"}
 {"itemId":"FEAT-080","date":"2026-03-31","text":"Validator permissions do not include Write tool","verify":"grep 'PERMS_VALIDATOR=' .aishore/aishore | head -1 | grep -v 'CFG_' | grep -vq 'Write'"}
 {"itemId":"FEAT-080","date":"2026-03-31","text":"Validator permissions still include Bash for running commands and writing result.json","verify":"grep 'PERMS_VALIDATOR=' .aishore/aishore | head -1 | grep -v 'CFG_' | grep -q 'Bash'"}
+{"itemId":"FEAT-081","date":"2026-03-31","text":"Phase 2 text does not mention documentation or docs","verify":"grep 'Phase 2.*Critique' .aishore/aishore | grep -vq 'documented interface'"}
+{"itemId":"FEAT-081","date":"2026-03-31","text":"Documentation Maintenance section still exists as a separate injection","verify":"grep -q 'Documentation Maintenance' .aishore/aishore"}

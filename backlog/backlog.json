@@ -158,9 +158,10 @@
         ".aishore/aishore"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "status": "done",
+      "passes": true,
+      "readyForSprint": false,
+      "completedAt": "2026-03-31T17:14:57-07:00"
     },
     {
       "id": "FEAT-082",
