@@ -205,7 +205,7 @@ validation:
 | **Type** | integer |
 | **Default** | `15` |
 | **Env var** | `AISHORE_MAX_TURNS_GROOMER` |
-| **What it controls** | Maximum conversation turns for grooming agents (groomer, tech-lead, product-owner, architect). |
+| **What it controls** | Maximum conversation turns for grooming agents (groomer, architect). |
 | **When to change** | Increase for larger grooming sessions; decrease to keep grooming focused. |
 
 #### `permissions.developer`
@@ -445,8 +445,8 @@ When a scope (`done`, `p0`, `p1`, `p2`) is given, auto-grooming activates when r
 
 | Flag | Description |
 |------|-------------|
-| `--backlog` | Product owner mode: groom features (default: groom bugs) |
-| `--architect` | Architect mode: detect fragment risk, inject scaffolding items |
+| `--backlog` | *(deprecated, no-op)* Groom now covers all items by default |
+| `--architect` | *(deprecated)* Redirects to `scaffold` command |
 
 ### `review` — Architecture review
 
