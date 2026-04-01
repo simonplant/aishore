@@ -1,36 +1,30 @@
 {
-  "sprintId": "sprint-1775005501",
-  "startedAt": "2026-03-31T18:05:01-07:00",
+  "sprintId": "sprint-1775006080",
+  "startedAt": "2026-03-31T18:14:40-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-136",
-    "title": "exit 0 in sourced cmd-init.sh kills parent shell",
-    "intent": "Sourced modules must never kill the parent process — use return, not exit, so the orchestrator can handle errors gracefully.",
-    "description": "cmd-init.sh line 285 uses 'exit 0' when the user declines reinit. Since modules are loaded via source, exit terminates the entire orchestrator process instead of just returning from the function. Must replace with return 0.",
+    "id": "BUG-146",
+    "title": "Validator max turns (10) too low — causes false sprint failures",
+    "intent": "Validators must have enough turns to complete verification — a validator hitting max turns is a system failure, not a code quality failure.",
+    "description": "With MAX_TURNS_VALIDATOR=10, validators frequently hit the limit before writing result.json, causing the sprint to fail even when the developer's code passed all AC verify commands. Increase default to 15 or 20.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Replace exit 0 with return 0 at cmd-init.sh line 285",
-      "Audit all other lib modules for exit statements that should be return",
-      "Verify no exit calls remain in any sourced module function"
+      "Increase MAX_TURNS_VALIDATOR default from 10 to 15",
+      "Update CONFIGURATION.md if it documents the default"
     ],
     "acceptanceCriteria": [
       {
-        "text": "No exit statement exists in any sourced module function body",
-        "verify": "! grep -n 'exit [0-9]' .aishore/lib/*.sh | grep -v '^[^:]*:#' | grep -qv 'subshell\\|(\\|bash -c'"
-      },
-      {
-        "text": "cmd-init.sh uses return 0 instead of exit 0 for user cancellation",
-        "verify": "grep -A2 'yY' .aishore/lib/cmd-init.sh | grep -q 'return'"
+        "text": "MAX_TURNS_VALIDATOR default is at least 15",
+        "verify": "grep 'MAX_TURNS_VALIDATOR' .aishore/aishore | head -1 | grep -qE '[1-9][5-9]|[2-9][0-9]'"
       }
     ],
     "scope": [
-      ".aishore/lib/cmd-init.sh",
-      ".aishore/lib/*.sh"
+      ".aishore/aishore"
     ],
-    "startedAt": "2026-03-31T18:05:01-07:00",
+    "startedAt": "2026-03-31T18:14:40-07:00",
     "status": "passed",
-    "completedAt": "2026-03-31T18:06:26-07:00"
+    "completedAt": "2026-03-31T18:17:25-07:00"
   },
-  "completedAt": "2026-03-31T18:06:26-07:00",
+  "completedAt": "2026-03-31T18:17:25-07:00",
   "attempts": 1
 }
