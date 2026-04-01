@@ -85,7 +85,11 @@ protect_items_from_groom() {
                 } else . end
             ] + [$orig | to_entries[] | select(.key as $id | $live_ids | index($id) | not) | .value]) |
             ., "\($del) \($mod)"
-        ' "$live_file")
+        ' "$live_file") || {
+            log_error "Failed to parse $f after groom — restoring snapshot"
+            cp "$snap_file" "$live_file"
+            return 0
+        }
         # Last line is "del mod" counts; everything before is the protected JSON
         local counts
         counts=$(tail -n1 <<< "$output" | tr -d '"')

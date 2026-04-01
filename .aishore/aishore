@@ -1312,9 +1312,9 @@ mark_complete() {
     fi
     diffstat=$(git diff --shortstat "$diff_base" HEAD 2>/dev/null || true)
     if [[ -n "$diffstat" ]]; then
-        files_changed=$(printf '%s\n' "$diffstat" | sed -n 's/.*\([0-9][0-9]*\) file.*/\1/p')
-        lines_added=$(printf '%s\n' "$diffstat" | sed -n 's/.*\([0-9][0-9]*\) insertion.*/\1/p')
-        lines_removed=$(printf '%s\n' "$diffstat" | sed -n 's/.*\([0-9][0-9]*\) deletion.*/\1/p')
+        files_changed=$(printf '%s\n' "$diffstat" | sed -En 's/[^0-9]*([0-9]+) file.*/\1/p')
+        lines_added=$(printf '%s\n' "$diffstat" | sed -En 's/.*[^0-9]([0-9]+) insertion.*/\1/p')
+        lines_removed=$(printf '%s\n' "$diffstat" | sed -En 's/.*[^0-9]([0-9]+) deletion.*/\1/p')
     fi
     files_changed="${files_changed:-0}"
     lines_added="${lines_added:-0}"
@@ -2334,8 +2334,8 @@ Output ONLY the JSON object, no markdown fences, no explanation."
     # sprint.json may already be reset to idle, so reconstruct from current_spec
     local tmp_sprint
     tmp_sprint="$(ensure_tmpdir)/sprint_refine.json"
-    if jq -n --argjson item "$current_spec" --argjson refined "$json_output" \
-        '{sprintId: "refined", status: "in_progress", item: ($item | .steps = $refined.steps | .acceptanceCriteria = $refined.acceptanceCriteria)}' \
+    if jq -n --argjson item "$current_spec" --argjson refined "$json_output" --arg now "$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S')" \
+        '{sprintId: ("refined-" + now), startedAt: ($item.startedAt // now), status: "in_progress", item: ($item | .steps = $refined.steps | .acceptanceCriteria = $refined.acceptanceCriteria)}' \
         > "$tmp_sprint" 2>/dev/null; then
         mv "$tmp_sprint" "$sprint_file"
         log_success "Spec refined for $item_id"
@@ -2625,12 +2625,15 @@ ${body}"
 _run_retry_loop() {
     local attempt=0
     sprint_passed=false
+    _retry_failure_reason=""
+    _retry_failure_detail=""
     initial_dev_context="$retry_extra_prompt"
     retry_extra_prompt=""
     retry_failure_history=()
 
     if ! _run_preflight; then
-        _record_sprint_failure "Pre-flight failed" "Baseline validation failed before developer ran"
+        _retry_failure_reason="Pre-flight failed"
+        _retry_failure_detail="Baseline validation failed before developer ran"
         return
     fi
 
@@ -2643,7 +2646,8 @@ _run_retry_loop() {
                 log_info "Will retry with failure context"
                 continue
             fi
-            _record_sprint_failure "Implementation failed" "Implementation failed"
+            _retry_failure_reason="Implementation failed"
+            _retry_failure_detail="Implementation failed"
             break
         fi
 
@@ -2653,7 +2657,8 @@ _run_retry_loop() {
                 log_info "Will retry with failure context"
                 continue
             fi
-            _record_sprint_failure "$_validation_failure" "$(_validation_failure_reason "$_validation_failure")"
+            _retry_failure_reason="$_validation_failure"
+            _retry_failure_detail="$(_validation_failure_reason "$_validation_failure")"
             break
         fi
 
@@ -3261,7 +3266,7 @@ run_sprint_loop() {
         _run_retry_loop
 
         if [[ "$sprint_passed" != "true" ]]; then
-            # Refinement: always refine spec and try once more before final failure
+            # Refinement: try once more before recording failure (worktree still alive)
             log_info "Attempting spec refinement after exhausting retries"
             local failure_ctx=""
             for sf in "${session_failures[@]}"; do
@@ -3271,7 +3276,6 @@ run_sprint_loop() {
 
             if refine_item_spec "$ITEM_ID" "$failure_ctx" "$sprint_item_json"; then
                 log_info "Running one more developer → validate → validator cycle with refined spec"
-                # Reset failure tracking for this single refinement attempt
                 local saved_retries=$retries
                 local prior_attempts=$total_attempts
                 retries=0
@@ -3284,7 +3288,9 @@ run_sprint_loop() {
                 log_warning "Spec refinement failed — cannot retry"
             fi
 
+            # NOW record the failure and destroy the worktree (after refinement exhausted)
             if [[ "$sprint_passed" != "true" ]]; then
+                _record_sprint_failure "${_retry_failure_reason:-Unknown}" "${_retry_failure_detail:-Sprint failed}"
                 [[ "$auto_mode" == "true" ]] && log_info "Progress: $passed passed, $failed failed, $(_count_total_ready) remaining ready"
                 continue
             fi
