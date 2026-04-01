@@ -1657,9 +1657,9 @@ When your changes affect the project's public interface — CLI commands, flags,
 Do not create new documentation files. Only update existing docs that already cover the area you changed. If no relevant docs exist, skip this.
 
 ## Maturity Protocol (MANDATORY — complete all phases)
-**Phase 1 — Implement:** Write the code. Follow spec, match patterns.${VALIDATE_CMD:+ Run \`$VALIDATE_CMD\` and fix failures.}
+**Phase 1 — Implement:** Write the code. Follow spec, match conventions.${VALIDATE_CMD:+ Run \`$VALIDATE_CMD\` and fix failures.}
 **Phase 2 — Critique:** STOP coding. Re-read every changed file. Verify intent is fulfilled and each AC is provably met. Hunt bugs, edge cases, dead code, missing error handling. Fix everything found.
-**Phase 3 — Harden:**${VALIDATE_CMD:+ Run \`$VALIDATE_CMD\` and fix any failures.} Re-verify all AC. Fix regressions. Only then commit and signal done.
+**Phase 3 — Harden:**${VALIDATE_CMD:+ Run \`$VALIDATE_CMD\` and fix any failures.} **Run every AC verify command from the item spec and fix failures.** For AC without verify commands, manually execute the behavior. Fix regressions. Only then commit and signal done.
 Output phase markers: \`═══ PHASE 2: CRITIQUE ═══\` / \`═══ PHASE 3: HARDEN ═══\`"
     elif [[ "$agent_name" == "validator" ]]; then
         validate_hint=""
@@ -1682,7 +1682,9 @@ For every AC that claims observable behavior (\"error messages are clear\", \"co
 
 If the change added or modified CLI flags, commands, or configuration, check that help text and documentation files reflect the change.
 
-Do not just grep the code for error strings and call it verified. Execute the code path."
+Do not just grep the code for error strings and call it verified. Execute the code path.
+
+**If the item spec contains AC verify commands, run every one of them.** Their pass/fail results are your primary evidence. Diff review is secondary."
     elif [[ "$agent_name" == "groomer" || ("$agent_name" == "architect" && "$mode" == "groom") ]]; then
         # CLI commands: shared preamble + role-specific examples
         local cli_role_lines
@@ -1713,17 +1715,17 @@ Every item should have an \`intent\` field — a non-negotiable directive statin
 **Intent quality bar:** Intent must NOT be a restatement of the title. It must describe an observable outcome a user or system can verify. Bad: \"Implement error handling.\" Good: \"Every CLI command that fails must print a human-readable error message to stderr and exit non-zero — no stack traces, no silent failures.\"
 
 ## Executable Acceptance Criteria (MANDATORY)
-Every AC you write MUST have an \`--ac-verify\` command wherever the outcome is testable by a shell command. This is what separates an eval from an opinion.
+Every AC you write MUST have an \`--ac-verify\` command wherever the outcome is testable by a shell command. This is what separates an eval from an opinion. Verify commands must **execute the behavior and check the result**, not grep for code existence in source files.
 
 \`\`\`bash
 # Pattern: --ac \"what it does\" --ac-verify \"command that proves it\"
---ac \"CLI prints usage on --help\" --ac-verify \".aishore/aishore help | grep -q Usage\"
+--ac \"CLI prints usage on --help\" --ac-verify \".aishore/aishore help | head -1 | grep -qi usage\"
 --ac \"Invalid input returns exit code 1\" --ac-verify \"! .aishore/aishore backlog show NONEXISTENT\"
---ac \"Output contains expected field\" --ac-verify \".aishore/aishore status | grep -q 'Ready:'\"
---ac \"Config validation catches missing key\" --ac-verify \"echo '{}' > /tmp/bad.yaml && ! .aishore/aishore config check 2>/dev/null\"
+--ac \"New flag is wired end-to-end\" --ac-verify \".aishore/aishore run --dry-run 2>&1 | grep -q flag-output\"
+--ac \"Config rejects invalid input\" --ac-verify \"echo '{}' > /tmp/bad.yaml && ! tool validate /tmp/bad.yaml\"
 \`\`\`
 
-If you genuinely cannot write a verify command for an AC (e.g., \"code is readable\"), use a plain string AC — but this should be rare. Most real acceptance criteria describe observable behavior that a command can check. **If you cannot write a verify command, ask yourself whether the AC is specific enough to be useful.**
+If you genuinely cannot write a verify command for an AC (e.g., \"code is readable\"), use a plain string AC — but this should be rare. Most real acceptance criteria describe observable behavior that a command can check. **If you cannot write a verify command, ask yourself whether the AC is specific enough to be useful.** A verify command that only checks whether a string exists in a source file (e.g., \`grep -q 'functionName' file.sh\`) tests structure, not behavior. **Always test behavior.**
 
 ## Grooming Limits
 - **Maximum items per session:** $GROOM_MAX_ITEMS — stop adding new items after this cap. Focus on the highest-value items first.

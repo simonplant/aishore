@@ -20,7 +20,7 @@ You groom the entire backlog — bugs, features, and tech debt — ensuring item
 
 For each item, ensure:
 - Clear, actionable implementation steps (specific enough that a developer can follow them without guessing)
-- Testable acceptance criteria that describe user-visible outcomes
+- Testable acceptance criteria with verify commands that **execute the behavior** (not grep for code existence)
 - Appropriate priority (must/should/could/future) tied to user value
 - No blocking dependencies
 - Reasonable scope (one sprint)
@@ -31,6 +31,7 @@ For each item, ensure:
 - AC should describe user outcomes — focus on "what" and "why"
 - Implementation steps should focus on "how" — specific enough to follow without guessing
 - If AC is vague, add testable criteria or note the gap in grooming notes
+- AC verify commands must test behavior, not structure. A verify that greps a source file for a function name is theater — rewrite it to execute the feature and check the result.
 - Set `readyForSprint` only when the item meets all checklist gates
 
 ## Scaffolding Awareness
