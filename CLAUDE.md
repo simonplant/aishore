@@ -117,7 +117,7 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 **Module loading:** Command implementations are extracted into `.aishore/lib/cmd-*.sh` modules. The core script lazy-loads them via `_load_module <name>` at dispatch time — each module is sourced at most once per process. The core retains orchestration logic (sprint loop, agent invocation, git operations) while modules handle individual commands. All lib files are included in `checksums.sha256` for update verification.
 
-**Agent invocation:** All agent invocations go through `run_agent()`, which assembles the prompt, appends the completion contract (and validation command hint for developers), and delegates to `run_agent_process()`. Permissions vary by role: developer gets `Bash,Edit,Write,Read,Glob,Grep`; validator gets `Bash,Read,Glob,Grep`; reviewer gets `Read,Glob,Grep` (or with `Edit,Write` when `--update-docs` is used). Permissions are configurable in `config.yaml`.
+**Agent invocation:** All agent invocations go through `run_agent()`, which assembles the prompt, appends the completion contract (and validation command hint for developers), and delegates to `run_agent_process()`. Permissions vary by role: developer gets `Agent,Bash,Edit,Write,Read,Glob,Grep`; validator gets `Bash,Read,Glob,Grep`; reviewer gets `Read,Glob,Grep` (or with `Edit,Write` when `--update-docs` is used). Permissions are configurable in `config.yaml`.
 
 **Concurrency:** Only one aishore process runs at a time, enforced via a mkdir+PID lock at `.aishore/data/status/.aishore.lock/`. The lock is self-healing — stale locks from crashed processes are detected via PID liveness check and automatically cleaned up.
 

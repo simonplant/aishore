@@ -55,7 +55,7 @@ validation:
 
 # Permissions (restrict for tighter sandbox)
 # permissions:
-#   developer: "Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode"
+#   developer: "Agent,Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode"
 #   validator: "Bash,Read,Glob,Grep"
 #   reviewer: "Read,Glob,Grep"
 
