@@ -53,11 +53,15 @@ jobs:
     name: macOS Compatibility
     runs-on: macos-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        shell: /opt/homebrew/bin/bash -e {0}
     steps:
       - uses: actions/checkout@v6
 
       - name: Install dependencies
-        run: brew install jq coreutils
+        shell: bash
+        run: brew install bash jq coreutils
 
       - name: Test help command
         run: .aishore/aishore help
