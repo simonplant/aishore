@@ -1,35 +1,34 @@
 {
-  "sprintId": "sprint-1775002282",
-  "startedAt": "2026-03-31T17:11:22-07:00",
+  "sprintId": "sprint-1775002420",
+  "startedAt": "2026-03-31T17:13:40-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-080",
-    "title": "Remove Write permission from validator agent",
-    "intent": "Validators must report problems, never fix them — Write access lets the validator silently modify files instead of failing the sprint and giving the developer targeted retry context.",
-    "description": "PERMS_VALIDATOR currently includes Write (Bash,Read,Write,Glob,Grep). The validator only needs Write for result.json (completion contract). Remove Write from PERMS_VALIDATOR. The validator can still write result.json via Bash (echo/jq to file). This enforces the separation: developers fix, validators judge.",
+    "id": "FEAT-081",
+    "title": "Revert redundant doc check from Maturity Protocol Phase 2",
+    "intent": "The developer prompt must be concise and non-repetitive — saying the same instruction twice wastes context tokens and dilutes signal.",
+    "description": "We added a doc check to Phase 2 of the Maturity Protocol that duplicates the Documentation Maintenance section injected 10 lines earlier. Phase 2 should stay focused on its core job: bugs, AC verification, edge cases. Remove the doc-check clause from Phase 2 while keeping the standalone Documentation Maintenance section.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Change PERMS_VALIDATOR from 'Bash,Read,Write,Glob,Grep' to 'Bash,Read,Glob,Grep'",
-      "Verify the validator can still write result.json via Bash tool",
-      "Update CONFIGURATION.md if it documents validator permissions"
+      "In build_agent_prompt(), revert the Phase 2 Critique text to remove the doc-check clause",
+      "Keep the standalone Documentation Maintenance section intact (lines 1634-1640)"
     ],
     "acceptanceCriteria": [
       {
-        "text": "Validator permissions do not include Write tool",
-        "verify": "grep 'PERMS_VALIDATOR=' .aishore/aishore | head -1 | grep -v 'CFG_' | grep -vq 'Write'"
+        "text": "Phase 2 text does not mention documentation or docs",
+        "verify": "grep 'Phase 2.*Critique' .aishore/aishore | grep -vq 'documented interface'"
       },
       {
-        "text": "Validator permissions still include Bash for running commands and writing result.json",
-        "verify": "grep 'PERMS_VALIDATOR=' .aishore/aishore | head -1 | grep -v 'CFG_' | grep -q 'Bash'"
+        "text": "Documentation Maintenance section still exists as a separate injection",
+        "verify": "grep -q 'Documentation Maintenance' .aishore/aishore"
       }
     ],
     "scope": [
       ".aishore/aishore"
     ],
-    "startedAt": "2026-03-31T17:11:22-07:00",
+    "startedAt": "2026-03-31T17:13:40-07:00",
     "status": "passed",
-    "completedAt": "2026-03-31T17:13:38-07:00"
+    "completedAt": "2026-03-31T17:14:57-07:00"
   },
-  "completedAt": "2026-03-31T17:13:38-07:00",
+  "completedAt": "2026-03-31T17:14:57-07:00",
   "attempts": 1
 }
