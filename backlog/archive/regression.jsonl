@@ -5,3 +5,5 @@
 {"itemId":"BUG-148","date":"2026-04-01","text":"git merge --abort is called when squash merge fails","verify":"grep -A5 'Merge conflict on' .aishore/aishore | grep -q 'merge --abort'"}
 {"itemId":"BUG-148","date":"2026-04-01","text":"Feature branch cleanup still works after abort","verify":"grep -A10 'merge --abort' .aishore/aishore | grep -q 'AISHORE_FEATURE_BRANCH'"}
 {"itemId":"BUG-149","date":"2026-04-01","text":"Function returns 1 when jq parsing fails after groom","verify":"grep -A3 'restoring snapshot' .aishore/lib/cmd-groom.sh | grep -q 'return 1'"}
+{"itemId":"FEAT-096","date":"2026-04-01","text":"Worktree directories use mktemp instead of predictable PID paths","verify":"grep -q 'mktemp.*aishore-wt' .aishore/aishore"}
+{"itemId":"FEAT-096","date":"2026-04-01","text":"No predictable PID-based temp path construction for worktrees","verify":"! grep -q 'aishore-wt.*$$' .aishore/aishore"}
