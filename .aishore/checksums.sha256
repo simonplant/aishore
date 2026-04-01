@@ -17,7 +17,7 @@ b517e969f84512c9710b74a8d4b11c2a3884cc8e142ce20de668701bda4c741c  .aishore/templ
 d335f6e5acd5ed1cfeb8ca2d6c4d201856b13c0ce0b6af51860459be05e4978c  .aishore/lib/cmd-backlog-read.sh
 de572aa6fa23ba9ee13f02e7a0c9861b3e52614f8befc6b5e28ce1c5c8ad9c77  .aishore/lib/cmd-backlog-write.sh
 b5ce2140352828eaec5e9f6767b12f0f3e599e71c05983950853aa23a808f46c  .aishore/lib/cmd-clean.sh
-f87efee9b8cf68f168d54b266dea63f526dcf2cd38141946da9c2b7aef1fe895  .aishore/lib/cmd-groom.sh
+5a7938b08fbb82de383da79942d82002d509cb8e05462dcb360773fec25a13d3  .aishore/lib/cmd-groom.sh
 c178abad50f2fcc7c2f59168952e5a8c01a9c71f6496a2c1cc3357e5eda05b86  .aishore/lib/cmd-help.sh
 0a3b76910576962bf7a0de5874ad3b40caa78da500b7a102cf1957af5cb40d91  .aishore/lib/cmd-init.sh
 df8bb922d1cb0900ccbbd0410f5c046b124001d0eb251b2f2823d019c13d1ff0  .aishore/lib/cmd-review.sh

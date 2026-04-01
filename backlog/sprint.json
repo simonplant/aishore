@@ -1,36 +1,31 @@
 {
-  "sprintId": "sprint-1775087206",
-  "startedAt": "2026-04-01T16:46:46-07:00",
+  "sprintId": "sprint-1775087328",
+  "startedAt": "2026-04-01T16:48:48-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-148",
-    "title": "Add git merge --abort on squash merge failure",
-    "intent": "A failed squash merge must not leave the repo in a dirty merge state — the orchestrator must abort the merge cleanly so the next sprint can start fresh.",
+    "id": "BUG-149",
+    "title": "Fix groom returning success on jq parse failure",
+    "intent": "When jq parsing fails after a groom operation and the snapshot is restored, the function must signal failure so callers know the groom did not succeed.",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Locate the git merge --squash failure path (~line 2957-2979 in .aishore/aishore)",
-      "Add git merge --abort 2>/dev/null before setting AISHORE_FEATURE_BRANCH empty",
-      "Add a log_warning if merge --abort itself fails",
-      "Verify the cleanup path still deletes the feature branch correctly"
+      "Open .aishore/lib/cmd-groom.sh and find the jq parse failure handler (~lines 88-91)",
+      "Change return 0 to return 1 in the jq parse failure block",
+      "Verify callers of this function handle the failure return correctly"
     ],
     "acceptanceCriteria": [
       {
-        "text": "git merge --abort is called when squash merge fails",
-        "verify": "grep -A5 'Merge conflict on' .aishore/aishore | grep -q 'merge --abort'"
-      },
-      {
-        "text": "Feature branch cleanup still works after abort",
-        "verify": "grep -A10 'merge --abort' .aishore/aishore | grep -q 'AISHORE_FEATURE_BRANCH'"
+        "text": "Function returns 1 when jq parsing fails after groom",
+        "verify": "grep -A3 'restoring snapshot' .aishore/lib/cmd-groom.sh | grep -q 'return 1'"
       }
     ],
     "scope": [
-      ".aishore/aishore"
+      ".aishore/lib/cmd-groom.sh"
     ],
-    "startedAt": "2026-04-01T16:46:46-07:00",
+    "startedAt": "2026-04-01T16:48:48-07:00",
     "status": "passed",
-    "completedAt": "2026-04-01T16:48:47-07:00"
+    "completedAt": "2026-04-01T16:50:57-07:00"
   },
-  "completedAt": "2026-04-01T16:48:47-07:00",
+  "completedAt": "2026-04-01T16:50:57-07:00",
   "attempts": 1
 }
