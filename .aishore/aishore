@@ -2824,11 +2824,15 @@ _handle_sprint_success() {
             bash -c "$NOTIFY_CMD" -- "pass" "$ITEM_ID" 2>/dev/null || log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
         fi
 
-        # Record compact success summary for groom agents
+        # Record compact success summary for groom agents (read before removing item)
         local _ss_title _ss_ac_count
         _ss_title=$(jq -r '.item.title // ""' "$BACKLOG_DIR/sprint.json" 2>/dev/null || true)
         _ss_ac_count=$(jq -r '.item.acceptanceCriteria | length' "$BACKLOG_DIR/sprint.json" 2>/dev/null || echo 0)
         session_successes+=("$ITEM_ID ($total_attempts attempt(s), $_ss_ac_count AC): $_ss_title")
+
+        # Remove done item from backlog to keep file small for subsequent agents
+        # (item is already archived in sprints.jsonl by mark_complete)
+        remove_item "$item_source" "$ITEM_ID" 2>/dev/null || true
     else
         log_error "Failed to mark $ITEM_ID complete"
         failed=$((failed + 1))
