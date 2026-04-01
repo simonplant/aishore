@@ -3966,6 +3966,109 @@
     "resolved_at": "2026-04-01T01:23:48Z"
   },
   {
+    "id": "BUG-140",
+    "title": "sed injection in cmd-init.sh via unescaped user input",
+    "intent": "User-provided project names and commands must never be interpreted as sed metacharacters — init wizard input must be escaped before sed substitution.",
+    "description": "cmd-init.sh passes $project_name and $validate_cmd directly to sed without escaping. Characters like |, &, and backslash break config files.",
+    "priority": "should",
+    "category": "security",
+    "steps": [
+      "Create a sed-escape helper or inline escape: sed 's:[&/\\\\]:\\\\&:g'",
+      "Apply escaping to variables before passing to sed"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "sed substitution uses escaped values for user input",
+        "verify": "grep -q 'sed_escape\\|_sed_esc\\|_safe' .aishore/lib/cmd-init.sh"
+      }
+    ],
+    "scope": [
+      ".aishore/lib/cmd-init.sh"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "resolved_at": "2026-04-01T03:43:50Z"
+  },
+  {
+    "id": "BUG-141",
+    "title": "Missing git error handling in sprint commit flow",
+    "intent": "Git failures during sprint commit must be detected — an undetected failure means the sprint proceeds with uncommitted work, leading to lost changes on branch cleanup.",
+    "description": "In the sprint commit flow, git add -A and git commit run without checking exit codes. If either fails, the orchestrator continues assuming state was saved.",
+    "priority": "should",
+    "category": "robustness",
+    "steps": [
+      "Find git add and git commit calls in the sprint flow",
+      "Add exit code checks to each"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "git add and git commit in sprint flow check exit codes",
+        "verify": "grep -A2 'git add' .aishore/aishore | grep -q '|| {\\||| log\\|if !'"
+      }
+    ],
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "resolved_at": "2026-04-01T03:43:50Z"
+  },
+  {
+    "id": "BUG-142",
+    "title": "Excessive || true in cmd-groom.sh masks real jq failures",
+    "intent": "Grooming must fail visibly when jq parsing breaks — silently continuing with empty data produces corrupt or incomplete backlog edits.",
+    "description": "cmd-groom.sh uses || true after many jq calls. When jq fails, downstream code operates on empty strings. Replace with proper error handling.",
+    "priority": "should",
+    "category": "robustness",
+    "steps": [
+      "Audit all jq ... || true patterns in cmd-groom.sh",
+      "Replace with proper error handling, keeping || true only where empty is a valid result"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "No bare || true after jq without justification comment",
+        "verify": "! grep -n 'jq.*|| true' .aishore/lib/cmd-groom.sh | grep -cv '# ' | grep -qv '^0$'"
+      }
+    ],
+    "scope": [
+      ".aishore/lib/cmd-groom.sh"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "resolved_at": "2026-04-01T03:43:50Z"
+  },
+  {
+    "id": "BUG-143",
+    "title": "Worktree creation TOCTOU race between rmdir and git worktree add",
+    "intent": "Worktree creation must be atomic — a race between mktemp/rmdir/git can cause sprint failures.",
+    "description": "mktemp -d then rmdir then git worktree add has a race. Use mktemp -u or skip the rmdir.",
+    "priority": "could",
+    "category": "robustness",
+    "steps": [
+      "Remove rmdir step between mktemp and git worktree add"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "No rmdir between mktemp and git worktree add",
+        "verify": "! grep -A5 'mktemp.*aishore-wt' .aishore/aishore | grep -q 'rmdir'"
+      }
+    ],
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "resolved_at": "2026-04-01T03:43:50Z"
+  },
+  {
     "id": "BUG-144",
     "title": "Sprint merge fails when backlog files have uncommitted local changes",
     "intent": "Sprints must not fail at merge time due to locally modified tracking files — the orchestrator must handle its own bookkeeping files around merges.",
