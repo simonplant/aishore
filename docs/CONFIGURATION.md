@@ -193,9 +193,9 @@ validation:
 | | |
 |---|---|
 | **Type** | integer |
-| **Default** | `10` |
+| **Default** | `15` |
 | **Env var** | `AISHORE_MAX_TURNS_VALIDATOR` |
-| **What it controls** | Maximum conversation turns for the validator agent. Validators typically need fewer turns since they run checks and report results. |
+| **What it controls** | Maximum conversation turns for the validator agent. Validators need enough turns to complete multi-step verification without hitting the limit. |
 | **When to change** | Increase if validation involves complex multi-step probing. |
 
 #### `agent.max_turns.groomer`
@@ -389,7 +389,7 @@ All `AISHORE_*` environment variables and what they map to:
 | `AISHORE_RETRIES` | `run.retries` | `0` | Per-item retry attempts on failure |
 | `AISHORE_SESSION_LIMIT` | `run.session_limit` | `0` | Cap session at N items (0 = unlimited) |
 | `AISHORE_MAX_TURNS_DEVELOPER` | `agent.max_turns.developer` | `25` | Max turns for developer agent |
-| `AISHORE_MAX_TURNS_VALIDATOR` | `agent.max_turns.validator` | `10` | Max turns for validator agent |
+| `AISHORE_MAX_TURNS_VALIDATOR` | `agent.max_turns.validator` | `15` | Max turns for validator agent |
 | `AISHORE_MAX_TURNS_GROOMER` | `agent.max_turns.groomer` | `15` | Max turns for grooming agents |
 
 ---

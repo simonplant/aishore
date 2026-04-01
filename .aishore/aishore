@@ -102,7 +102,7 @@ TIMEOUT_MINUTES="0"
 SESSION_RETRIES="0"
 SESSION_LIMIT=""
 MAX_TURNS_DEVELOPER="25"
-MAX_TURNS_VALIDATOR="10"
+MAX_TURNS_VALIDATOR="15"
 MAX_TURNS_GROOMER="15"
 
 # Detect timeout command once at startup (macOS uses gtimeout from coreutils)
