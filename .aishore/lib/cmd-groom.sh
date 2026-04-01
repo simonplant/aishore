@@ -20,7 +20,7 @@ cmd_groom() {
 
     acquire_lock
     load_config
-    cd "$PROJECT_ROOT"
+    cd "$PROJECT_ROOT" || { log_error "Cannot cd to $PROJECT_ROOT"; return 1; }
 
     log_header "Grooming: Bugs, Features & Tech Debt"
 

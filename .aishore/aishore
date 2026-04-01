@@ -2787,7 +2787,7 @@ _handle_sprint_success() {
             fi
         fi
 
-        git checkout "$base_branch"
+        git checkout "$base_branch" || { log_error "Cannot checkout $base_branch after no-merge push"; return 1; }
     else
         # Shared merge path: squash or no-ff, branching only on the git merge command
         local merge_summary
@@ -2801,7 +2801,12 @@ _handle_sprint_success() {
             git stash push -q && _had_stash=true
         fi
 
-        git checkout "$base_branch"
+        git checkout "$base_branch" || {
+            log_error "Cannot checkout $base_branch for merge"
+            [[ "$_had_stash" == "true" ]] && git stash pop -q 2>/dev/null || true
+            AISHORE_FEATURE_BRANCH=""
+            return 1
+        }
 
         if [[ "$MERGE_STRATEGY" == "squash" ]]; then
             log_info "Squash-merging $AISHORE_FEATURE_BRANCH → $base_branch"
