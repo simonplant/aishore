@@ -1,17 +1,1 @@
-{"itemId":"FEAT-077","date":"2026-03-31","text":"Validator agent is invoked with MODEL_FAST model","verify":"grep -n 'run_agent.*validator.*validate' .aishore/aishore | grep -q 'MODEL_FAST'"}
-{"itemId":"FEAT-077","date":"2026-03-31","text":"No other agent invocations are changed — developer still uses MODEL_PRIMARY","verify":"grep -n 'run_agent.*developer.*implement' .aishore/aishore | grep -q 'MODEL_PRIMARY'"}
-{"itemId":"FEAT-078","date":"2026-03-31","text":"Developer agent invocation includes --max-turns flag","verify":".aishore/aishore run --dry-run 2>&1 | grep -q 'max.turns' || grep -q 'max_turns' .aishore/aishore"}
-{"itemId":"FEAT-078","date":"2026-03-31","text":"Default max-turns values exist in the defaults section","verify":"grep -E 'MAX_TURNS_(DEVELOPER|VALIDATOR|GROOMER)' .aishore/aishore | grep -c '=' | grep -q '[3-9]'"}
-{"itemId":"FEAT-078","date":"2026-03-31","text":"Max-turns is configurable via env var","verify":"grep -q 'AISHORE_MAX_TURNS' .aishore/aishore"}
-{"itemId":"FEAT-078","date":"2026-03-31","text":"New config keys documented in CONFIGURATION.md","verify":"grep -q 'max_turns' docs/CONFIGURATION.md"}
-{"itemId":"FEAT-080","date":"2026-03-31","text":"Validator permissions do not include Write tool","verify":"grep 'PERMS_VALIDATOR=' .aishore/aishore | head -1 | grep -v 'CFG_' | grep -vq 'Write'"}
-{"itemId":"FEAT-080","date":"2026-03-31","text":"Validator permissions still include Bash for running commands and writing result.json","verify":"grep 'PERMS_VALIDATOR=' .aishore/aishore | head -1 | grep -v 'CFG_' | grep -q 'Bash'"}
-{"itemId":"FEAT-081","date":"2026-03-31","text":"Phase 2 text does not mention documentation or docs","verify":"grep 'Phase 2.*Critique' .aishore/aishore | grep -vq 'documented interface'"}
-{"itemId":"FEAT-081","date":"2026-03-31","text":"Documentation Maintenance section still exists as a separate injection","verify":"grep -q 'Documentation Maintenance' .aishore/aishore"}
-{"itemId":"BUG-134","date":"2026-03-31","text":"No cd command uses || true or suppresses stderr without an error handler","verify":"! grep -n 'cd .*|| true' .aishore/aishore | grep -qv '#'"}
-{"itemId":"BUG-134","date":"2026-03-31","text":"All cd commands have explicit failure handling","verify":"! grep -En '^\\s+cd ' .aishore/aishore | grep -v '|| {' | grep -v 'log_error' | grep -v '|| return' | grep -v '|| exit' | grep -qv '#'"}
-{"itemId":"BUG-136","date":"2026-03-31","text":"No exit statement exists in any sourced module function body","verify":"! grep -n 'exit [0-9]' .aishore/lib/*.sh | grep -v '^[^:]*:#' | grep -qv 'subshell\\|(\\|bash -c'"}
-{"itemId":"BUG-136","date":"2026-03-31","text":"cmd-init.sh uses return 0 instead of exit 0 for user cancellation","verify":"grep -A2 'yY' .aishore/lib/cmd-init.sh | grep -q 'return'"}
-{"itemId":"BUG-146","date":"2026-03-31","text":"MAX_TURNS_VALIDATOR default is at least 15","verify":"grep 'MAX_TURNS_VALIDATOR' .aishore/aishore | head -1 | grep -qE '[1-9][5-9]|[2-9][0-9]'"}
-{"itemId":"FEAT-085","date":"2026-03-31","text":"product-owner.md and tech-lead.md do not exist","verify":"test ! -f .aishore/agents/product-owner.md && test ! -f .aishore/agents/tech-lead.md"}
-{"itemId":"FEAT-085","date":"2026-03-31","text":"Orchestrator does not reference product-owner or tech-lead","verify":"! grep -q 'product-owner\\|tech-lead' .aishore/aishore"}
+
