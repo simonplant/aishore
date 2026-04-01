@@ -2347,6 +2347,163 @@
     "resolved_at": "2026-04-01T02:30:31Z"
   },
   {
+    "id": "FEAT-087",
+    "title": "Enrich retry failure context with structured ac_results references",
+    "intent": "Developer retry attempts must receive precise file:line failure references from prior attempts so they fix the right code — attempt 1 context must survive to attempt 3 even under truncation",
+    "description": "",
+    "priority": "must",
+    "category": null,
+    "steps": [
+      "In _capture_retry_failure() around line 2577, after capturing diff_summary, check if STATUS_DIR/result.json exists and extract ac_results using jq. For each failed AC (met==false), format a compact line like 'AC{index} FAIL: {issue} ({file}:{line})'. Append these compact failure lines to the entry variable",
+      "In _build_prior_failure_context() around line 2600, increase max_body_chars from 2000 to 4000",
+      "Change the truncation logic in _build_prior_failure_context(): when an entry would exceed the cap, instead of dropping it entirely with the text 'earlier attempts truncated', extract the compact AC failure lines from the dropped entry and prepend them as a condensed summary. Remove or replace the literal string 'earlier attempts truncated' with something that preserves the failure references"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "max_body_chars in _build_prior_failure_context is 4000 or greater",
+        "verify": "grep 'max_body_chars' .aishore/aishore | grep -qE '([4-9][0-9]{3}|[1-9][0-9]{4})'"
+      },
+      {
+        "text": "When result.json contains ac_results with failed ACs, _capture_retry_failure includes file:line references in the entry",
+        "verify": "grep -A25 '_capture_retry_failure()' .aishore/aishore | grep -q 'ac_results'"
+      },
+      {
+        "text": "Truncated entries preserve compact failure summaries instead of being dropped entirely",
+        "verify": "! grep -q 'earlier attempts truncated' .aishore/aishore"
+      }
+    ],
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "dependsOn": [
+      "FEAT-095"
+    ],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "resolved_at": "2026-04-01T18:56:19Z"
+  },
+  {
+    "id": "FEAT-089",
+    "title": "Deduplicate AC verify execution — validator trusts orchestrator results",
+    "intent": "AC verify commands must not run three times per sprint — the validator must be explicitly told to trust orchestrator results and redirect its effort to intent fulfillment and integration correctness instead of re-running commands",
+    "description": "",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "In _run_validation_cycle() where validator_extra is built with ac_report (around lines 2476-2479), change the injection to include an explicit instruction telling the validator to trust the provided AC verification results and NOT re-run AC verify commands. Redirect the validator to focus on: (1) whether the implementation fulfills the item intent beyond mechanical AC pass, (2) integration correctness — is new code wired into the codebase and reachable, (3) ACs without verify commands that need manual probing",
+      "Make the trust-results instruction conditional — only inject it when ac_report is non-empty",
+      "Also update line 1687 in build_agent_prompt() where it currently says 'run every one of them' for AC verify commands — this contradicts the new trust instruction. Change it to say the orchestrator runs AC verify commands authoritatively and results will be provided, so the validator should review results rather than re-run"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "validator_extra includes instruction to trust orchestrator AC results and not re-run them",
+        "verify": "grep -q 'Trust these results\\|trust these results\\|Trust the results\\|trust the results' .aishore/aishore"
+      },
+      {
+        "text": "The instruction redirects validator focus to intent fulfillment and integration",
+        "verify": "grep -A15 'Trust.*results\\|trust.*results' .aishore/aishore | grep -qi 'intent'"
+      },
+      {
+        "text": "Line 1687 no longer tells validator to run every AC verify command",
+        "verify": "! grep -q 'run every one of them.*primary evidence' .aishore/aishore"
+      }
+    ],
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "dependsOn": [
+      "FEAT-095"
+    ],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "resolved_at": "2026-04-01T18:56:19Z"
+  },
+  {
+    "id": "FEAT-090",
+    "title": "Inject integration enforcement rules into validator context",
+    "intent": "When an item has AC verify commands testing reachability, the validator must treat disconnected or unreachable code as a hard failure — not an advisory note — closing the loophole where code passes ACs mechanically but is never called from real entry points",
+    "description": "",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "In _run_validation_cycle(), after building validator_extra with AC results and the trust-results instruction, add an Integration Enforcement section to validator_extra",
+      "Read the sprint.json acceptanceCriteria to determine whether any AC has verify commands. If yes: inject text saying disconnected code (new functions, modules, or routes not reachable from any existing entry point) is a validation failure, not advisory. If no verify commands exist (scaffolding/infrastructure items): inject text saying integration issues remain advisory notes only",
+      "The enforcement text must go into validator_extra (runtime injection), NOT into .aishore/agents/validator.md"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "Validator_extra includes an Integration Enforcement section",
+        "verify": "grep -q 'Integration Enforcement\\|integration enforcement\\|INTEGRATION ENFORCEMENT' .aishore/aishore"
+      },
+      {
+        "text": "Integration enforcement treats disconnected code as failure when verify commands exist",
+        "verify": "grep -A25 'Integration Enforcement\\|integration enforcement' .aishore/aishore | grep -qi 'fail'"
+      },
+      {
+        "text": "Integration enforcement distinguishes items with verify commands from items without",
+        "verify": "grep -A25 'Integration Enforcement\\|integration enforcement' .aishore/aishore | grep -qi 'advisory\\|scaffolding\\|without.*verify\\|no.*verify'"
+      },
+      {
+        "text": "The validator agent prompt file is not modified",
+        "verify": "! grep -q 'Integration Enforcement\\|disconnected.*fail' .aishore/agents/validator.md"
+      }
+    ],
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "dependsOn": [
+      "FEAT-089"
+    ],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "resolved_at": "2026-04-01T18:56:19Z"
+  },
+  {
+    "id": "FEAT-093",
+    "title": "Enforce maturity protocol phases in developer result.json",
+    "intent": "Developer agents must prove they completed Critique and Harden phases with structured evidence in result.json — skipping phases must cause the orchestrator to reject the submission as incomplete",
+    "description": "",
+    "priority": "must",
+    "category": null,
+    "steps": [
+      "In the maturity protocol injection text (around line 1659-1663), append a structured output requirement explaining that result.json must include a '\"phases\"' object (use the literal JSON key) with critique (containing findings_count) and harden (containing verify_commands_run and verify_commands_passed). State clearly that the orchestrator will reject results missing this field",
+      "Modify check_result() (lines 1832-1864) to accept an optional first argument for agent role (e.g. 'developer' or 'validator'). When role is 'developer' and status is 'pass', use jq to check for .phases in result.json. If phases is missing, null, or empty, log an error about missing maturity evidence and return 1",
+      "In _run_developer_cycle() at the check_result call (around line 2415), pass 'developer' as the first argument",
+      "In _run_validation_cycle() at the check_result call (around line 2481), pass 'validator' as the first argument so phase enforcement is not applied to validators"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "check_result accepts a role parameter and enforces phases for developer role",
+        "verify": "grep -q 'check_result.*\"developer\"' .aishore/aishore"
+      },
+      {
+        "text": "check_result passes validator results without phase enforcement",
+        "verify": "grep -q 'check_result.*\"validator\"' .aishore/aishore"
+      },
+      {
+        "text": "Maturity protocol injection tells developer to include a phases JSON key in result.json",
+        "verify": "grep -A40 'Maturity Protocol' .aishore/aishore | grep -q '\"phases\"'"
+      },
+      {
+        "text": "check_result function contains logic to verify the phases field",
+        "verify": "grep -A40 'check_result()' .aishore/aishore | grep -q '\\.phases'"
+      }
+    ],
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "dependsOn": [
+      "FEAT-095"
+    ],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "resolved_at": "2026-04-01T18:56:19Z"
+  },
+  {
     "id": "FEAT-094",
     "title": "Warn on out-of-scope file modifications after developer commit",
     "intent": "After a developer commits, the orchestrator must compare modified files against declared scope globs and log visible warnings for out-of-scope changes — establishing observability before hard enforcement in a future item",
@@ -2380,5 +2537,76 @@
     "passes": false,
     "readyForSprint": true,
     "resolved_at": "2026-04-01T18:30:01Z"
+  },
+  {
+    "id": "FEAT-095",
+    "title": "Enforce mandatory ac_results in validator result.json",
+    "intent": "Every validator failure must include structured per-AC results so retry context is always precise and targeted — generic failure text alone is not acceptable as validator output",
+    "description": "",
+    "priority": "must",
+    "category": null,
+    "steps": [
+      "In _run_validation_cycle() around line 2476, before calling run_agent validator, append a section to validator_extra that requires the validator to include an ac_results array in result.json. The text must contain 'ac_results' and explain the required structure: array of objects with ac_index (int), met (bool), and either summary (if met) or issue/file/line (if not met). Use the phrase 'MUST include' or 'must include' to make the requirement clear",
+      "After the check_result call on the validator result (around line 2481), when result is fail, use jq to check for .ac_results in result.json. If missing or null, call log_warning with a message containing the word 'degraded' about reduced retry precision"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "validator_extra injection contains ac_results requirement with MUST/must include",
+        "verify": "grep -c 'must include.*ac_results\\|MUST include.*ac_results\\|must.*include.*ac_results' .aishore/aishore | grep -qv '^0$'"
+      },
+      {
+        "text": "A log_warning with the word degraded is emitted when ac_results is missing from a failed validator result",
+        "verify": "grep -c 'log_warning.*degraded\\|degraded.*log_warning' .aishore/aishore | grep -qv '^0$'"
+      },
+      {
+        "text": "The injected text describes ac_index, met, and issue fields as part of the required structure",
+        "verify": "grep -c 'ac_index.*met\\|met.*ac_index' .aishore/aishore | grep -qv '^0$'"
+      }
+    ],
+    "scope": [
+      ".aishore/aishore"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "resolved_at": "2026-04-01T18:56:19Z"
+  },
+  {
+    "id": "FEAT-096",
+    "title": "Add regression suite clean and skip support",
+    "intent": "Operators must be able to clear a flaky regression suite with backup and skip specific entries by item ID — flaky or obsolete regressions must never permanently block all future sprints with no escape hatch",
+    "description": "",
+    "priority": "should",
+    "category": null,
+    "steps": [
+      "In .aishore/lib/cmd-clean.sh cmd_clean(), add --regression flag support via parse_opts. When --regression and --dry-run: count lines in ARCHIVE_DIR/regression.jsonl, report count. When --regression without --dry-run: create a backup copy of regression.jsonl (with .bak extension), then remove the original. Print confirmation with entry count and backup path",
+      "In .aishore/aishore _run_regression_suite(), before the execution loop, check for ARCHIVE_DIR/regression-skip.json. If it exists and is valid JSON, read it as an array of item IDs to skip. Inside the loop, compare each entry itemId against the skip list and continue (skip execution) if matched. Log the count of skipped entries after the loop",
+      "In .aishore/lib/cmd-help.sh _help_clean(), add documentation for --regression flag"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "Help text for clean command documents the --regression flag",
+        "verify": ".aishore/aishore help clean 2>&1 | grep -qi 'regression'"
+      },
+      {
+        "text": "cmd-clean.sh contains regression handling code that creates a backup file",
+        "verify": "grep -c 'regression.*bak\\|bak.*regression\\|regression.*backup\\|cp.*regression\\|mv.*regression' .aishore/lib/cmd-clean.sh | grep -qv '^0$'"
+      },
+      {
+        "text": "regression-skip.json support exists in the orchestrator",
+        "verify": "grep -q 'regression-skip' .aishore/aishore"
+      }
+    ],
+    "scope": [
+      ".aishore/lib/cmd-clean.sh",
+      ".aishore/aishore",
+      ".aishore/lib/cmd-help.sh"
+    ],
+    "dependsOn": [],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "resolved_at": "2026-04-01T18:56:19Z"
   }
 ]
