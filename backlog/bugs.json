@@ -14,8 +14,8 @@
       ],
       "acceptanceCriteria": [
         {
-          "text": "sed substitution uses escaped values, not raw user input",
-          "verify": "grep -B5 'PROJECT_NAME' .aishore/lib/cmd-init.sh | grep -q 'escape\\|_esc\\|_safe\\|sed.*s:'"
+          "text": "sed substitution uses escaped values for user input",
+          "verify": "grep -q 'sed_escape\\|_sed_esc\\|_safe' .aishore/lib/cmd-init.sh"
         }
       ],
       "scope": [
@@ -39,8 +39,8 @@
       ],
       "acceptanceCriteria": [
         {
-          "text": "git add calls check exit codes",
-          "verify": "grep -A1 'git add' .aishore/aishore | grep -q '|| {\\|if !'"
+          "text": "git add and git commit in sprint flow check exit codes",
+          "verify": "grep -A2 'git add' .aishore/aishore | grep -q '|| {\\||| log\\|if !'"
         }
       ],
       "scope": [

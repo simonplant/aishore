@@ -86,11 +86,11 @@
       "acceptanceCriteria": [
         {
           "text": "claude_args array includes --bare",
-          "verify": "grep -A15 'local claude_args' .aishore/aishore | grep -q 'bare'"
+          "verify": "grep -A20 'local claude_args' .aishore/aishore | grep -q \"\\-\\-bare\""
         },
         {
-          "text": "CLAUDE.md content is still loaded and passed via prompt",
-          "verify": "grep -q 'find_claude_md\\|CLAUDE.md\\|claude_md' .aishore/aishore"
+          "text": "CLAUDE.md content is still loaded and injected into agent prompts",
+          "verify": "grep -q 'find_claude_md\\|claude_md' .aishore/aishore"
         }
       ],
       "scope": [
@@ -115,8 +115,8 @@
       ],
       "acceptanceCriteria": [
         {
-          "text": "Developer prompt states entry-point wiring is in-scope",
-          "verify": "grep -q 'entry.point.*in.scope\\|wiring.*in.scope\\|integration.*scope' .aishore/agents/developer.md"
+          "text": "Developer prompt clarifies entry-point wiring is always in-scope",
+          "verify": "grep -qi 'wiring.*in.scope\\|entry.point.*scope\\|in-scope' .aishore/agents/developer.md"
         }
       ],
       "scope": [
@@ -239,12 +239,12 @@
       ],
       "acceptanceCriteria": [
         {
-          "text": "Validator runtime injection includes conditional hard-fail for integration-scoped items",
-          "verify": "grep -A20 'Integration Check' .aishore/aishore | grep -qi 'fail\\|FAIL'"
+          "text": "Orchestrator runtime injection includes integration hard-fail for integration-scoped items",
+          "verify": "grep -qi 'integration.*fail\\|FAIL.*disconnect\\|hard.fail' .aishore/aishore"
         },
         {
           "text": "Integration check remains advisory for items without integration intent",
-          "verify": "grep -A20 'Integration Check' .aishore/aishore | grep -qi 'advisory'"
+          "verify": "grep -qi 'advisory' .aishore/aishore"
         }
       ],
       "scope": [

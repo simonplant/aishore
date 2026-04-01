@@ -2251,14 +2251,16 @@ _run_dry_run() {
 refine_item_spec() {
     local item_id="$1"
     local failure_context="$2"
+    local current_spec="${3:-}"
 
     log_info "Refining spec for $item_id based on failure context"
 
-    local sprint_file="$BACKLOG_DIR/sprint.json"
-    [[ ! -f "$sprint_file" ]] && { log_error "No sprint.json for refinement"; return 1; }
-
-    local current_spec
-    current_spec=$(jq '.item' "$sprint_file" 2>/dev/null)
+    # Accept spec as arg 3 (preferred), fall back to sprint.json
+    if [[ -z "$current_spec" || "$current_spec" == "null" ]]; then
+        local sprint_file="$BACKLOG_DIR/sprint.json"
+        [[ ! -f "$sprint_file" ]] && { log_error "No sprint.json for refinement"; return 1; }
+        current_spec=$(jq '.item' "$sprint_file" 2>/dev/null)
+    fi
     [[ -z "$current_spec" || "$current_spec" == "null" ]] && { log_error "Cannot refine: sprint item spec is empty"; return 1; }
 
     local refinement_prompt
@@ -3262,7 +3264,7 @@ run_sprint_loop() {
             done
             [[ -n "$retry_extra_prompt" ]] && failure_ctx="${failure_ctx}Last failure context: ${retry_extra_prompt}"
 
-            if refine_item_spec "$ITEM_ID" "$failure_ctx"; then
+            if refine_item_spec "$ITEM_ID" "$failure_ctx" "$item_json"; then
                 log_info "Running one more developer → validate → validator cycle with refined spec"
                 # Reset failure tracking for this single refinement attempt
                 local saved_retries=$retries
