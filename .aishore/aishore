@@ -1660,7 +1660,14 @@ Do not create new documentation files. Only update existing docs that already co
 **Phase 1 — Implement:** Write the code. Follow spec, match conventions.${VALIDATE_CMD:+ Run \`$VALIDATE_CMD\` and fix failures.}
 **Phase 2 — Critique:** STOP coding. Re-read every changed file. Verify intent is fulfilled and each AC is provably met. Hunt bugs, edge cases, dead code, missing error handling. Fix everything found.
 **Phase 3 — Harden:**${VALIDATE_CMD:+ Run \`$VALIDATE_CMD\` and fix any failures.} **Run every AC verify command from the item spec and fix failures.** For AC without verify commands, manually execute the behavior. Fix regressions. Only then commit and signal done.
-Output phase markers: \`═══ PHASE 2: CRITIQUE ═══\` / \`═══ PHASE 3: HARDEN ═══\`"
+Output phase markers: \`═══ PHASE 2: CRITIQUE ═══\` / \`═══ PHASE 3: HARDEN ═══\`
+
+## Maturity Evidence (REQUIRED in result.json)
+Your result.json MUST include a \`\"phases\"\` object proving you completed Critique and Harden:
+\`\`\`json
+{\"status\": \"pass\", \"summary\": \"...\", \"phases\": {\"critique\": {\"findings_count\": N, \"fixed_count\": N}, \"harden\": {\"verify_commands_run\": N, \"verify_commands_passed\": N}}}
+\`\`\`
+The orchestrator will REJECT a pass result that lacks the \`\"phases\"\` field. findings_count is how many issues you found in Critique; fixed_count is how many you fixed. verify_commands_run/passed are from Harden."
     elif [[ "$agent_name" == "validator" ]]; then
         validate_hint=""
         if [[ -n "$VALIDATE_CMD" ]]; then
@@ -1684,7 +1691,7 @@ If the change added or modified CLI flags, commands, or configuration, check tha
 
 Do not just grep the code for error strings and call it verified. Execute the code path.
 
-**If the item spec contains AC verify commands, run every one of them.** Their pass/fail results are your primary evidence. Diff review is secondary."
+**The orchestrator runs AC verify commands authoritatively before you.** If results are provided above, trust them — they are your primary evidence for ACs with verify commands. Focus your own probing on ACs without verify commands, intent fulfillment, and integration correctness."
     elif [[ "$agent_name" == "groomer" || ("$agent_name" == "architect" && "$mode" == "groom") ]]; then
         # CLI commands: shared preamble + role-specific examples
         local cli_role_lines
@@ -1830,6 +1837,8 @@ show_failure_log_tail() {
 }
 
 check_result() {
+    local role="${1:-}"
+
     if [[ ! -f "$STATUS_DIR/result.json" ]]; then
         log_error "No result file - agent may have crashed"
         show_failure_log_tail
@@ -1843,6 +1852,16 @@ check_result() {
     status=$(printf '%s\n' "$status" | tr '[:upper:]' '[:lower:]')
 
     if [[ "$status" == "pass" ]]; then
+        # Enforce maturity protocol: developer must include .phases evidence
+        if [[ "$role" == "developer" ]]; then
+            local has_phases
+            has_phases=$(jq -r '.phases // empty' "$STATUS_DIR/result.json" 2>/dev/null || true)
+            if [[ -z "$has_phases" || "$has_phases" == "null" ]]; then
+                log_error "Developer result missing maturity phases evidence — rejecting as incomplete"
+                return 1
+            fi
+        fi
+
         local summary
         summary=$(jq -r '.summary // .checks // "completed"' "$STATUS_DIR/result.json")
         log_success "$summary"
@@ -1955,6 +1974,17 @@ _run_regression_suite() {
     total=$(wc -l < "$regression_file")
     [[ "$total" -eq 0 ]] && return 0
 
+    # Load regression-skip.json if present (array of item IDs to skip)
+    local -A skip_items=()
+    local skip_file="$ARCHIVE_DIR/regression-skip.json"
+    if [[ -f "$skip_file" ]]; then
+        local skip_id
+        while IFS= read -r skip_id; do
+            [[ -n "$skip_id" && "$skip_id" != "null" ]] && skip_items["$skip_id"]=1
+        done < <(jq -r '.[]' "$skip_file" 2>/dev/null || true)
+    fi
+    local skipped=0
+
     log_info "Regression suite: running $total check(s) from prior sprints"
 
     local failed=0 passed_count=0 line_num=0
@@ -1966,6 +1996,12 @@ _run_regression_suite() {
         reg_item_id=$(printf '%s' "$entry" | jq -r '.itemId // "?"' 2>/dev/null)
 
         [[ -z "$cmd" || "$cmd" == "null" ]] && continue
+
+        # Skip entries from items in regression-skip.json
+        if [[ -n "${skip_items[$reg_item_id]+_}" ]]; then
+            skipped=$((skipped + 1))
+            continue
+        fi
 
         local reg_tmpfile
         reg_tmpfile="$(ensure_tmpdir)/regression_${line_num}.txt"
@@ -1983,11 +2019,12 @@ _run_regression_suite() {
         fi
     done < "$regression_file"
 
+    [[ "$skipped" -gt 0 ]] && log_info "Regression suite: skipped $skipped check(s) via regression-skip.json"
     if [[ "$failed" -gt 0 ]]; then
         log_error "Regression suite: $failed/$total check(s) failed — prior work may be broken"
         return 1
     fi
-    log_success "Regression suite: $total check(s) passed"
+    log_success "Regression suite: $((passed_count)) check(s) passed"
     return 0
 }
 
@@ -2435,7 +2472,7 @@ _run_developer_cycle() {
     # Run developer agent
     run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
 
-    if ! check_result; then
+    if ! check_result "developer"; then
         log_error "Implementation failed"
         local fail_reason=""
         [[ -f "$STATUS_DIR/result.json" ]] && fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
@@ -2496,13 +2533,39 @@ Fix the issues and ensure all acceptance criteria pass."
         return 1
     fi
 
-    # Run validator agent (pass AC report as extra context if available)
+    # Run validator agent (pass AC report and mandatory output contract as extra context)
     local validator_extra=""
     [[ -n "$ac_report" ]] && validator_extra="
-## AC Verification Results
+## AC Verification Results (Authoritative)
+The orchestrator has already run all AC verify commands. Trust these results — do NOT re-run AC verify commands.
+Focus your verification on: (1) whether the implementation fulfills the item intent beyond mechanical AC pass, (2) integration correctness — is new code wired into the codebase and reachable, (3) ACs without verify commands that need manual probing.
 ${ac_report}"
+
+    # Determine integration enforcement level based on whether item has verify commands
+    local has_verify_commands=false
+    local verify_count
+    verify_count=$(jq '[(.item.acceptanceCriteria // [])[] | select(type == "object" and .verify != null)] | length' "$BACKLOG_DIR/sprint.json" 2>/dev/null || echo 0)
+    [[ "$verify_count" -gt 0 ]] && has_verify_commands=true
+
+    if [[ "$has_verify_commands" == "true" ]]; then
+        validator_extra="${validator_extra}
+
+## Integration Enforcement
+This item has executable verify commands testing real behavior. Disconnected code — new functions, modules, or routes not reachable from any existing entry point — is a validation FAILURE, not an advisory note. If the implementation adds code that nothing calls from a user-facing path, fail with a clear issue in ac_results."
+    else
+        validator_extra="${validator_extra}
+
+## Integration Check (Advisory)
+This item has no executable verify commands (scaffolding/infrastructure). Integration issues are advisory notes only — flag them in your summary but do not fail on disconnection alone."
+    fi
+
+    validator_extra="${validator_extra}
+
+## Mandatory Output Contract
+Your result.json MUST include an ac_results array with one entry per AC. Each entry must include ac_index (int, 0-based), met (bool), and either summary (string, if met) or issue (string, actionable) with optional file (string) and line (int) if not met. The orchestrator uses ac_results for targeted retry context — omitting it degrades retry intelligence."
+
     run_agent "validator" "validate" "$MODEL_FAST" "" "" "$validator_extra"
-    if ! check_result; then
+    if ! check_result "validator"; then
         log_error "Validation failed"
         local agent_fail_reason=""
         [[ -f "$STATUS_DIR/result.json" ]] && agent_fail_reason=$(jq -r '.reason // .summary // "unknown error"' "$STATUS_DIR/result.json" 2>/dev/null)
@@ -2514,6 +2577,8 @@ ${ac_report}"
             ac_results_json=$(jq -c '.ac_results // empty' "$STATUS_DIR/result.json" 2>/dev/null || true)
             if [[ -n "$ac_results_json" && "$ac_results_json" != "null" ]]; then
                 ac_targeted_ctx=$(_build_ac_failure_context "$ac_results_json")
+            else
+                log_warning "Validator failed without ac_results — degraded retry intelligence (context will be less targeted)"
             fi
         fi
 
@@ -2603,16 +2668,29 @@ _capture_retry_failure() {
     diff_summary=$(git diff --stat "$AISHORE_BASE_BRANCH" 2>/dev/null | tail -n 20 || true)
     [[ -z "$diff_summary" ]] && diff_summary="(no changes detected)"
 
+    # Extract compact ac_results references (file:line) from result.json if available
+    local ac_failure_refs=""
+    if [[ -f "$STATUS_DIR/result.json" ]]; then
+        local ac_results_json
+        ac_results_json=$(jq -c '.ac_results // empty' "$STATUS_DIR/result.json" 2>/dev/null || true)
+        if [[ -n "$ac_results_json" && "$ac_results_json" != "null" ]]; then
+            ac_failure_refs=$(printf '%s' "$ac_results_json" | jq -r '.[] | select(.met == false) | "AC\(.ac_index + 1) FAIL: \(.issue // "unknown") (\(.file // "?"):\(.line // "?"))"' 2>/dev/null || true)
+        fi
+    fi
+
     local entry="### Attempt $((attempt + 1))
 **Changes:** \`\`\`
 ${diff_summary}
 \`\`\`
 **Failure:** ${retry_extra_prompt}"
+    [[ -n "$ac_failure_refs" ]] && entry="${entry}
+**AC Failures:** ${ac_failure_refs}"
     retry_failure_history+=("$entry")
 }
 
 # Build a structured "Prior failure context" section from retry_failure_history.
-# Caps total output at 2000 chars, truncating oldest entries first.
+# Caps total output at 4000 chars. When entries would be dropped, preserves
+# compact AC failure references (file:line) instead of discarding entirely.
 # Returns empty string if history is empty.
 _build_prior_failure_context() {
     local count=${#retry_failure_history[@]}
@@ -2621,7 +2699,7 @@ _build_prior_failure_context() {
     local header="## Prior Failure Context
 **Read each prior attempt below and address the failures before coding.**
 "
-    local max_body_chars=$(( 2000 - ${#header} ))
+    local max_body_chars=$(( 4000 - ${#header} ))
     [[ $max_body_chars -lt 100 ]] && max_body_chars=100
 
     # Build body from newest to oldest, prepending each entry
@@ -2629,9 +2707,13 @@ _build_prior_failure_context() {
     for ((i=count-1; i>=0; i--)); do
         entry_text="${retry_failure_history[$i]}"
         if [[ $(( ${#body} + ${#entry_text} + 2 )) -gt $max_body_chars && -n "$body" ]]; then
-            # Would exceed cap — prepend truncation notice and stop
-            body="(earlier attempts truncated)
+            # Would exceed cap — extract compact AC failure refs before dropping
+            local compact_refs
+            compact_refs=$(printf '%s' "$entry_text" | grep -E '^AC[0-9]+ FAIL:|^\*\*AC Failures:\*\*' || true)
+            if [[ -n "$compact_refs" ]]; then
+                body="(Attempt $((i + 1)) condensed) ${compact_refs}
 ${body}"
+            fi
             break
         fi
         if [[ -n "$body" ]]; then
