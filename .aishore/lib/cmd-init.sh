@@ -282,7 +282,7 @@ cmd_init() {
             reinit=true
         else
             read -r -p "  Reinitialize? This preserves existing backlogs. [y/N] " c
-            [[ $c != [yY] ]] && exit 0
+            [[ $c != [yY] ]] && return 0
             reinit=true
         fi
         echo ""

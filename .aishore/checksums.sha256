@@ -21,7 +21,7 @@ a1e2e5a5e6dc65f052de5e50ca6de1df789070b0acac4817a6ad3cc9d5789c1c  .aishore/lib/c
 86ee2e9acdd9944f7ebfe42e02fdaccfc6a501d951bb4533f7afa9f223294b7d  .aishore/lib/cmd-clean.sh
 00815154351e83214499936e6b949e28005bf4f8c6d6a77733ef2d211a15f494  .aishore/lib/cmd-groom.sh
 3c8b4ac725483aa4fcef3ef3dbe4a78b1a65f2df81ffd960584162a8e725410d  .aishore/lib/cmd-help.sh
-c0ca93fce25530d74f191b0d80bd86b6d65cc48fe5fb87e4a021056665bfd326  .aishore/lib/cmd-init.sh
+580f869c5961cd6035437d87d25ece6a293d1767dfead150d1a0cfbfa4214f4f  .aishore/lib/cmd-init.sh
 cc3681c72876e8cac492676400f26847df5c20018dae053c97dc4d03a8bd6f5d  .aishore/lib/cmd-review.sh
 fb24867bcfa2fe269058138ebdddb7e42f164ec12237a0d0ba2833c55d2e9d41  .aishore/lib/cmd-scaffold.sh
 8f0e63a3c9586ccbf2c23e335cc20ecb7d0d892766616dbb8d9ea594ff8d54f0  .aishore/lib/cmd-status.sh

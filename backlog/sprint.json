@@ -1,35 +1,36 @@
 {
-  "sprintId": "sprint-1775005206",
-  "startedAt": "2026-03-31T18:00:06-07:00",
+  "sprintId": "sprint-1775005501",
+  "startedAt": "2026-03-31T18:05:01-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-134",
-    "title": "Unchecked cd commands silently continue in wrong directory",
-    "intent": "Every cd in the orchestrator must fail loudly — silently running git or file operations in the wrong directory can corrupt repos or lose work.",
-    "description": "Several cd commands use '2>/dev/null || true', suppressing errors. If cd fails, subsequent git/file operations execute in the wrong directory. Affected lines: cd $PROJECT_ROOT, cd $wt_dir, and others. Replace with explicit error checks that return/exit on failure.",
+    "id": "BUG-136",
+    "title": "exit 0 in sourced cmd-init.sh kills parent shell",
+    "intent": "Sourced modules must never kill the parent process — use return, not exit, so the orchestrator can handle errors gracefully.",
+    "description": "cmd-init.sh line 285 uses 'exit 0' when the user declines reinit. Since modules are loaded via source, exit terminates the entire orchestrator process instead of just returning from the function. Must replace with return 0.",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Find all cd commands in .aishore/aishore that use || true or 2>/dev/null",
-      "Replace with: cd \"$dir\" || { log_error \"Cannot cd to $dir\"; return 1; }",
-      "Verify no cd command silently ignores failure"
+      "Replace exit 0 with return 0 at cmd-init.sh line 285",
+      "Audit all other lib modules for exit statements that should be return",
+      "Verify no exit calls remain in any sourced module function"
     ],
     "acceptanceCriteria": [
       {
-        "text": "No cd command uses || true or suppresses stderr without an error handler",
-        "verify": "! grep -n 'cd .*|| true' .aishore/aishore | grep -qv '#'"
+        "text": "No exit statement exists in any sourced module function body",
+        "verify": "! grep -n 'exit [0-9]' .aishore/lib/*.sh | grep -v '^[^:]*:#' | grep -qv 'subshell\\|(\\|bash -c'"
       },
       {
-        "text": "All cd commands have explicit failure handling",
-        "verify": "! grep -En '^\\s+cd ' .aishore/aishore | grep -v '|| {' | grep -v 'log_error' | grep -v '|| return' | grep -v '|| exit' | grep -qv '#'"
+        "text": "cmd-init.sh uses return 0 instead of exit 0 for user cancellation",
+        "verify": "grep -A2 'yY' .aishore/lib/cmd-init.sh | grep -q 'return'"
       }
     ],
     "scope": [
-      ".aishore/aishore"
+      ".aishore/lib/cmd-init.sh",
+      ".aishore/lib/*.sh"
     ],
-    "startedAt": "2026-03-31T18:00:06-07:00",
+    "startedAt": "2026-03-31T18:05:01-07:00",
     "status": "passed",
-    "completedAt": "2026-03-31T18:02:29-07:00"
+    "completedAt": "2026-03-31T18:06:26-07:00"
   },
-  "completedAt": "2026-03-31T18:02:29-07:00",
+  "completedAt": "2026-03-31T18:06:26-07:00",
   "attempts": 1
 }
