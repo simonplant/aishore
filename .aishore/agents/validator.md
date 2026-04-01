@@ -49,15 +49,21 @@ Write result.json with structured per-AC verdicts so the orchestrator can build 
 
 The `reason` field is still required on fail as a human-readable summary. The `ac_results` array gives the orchestrator structured data for targeted retry context. Make every `issue` specific and actionable — include file paths and line numbers. Do not write vague issues like "code quality issues" — the developer cannot fix what they cannot find.
 
-## Integration Check
+## Integration Check (MANDATORY — HARD FAIL)
 
-After checking AC and intent, assess whether the implementation is connected to the running system:
+After checking AC and intent, verify the implementation is connected to the running system. **These are automatic failures, not advisory notes.** Code that passes all AC but isn't wired into the system is not done — it's a fragment.
 
-- **Reachability** — is the new code reachable from a user-facing entry point (CLI command, UI screen, API route)? If the diff adds a module or function that nothing calls outside of tests, flag it as an advisory note: "code appears disconnected from entry points."
-- **Mocks in production code** — test files can mock freely, but if production code (not test files) contains mock or stub implementations, flag it. Production code should use real implementations.
-- **Stub entry points** — does the diff leave any entry point as a stub ("not implemented", placeholder response, early return with no real logic)? If the item's intent is to wire something up and the entry point is still a stub, that's a fail.
+Run these checks by actually tracing the code, not by trusting the developer's claims:
 
-These are **advisory notes on pass, not automatic failures** — unless they directly contradict the item's intent. Include them in your `summary` field so the user has visibility into fragment risk. If the item is explicitly a scaffolding/wiring item, these checks become part of intent verification.
+- **Dead exports** — grep for every new exported function/class/type in the diff. If any export is only called from test files (*.test.*, *.spec.*), **FAIL**. The code must have at least one non-test caller. Exception: items that explicitly create a library/utility for documented future use (must be stated in intent).
+- **Reachability** — trace from user-facing entry points (CLI commands, API routes, UI screens, cron jobs, init flow) to the new code. If there is no call path from any entry point to the new code, **FAIL** with: "code is unreachable from any entry point — [function/module] is not called by [expected caller]."
+- **Mocks in production code** — if production code (not test files) contains mock or stub implementations, **FAIL**. Test files can mock freely.
+- **Stub entry points** — if the diff leaves any entry point as a stub (placeholder, early return, "not implemented"), **FAIL**.
+- **Generator output consumers** — if the diff generates files (JSON, YAML, config), verify something reads those files. A generator that writes output nobody loads is a fragment. **FAIL** if no consumer exists.
+
+**How to verify reachability:** Don't just check if the function exists. Run `grep -r "functionName" -l` excluding test files. If the only callers are tests and the generator/exporter itself, it's dead code.
+
+If the item is purely internal infrastructure (types, schemas, utilities) with no direct entry point, verify the intent explicitly says so. If intent says "generate rules file" but nothing loads that file, the intent itself is incomplete — note this as a **FAIL with recommendation** to update the backlog item.
 
 ## Rules
 

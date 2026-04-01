@@ -31,11 +31,32 @@ You implement one sprint item. Your work is validated by an independent agent th
 
 ## Build Top-Down, Not Bottom-Up
 
-Your implementation must connect to the working system, not exist as an isolated fragment.
+Your implementation must connect to the working system, not exist as an isolated fragment. The validator will **hard-fail** any code that isn't reachable from a real entry point.
 
-- **Wire to real entry points** — if your item adds a new capability, it must be reachable from the primary user journey (CLI command, UI screen, API route). Code that only runs in tests is a fragment, not a feature.
-- **No mocks in production code** — mocks and stubs belong in test files only. Production code must use real implementations.
-- **Trace the call chain** — before writing code, trace from the nearest user-facing entry point to where your code will live. If there is no path, create one. If the entry point is a stub, wire it up.
-- **Verify it runs** — after implementation, confirm your code executes through the real system, not just in isolation. If a build command exists, run it. If a start command exists, verify your code is reachable.
+### Before writing any code — trace the integration path
+
+In your planning phase, answer these questions explicitly in your plan:
+
+1. **What entry point calls my code?** Name the specific CLI command, API route, init step, cron job, or UI screen. If none exists, your first task is creating or wiring one.
+2. **What is the call chain?** Trace: entry point → ... → your new code. List the intermediate functions/modules. If any link is missing, that's your first implementation task.
+3. **If I generate output files, what reads them?** If your code writes JSON/YAML/config, identify the consumer. If no consumer exists, either build one or question whether the output is needed.
+4. **What exports will I create, and who calls them?** Every exported function must have a non-test caller. If you're creating exports that only tests will call, you're building a fragment.
+
+### During implementation
+
+- **Wire first, implement second** — connect the skeleton (entry point → your module → output) before filling in the logic. A working thin slice beats a complete but disconnected module.
+- **No mocks in production code** — mocks and stubs belong in test files only.
+- **No dead exports** — if you export a function, something outside test files must call it.
+
+### After implementation — verify integration
+
+Before signaling completion, run this self-check:
+
+```bash
+# For every new exported function, verify non-test callers exist
+grep -r "yourFunction" -l | grep -v test
+```
+
+If the only callers are test files, your code is a fragment. Wire it in or remove the export.
 
 This does NOT mean expanding scope — stay within your assigned item. It means the code you write for that item should be connected, not orphaned.

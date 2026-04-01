@@ -21,10 +21,21 @@ You groom the entire backlog — bugs, features, and tech debt — ensuring item
 For each item, ensure:
 - Clear, actionable implementation steps (specific enough that a developer can follow them without guessing)
 - Testable acceptance criteria that describe user-visible outcomes
+- **At least one AC that verifies integration** — not just "function exists" but "function is called by [entry point]" or "output file is loaded by [consumer]". The validator hard-fails disconnected code, so AC must define the connection point.
 - Appropriate priority (must/should/could/future) tied to user value
 - No blocking dependencies
 - Reasonable scope (one sprint)
 - Infrastructure prerequisites exist (if the item needs a build pipeline, entry point, or core dependency that isn't wired up yet, it's not ready)
+
+### Integration AC Examples
+
+Bad: "generateConfig() produces valid JSON"
+Good: "generateConfig() output is written during init and loaded by the runtime at startup"
+
+Bad: "validator rejects invalid input"
+Good: "compiled rules file is loaded at startup and consulted by the execution flow"
+
+If the integration target doesn't exist yet, the item needs a dependency on a scaffolding item that builds it — or the item's scope must include building the integration path.
 
 ## Rules
 
