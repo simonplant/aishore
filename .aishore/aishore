@@ -3393,7 +3393,8 @@ run_sprint_loop() {
 
         # Worktree isolation: create a separate working directory for the sprint
         local wt_dir
-        wt_dir="${TMPDIR:-/tmp}/aishore-wt-${ITEM_ID}-$$"
+        wt_dir=$(mktemp -d "${TMPDIR:-/tmp}/aishore-wt-${ITEM_ID}.XXXXXX")
+        rmdir "$wt_dir"
         git branch -D "$branch_name" 2>/dev/null || true
         git worktree add "$wt_dir" -b "$branch_name"
         AISHORE_WORKTREE_DIR="$wt_dir"
