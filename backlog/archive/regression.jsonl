@@ -10,3 +10,5 @@
 {"itemId":"FEAT-081","date":"2026-03-31","text":"Documentation Maintenance section still exists as a separate injection","verify":"grep -q 'Documentation Maintenance' .aishore/aishore"}
 {"itemId":"BUG-134","date":"2026-03-31","text":"No cd command uses || true or suppresses stderr without an error handler","verify":"! grep -n 'cd .*|| true' .aishore/aishore | grep -qv '#'"}
 {"itemId":"BUG-134","date":"2026-03-31","text":"All cd commands have explicit failure handling","verify":"! grep -En '^\\s+cd ' .aishore/aishore | grep -v '|| {' | grep -v 'log_error' | grep -v '|| return' | grep -v '|| exit' | grep -qv '#'"}
+{"itemId":"BUG-136","date":"2026-03-31","text":"No exit statement exists in any sourced module function body","verify":"! grep -n 'exit [0-9]' .aishore/lib/*.sh | grep -v '^[^:]*:#' | grep -qv 'subshell\\|(\\|bash -c'"}
+{"itemId":"BUG-136","date":"2026-03-31","text":"cmd-init.sh uses return 0 instead of exit 0 for user cancellation","verify":"grep -A2 'yY' .aishore/lib/cmd-init.sh | grep -q 'return'"}
