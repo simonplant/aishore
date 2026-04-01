@@ -278,7 +278,7 @@ rm -rf .aishore && curl -sSL https://raw.githubusercontent.com/simonplant/aishor
 ## Next Steps
 
 - Run multiple sprints: `.aishore/aishore run 5`
-- Autonomous mode: `.aishore/aishore auto done` (drains the entire backlog)
+- Autonomous mode: `.aishore/aishore run done` (drains the entire backlog)
 - Architecture review: `.aishore/aishore review`
 - Full command reference: `.aishore/aishore help`
 - Full docs: [README.md](../README.md)

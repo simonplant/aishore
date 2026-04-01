@@ -183,7 +183,7 @@ validation:
 | | |
 |---|---|
 | **Type** | integer |
-| **Default** | `25` |
+| **Default** | `75` |
 | **Env var** | `AISHORE_MAX_TURNS_DEVELOPER` |
 | **What it controls** | Maximum conversation turns for the developer agent. Limits how many tool-call round trips the agent can make within a single invocation. |
 | **When to change** | Increase for complex features that need more iteration; decrease to bound token costs. |
@@ -193,7 +193,7 @@ validation:
 | | |
 |---|---|
 | **Type** | integer |
-| **Default** | `15` |
+| **Default** | `45` |
 | **Env var** | `AISHORE_MAX_TURNS_VALIDATOR` |
 | **What it controls** | Maximum conversation turns for the validator agent. Validators need enough turns to complete multi-step verification without hitting the limit. |
 | **When to change** | Increase if validation involves complex multi-step probing. |
@@ -203,7 +203,7 @@ validation:
 | | |
 |---|---|
 | **Type** | integer |
-| **Default** | `15` |
+| **Default** | `45` |
 | **Env var** | `AISHORE_MAX_TURNS_GROOMER` |
 | **What it controls** | Maximum conversation turns for grooming agents (groomer, architect). |
 | **When to change** | Increase for larger grooming sessions; decrease to keep grooming focused. |
@@ -388,9 +388,9 @@ All `AISHORE_*` environment variables and what they map to:
 | `AISHORE_TIMEOUT_MINUTES` | `timeout_minutes` | `0` | Agent timeout in minutes (overrides `agent.timeout`; 0 = no override) |
 | `AISHORE_RETRIES` | `run.retries` | `0` | Per-item retry attempts on failure |
 | `AISHORE_SESSION_LIMIT` | `run.session_limit` | `0` | Cap session at N items (0 = unlimited) |
-| `AISHORE_MAX_TURNS_DEVELOPER` | `agent.max_turns.developer` | `25` | Max turns for developer agent |
-| `AISHORE_MAX_TURNS_VALIDATOR` | `agent.max_turns.validator` | `15` | Max turns for validator agent |
-| `AISHORE_MAX_TURNS_GROOMER` | `agent.max_turns.groomer` | `15` | Max turns for grooming agents |
+| `AISHORE_MAX_TURNS_DEVELOPER` | `agent.max_turns.developer` | `75` | Max turns for developer agent |
+| `AISHORE_MAX_TURNS_VALIDATOR` | `agent.max_turns.validator` | `45` | Max turns for validator agent |
+| `AISHORE_MAX_TURNS_GROOMER` | `agent.max_turns.groomer` | `45` | Max turns for grooming agents |
 
 ---
 

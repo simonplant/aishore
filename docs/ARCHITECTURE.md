@@ -47,11 +47,11 @@ The maturity protocol is always on. It is a non-optional part of the quality mod
 
 ## Agent System
 
-aishore models a real sprint team with five specialized AI agents, each with a distinct role and restricted permissions:
+aishore models a real sprint team with four specialized AI agents, each with a distinct role and restricted permissions:
 
 | Agent | Role | Invoked by | Permissions |
 |-------|------|------------|-------------|
-| **Developer** | Implements features following project conventions and the maturity protocol | `run` | `Agent,Bash,Edit,Write,Read,Glob,Grep` |
+| **Developer** | Implements features following project conventions and the maturity protocol | `run` | `Agent,Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode` |
 | **Validator** | Checks acceptance criteria and commander's intent against actual changes | `run` | `Bash,Read,Glob,Grep` |
 | **Groomer** | Grooms bugs and features — adds steps, testable AC, sets priorities, marks items ready | `groom` | CLI commands |
 | **Architect** | Reviews patterns and risks; detects fragment risk and injects scaffolding items | `review`, `scaffold` | `Read,Glob,Grep` (+ `Edit,Write` with `--update-docs`; full permissions in scaffold mode) |
