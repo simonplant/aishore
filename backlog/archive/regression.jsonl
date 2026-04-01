@@ -1,1 +1,4 @@
 
+{"itemId":"FEAT-094","date":"2026-04-01","text":"A scope enforcement block exists in _run_validation_cycle that uses git diff --name-only to compare against scope","verify":"grep -q 'diff.*name-only' .aishore/aishore && grep -B20 'diff.*name-only' .aishore/aishore | grep -qi 'scope'"}
+{"itemId":"FEAT-094","date":"2026-04-01","text":"log_warning is called for files outside scope within the validation cycle","verify":"grep -A5 'diff.*name-only' .aishore/aishore | grep -q 'log_warning'"}
+{"itemId":"FEAT-094","date":"2026-04-01","text":"The scope check does not set _validation_failure","verify":"! grep -A30 'diff.*name-only' .aishore/aishore | grep -q '_validation_failure'"}
