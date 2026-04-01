@@ -2,85 +2,6 @@
   "description": "Bugs and tech debt",
   "items": [
     {
-      "id": "BUG-137",
-      "title": "Guard jq-to-mv writes in core orchestrator against jq failure",
-      "intent": "Backlog files must never be corrupted by a failed jq command — every jq-to-mv write must verify jq succeeded before overwriting the original file.",
-      "description": "In .aishore/aishore, the pattern jq ... > $tmp followed by mv $tmp $file does not check jq exit code. If jq fails, mv overwrites the original with empty/corrupt data. Affected functions: update_item(), remove_item(), create_sprint(). Guard each with: jq ... > $tmp || { rm -f $tmp; log_error ...; return 1; }",
-      "priority": "must",
-      "category": "robustness",
-      "steps": [
-        "Find all 'jq ... > $tmp' patterns in .aishore/aishore (roughly 5-8 instances)",
-        "For each instance, add jq exit code check before the mv command",
-        "Ensure rm -f $tmp runs on jq failure to avoid stale temp files"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "No jq output redirect to tmp file is followed by mv without checking jq exit code",
-          "verify": "! grep -Pn 'jq.*>.*tmp' .aishore/aishore | grep -v '|| {' | grep -v 'if jq' | grep -q '.'"
-        }
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": false,
-      "readyForSprint": true,
-      "resolved_at": "2026-04-01T01:23:48Z"
-    },
-    {
-      "id": "BUG-138",
-      "title": "Unquoted variable in JSON construction breaks AC entries",
-      "intent": "Acceptance criteria containing quotes or special characters must round-trip safely — JSON construction must use jq, never string interpolation with unquoted variables.",
-      "description": "In cmd-backlog-write.sh, $last_text is embedded unquoted in a JSON object literal when attaching --ac-verify to the preceding --ac. If the AC text contains double quotes, braces, or backslashes, the JSON breaks. Replace with jq -n --arg for safe construction.",
-      "priority": "must",
-      "category": "correctness",
-      "steps": [
-        "In cmd-backlog-write.sh, find the two locations where ac_entries constructs JSON with string interpolation",
-        "Replace each with: jq -n --argjson text \"$last_text\" --arg verify \"$2\" '{text: $text, verify: $verify}'"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "No raw string interpolation of last_text in JSON construction",
-          "verify": "! grep -n 'text.*$last_text\\|text.*${last_text' .aishore/lib/cmd-backlog-write.sh | grep -qv 'jq'"
-        }
-      ],
-      "scope": [
-        ".aishore/lib/cmd-backlog-write.sh"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": false,
-      "readyForSprint": true,
-      "resolved_at": "2026-04-01T01:23:48Z"
-    },
-    {
-      "id": "BUG-139",
-      "title": "Module load failures silently marked as loaded",
-      "intent": "A broken module must fail fast at load time — silently marking a failed source as loaded causes cryptic command-not-found errors far from the root cause.",
-      "description": "_load_module() runs source $mod_file then sets _LOADED_MODULES[$mod]=1 regardless of whether source succeeded. Add error check after source.",
-      "priority": "must",
-      "category": "robustness",
-      "steps": [
-        "In _load_module(), wrap source with: source \"$mod_file\" || { log_error \"Failed to load module $mod\"; return 1; }",
-        "Only set _LOADED_MODULES[$mod]=1 after source succeeds"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "_load_module checks source exit code before marking module as loaded",
-          "verify": "grep -A3 'source.*mod_file' .aishore/aishore | grep -q '|| {'"
-        }
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": false,
-      "readyForSprint": true,
-      "resolved_at": "2026-04-01T01:23:48Z"
-    },
-    {
       "id": "BUG-140",
       "title": "sed injection in cmd-init.sh via unescaped user input",
       "intent": "User-provided project names and commands must never be interpreted as sed metacharacters — init wizard input must be escaped before sed substitution.",
@@ -180,33 +101,6 @@
       "readyForSprint": true
     },
     {
-      "id": "BUG-144",
-      "title": "Sprint merge fails when backlog files have uncommitted local changes",
-      "intent": "Sprints must not fail at merge time due to locally modified tracking files — the orchestrator must handle its own bookkeeping files around merges.",
-      "description": "When the orchestrator updates backlog/bugs.json or backlog/backlog.json during a sprint session (marking items done, updating failCount), those changes are uncommitted. When the next sprint's worktree branch merges back, git merge fails with 'local changes would be overwritten'. The orchestrator should stash or commit tracking changes before merge.",
-      "priority": "must",
-      "category": "robustness",
-      "steps": [
-        "Before merging a feature branch, stash any uncommitted changes to backlog files",
-        "After merge, pop the stash to restore tracking state",
-        "Handle stash pop conflicts gracefully"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "Sprint merge does not fail due to uncommitted backlog file changes",
-          "verify": "grep -q 'stash\\|git add.*backlog\\|commit.*tracking' .aishore/aishore"
-        }
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": false,
-      "readyForSprint": true,
-      "resolved_at": "2026-04-01T01:23:48Z"
-    },
-    {
       "id": "BUG-145",
       "title": "Spec refinement fails with 'sprint item spec is empty' after sprint failure",
       "intent": "Spec refinement must work when items fail — it exists specifically for failed items, so it must have access to the item spec at refinement time.",
@@ -230,32 +124,6 @@
       "status": "todo",
       "passes": false,
       "readyForSprint": true
-    },
-    {
-      "id": "BUG-146",
-      "title": "Validator max turns (10) too low — causes false sprint failures",
-      "intent": "Validators must have enough turns to complete verification — a validator hitting max turns is a system failure, not a code quality failure.",
-      "description": "With MAX_TURNS_VALIDATOR=10, validators frequently hit the limit before writing result.json, causing the sprint to fail even when the developer's code passed all AC verify commands. Increase default to 15 or 20.",
-      "priority": "must",
-      "category": "robustness",
-      "steps": [
-        "Increase MAX_TURNS_VALIDATOR default from 10 to 15",
-        "Update CONFIGURATION.md if it documents the default"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "MAX_TURNS_VALIDATOR default is at least 15",
-          "verify": "grep 'MAX_TURNS_VALIDATOR' .aishore/aishore | head -1 | grep -qE '[1-9][5-9]|[2-9][0-9]'"
-        }
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": false,
-      "readyForSprint": true,
-      "resolved_at": "2026-04-01T01:24:33Z"
     }
   ]
 }
