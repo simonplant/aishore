@@ -22,9 +22,10 @@
         ".aishore/lib/cmd-init.sh"
       ],
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "passes": false,
-      "readyForSprint": true
+      "readyForSprint": true,
+      "resolved_at": "2026-04-01T03:43:50Z"
     },
     {
       "id": "BUG-141",
@@ -47,9 +48,10 @@
         ".aishore/aishore"
       ],
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "passes": false,
-      "readyForSprint": true
+      "readyForSprint": true,
+      "resolved_at": "2026-04-01T03:43:50Z"
     },
     {
       "id": "BUG-142",
@@ -72,9 +74,10 @@
         ".aishore/lib/cmd-groom.sh"
       ],
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "passes": false,
-      "readyForSprint": true
+      "readyForSprint": true,
+      "resolved_at": "2026-04-01T03:43:50Z"
     },
     {
       "id": "BUG-143",
@@ -96,9 +99,10 @@
         ".aishore/aishore"
       ],
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "passes": false,
-      "readyForSprint": true
+      "readyForSprint": true,
+      "resolved_at": "2026-04-01T03:43:50Z"
     }
   ]
 }
