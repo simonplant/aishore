@@ -1,31 +1,36 @@
 {
-  "sprintId": "sprint-1775087328",
-  "startedAt": "2026-04-01T16:48:48-07:00",
+  "sprintId": "sprint-1775087669",
+  "startedAt": "2026-04-01T16:54:29-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-149",
-    "title": "Fix groom returning success on jq parse failure",
-    "intent": "When jq parsing fails after a groom operation and the snapshot is restored, the function must signal failure so callers know the groom did not succeed.",
+    "id": "FEAT-096",
+    "title": "Use mktemp for worktree temp directories",
+    "intent": "Worktree temp directories must use unpredictable paths via mktemp -d, not a predictable PID-based pattern — preventing symlink attacks and temp directory collisions.",
     "description": "",
-    "sourceBacklog": "bugs.json",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "Open .aishore/lib/cmd-groom.sh and find the jq parse failure handler (~lines 88-91)",
-      "Change return 0 to return 1 in the jq parse failure block",
-      "Verify callers of this function handle the failure return correctly"
+      "Locate worktree directory creation in .aishore/aishore (~line 3390)",
+      "Replace the predictable path construction with mktemp -d \"${TMPDIR:-/tmp}/aishore-wt-${ITEM_ID}.XXXXXX\"",
+      "Ensure cleanup still works with the mktemp-generated path",
+      "Verify git worktree add works with the new path"
     ],
     "acceptanceCriteria": [
       {
-        "text": "Function returns 1 when jq parsing fails after groom",
-        "verify": "grep -A3 'restoring snapshot' .aishore/lib/cmd-groom.sh | grep -q 'return 1'"
+        "text": "Worktree directories use mktemp instead of predictable PID paths",
+        "verify": "grep -q 'mktemp.*aishore-wt' .aishore/aishore"
+      },
+      {
+        "text": "No predictable PID-based temp path construction for worktrees",
+        "verify": "! grep -q 'aishore-wt.*$$' .aishore/aishore"
       }
     ],
     "scope": [
-      ".aishore/lib/cmd-groom.sh"
+      ".aishore/aishore"
     ],
-    "startedAt": "2026-04-01T16:48:48-07:00",
+    "startedAt": "2026-04-01T16:54:29-07:00",
     "status": "passed",
-    "completedAt": "2026-04-01T16:50:57-07:00"
+    "completedAt": "2026-04-01T16:56:06-07:00"
   },
-  "completedAt": "2026-04-01T16:50:57-07:00",
+  "completedAt": "2026-04-01T16:56:06-07:00",
   "attempts": 1
 }
