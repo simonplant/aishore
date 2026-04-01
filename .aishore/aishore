@@ -2349,6 +2349,29 @@ Output ONLY the JSON object, no markdown fences, no explanation."
     fi
 }
 
+# Scope enforcement — warn on out-of-scope file modifications (advisory only).
+# Reads .item.scope from sprint.json, compares changed files against scope globs,
+# and calls log_warning for each file outside scope. Never fails the sprint.
+_check_scope_warnings() {
+    local _scope_globs
+    _scope_globs=$(jq -r '.item.scope // [] | .[]' "$BACKLOG_DIR/sprint.json" 2>/dev/null || true)
+    [[ -z "$_scope_globs" || -z "${AISHORE_BASE_BRANCH:-}" ]] && return 0
+    # Build combined regex from all scope globs
+    local _combined_re="" _sg _re
+    while IFS= read -r _sg; do
+        _re=$(printf '%s' "$_sg" | sed -e 's/\./\\./g' -e 's/\*\*/\x00/g' -e 's/\*/[^\/]*/g' -e 's/\x00/.*/g' -e 's/?/./g')
+        [[ -n "$_combined_re" ]] && _combined_re="${_combined_re}|"
+        _combined_re="${_combined_re}^${_re}\$"
+    done <<< "$_scope_globs"
+    # Compare changed files against scope globs and warn on mismatches
+    local _scope_diff _cf
+    _scope_diff=$(git diff --name-only "$AISHORE_BASE_BRANCH" 2>/dev/null || true)
+    while IFS= read -r _cf; do [[ -z "$_cf" ]] && continue
+        [[ "$_cf" =~ ${_combined_re} ]] || log_warning "Out-of-scope file modified: $_cf"
+    done <<< "$_scope_diff"
+    return 0
+}
+
 # Pre-flight: run validation command on the baseline before developer touches anything.
 # Returns 0 if preflight passes (or no VALIDATE_CMD configured), 1 on failure.
 _run_preflight() {
@@ -2432,8 +2455,6 @@ _run_developer_cycle() {
 
 # Run validation cycle: scope check, validation command, AC verification, validator agent.
 # Uses outer-scope: retry_extra_prompt, VALIDATE_CMD
-# Sets: _validation_failure (short label for _record_sprint_failure)
-# Returns 0 if all validations pass, 1 on failure (sets retry_extra_prompt with context).
 _run_validation_cycle() {
     _validation_failure=""
     local validate_output=""
@@ -2458,6 +2479,9 @@ Fix the issues and ensure all acceptance criteria pass."
             return 1
         fi
     fi
+
+    # Scope enforcement — warn on out-of-scope file modifications (advisory only)
+    _check_scope_warnings
 
     # Run AC verification commands (report returned via stdout)
     local ac_report
