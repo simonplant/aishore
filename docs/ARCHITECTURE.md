@@ -52,7 +52,7 @@ aishore models a real sprint team with five specialized AI agents, each with a d
 | Agent | Role | Invoked by | Permissions |
 |-------|------|------------|-------------|
 | **Developer** | Implements features following project conventions and the maturity protocol | `run` | `Bash,Edit,Write,Read,Glob,Grep` |
-| **Validator** | Checks acceptance criteria and commander's intent against actual changes | `run` | `Bash,Read,Write,Glob,Grep` |
+| **Validator** | Checks acceptance criteria and commander's intent against actual changes | `run` | `Bash,Read,Glob,Grep` |
 | **Groomer** | Grooms bugs and features — adds steps, testable AC, sets priorities, marks items ready | `groom` | CLI commands |
 | **Architect** | Reviews patterns and risks; detects fragment risk and injects scaffolding items | `review`, `scaffold` | `Read,Glob,Grep` (+ `Edit,Write` with `--update-docs`; full permissions in scaffold mode) |
 

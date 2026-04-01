@@ -56,7 +56,7 @@ validation:
 # Permissions (restrict for tighter sandbox)
 # permissions:
 #   developer: "Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode"
-#   validator: "Bash,Read,Write,Glob,Grep"
+#   validator: "Bash,Read,Glob,Grep"
 #   reviewer: "Read,Glob,Grep"
 
 # Merge strategy: "merge" (default, --no-ff) or "squash" (single commit per item)
@@ -223,9 +223,9 @@ validation:
 | | |
 |---|---|
 | **Type** | string (comma-separated tool names) |
-| **Default** | `Bash,Read,Write,Glob,Grep` |
+| **Default** | `Bash,Read,Glob,Grep` |
 | **Env var** | — |
-| **What it controls** | Claude Code tools available to the validator agent. No `Edit` by default — validators read and run tests, but don't modify code. |
+| **What it controls** | Claude Code tools available to the validator agent. No `Edit` or `Write` by default — validators read and run commands, but don't modify files. The validator writes `result.json` via Bash. |
 | **When to change** | Rarely. Only if your validation workflow requires editing files. |
 
 #### `permissions.reviewer`
@@ -627,9 +627,9 @@ Full access. The developer agent can run shell commands, read and write files, s
 
 ### Validator Agent
 
-**Default:** `Bash,Read,Write,Glob,Grep`
+**Default:** `Bash,Read,Glob,Grep`
 
-Can run tests and read files, but cannot use `Edit`. The validator checks the developer's work by running the validation command and inspecting outputs. `Write` is included so it can write the result signal file.
+Can run tests and read files, but cannot use `Edit` or `Write`. The validator checks the developer's work by running the validation command and inspecting outputs. The result signal file is written via Bash (`echo`/`jq` to file).
 
 ### Reviewer Agent
 
