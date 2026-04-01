@@ -79,9 +79,10 @@
       "priority": "must",
       "category": null,
       "steps": [
-        "In run_agent_process(), add '--bare' to the claude_args array after the initial declaration",
-        "Verify the orchestrator still passes CLAUDE.md content explicitly via -p prompt injection",
-        "Update checksums.sha256 if the main script changes"
+        "In run_agent_process(), add '--bare' to the claude_args array BEFORE any other flags — this is the ONLY change needed in run_agent_process()",
+        "In refine_item_spec(), add '--bare' to the _refine_cmd array for the spec refinement agent",
+        "Update checksums.sha256 with the new hash for .aishore/aishore",
+        "CRITICAL: Do NOT modify find_claude_md(), build_context(), or any CLAUDE.md-related code — only add --bare flags"
       ],
       "acceptanceCriteria": [
         {

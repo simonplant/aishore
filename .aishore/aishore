@@ -2255,9 +2255,10 @@ refine_item_spec() {
 
     log_info "Refining spec for $item_id based on failure context"
 
+    local sprint_file="$BACKLOG_DIR/sprint.json"
+
     # Accept spec as arg 3 (preferred), fall back to sprint.json
     if [[ -z "$current_spec" || "$current_spec" == "null" ]]; then
-        local sprint_file="$BACKLOG_DIR/sprint.json"
         [[ ! -f "$sprint_file" ]] && { log_error "No sprint.json for refinement"; return 1; }
         current_spec=$(jq '.item' "$sprint_file" 2>/dev/null)
     fi
@@ -2329,18 +2330,19 @@ Output ONLY the JSON object, no markdown fences, no explanation."
         return 1
     fi
 
-    # Update sprint.json with refined spec
+    # Rebuild sprint.json with the refined spec
+    # sprint.json may already be reset to idle, so reconstruct from current_spec
     local tmp_sprint
     tmp_sprint="$(ensure_tmpdir)/sprint_refine.json"
-    if jq --argjson refined "$json_output" \
-        '.item.steps = $refined.steps | .item.acceptanceCriteria = $refined.acceptanceCriteria' \
-        "$sprint_file" > "$tmp_sprint" 2>/dev/null; then
+    if jq -n --argjson item "$current_spec" --argjson refined "$json_output" \
+        '{sprintId: "refined", status: "in_progress", item: ($item | .steps = $refined.steps | .acceptanceCriteria = $refined.acceptanceCriteria)}' \
+        > "$tmp_sprint" 2>/dev/null; then
         mv "$tmp_sprint" "$sprint_file"
         log_success "Spec refined for $item_id"
         return 0
     else
         rm -f "$tmp_sprint"
-        log_error "Failed to update sprint.json with refined spec"
+        log_error "Failed to write refined spec to sprint.json"
         return 1
     fi
 }
