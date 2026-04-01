@@ -11,18 +11,21 @@ aishore ships working autonomous sprints today:
 - **Intent as hard gate** — items without commander's intent don't enter sprints. Validator checks intent fulfillment, not just AC pass/fail.
 - **Executable evals** — AC verify commands run real behavior checks. Regression suite compounds automatically across sprints.
 - **Scaffolding detection** — architect agent identifies fragment risk before features sprint. Scaffolding items wire the skeleton first.
-- **Retry with context** — failures feed back structured context (validator AC results, error logs, prior diffs). Spec refinement rewrites steps/AC as a last resort.
+- **Retry with structured context** — failures feed back file:line references from validator AC results. Retry cap increased to 4000 chars with compact summaries preserved on truncation. Spec refinement rewrites steps/AC as a last resort.
+- **Maturity protocol enforcement** — `check_result("developer")` rejects pass results missing `.phases` evidence. Developer must prove critique findings and harden verification counts.
+- **Mandatory validator ac_results** — validator must include structured per-AC results (ac_index, met, issue, file, line). Warning on degraded retry when missing.
+- **AC verify deduplication** — developer runs verify commands for feedback, orchestrator runs authoritatively, validator trusts results and focuses on intent and integration.
+- **Integration enforcement** — disconnected code is a hard failure when item has verify commands, advisory for scaffolding items.
+- **Scope enforcement** — post-commit warning when files modified outside declared scope globs.
+- **Regression suite management** — `clean --regression` with backup, `regression-skip.json` to skip flaky entries by item ID.
+- **Agent output streaming** — real-time visibility into what the developer agent is doing during long sprints.
 - **Checksum-verified updates** — self-update from GitHub releases with SHA-256 integrity checks
 
 ## Next
 
 Things that directly improve the core loop of shipping working code:
 
-- **Enforce maturity protocol mechanically** — the 3-phase cycle (implement, critique, harden) is currently a prompt instruction. The orchestrator should verify phases executed, not trust self-reporting. This is the biggest gap between philosophy and implementation.
-- **Targeted retry context** — validator AC results with file:line references should always reach the developer on retry, not just when the validator happens to provide structured output. Make `ac_results` mandatory, not optional.
-- **Regression suite management** — provide escape hatches for flaky or obsolete regression entries. Behavior evolves; the regression suite needs to evolve with it without blocking all future sprints.
 - **PR workflow integration** — `--no-merge` and `--pr` exist; tighter GitHub PR creation with intent and AC summary in the PR body.
-- **Agent output streaming** — real-time visibility into what the developer agent is doing during long sprints.
 
 ## Later
 

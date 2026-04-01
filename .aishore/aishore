@@ -2921,7 +2921,10 @@ _handle_sprint_success() {
             if git merge --squash "$AISHORE_FEATURE_BRANCH"; then
                 git commit -m "feat($ITEM_ID): ${merge_summary:-implement sprint item}
 
-Co-Authored-By: Claude <noreply@anthropic.com>"
+Co-Authored-By: Claude <noreply@anthropic.com>" || {
+                    log_error "Commit failed after squash merge — worktree may need manual cleanup"
+                    return 1
+                }
             else
                 log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
                 [[ "$_had_stash" == "true" ]] && git stash pop -q 2>/dev/null || true

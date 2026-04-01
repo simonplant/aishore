@@ -75,7 +75,7 @@ _clean_regression() {
         jq -r '.itemId // "unknown"' "$regression_file" | sort | uniq -c | sort -rn
     else
         local bak_file="${regression_file}.bak"
-        cp "$regression_file" "$bak_file"
+        cp "$regression_file" "$bak_file" || { log_error "Backup failed — regression file not removed"; return 1; }
         rm "$regression_file"
         echo "Removed $reg_count regression entries (backup: $bak_file)"
     fi
