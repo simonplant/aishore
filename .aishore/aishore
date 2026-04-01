@@ -24,6 +24,8 @@ AISHORE_FEATURE_BRANCH=""
 AISHORE_WORKTREE_DIR=""
 LAST_AGENT_LOG=""
 cleanup_exit() {
+    # Restore tool file permissions on unexpected exit
+    _unlock_tool_files 2>/dev/null || true
     # Clean up worktree on unexpected exit
     if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
         _remove_worktree "$AISHORE_WORKTREE_DIR" "$AISHORE_FEATURE_BRANCH"
@@ -427,6 +429,29 @@ EOCONTRACT
 
 release_lock() {
     rm -rf "$STATUS_DIR/.aishore.lock" 2>/dev/null || true
+}
+
+# Protect .aishore/ tool files from agent modification during sprints.
+# Makes tool files read-only while leaving data/, config.yaml writable.
+_lock_tool_files() {
+    local f
+    for f in "$AISHORE_ROOT/aishore" "$AISHORE_ROOT/VERSION" "$AISHORE_ROOT/checksums.sha256"; do
+        [[ -f "$f" ]] && chmod a-w "$f" 2>/dev/null || true
+    done
+    for f in "$AGENTS_DIR"/*.md "$AISHORE_ROOT"/lib/*.sh "$AISHORE_ROOT"/templates/*; do
+        [[ -f "$f" ]] && chmod a-w "$f" 2>/dev/null || true
+    done
+}
+
+# Restore write permissions on .aishore/ tool files.
+_unlock_tool_files() {
+    local f
+    for f in "$AISHORE_ROOT/aishore" "$AISHORE_ROOT/VERSION" "$AISHORE_ROOT/checksums.sha256"; do
+        [[ -f "$f" ]] && chmod u+w "$f" 2>/dev/null || true
+    done
+    for f in "$AGENTS_DIR"/*.md "$AISHORE_ROOT"/lib/*.sh "$AISHORE_ROOT"/templates/*; do
+        [[ -f "$f" ]] && chmod u+w "$f" 2>/dev/null || true
+    done
 }
 
 acquire_lock() {
@@ -2471,8 +2496,10 @@ _run_developer_cycle() {
         fi
     fi
 
-    # Run developer agent
+    # Protect tool files from agent modification during sprint
+    _lock_tool_files
     run_agent "developer" "implement" "$MODEL_PRIMARY" "" "" "$dev_extra_prompt"
+    _unlock_tool_files
 
     if ! check_result "developer"; then
         log_error "Implementation failed"
@@ -3610,3 +3637,4 @@ main() {
 }
 
 main "$@"
+test

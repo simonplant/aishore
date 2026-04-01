@@ -1,5 +1,5 @@
 26e0ab83aa1ff6bd0ae3882787a92663aa19db128e1241ffc99375fb9ca0c121  .aishore/VERSION
-c12667e11b1315ab75b078c3b997e08ae0552149047755a02da664da8a418bb1  .aishore/aishore
+35965510a7f836ee01951d3498946975482a1e8f6b02d919b241fa0accbd4d9f  .aishore/aishore
 c3bb97377afe9552042e0cba4c34685d833bb8d846edd6e6edb136c3d1ad23e1  .aishore/README.md
 23d39914d11e9391a3281df11e7506d739d05fab05cab919d29d623cbedbae25  .aishore/gitignore-entries.txt
 88a1b31ba55ff8257c1114255895b119edf6d491c0807e1b40f29ef5342b0c3e  .aishore/help.txt
@@ -23,4 +23,4 @@ c178abad50f2fcc7c2f59168952e5a8c01a9c71f6496a2c1cc3357e5eda05b86  .aishore/lib/c
 df8bb922d1cb0900ccbbd0410f5c046b124001d0eb251b2f2823d019c13d1ff0  .aishore/lib/cmd-review.sh
 89f78bb527e3ce7218e0dbcc9f95a5e0809d9680b78a208f23f0fbe69f204bae  .aishore/lib/cmd-scaffold.sh
 8f0e63a3c9586ccbf2c23e335cc20ecb7d0d892766616dbb8d9ea594ff8d54f0  .aishore/lib/cmd-status.sh
-8c63d74cba0173f64e93c345a1458c3260c2bf58f01a5d9e1ebf59e5c8cf0256  .aishore/lib/cmd-update.sh
+7d19c3b99e4064d1e33a335d97e3694bba01e0d0d32d1600c223c19c76485854  .aishore/lib/cmd-update.sh

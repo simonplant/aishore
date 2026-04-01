@@ -181,6 +181,7 @@ cmd_update() {
     printf "\r%40s\r" ""  # clear progress line
 
     # ── Phase 2: Install (only if all verified) ──
+    _unlock_tool_files
     if [[ "$all_verified" != "true" ]]; then
         log_error "Verification failed — no files were modified"
         return 1
@@ -236,6 +237,7 @@ cmd_update() {
 }
 
 cmd_checksums() {
+    _unlock_tool_files
     cd "$PROJECT_ROOT" || { log_error "Cannot cd to $PROJECT_ROOT"; return 1; }
 
     local checksum_file="$AISHORE_ROOT/checksums.sha256"
