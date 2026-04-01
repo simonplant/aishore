@@ -1,46 +1,35 @@
 {
-  "sprintId": "sprint-1775001599",
-  "startedAt": "2026-03-31T16:59:59-07:00",
+  "sprintId": "sprint-1775002282",
+  "startedAt": "2026-03-31T17:11:22-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-078",
-    "title": "Add --max-turns to agent invocations",
-    "intent": "Prevent runaway agents from spinning indefinitely within the timeout, burning tokens on repetitive tool calls without making progress.",
-    "description": "run_agent_process() builds claude args but never sets --max-turns. A stuck agent can loop tool calls until the timeout kills it. Add per-role max-turns defaults: developer ~25, validator ~10, groomer ~15. Make configurable via config.yaml and env overrides.",
+    "id": "FEAT-080",
+    "title": "Remove Write permission from validator agent",
+    "intent": "Validators must report problems, never fix them — Write access lets the validator silently modify files instead of failing the sprint and giving the developer targeted retry context.",
+    "description": "PERMS_VALIDATOR currently includes Write (Bash,Read,Write,Glob,Grep). The validator only needs Write for result.json (completion contract). Remove Write from PERMS_VALIDATOR. The validator can still write result.json via Bash (echo/jq to file). This enforces the separation: developers fix, validators judge.",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Add MAX_TURNS_DEVELOPER, MAX_TURNS_VALIDATOR, MAX_TURNS_GROOMER defaults in the defaults section",
-      "Add config.yaml keys (agent.max_turns.developer, etc.) and AISHORE_ env overrides",
-      "In run_agent_process(), accept a max_turns parameter and add --max-turns to claude_args",
-      "Pass the appropriate max_turns from run_agent() based on agent_name",
-      "Update CONFIGURATION.md with the new config keys and env vars"
+      "Change PERMS_VALIDATOR from 'Bash,Read,Write,Glob,Grep' to 'Bash,Read,Glob,Grep'",
+      "Verify the validator can still write result.json via Bash tool",
+      "Update CONFIGURATION.md if it documents validator permissions"
     ],
     "acceptanceCriteria": [
       {
-        "text": "Developer agent invocation includes --max-turns flag",
-        "verify": ".aishore/aishore run --dry-run 2>&1 | grep -q 'max.turns' || grep -q 'max_turns' .aishore/aishore"
+        "text": "Validator permissions do not include Write tool",
+        "verify": "grep 'PERMS_VALIDATOR=' .aishore/aishore | head -1 | grep -v 'CFG_' | grep -vq 'Write'"
       },
       {
-        "text": "Default max-turns values exist in the defaults section",
-        "verify": "grep -E 'MAX_TURNS_(DEVELOPER|VALIDATOR|GROOMER)' .aishore/aishore | grep -c '=' | grep -q '[3-9]'"
-      },
-      {
-        "text": "Max-turns is configurable via env var",
-        "verify": "grep -q 'AISHORE_MAX_TURNS' .aishore/aishore"
-      },
-      {
-        "text": "New config keys documented in CONFIGURATION.md",
-        "verify": "grep -q 'max_turns' docs/CONFIGURATION.md"
+        "text": "Validator permissions still include Bash for running commands and writing result.json",
+        "verify": "grep 'PERMS_VALIDATOR=' .aishore/aishore | head -1 | grep -v 'CFG_' | grep -q 'Bash'"
       }
     ],
     "scope": [
-      ".aishore/aishore",
-      "docs/CONFIGURATION.md"
+      ".aishore/aishore"
     ],
-    "startedAt": "2026-03-31T16:59:59-07:00",
+    "startedAt": "2026-03-31T17:11:22-07:00",
     "status": "passed",
-    "completedAt": "2026-03-31T17:05:34-07:00"
+    "completedAt": "2026-03-31T17:13:38-07:00"
   },
-  "completedAt": "2026-03-31T17:05:34-07:00",
+  "completedAt": "2026-03-31T17:13:38-07:00",
   "attempts": 1
 }
