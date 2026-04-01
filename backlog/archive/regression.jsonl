@@ -13,3 +13,5 @@
 {"itemId":"BUG-136","date":"2026-03-31","text":"No exit statement exists in any sourced module function body","verify":"! grep -n 'exit [0-9]' .aishore/lib/*.sh | grep -v '^[^:]*:#' | grep -qv 'subshell\\|(\\|bash -c'"}
 {"itemId":"BUG-136","date":"2026-03-31","text":"cmd-init.sh uses return 0 instead of exit 0 for user cancellation","verify":"grep -A2 'yY' .aishore/lib/cmd-init.sh | grep -q 'return'"}
 {"itemId":"BUG-146","date":"2026-03-31","text":"MAX_TURNS_VALIDATOR default is at least 15","verify":"grep 'MAX_TURNS_VALIDATOR' .aishore/aishore | head -1 | grep -qE '[1-9][5-9]|[2-9][0-9]'"}
+{"itemId":"FEAT-085","date":"2026-03-31","text":"product-owner.md and tech-lead.md do not exist","verify":"test ! -f .aishore/agents/product-owner.md && test ! -f .aishore/agents/tech-lead.md"}
+{"itemId":"FEAT-085","date":"2026-03-31","text":"Orchestrator does not reference product-owner or tech-lead","verify":"! grep -q 'product-owner\\|tech-lead' .aishore/aishore"}
