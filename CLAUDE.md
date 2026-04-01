@@ -168,6 +168,8 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`
 
+<!-- This section is managed by aishore and will be overwritten on `aishore update`. -->
+<!-- Customizations here will be lost. Add project-specific instructions above this section. -->
 ## Sprint Orchestration (aishore)
 
 This project uses aishore for autonomous sprint execution. Backlog lives in `backlog/`, tool lives in `.aishore/`. Run `.aishore/aishore help` for full usage.
