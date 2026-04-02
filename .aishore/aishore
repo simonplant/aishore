@@ -3424,7 +3424,7 @@ run_sprint_loop() {
                 log_error "Setup command failed — aborting sprint"
                 _record_sprint_failure "$ITEM_ID" "$item_source" "Setup failed" "Setup command '$SETUP_CMD' failed in worktree"
                 _cleanup_worktree
-                cd "$PROJECT_ROOT" || true
+                cd "$PROJECT_ROOT" || { log_error "Cannot return to project root"; break; }
                 failed=$((failed + 1))
                 FAILED_IDS["$ITEM_ID"]="Setup failed"
                 sprint_results+=("fail")

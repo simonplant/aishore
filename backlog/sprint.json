@@ -1,36 +1,31 @@
 {
-  "sprintId": "sprint-1775087669",
-  "startedAt": "2026-04-01T16:54:29-07:00",
+  "sprintId": "sprint-1775088005",
+  "startedAt": "2026-04-01T17:00:05-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-096",
-    "title": "Use mktemp for worktree temp directories",
-    "intent": "Worktree temp directories must use unpredictable paths via mktemp -d, not a predictable PID-based pattern — preventing symlink attacks and temp directory collisions.",
+    "id": "BUG-151",
+    "title": "Fix worktree cleanup: fail on cd instead of silent swallow",
+    "intent": "When returning to PROJECT_ROOT after a worktree failure, a failed cd must abort the sprint loop — silently continuing in the wrong directory corrupts subsequent backlog operations.",
     "description": "",
-    "sourceBacklog": "backlog.json",
+    "sourceBacklog": "bugs.json",
     "steps": [
-      "Locate worktree directory creation in .aishore/aishore (~line 3390)",
-      "Replace the predictable path construction with mktemp -d \"${TMPDIR:-/tmp}/aishore-wt-${ITEM_ID}.XXXXXX\"",
-      "Ensure cleanup still works with the mktemp-generated path",
-      "Verify git worktree add works with the new path"
+      "Find cd \"$PROJECT_ROOT\" || true in .aishore/aishore (~line 3418-3420)",
+      "Replace || true with || { log_error 'Cannot return to project root'; break; }",
+      "Check for other instances of cd ... || true that should also fail loudly"
     ],
     "acceptanceCriteria": [
       {
-        "text": "Worktree directories use mktemp instead of predictable PID paths",
-        "verify": "grep -q 'mktemp.*aishore-wt' .aishore/aishore"
-      },
-      {
-        "text": "No predictable PID-based temp path construction for worktrees",
-        "verify": "! grep -q 'aishore-wt.*$$' .aishore/aishore"
+        "text": "cd failure to PROJECT_ROOT breaks the sprint loop instead of continuing",
+        "verify": "grep -c 'cd.*PROJECT_ROOT.*||.*true' .aishore/aishore | grep -q '^0$'"
       }
     ],
     "scope": [
       ".aishore/aishore"
     ],
-    "startedAt": "2026-04-01T16:54:29-07:00",
+    "startedAt": "2026-04-01T17:00:05-07:00",
     "status": "passed",
-    "completedAt": "2026-04-01T16:56:06-07:00"
+    "completedAt": "2026-04-01T17:02:03-07:00"
   },
-  "completedAt": "2026-04-01T16:56:06-07:00",
+  "completedAt": "2026-04-01T17:02:03-07:00",
   "attempts": 1
 }
