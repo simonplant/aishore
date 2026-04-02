@@ -16,3 +16,4 @@
 {"itemId":"BUG-150","date":"2026-04-01","text":"Lock still works in normal case","verify":".aishore/aishore version >/dev/null 2>&1"}
 {"itemId":"FEAT-097","date":"2026-04-01","text":"Developer context mentions intent minimum length or hard gate","verify":"grep -Eqi 'intent.*char|intent.*gate|intent.*length|intent.*minimum|intent.*reject|20.*char|char.*20|intent.*skip' .aishore/aishore"}
 {"itemId":"FEAT-098","date":"2026-04-01","text":"Scope injection uses advisory language","verify":"grep -i 'scope' .aishore/aishore | grep -Eiq 'advisory|warning|prefer|not strict|do not fail'"}
+{"itemId":"FEAT-100","date":"2026-04-01","text":"Orchestrator injects mode indicator into architect prompt","verify":"grep -Eqi 'review mode|groom mode|mode.*=.*review|mode.*=.*groom|You are in' .aishore/aishore"}
