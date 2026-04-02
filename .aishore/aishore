@@ -1672,7 +1672,7 @@ The \`intent\` field in sprint.json is a non-negotiable directive — what must 
 ## File Scope Advisory
 The following file globs define the preferred scope for this item:
 ${scope_list}
-Try to keep your changes within these paths. Out-of-scope changes will be flagged in review."
+Scope is advisory, not strict — stay within these paths when possible. Out-of-scope changes are not failures but will be flagged as warnings in review."
         fi
 
         if [[ -n "$FIX_CMD" ]]; then
