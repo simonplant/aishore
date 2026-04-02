@@ -1645,9 +1645,15 @@ build_agent_prompt() {
     elif [[ "$agent_name" == "architect" && "$mode" == "groom" ]]; then
         # Strip Review Mode section, keep Groom Mode section
         prompt_content="$(sed '/^## Review Mode/,/^## Groom Mode/{/^## Groom Mode/!d}' "$prompt_file")"
+        # Inject explicit mode indicator so the architect knows its mode without inferring from stripped sections
+        prompt_content="You are in groom mode.
+${prompt_content}"
     elif [[ "$agent_name" == "architect" ]]; then
         # Strip Groom Mode section (review mode)
         prompt_content="$(sed '/^## Groom Mode/,$d' "$prompt_file" | sed -e :a -e '/^[[:space:]]*$/{ $d; N; ba; }')"
+        # Inject explicit mode indicator so the architect knows its mode without inferring from stripped sections
+        prompt_content="You are in review mode.
+${prompt_content}"
     else
         prompt_content="$(cat "$prompt_file")"
     fi
