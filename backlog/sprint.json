@@ -1,6 +1,6 @@
 {
-  "sprintId": "sprint-1775099803",
-  "startedAt": "2026-04-01T20:16:43-07:00",
+  "sprintId": "sprint-1775100060",
+  "startedAt": "2026-04-01T20:21:00-07:00",
   "status": "completed",
   "item": {
     "id": "BUG-150",
@@ -27,10 +27,10 @@
     "scope": [
       ".aishore/aishore"
     ],
-    "startedAt": "2026-04-01T20:16:43-07:00",
+    "startedAt": "2026-04-01T20:21:00-07:00",
     "status": "passed",
-    "completedAt": "2026-04-01T20:17:58-07:00"
+    "completedAt": "2026-04-01T20:22:41-07:00"
   },
-  "completedAt": "2026-04-01T20:17:58-07:00",
+  "completedAt": "2026-04-01T20:22:41-07:00",
   "attempts": 1
 }
