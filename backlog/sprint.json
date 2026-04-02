@@ -1,31 +1,31 @@
 {
-  "sprintId": "sprint-1775100387",
-  "startedAt": "2026-04-01T20:26:27-07:00",
+  "sprintId": "sprint-1775100659",
+  "startedAt": "2026-04-01T20:30:59-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-098",
-    "title": "Align scope enforcement language: advisory not strict",
-    "intent": "The orchestrator's scope injection into developer prompts must say scope is advisory with warnings, not strict — matching CLAUDE.md and actual enforcement behavior.",
+    "id": "FEAT-100",
+    "title": "Inject explicit mode indicator into architect prompt assembly",
+    "intent": "The architect agent must know which mode it is operating in (review vs groom) via an explicit injected line, not by inferring from which sections were stripped.",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Find where the orchestrator injects scope constraints into the developer prompt",
-      "Change language from strict enforcement to advisory: 'stay within scope; out-of-scope changes are flagged as warnings'",
-      "This is an orchestrator injection change, not an agent prompt rewrite"
+      "Find where the orchestrator strips Review/Groom mode sections from the architect prompt",
+      "After stripping, inject a line like 'You are in [review|groom] mode' at the top of the assembled prompt",
+      "This is an orchestrator assembly change, not an agent prompt rewrite"
     ],
     "acceptanceCriteria": [
       {
-        "text": "Scope injection uses advisory language",
-        "verify": "grep -i 'scope' .aishore/aishore | grep -Eiq 'advisory|warning|prefer|not strict|do not fail'"
+        "text": "Orchestrator injects mode indicator into architect prompt",
+        "verify": "grep -Eqi 'review mode|groom mode|mode.*=.*review|mode.*=.*groom|You are in' .aishore/aishore"
       }
     ],
     "scope": [
       ".aishore/aishore"
     ],
-    "startedAt": "2026-04-01T20:26:27-07:00",
+    "startedAt": "2026-04-01T20:30:59-07:00",
     "status": "passed",
-    "completedAt": "2026-04-01T20:28:32-07:00"
+    "completedAt": "2026-04-01T20:32:35-07:00"
   },
-  "completedAt": "2026-04-01T20:28:32-07:00",
+  "completedAt": "2026-04-01T20:32:35-07:00",
   "attempts": 1
 }
