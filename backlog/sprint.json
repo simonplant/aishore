@@ -1,31 +1,31 @@
 {
-  "sprintId": "sprint-1775100274",
-  "startedAt": "2026-04-01T20:24:34-07:00",
+  "sprintId": "sprint-1775100387",
+  "startedAt": "2026-04-01T20:26:27-07:00",
   "status": "completed",
   "item": {
-    "id": "FEAT-097",
-    "title": "Inject intent gate context into developer retry prompts",
-    "intent": "Developers in retry loops must know that items with intent <20 chars are hard-rejected — this context prevents wasted retries on items that will never pass the gate.",
+    "id": "FEAT-098",
+    "title": "Align scope enforcement language: advisory not strict",
+    "intent": "The orchestrator's scope injection into developer prompts must say scope is advisory with warnings, not strict — matching CLAUDE.md and actual enforcement behavior.",
     "description": "",
     "sourceBacklog": "backlog.json",
     "steps": [
-      "Locate where the orchestrator builds the developer retry prompt context",
-      "Add a line to the injected context explaining the intent hard gate (>=20 chars, silently skipped by auto-pick)",
+      "Find where the orchestrator injects scope constraints into the developer prompt",
+      "Change language from strict enforcement to advisory: 'stay within scope; out-of-scope changes are flagged as warnings'",
       "This is an orchestrator injection change, not an agent prompt rewrite"
     ],
     "acceptanceCriteria": [
       {
-        "text": "Developer context mentions intent minimum length or hard gate",
-        "verify": "grep -Eqi 'intent.*char|intent.*gate|intent.*length|intent.*minimum|intent.*reject|20.*char|char.*20|intent.*skip' .aishore/aishore"
+        "text": "Scope injection uses advisory language",
+        "verify": "grep -i 'scope' .aishore/aishore | grep -Eiq 'advisory|warning|prefer|not strict|do not fail'"
       }
     ],
     "scope": [
       ".aishore/aishore"
     ],
-    "startedAt": "2026-04-01T20:24:34-07:00",
+    "startedAt": "2026-04-01T20:26:27-07:00",
     "status": "passed",
-    "completedAt": "2026-04-01T20:26:26-07:00"
+    "completedAt": "2026-04-01T20:28:32-07:00"
   },
-  "completedAt": "2026-04-01T20:26:26-07:00",
+  "completedAt": "2026-04-01T20:28:32-07:00",
   "attempts": 1
 }
