@@ -1,31 +1,36 @@
 {
-  "sprintId": "sprint-1775088005",
-  "startedAt": "2026-04-01T17:00:05-07:00",
+  "sprintId": "sprint-1775091169",
+  "startedAt": "2026-04-01T17:52:49-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-151",
-    "title": "Fix worktree cleanup: fail on cd instead of silent swallow",
-    "intent": "When returning to PROJECT_ROOT after a worktree failure, a failed cd must abort the sprint loop — silently continuing in the wrong directory corrupts subsequent backlog operations.",
+    "id": "BUG-150",
+    "title": "Fix lock TOCTOU race: cleanup on PID write failure",
+    "intent": "The mkdir-based lock must not leave an empty lockdir if the PID write fails — a signal or crash between mkdir and echo must clean up, or the next process will see a stale lock with no PID.",
     "description": "",
     "sourceBacklog": "bugs.json",
     "steps": [
-      "Find cd \"$PROJECT_ROOT\" || true in .aishore/aishore (~line 3418-3420)",
-      "Replace || true with || { log_error 'Cannot return to project root'; break; }",
-      "Check for other instances of cd ... || true that should also fail loudly"
+      "Locate the lock acquisition in .aishore/aishore (~lines 467-468)",
+      "Add cleanup after the PID write: echo $$ > pid || { rmdir lockdir; return 1; }",
+      "Consider adding a trap for the window between mkdir and PID write",
+      "Test by verifying the lock file contains a valid PID after acquisition"
     ],
     "acceptanceCriteria": [
       {
-        "text": "cd failure to PROJECT_ROOT breaks the sprint loop instead of continuing",
-        "verify": "grep -c 'cd.*PROJECT_ROOT.*||.*true' .aishore/aishore | grep -q '^0$'"
+        "text": "Lock acquisition handles PID write failure",
+        "verify": "grep -A5 'echo.*pid' .aishore/aishore | grep -Eq 'rmdir|rm |cleanup|return 1'"
+      },
+      {
+        "text": "Lock still works in normal case",
+        "verify": ".aishore/aishore version >/dev/null 2>&1"
       }
     ],
     "scope": [
       ".aishore/aishore"
     ],
-    "startedAt": "2026-04-01T17:00:05-07:00",
+    "startedAt": "2026-04-01T17:52:49-07:00",
     "status": "passed",
-    "completedAt": "2026-04-01T17:02:03-07:00"
+    "completedAt": "2026-04-01T17:54:05-07:00"
   },
-  "completedAt": "2026-04-01T17:02:03-07:00",
+  "completedAt": "2026-04-01T17:54:05-07:00",
   "attempts": 1
 }
