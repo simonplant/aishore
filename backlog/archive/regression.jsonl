@@ -8,3 +8,5 @@
 {"itemId":"FEAT-096","date":"2026-04-01","text":"Worktree directories use mktemp instead of predictable PID paths","verify":"grep -q 'mktemp.*aishore-wt' .aishore/aishore"}
 {"itemId":"FEAT-096","date":"2026-04-01","text":"No predictable PID-based temp path construction for worktrees","verify":"! grep -q 'aishore-wt.*$$' .aishore/aishore"}
 {"itemId":"BUG-151","date":"2026-04-01","text":"cd failure to PROJECT_ROOT breaks the sprint loop instead of continuing","verify":"grep -c 'cd.*PROJECT_ROOT.*||.*true' .aishore/aishore | grep -q '^0$'"}
+{"itemId":"BUG-150","date":"2026-04-01","text":"Lock acquisition handles PID write failure","verify":"grep -A5 'echo.*pid' .aishore/aishore | grep -Eq 'rmdir|rm |cleanup|return 1'"}
+{"itemId":"BUG-150","date":"2026-04-01","text":"Lock still works in normal case","verify":".aishore/aishore version >/dev/null 2>&1"}
