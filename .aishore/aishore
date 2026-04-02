@@ -465,7 +465,11 @@ acquire_lock() {
     local attempt
     for (( attempt = 0; attempt < 2; attempt++ )); do
         if mkdir "$lockdir" 2>/dev/null; then
-            echo $$ > "$lockdir/pid"
+            if ! echo $$ > "$lockdir/pid"; then
+                rm -rf "$lockdir"
+                log_error "Failed to write PID to lock file"
+                return 1
+            fi
             return 0
         fi
 
