@@ -1657,7 +1657,9 @@ build_agent_prompt() {
     if [[ "$agent_name" == "developer" ]]; then
         validate_hint="
 ## Commander's Intent
-The \`intent\` field in sprint.json is a non-negotiable directive — what must be true when done. When the spec is unclear or steps seem wrong, intent is the order you follow."
+The \`intent\` field in sprint.json is a non-negotiable directive — what must be true when done. When the spec is unclear or steps seem wrong, intent is the order you follow.
+
+**Intent hard gate:** Items with missing or short intent (<20 chars) are silently skipped by auto-pick and hard-rejected when run by ID. If your item's intent does not meet this minimum length, it will never pass the gate — do not retry, fix the intent first."
 
         # Inject scope constraints if the item declares scope globs
         local item_scope_json

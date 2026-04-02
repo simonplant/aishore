@@ -1,36 +1,31 @@
 {
-  "sprintId": "sprint-1775100060",
-  "startedAt": "2026-04-01T20:21:00-07:00",
+  "sprintId": "sprint-1775100274",
+  "startedAt": "2026-04-01T20:24:34-07:00",
   "status": "completed",
   "item": {
-    "id": "BUG-150",
-    "title": "Fix lock TOCTOU race: cleanup on PID write failure",
-    "intent": "The mkdir-based lock must not leave an empty lockdir if the PID write fails — a signal or crash between mkdir and echo must clean up, or the next process will see a stale lock with no PID.",
+    "id": "FEAT-097",
+    "title": "Inject intent gate context into developer retry prompts",
+    "intent": "Developers in retry loops must know that items with intent <20 chars are hard-rejected — this context prevents wasted retries on items that will never pass the gate.",
     "description": "",
-    "sourceBacklog": "bugs.json",
+    "sourceBacklog": "backlog.json",
     "steps": [
-      "Locate the lock acquisition in .aishore/aishore (~lines 467-468)",
-      "Add cleanup after the PID write: echo $$ > pid || { rmdir lockdir; return 1; }",
-      "Consider adding a trap for the window between mkdir and PID write",
-      "Test by verifying the lock file contains a valid PID after acquisition"
+      "Locate where the orchestrator builds the developer retry prompt context",
+      "Add a line to the injected context explaining the intent hard gate (>=20 chars, silently skipped by auto-pick)",
+      "This is an orchestrator injection change, not an agent prompt rewrite"
     ],
     "acceptanceCriteria": [
       {
-        "text": "Lock acquisition handles PID write failure",
-        "verify": "grep -A5 'echo.*pid' .aishore/aishore | grep -Eq 'rmdir|rm |cleanup|return 1'"
-      },
-      {
-        "text": "Lock still works in normal case",
-        "verify": ".aishore/aishore version >/dev/null 2>&1"
+        "text": "Developer context mentions intent minimum length or hard gate",
+        "verify": "grep -Eqi 'intent.*char|intent.*gate|intent.*length|intent.*minimum|intent.*reject|20.*char|char.*20|intent.*skip' .aishore/aishore"
       }
     ],
     "scope": [
       ".aishore/aishore"
     ],
-    "startedAt": "2026-04-01T20:21:00-07:00",
+    "startedAt": "2026-04-01T20:24:34-07:00",
     "status": "passed",
-    "completedAt": "2026-04-01T20:22:41-07:00"
+    "completedAt": "2026-04-01T20:26:26-07:00"
   },
-  "completedAt": "2026-04-01T20:22:41-07:00",
+  "completedAt": "2026-04-01T20:26:26-07:00",
   "attempts": 1
 }
