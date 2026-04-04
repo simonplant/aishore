@@ -90,6 +90,8 @@ project/
     ├── checksums.sha256     # SHA-256 checksums for update verification
     ├── agents/*.md          # Agent prompts
     ├── config.yaml          # Optional overrides (requires yq for full support)
+    ├── templates/           # Init wizard templates
+    ├── tests/               # Integration and smoke tests
     ├── lib/                 # Lazy-loaded command modules
     │   ├── cmd-backlog-read.sh   # backlog list/show/check/rm
     │   ├── cmd-backlog-write.sh  # backlog add/edit

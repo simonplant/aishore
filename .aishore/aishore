@@ -1902,6 +1902,18 @@ check_result() {
                 log_error "Developer result missing maturity phases evidence — rejecting as incomplete"
                 return 1
             fi
+
+            # Cross-check: developer's reported verify_commands_run must match actual count
+            local sprint_file="$BACKLOG_DIR/sprint.json"
+            if [[ -f "$sprint_file" ]]; then
+                local actual_verify_count reported_verify_count
+                actual_verify_count=$(jq '[(.item.acceptanceCriteria // [])[] | select(type == "object" and .verify != null)] | length' "$sprint_file" 2>/dev/null || echo 0)
+                reported_verify_count=$(jq -r '.phases.harden.verify_commands_run // 0' "$STATUS_DIR/result.json" 2>/dev/null || echo 0)
+                if [[ "$actual_verify_count" -gt 0 && "$reported_verify_count" -ne "$actual_verify_count" ]]; then
+                    log_error "Developer reported running $reported_verify_count verify commands but sprint has $actual_verify_count — rejecting (run ALL AC verify commands in Phase 3)"
+                    return 1
+                fi
+            fi
         fi
 
         local summary
@@ -2416,7 +2428,7 @@ Output ONLY the JSON object, no markdown fences, no explanation."
     local tmp_sprint
     tmp_sprint="$(ensure_tmpdir)/sprint_refine.json"
     if jq -n --argjson item "$current_spec" --argjson refined "$json_output" --arg now "$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S')" \
-        '{sprintId: ("refined-" + now), startedAt: ($item.startedAt // now), status: "in_progress", item: ($item | .steps = $refined.steps | .acceptanceCriteria = $refined.acceptanceCriteria)}' \
+        '{sprintId: ("refined-" + $now), startedAt: ($item.startedAt // $now), status: "in_progress", item: ($item | .steps = $refined.steps | .acceptanceCriteria = $refined.acceptanceCriteria)}' \
         > "$tmp_sprint" 2>/dev/null; then
         mv "$tmp_sprint" "$sprint_file"
         log_success "Spec refined for $item_id"
