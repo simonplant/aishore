@@ -5,6 +5,28 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-04-03
+
+### Added
+
+- **Explicit mode indicator in architect prompt** — `build_agent_prompt()` injects 'You are in [groom|review] mode.' for both groom and review branches (FEAT-100)
+- **Verify count cross-check** — `check_result()` rejects developer results where reported verify command count doesn't match actual AC verify count
+- **Groomer: structural verify guidance** — prefer `test -f`/`test -d` over content greps on built output (build tools transform/bundle/minify)
+
+### Changed
+
+- **Scope injection wording** — developer prompt now says 'advisory, not strict' — out-of-scope changes flagged as warnings, not failures (FEAT-098)
+- **Intent hard gate context in developer prompt** — developers informed that items with intent <20 chars are auto-skipped/rejected (FEAT-097)
+
+### Fixed
+
+- **Lock PID write failure** — cleanup lockdir on PID write failure, closing TOCTOU window (BUG-150)
+- **Silent `cd` failure** — `cd "$PROJECT_ROOT" || true` replaced with loud failure in sprint loop (BUG-151)
+- **Predictable worktree paths** — `mktemp -d` replaces `$$`-based pattern, defeating symlink pre-staging (FEAT-096)
+- **Groom parse failure swallowed** — `return 0` changed to `return 1` on jq parse failure (BUG-149)
+- **Merge failure leaves dirty state** — `git merge --abort` called before branch cleanup on both squash and --no-ff merge failures (BUG-148)
+- **jq variable interpolation** — `now` → `$now` in spec refinement jq expression
+
 ## [0.5.2] - 2026-04-01
 
 ### Added
