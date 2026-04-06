@@ -2740,6 +2740,68 @@ _record_sprint_failure() {
 }
 
 
+# Auto-groom when ready items are low. Runs architect + groomer, protects
+# existing items, enforces limits, refreshes the item queue.
+# Uses outer-scope locals from cmd_run and setup_sprint_environment.
+_maybe_auto_groom() {
+    [[ "$auto_mode" != "true" || "$groom_exhausted" == "true" ]] && return 0
+    local total_ready
+    total_ready=$(_count_total_ready)
+    [[ "$total_ready" -ge "$AUTO_GROOM_THRESHOLD" ]] && return 0
+
+    log_info "Auto: ready buffer low ($total_ready < $AUTO_GROOM_THRESHOLD) — grooming"
+    _load_module cmd-clean; cmd_clean 2>/dev/null || true
+    _load_module cmd-groom
+    local -a groom_context
+    # shellcheck disable=SC2034  # used via nameref in run_agent
+    mapfile -t groom_context < <(_build_groom_context)
+    local groom_combined_feedback
+    groom_combined_feedback=$(_build_groom_feedback)
+
+    local snap_dir
+    snap_dir=$(mktemp -d)
+    local _sbf; for _sbf in "${BACKLOG_FILES[@]}"; do [[ -f "$BACKLOG_DIR/$_sbf" ]] && cp "$BACKLOG_DIR/$_sbf" "$snap_dir/$_sbf"; done
+
+    GROOM_MONITOR=true run_agent "architect" "groom" "$MODEL_FAST" groom_context "" "$groom_combined_feedback" || true
+    GROOM_MONITOR=
+    check_result || log_warning "Architect groom did not pass — continuing"
+    GROOM_MONITOR=true run_agent "groomer" "groom" "$MODEL_FAST" groom_context "" "$groom_combined_feedback" || true
+    GROOM_MONITOR=
+    check_result || log_warning "Groomer did not pass — continuing"
+
+    protect_items_from_groom "$snap_dir"
+    local counts added skipped
+    counts=$(enforce_groom_limits "$snap_dir")
+    read -r added skipped <<< "$counts"
+    rm -rf "$snap_dir"
+    [[ "$skipped" -gt 0 ]] && log_info "Auto-groom: $added item(s) added, $skipped skipped (limits: max=$GROOM_MAX_ITEMS, min_priority=$GROOM_MIN_PRIORITY)"
+
+    if [[ "$(_count_total_ready)" -le "$total_ready" ]]; then
+        log_warning "Groom did not produce new ready items — pausing auto-groom"
+        groom_exhausted=true
+    fi
+
+    # Refresh queue with newly groomed items
+    local _skip_csv _k
+    _skip_csv=$(for _k in "${!FAILED_IDS[@]}" "${!COMPLETED_IDS[@]}"; do printf '%s,' "$_k"; done)
+    local _uid
+    while IFS= read -r _uid; do
+        [[ -z "$_uid" ]] && continue
+        local _found=false _qid
+        for _qid in "${queued_ids[@]}"; do [[ "$_qid" == "$_uid" ]] && { _found=true; break; }; done
+        [[ "$_found" == "false" ]] && queued_ids+=("$_uid")
+    done < <(list_pickable_ids "${_skip_csv%,}" "$auto_priorities")
+}
+
+# Build comma-separated skip list from failed + completed items.
+_build_skip_list() {
+    local _k
+    local -a _keys=()
+    for _k in "${!FAILED_IDS[@]}"; do _keys+=("$_k"); done
+    for _k in "${!COMPLETED_IDS[@]}"; do _keys+=("$_k"); done
+    IFS=,; printf '%s' "${_keys[*]}"
+}
+
 # Execute the core pick-implement-validate-merge cycle.
 # Uses and modifies outer-scope locals from cmd_run and setup_sprint_environment.
 run_sprint_loop() {
@@ -2750,20 +2812,10 @@ run_sprint_loop() {
         fi
 
         if [[ "$auto_mode" == "true" ]]; then
-            # Session progress line
-            local elapsed_secs elapsed_min progress_count
-            elapsed_secs=$(( $(date +%s) - batch_start ))
-            elapsed_min=$(( elapsed_secs / 60 ))
-            if [[ ${#queued_ids[@]} -gt 0 ]]; then
-                local display_total="${#queued_ids[@]}"
-                if [[ -n "$session_limit" && "$session_limit" -lt "$display_total" ]]; then
-                    display_total="$session_limit"
-                fi
-                progress_count="$passed/$display_total complete"
-            else
-                progress_count="$passed complete"
-            fi
-            log_info "Sprint session: $progress_count | $failed failed | ${elapsed_min}m elapsed"
+            local elapsed_min=$(( ($(date +%s) - batch_start) / 60 ))
+            local display_total="${#queued_ids[@]}"
+            [[ -n "$session_limit" && "$session_limit" -lt "$display_total" ]] && display_total="$session_limit"
+            log_info "Sprint session: $passed/$display_total complete | $failed failed | ${elapsed_min}m elapsed"
             log_subheader "Sprint $i (passed: $passed, failed: $failed)"
         else
             [[ $count -gt 1 ]] && log_subheader "Sprint $i/$count"
@@ -2771,77 +2823,10 @@ run_sprint_loop() {
         local sprint_start
         sprint_start=$(date +%s)
 
-        # Auto mode: auto-groom when ready items are low
-        if [[ "$auto_mode" == "true" && "$groom_exhausted" != "true" ]]; then
-            local total_ready
-            total_ready=$(_count_total_ready)
-            if [[ "$total_ready" -lt "$AUTO_GROOM_THRESHOLD" ]]; then
-                log_info "Auto: ready buffer low ($total_ready < $AUTO_GROOM_THRESHOLD) — grooming"
-                # Auto-clean done items so groom agents see lean backlogs
-                _load_module cmd-clean; cmd_clean 2>/dev/null || true
-                _load_module cmd-groom
-                local -a groom_context
-                # shellcheck disable=SC2034  # used via nameref in run_agent
-                mapfile -t groom_context < <(_build_groom_context)
-                local groom_combined_feedback
-                groom_combined_feedback=$(_build_groom_feedback)
-                # Snapshot for groom limit enforcement
-                local auto_groom_snap
-                auto_groom_snap=$(mktemp -d)
-                local _sbf; for _sbf in "${BACKLOG_FILES[@]}"; do [[ -f "$BACKLOG_DIR/$_sbf" ]] && cp "$BACKLOG_DIR/$_sbf" "$auto_groom_snap/$_sbf"; done
-                # Architect runs first — detects fragment risk and creates scaffolding items
-                # before the groomer prepares features that depend on the skeleton
-                GROOM_MONITOR=true run_agent "architect" "groom" "$MODEL_FAST" groom_context "" "$groom_combined_feedback" || true
-                GROOM_MONITOR=
-                check_result || log_warning "Architect groom did not pass — continuing"
-                GROOM_MONITOR=true run_agent "groomer" "groom" "$MODEL_FAST" groom_context "" "$groom_combined_feedback" || true
-                GROOM_MONITOR=
-                check_result || log_warning "Groomer did not pass — continuing"
-                # Protect existing items from groomer rewrites, then enforce limits
-                protect_items_from_groom "$auto_groom_snap"
-                local auto_groom_counts auto_groom_added auto_groom_skipped
-                auto_groom_counts=$(enforce_groom_limits "$auto_groom_snap")
-                read -r auto_groom_added auto_groom_skipped <<< "$auto_groom_counts"
-                rm -rf "$auto_groom_snap"
-                if [[ "$auto_groom_skipped" -gt 0 ]]; then
-                    log_info "Auto-groom: $auto_groom_added item(s) added, $auto_groom_skipped skipped (limits: max=$GROOM_MAX_ITEMS, min_priority=$GROOM_MIN_PRIORITY)"
-                fi
-                if [[ "$(_count_total_ready)" -le "$total_ready" ]]; then
-                    log_warning "Groom did not produce new ready items — pausing auto-groom"
-                    groom_exhausted=true
-                fi
-                # Refresh queued_ids so progress denominator reflects newly groomed items
-                local -a _skip_for_refresh=()
-                for _k in "${!FAILED_IDS[@]}"; do _skip_for_refresh+=("$_k"); done
-                for _k in "${!COMPLETED_IDS[@]}"; do _skip_for_refresh+=("$_k"); done
-                local _refresh_skip
-                _refresh_skip=$(IFS=,; printf '%s' "${_skip_for_refresh[*]}")
-                local -a _updated_ids
-                mapfile -t _updated_ids < <(list_pickable_ids "$_refresh_skip" "$auto_priorities")
-                local _uid
-                for _uid in "${_updated_ids[@]}"; do
-                    local _already_queued=false
-                    local _qid
-                    for _qid in "${queued_ids[@]}"; do
-                        if [[ "$_qid" == "$_uid" ]]; then
-                            _already_queued=true
-                            break
-                        fi
-                    done
-                    if [[ "$_already_queued" == "false" ]]; then
-                        queued_ids+=("$_uid")
-                    fi
-                done
-            fi
-        fi
+        _maybe_auto_groom
 
-        # Build exclusion list from failed and already-completed items
-        local -a _skip_keys=()
-        local _k
-        for _k in "${!FAILED_IDS[@]}"; do _skip_keys+=("$_k"); done
-        for _k in "${!COMPLETED_IDS[@]}"; do _skip_keys+=("$_k"); done
         local skip_list
-        skip_list=$(IFS=,; printf '%s' "${_skip_keys[*]}")
+        skip_list=$(_build_skip_list)
 
         local item_json
         if ! item_json=$(pick_item "$specific_id" "$skip_list"); then
