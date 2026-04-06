@@ -43,7 +43,21 @@ gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d 
 .aishore/aishore run p1 --retries 2  # must + should, with retries
 ```
 
-Each sprint: picks an item, creates a feature branch in an isolated worktree, runs the developer agent through implement/critique/harden phases, validates with an independent agent, merges, archives. Failed items retry with full failure context. A circuit breaker stops cascading failures.
+## Intent-Based Development
+
+aishore doesn't work like TDD or agile ceremony. There are no standups, no velocity charts, no coverage targets. The quality model is: **prove the software works by running it, not by counting tests.**
+
+**The backlog item is the unit of quality.** Each item has three things:
+
+1. **Commander's intent** — a directive stating what must be true when done. Not "add health check endpoint" but "ops must know instantly if the service is alive or dead." Intent is the north star when specs are ambiguous, the bar the validator checks against, and a hard gate for sprint entry.
+
+2. **Steps and acceptance criteria** — specific enough that an AI developer can implement without guessing. Bad AC: "it works." Good AC: "health endpoint returns 200 when the service is running."
+
+3. **Executable evals** — `--ac-verify` shell commands that prove the AC is met. Not `grep -q 'healthCheck' src/app.js` (that's structure, not behavior). Instead: `curl -sf http://localhost:3000/health` (that's proof it runs). These are the difference between testing and hoping.
+
+**Evals compound into a regression suite.** Every passing sprint's verify commands are saved. Before every future sprint, the full suite runs as pre-flight. Sprint 51 cannot silently break what sprint 12 proved. No manual test maintenance — the suite grows automatically from well-written AC.
+
+**The groomer is the quality bottleneck.** A vague backlog produces vague implementations that fail validation and burn retries. A precise backlog — clear intent, right-sized steps, executable AC — produces sprints that pass autonomously. `backlog populate` and `groom` exist because the quality of the input determines the quality of the output.
 
 ## How It Works
 
@@ -60,26 +74,20 @@ Pick ─→ Branch ─→ Preflight ─→ Develop ─→ Validate ─→ Merge/
 5. **Validate** — validation command, AC verify commands, then independent Validator agent probes against intent
 6. **Merge** — feature branch merged, pushed, item archived
 
-## Key Concepts
-
-**Commander's intent** — every item requires a directive stating what must be true when done. Not what to build — the outcome. Intent gates sprint entry, guides the developer when specs are ambiguous, and is the bar the validator checks against.
-
-| Intent (good) | Not intent (bad) |
-|---|---|
-| "Ops must know instantly if the service is alive or dead." | "Add health check endpoint" |
-| "Users authenticate securely or are told exactly why they cannot." | "Implement OAuth login" |
-
-**Executable AC (evals)** — acceptance criteria with `--ac-verify` shell commands. These run after every sprint, get saved to a regression suite, and run as pre-flight before every future sprint. Sprint 51 cannot silently break what sprint 12 proved.
+## Example Item
 
 ```bash
 .aishore/aishore backlog add \
   --title "Add health check endpoint" \
   --intent "Ops must know instantly if the service is alive or dead. No false positives." \
+  --steps "Add GET /health route that checks DB connection and returns 200/503" \
   --ac "Health endpoint returns 200 when service is running" \
-  --ac-verify "curl -sf http://localhost:3000/health"
+  --ac-verify "curl -sf http://localhost:3000/health" \
+  --ac "Health endpoint returns 503 when DB is unreachable" \
+  --ac-verify "DB_HOST=nowhere curl -sf http://localhost:3000/health; test $? -ne 0"
 ```
 
-**Auto-groom** — during `run done`, when ready items drop below threshold, the architect and groomer agents automatically create and prepare new items from the backlog.
+Intent is the north star. Steps tell the developer how. AC verify commands prove it works. The verify commands become regression tests automatically.
 
 ## Commands
 
