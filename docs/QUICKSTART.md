@@ -260,7 +260,7 @@ npm test && npm run lint   # or whatever your validation command is
 ```
 
 **Sprint failing after developer runs?**
-- Use retries: `.aishore/aishore run --retries 2` (spec refinement runs automatically when retries exhaust)
+- Use retries: `.aishore/aishore run --retries 2` (failure context is fed back to the developer on retry)
 - Check logs: `ls -lt .aishore/data/logs/` (most recent agent log has failure details)
 
 **Stuck state?**

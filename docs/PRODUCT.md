@@ -12,7 +12,7 @@ aishore rejects process-as-product. No standups, no velocity charts, no sprint r
 
 Solo developers and small teams using AI coding tools (currently Claude Code) who want to go from "AI can write a function" to "AI can ship 20 features while I sleep." People who have backlogs of real work and want autonomous batch execution with quality they can trust.
 
-Not for: teams that need approval workflows, compliance gates, or human review on every change. aishore merges autonomously by design — add `--no-merge` or `--pr` if you need human checkpoints.
+Not for: teams that need approval workflows, compliance gates, or human review on every change. aishore merges autonomously by design — add `--no-merge` if you need human checkpoints.
 
 ## Core Capabilities
 
@@ -25,7 +25,7 @@ Not for: teams that need approval workflows, compliance gates, or human review o
 ## Boundaries
 
 - **Quality is mechanical, not procedural.** If the system can't check it automatically (readiness gates, validation command, AC verify, regression suite), it doesn't gate on it.
-- **Autonomous merge is the default.** Human review is opt-in (`--no-merge`, `--pr`). The assumed workflow is hands-off.
+- **Autonomous merge is the default.** Human review is opt-in (`--no-merge`). The assumed workflow is hands-off.
 - **Behavior proof over coverage metrics.** A verify command that proves the feature works end-to-end outweighs coverage percentages. Verify commands are the quality signal.
 - **Single backend: Claude Code CLI.** No abstraction layer until a second backend is competitive for full-repo autonomous work.
 - **CLI-only.** aishore orchestrates from the terminal. It wraps the coding agent, not the editor.

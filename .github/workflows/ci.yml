@@ -25,7 +25,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y shellcheck
 
       - name: Run ShellCheck
-        run: shellcheck -S warning .aishore/aishore install.sh scripts/*.sh
+        run: shellcheck -S warning .aishore/aishore .aishore/lib/*.sh install.sh scripts/*.sh
 
   test:
     name: Basic Tests

@@ -25,12 +25,6 @@ All settings live in `.aishore/config.yaml`. The file is optional — aishore wo
 project:
   name: "your-project"
 
-# Backlog files to read from (relative to backlog/ directory)
-# backlog_files:
-#   - backlog.json
-#   - bugs.json
-#   - infra.json
-
 # Validation command for your stack (e.g., "npm test && npm run lint")
 validation:
   command: ""
@@ -52,12 +46,6 @@ validation:
 #     developer: 75
 #     validator: 45
 #     groomer: 45
-
-# Permissions (restrict for tighter sandbox)
-# permissions:
-#   developer: "Agent,Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode"
-#   validator: "Bash,Read,Glob,Grep"
-#   reviewer: "Read,Glob,Grep"
 
 # Merge strategy: "merge" (default, --no-ff) or "squash" (single commit per item)
 # merge:
@@ -81,10 +69,6 @@ validation:
 # output:
 #   truncate_lines: 50
 
-# PR creation
-# pr:
-#   create: false
-
 # Output streaming
 # streaming:
 #   enabled: true
@@ -107,16 +91,6 @@ validation:
 | **Env var** | — |
 | **What it controls** | Project name used in logs and agent context. |
 | **When to change** | When the directory name doesn't match the project name. |
-
-#### `backlog_files`
-
-| | |
-|---|---|
-| **Type** | list of strings (file paths relative to `backlog/`) |
-| **Default** | `["backlog.json", "bugs.json"]` |
-| **Env var** | `AISHORE_BACKLOG_FILES` (comma-separated) |
-| **What it controls** | Which backlog files aishore reads from. Items are picked by priority across all declared files. |
-| **When to change** | When you split work across component-specific backlogs (e.g., `infra.json`, `api.json`). Omitting this key preserves the default two-file behavior. Missing files produce a warning, not an abort. |
 
 #### `validation.command`
 
@@ -208,36 +182,6 @@ validation:
 | **What it controls** | Maximum conversation turns for grooming agents (groomer, architect). |
 | **When to change** | Increase for larger grooming sessions; decrease to keep grooming focused. |
 
-#### `permissions.developer`
-
-| | |
-|---|---|
-| **Type** | string (comma-separated tool names) |
-| **Default** | `Agent,Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode` |
-| **Env var** | — |
-| **What it controls** | Claude Code tools available to the developer agent. Full access by default, including plan mode for structured implementation planning. |
-| **When to change** | Remove `Bash` to prevent shell commands, or restrict further for a tighter sandbox. |
-
-#### `permissions.validator`
-
-| | |
-|---|---|
-| **Type** | string (comma-separated tool names) |
-| **Default** | `Bash,Read,Glob,Grep` |
-| **Env var** | — |
-| **What it controls** | Claude Code tools available to the validator agent. No `Edit` or `Write` by default — validators read and run commands, but don't modify files. The validator writes `result.json` via Bash. |
-| **When to change** | Rarely. Only if your validation workflow requires editing files. |
-
-#### `permissions.reviewer`
-
-| | |
-|---|---|
-| **Type** | string (comma-separated tool names) |
-| **Default** | `Read,Glob,Grep` |
-| **Env var** | — |
-| **What it controls** | Claude Code tools available to the architecture reviewer agent. Read-only by default. When `review --update-docs` is used, `Edit,Write` are added automatically. |
-| **When to change** | Rarely. The `--update-docs` flag handles the common case. |
-
 #### `merge.strategy`
 
 | | |
@@ -308,16 +252,6 @@ validation:
 | **What it controls** | Number of lines shown when truncating long command output in logs. |
 | **When to change** | Increase to see more output in logs; decrease to reduce noise. |
 
-#### `pr.create`
-
-| | |
-|---|---|
-| **Type** | boolean |
-| **Default** | `false` |
-| **Env var** | `AISHORE_CREATE_PR` |
-| **What it controls** | When `true`, creates a GitHub pull request instead of merging the feature branch. Equivalent to using the `--pr` flag on every run. |
-| **When to change** | Enable for teams that require PR review before merging. |
-
 #### `streaming.enabled`
 
 | | |
@@ -368,7 +302,6 @@ All `AISHORE_*` environment variables and what they map to:
 
 | Environment Variable | Config Path | Default | Description |
 |---|---|---|---|
-| `AISHORE_BACKLOG_FILES` | `backlog_files` | `backlog.json,bugs.json` | Comma-separated backlog file list |
 | `AISHORE_VALIDATE_CMD` | `validation.command` | `""` | Validation command (tests, lint) |
 | `AISHORE_VALIDATE_TIMEOUT` | `validation.timeout` | `120` | Validation timeout (seconds) |
 | `AISHORE_FIX_CMD` | `fix.command` | `""` | Auto-fix command (formatters) |
@@ -382,7 +315,6 @@ All `AISHORE_*` environment variables and what they map to:
 | `AISHORE_GROOM_MAX_ITEMS` | `groom.max_items` | `10` | Max items per groom session |
 | `AISHORE_GROOM_MIN_PRIORITY` | `groom.min_priority` | `should` | Min priority for grooming |
 | `AISHORE_OUTPUT_TRUNCATE_LINES` | `output.truncate_lines` | `50` | Log truncation lines |
-| `AISHORE_CREATE_PR` | `pr.create` | `false` | Create PR instead of merging |
 | `AISHORE_STREAMING` | `streaming.enabled` | `true` | Enable/disable output streaming |
 | `AISHORE_STREAMING_MAX_LINES` | `streaming.max_lines` | `20` | Max trailing lines during streaming |
 | `AISHORE_TIMEOUT_MINUTES` | `timeout_minutes` | `0` | Agent timeout in minutes (overrides `agent.timeout`; 0 = no override) |
@@ -432,10 +364,7 @@ When a scope (`done`, `p0`, `p1`, `p2`) is given, auto-grooming activates when r
 | `--retries` | `N` | Per-item retries on failure (default: `0`) |
 | `--limit` | `N` | Cap session at N successful items then exit cleanly |
 | `--no-merge` | — | Keep feature branches; push instead of merging |
-| `--pr` | — | Create GitHub PR (implies `--no-merge`) |
 | `--max-failures` | `N` | Circuit breaker: stop after N consecutive failures (default: `5`) |
-
-**Note:** `auto` is accepted as an alias for `run` for backwards compatibility.
 
 ### `groom` — Refine backlog
 
@@ -637,15 +566,4 @@ Can run tests and read files, but cannot use `Edit` or `Write`. The validator ch
 
 Read-only. The architecture reviewer can examine code but cannot modify it. When `review --update-docs` is used, `Edit,Write` are added automatically so it can update documentation files.
 
-### Customizing Permissions
-
-Override in `config.yaml`:
-
-```yaml
-permissions:
-  developer: "Read,Edit,Write,Glob,Grep,EnterPlanMode,ExitPlanMode"  # No Bash — no shell access
-  validator: "Bash,Read,Glob,Grep"           # No Write
-  reviewer: "Read,Glob,Grep"                 # Default (read-only)
-```
-
-Permissions are comma-separated Claude Code tool names. Available tools: `Bash`, `Edit`, `Write`, `Read`, `Glob`, `Grep`, `EnterPlanMode`, `ExitPlanMode`.
+Permissions are hardcoded per role and not configurable via config.yaml.

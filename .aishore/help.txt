@@ -2,7 +2,7 @@ aishore - iterative intent-based development with evals (v__VERSION__)
 Copyright (C) 2025-2026 Simon Plant. Licensed under Apache-2.0. See LICENSE.
 
 Usage: .aishore/aishore <command> [options]
-       .aishore/aishore run [<count>|<ID>|<scope>] [--limit N] [--retries N] [--max-failures N] [--no-merge] [--pr] [--dry-run]
+       .aishore/aishore run [<count>|<ID>|<scope>] [--limit N] [--retries N] [--max-failures N] [--no-merge] [--dry-run]
 
 Commands:
   backlog list      List all items (features + bugs)
@@ -47,8 +47,7 @@ Commands:
     --limit N       Cap session at N successful items then exit cleanly
     --max-failures N  Consecutive failures before stopping (default: 5)
     --retries N     Per-item retry attempts on failure
-    --no-merge      Keep feature branches for PR review
-    --pr            Create GitHub PR (implies --no-merge, requires gh CLI)
+    --no-merge      Keep feature branches for review
     --dry-run       Preview without running agents
 
   groom             Groom bugs, features, and tech debt
@@ -70,8 +69,7 @@ Examples:
   .aishore/aishore run done                # Drain entire backlog
   .aishore/aishore run p1 --retries 2      # Complete must + should, with retries
   .aishore/aishore run FEAT-001            # Run specific item
-  .aishore/aishore run --no-merge 3        # Keep branches for PR review
-  .aishore/aishore run --pr FEAT-001       # Create GitHub PR for review
+  .aishore/aishore run --no-merge 3        # Keep branches for review
   .aishore/aishore scaffold                # Detect missing scaffolding, add skeleton items
   .aishore/aishore update --dry-run        # Check for updates
 

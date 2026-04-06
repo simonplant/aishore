@@ -10,7 +10,7 @@ aishore ships working autonomous sprints: full sprint lifecycle (branch, develop
 
 Things that directly improve the core loop of shipping working code:
 
-- **PR workflow integration** — `--no-merge` and `--pr` exist; tighter GitHub PR creation with intent and AC summary in the PR body.
+- **PR workflow integration** — `--no-merge` keeps branches for external PR creation; tighter integration possible.
 
 ## Later
 

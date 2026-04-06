@@ -12,7 +12,6 @@ cmd_help() {
     case "$arg" in
         --full) sed "s/__VERSION__/$AISHORE_VERSION/g" "$AISHORE_ROOT/help.txt" ;;
         run)    _help_run ;;
-        auto)   _help_auto ;;
         backlog) _help_backlog ;;
         groom)    _help_groom ;;
         scaffold) _help_scaffold ;;
@@ -66,25 +65,17 @@ activate automatically.
 
 Options:
   --dry-run             Preview without running agents
-  --no-merge            Keep feature branches for PR review
-  --pr                  Create GitHub PR (implies --no-merge, requires gh)
+  --no-merge            Keep feature branches for review
   --retries N           Retry attempts on validation failure
   --max-failures N      Circuit breaker: stop after N consecutive failures
   --limit N             Stop after N successful items
 
 Examples:
   aishore run FEAT-001               # Run specific item
-  aishore run --no-merge 3           # Keep branches for PR review
-  aishore run --pr FEAT-001          # Create GitHub PR for review
+  aishore run --no-merge 3           # Keep branches for review
   aishore run done                   # Drain entire backlog
   aishore run p1 --retries 2         # Must + should, with retries
 EOF
-}
-
-_help_auto() {
-    echo "'auto' is now part of 'run'. Use: aishore run <scope> [options]"
-    echo ""
-    _help_run
 }
 
 _help_backlog() {

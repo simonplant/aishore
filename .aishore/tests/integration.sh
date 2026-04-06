@@ -324,7 +324,7 @@ echo -e "${CYAN}── Removed commands reject ──${RESET}"
 
 assert_fail "metrics rejected"          "$AISHORE" metrics
 assert_fail "report rejected"           "$AISHORE" report
-assert_fail "checksums rejected"        "$AISHORE" checksums
+assert_ok   "checksums command"         "$AISHORE" checksums
 assert_fail "config check rejected"     "$AISHORE" config check
 assert_fail "backlog history rejected"  "$AISHORE" backlog history
 assert_fail "backlog populate rejected" "$AISHORE" backlog populate
