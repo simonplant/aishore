@@ -240,6 +240,12 @@ cmd_update() {
     _unlock_tool_files
     if [[ "$all_verified" != "true" ]]; then
         log_error "Verification failed — no files were modified"
+        echo ""
+        echo "This usually means GitHub's CDN is serving stale files after a release."
+        echo "Try reinstalling via the authenticated API route:"
+        echo ""
+        echo "  gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d | bash -s -- --force"
+        echo ""
         return 1
     fi
 

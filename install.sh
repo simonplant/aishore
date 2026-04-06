@@ -236,6 +236,12 @@ install_aishore() {
     printf "\r%40s\r" ""  # clear progress line
 
     if [[ $failed -gt 0 ]]; then
+        echo ""
+        echo "This usually means GitHub's CDN is serving stale files."
+        echo "Try the authenticated API route instead:"
+        echo ""
+        echo "  gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d | bash -s -- --force"
+        echo ""
         die "$failed files failed — nothing was installed"
     fi
 
