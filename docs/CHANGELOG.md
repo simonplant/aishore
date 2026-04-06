@@ -5,6 +5,41 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.8] - 2026-04-06
+
+### Removed
+
+- **605 lines of dead code and unused features** — `reverse_lines`, `_generate_uuid`, `_append_array_field`, `AGENT_RESUME_SESSION`/`AGENT_SESSION_ID` (dead branches), `auto` command alias, `_help_auto`
+- **Spec refinement** (`refine_item_spec`) — spawned a Sonnet call to rewrite steps/AC after retries exhausted; low success rate, 100 lines of JSON extraction heuristics
+- **`--pr` flag** and `CREATE_PR` config — PR creation via `gh`; users who want PRs use `--no-merge` + their own workflow
+- **Configurable agent permissions** — `CFG_PERMS_DEVELOPER/VALIDATOR/REVIEWER` and `permissions.*` config section; hardcoded defaults are correct for all use cases
+- **Configurable backlog files** — `BACKLOG_FILES` config/env override; hardcoded to `backlog.json` + `bugs.json`
+- **Advisory-only features** — `check_complexity_hints` (45 lines), `_check_scope_warnings` (20 lines), `print_session_summary_table` (duplicate of batch summary), doc maintenance prompt injection, priority breakdown logging (50 lines for one log line)
+- **Over-abstraction** — `_validation_failure_reason` case mapping, `send_session_notification` wrapper, `save/restore_backlog_snapshot` wrappers, `find_first_backlog`/`snapshot_backlog_files`/`restore_backlog_files`/`sum_backlog_count` iterator functions (inlined at call sites), `print_batch_summary` (60-line table replaced with failed-items list)
+
+### Added
+
+- **`backlog populate` command restored** — lazy-loaded module (`cmd-populate.sh`) that reads PRODUCT.md and creates sprint-ready backlog items via the groomer agent in populate mode. Previously removed but the groomer prompt's 80-line populate mode section was orphaned.
+- **`MERGE_STRATEGY` validation** — rejects invalid values at config load time
+- **`setup.command`** documented in CONFIGURATION.md with env var `AISHORE_SETUP_CMD`
+
+### Fixed
+
+- **`--step` flag bug in architect agent** — `architect.md` and `build_agent_prompt` used `--step` (nonexistent) instead of `--steps`, silently breaking every scaffold and auto-groom architect run
+- **`portable_date_iso` in refine path** — was using non-portable `date -Iseconds` without BSD fallback
+- **Integration test** — `checksums` command was asserted as rejected but is a valid command
+- **CI shellcheck** — now includes `.aishore/lib/*.sh` modules
+- **11 documentation drifts resolved** — zero drift on all checks
+- **Drift checker false positive** — table borders (`------`) no longer match as flags
+
+### Changed
+
+- **Main script: 3701 → 3096 lines** (16% reduction)
+- **`run_sprint_loop` decomposed** — 60-line auto-groom block extracted to `_maybe_auto_groom()`, skip-list building to `_build_skip_list()`
+- **`_build_prior_failure_context` simplified** — body-budget capping replaced with last-2-entries
+- **`_build_groom_feedback` simplified** — removed duplicated "Specs That Worked" section
+- **Pick-item warnings consolidated** — two callback functions replaced with single jq filter
+
 ## [0.5.7] - 2026-04-06
 
 ### Changed
