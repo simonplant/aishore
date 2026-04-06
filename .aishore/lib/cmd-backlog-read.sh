@@ -5,7 +5,7 @@
 # find_item, resolve_backlog_file, remove_item, check_readiness_gates,
 # collect_done_ids, require_tool,
 # JQ_PRIO_RANK, _load_module) come from the main script.
-# Write commands (add, edit, populate) remain in cmd-backlog-write.sh.
+# Write commands (add, edit) in cmd-backlog-write.sh, populate in cmd-populate.sh.
 
 cmd_backlog() {
     require_tool jq
@@ -18,9 +18,10 @@ cmd_backlog() {
         edit)       _load_module cmd-backlog-write; cmd_backlog_edit "$@" ;;
         rm|remove)  cmd_backlog_rm "$@" ;;
         check)      cmd_backlog_check "$@" ;;
+        populate)   _load_module cmd-populate; cmd_backlog_populate "$@" ;;
         *)
             log_error "Unknown backlog command: $subcmd"
-            echo "Usage: backlog {list|add|show|edit|check|rm}" >&2
+            echo "Usage: backlog {list|add|show|edit|check|rm|populate}" >&2
             return 1
             ;;
     esac

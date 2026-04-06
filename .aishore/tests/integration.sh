@@ -327,7 +327,7 @@ assert_fail "report rejected"           "$AISHORE" report
 assert_ok   "checksums command"         "$AISHORE" checksums
 assert_fail "config check rejected"     "$AISHORE" config check
 assert_fail "backlog history rejected"  "$AISHORE" backlog history
-assert_fail "backlog populate rejected" "$AISHORE" backlog populate
+assert_contains "populate in help" "populate" "$AISHORE" help backlog
 
 echo ""
 

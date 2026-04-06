@@ -69,6 +69,7 @@ The orchestrator polls for this file. On pass, the pipeline continues. On fail, 
 .aishore/aishore backlog edit <ID> [flags]  # Update item
 .aishore/aishore backlog check <ID|--all>   # Validate readiness
 .aishore/aishore backlog rm <ID>            # Remove item
+.aishore/aishore backlog populate           # Populate from PRODUCT.md
 
 # Maintenance
 .aishore/aishore clean [--dry-run]          # Archive done items

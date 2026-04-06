@@ -110,12 +110,14 @@ Subcommands:
   check <ID>        Check readiness gates for an item
     --all             Audit every non-done item
   rm <ID>           Remove an item (--force to skip confirmation)
+  populate          Create items from PRODUCT.md (AI-assisted)
 
 Examples:
   aishore backlog list --ready         # Show sprint-ready items
   aishore backlog add --title "Add auth" --intent "Users can log in" --ac "Login works"
   aishore backlog edit FEAT-001 --priority must --ready
   aishore backlog check --all          # Audit all items
+  aishore backlog populate             # Populate from PRODUCT.md
 EOF
 }
 

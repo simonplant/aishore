@@ -3039,7 +3039,8 @@ cmd_version() {
 
 # ============================================================================
 # BACKLOG CRUD — extracted to .aishore/lib/cmd-backlog-read.sh (lazy-loaded via _load_module)
-# Write commands (add, edit, populate) in .aishore/lib/cmd-backlog-write.sh
+# Write commands (add, edit) in .aishore/lib/cmd-backlog-write.sh
+# Populate command in .aishore/lib/cmd-populate.sh
 # ============================================================================
 
 # cmd_clean, _archive_done_items — extracted to .aishore/lib/cmd-clean.sh (lazy-loaded via _load_module)
