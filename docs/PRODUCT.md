@@ -22,10 +22,10 @@ Not for: teams that need approval workflows, compliance gates, or human review o
 - **Compounding regression protection** — every passing sprint's verify commands are saved. Before every future sprint, the full suite runs. Sprint 51 cannot silently break what sprint 12 proved. No manual test maintenance.
 - **Top-down wiring** — scaffolding detection prevents fragment accumulation. Code must be reachable from real entry points. Mocks in production code and stub endpoints are treated as risks, not progress.
 
-## Non-Goals
+## Boundaries
 
-- **Process ceremony.** No burndown charts, no sprint planning meetings, no definition-of-ready checklists beyond what's mechanically enforced. If the system can't check it automatically, it doesn't gate on it.
-- **Human-in-the-loop by default.** The default path is autonomous merge. Human review is opt-in (`--no-merge`, `--pr`), not the assumed workflow.
-- **Test coverage as a metric.** aishore cares whether verify commands pass, not what percentage of lines they cover. A single verify command that proves the feature works end-to-end is worth more than 90% coverage of unit tests that mock everything.
-- **Multi-LLM abstraction.** Currently Claude Code only. Building a provider abstraction layer before there's a second provider would be speculative engineering.
-- **IDE integration.** aishore is a CLI tool that orchestrates from the terminal. It wraps the coding agent, not the editor.
+- **Quality is mechanical, not procedural.** If the system can't check it automatically (readiness gates, validation command, AC verify, regression suite), it doesn't gate on it.
+- **Autonomous merge is the default.** Human review is opt-in (`--no-merge`, `--pr`). The assumed workflow is hands-off.
+- **Behavior proof over coverage metrics.** A verify command that proves the feature works end-to-end outweighs coverage percentages. Verify commands are the quality signal.
+- **Single backend: Claude Code CLI.** No abstraction layer until a second backend is competitive for full-repo autonomous work.
+- **CLI-only.** aishore orchestrates from the terminal. It wraps the coding agent, not the editor.

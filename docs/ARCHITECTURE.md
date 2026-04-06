@@ -1,10 +1,10 @@
 # Architecture — aishore
 
-This document describes how aishore works as a system — the pipeline, the agents, the quality model, and the design decisions behind them. It is the single reference for anyone evaluating or contributing to the project.
-
 ## Overview
 
-aishore is an autonomous sprint orchestration tool for Claude Code. It takes a prioritized backlog of work items, develops each one through an AI agent pipeline, validates the result, and archives completed work. The core loop is: **pick, branch, develop, validate, merge, archive**.
+aishore is an autonomous sprint orchestration tool for Claude Code. It takes a prioritized backlog, develops each item through an AI agent pipeline, validates the result, and archives completed work.
+
+## Pipeline
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────────────┐
@@ -19,68 +19,102 @@ aishore is an autonomous sprint orchestration tool for Claude Code. It takes a p
 └───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Each stage in detail:
+| Stage | What happens |
+|-------|-------------|
+| **Pick** | Selects highest-priority ready item. Must pass readiness gates (intent >= 20 chars, steps, AC). Priority scoping filters by `p0`/`p1`/`p2`/`done`. |
+| **Branch** | Creates isolated feature branch `aishore/<ITEM-ID>` in a git worktree. |
+| **Preflight** | Runs validation command + full regression suite against unmodified codebase. Aborts if baseline is broken. |
+| **Develop** | Developer agent implements via maturity protocol (implement → critique → harden). |
+| **Verify** | Validation command runs, then all AC verify commands execute. |
+| **Validate** | Validator agent reviews changes against AC and commander's intent. |
+| **Merge** | Branch merged with `--no-ff`, pushed, item archived to `sprints.jsonl`. |
 
-1. **Pick** — selects the highest-priority ready item from the backlog. Items must pass readiness gates (intent, steps, AC) to be eligible. In autonomous mode, priority scoping (p0/p1/p2/done) filters which items are considered.
-2. **Branch** — creates an isolated feature branch (`aishore/<ITEM-ID>`) from the current branch.
-3. **Preflight** — runs the project's validation command against the unmodified codebase. If the baseline is already broken, the sprint aborts immediately rather than producing confusing failures later.
-4. **Develop** — the Developer agent implements the feature following the maturity protocol (see below).
-5. **Verify** — changed files are checked against scope globs, the validation command runs, and any AC verification commands execute.
-6. **Validate** — the Validator agent reviews changes against acceptance criteria and commander's intent.
-7. **Merge & Archive** — the branch is merged back with `--no-ff`, pushed, and the completed item is archived to `sprints.jsonl`.
+## Completion Contract
 
-The orchestrator is a single Bash script (`.aishore/aishore`) with no build step. All agent invocations go through `run_agent()`, which assembles the prompt, appends the completion contract, and delegates to `run_agent_process()`.
+Agents signal completion by writing `.aishore/data/status/result.json`:
 
-## The Maturity Protocol
+```json
+{"status": "pass", "summary": "what was done"}
+{"status": "fail", "reason": "what went wrong"}
+```
 
-The maturity protocol is the core quality mechanism. Rather than relying on external retry loops to catch defects, it keeps quality iteration inside the developer session where implementation context is still hot.
+The orchestrator polls for this file. On `"pass"`, it proceeds. On `"fail"`, retry logic triggers.
+
+## Maturity Protocol
 
 Every developer session runs three phases:
 
-1. **Implement** — write the code. Follow the spec, match existing patterns.
-2. **Critique** — stop coding. Re-read every changed file. Verify intent is fulfilled and each AC is provably met. Hunt bugs, edge cases, dead code, missing error handling. Fix everything found.
-3. **Harden** — run validation again. Fix regressions. Re-verify all AC. Only then commit and signal done.
+| Phase | Action | Purpose |
+|-------|--------|---------|
+| **Implement** | Write the code following spec and existing patterns | Produce the implementation |
+| **Critique** | Stop coding. Re-read every changed file. Verify intent fulfilled, each AC provably met. Hunt bugs, edge cases, dead code. Fix everything found. | Catch defects while context is hot |
+| **Harden** | Run validation again. Fix regressions. Re-verify all AC. Commit and signal done. | Ensure the critique phase didn't break anything |
 
-**Why this exists:** One-shot AI implementation produces code that works for the happy path but often misses edge cases, introduces subtle bugs, or drifts from the stated intent. The critique phase forces the AI to shift from "writer" to "reviewer" mindset while it still holds the full implementation context. The harden phase catches anything the critique introduced. This three-phase cycle consistently produces higher quality output than implement-then-retry.
-
-The maturity protocol is always on. It is a non-optional part of the quality model — skipping it produces measurably worse outcomes.
+The protocol is always on. Skipping it produces measurably worse outcomes.
 
 ## Agent System
 
-aishore models a real sprint team with four specialized AI agents, each with a distinct role and restricted permissions:
-
 | Agent | Role | Invoked by | Permissions |
 |-------|------|------------|-------------|
-| **Developer** | Implements features following project conventions and the maturity protocol | `run` | `Agent,Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode` |
-| **Validator** | Checks acceptance criteria and commander's intent against actual changes | `run` | `Bash,Read,Glob,Grep` |
-| **Groomer** | Grooms bugs and features — adds steps, testable AC, sets priorities, marks items ready | `groom` | CLI commands |
-| **Architect** | Reviews patterns and risks; detects fragment risk and injects scaffolding items | `review`, `scaffold` | `Read,Glob,Grep` (+ `Edit,Write` with `--update-docs`; full permissions in scaffold mode) |
+| **Developer** | Implements features following maturity protocol | `run` | `Agent,Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode` |
+| **Validator** | Checks AC and intent against actual changes | `run` | `Bash,Read,Glob,Grep` |
+| **Groomer** | Adds steps, testable AC, sets priorities, marks items ready | `groom` | CLI commands |
+| **Architect** | Reviews patterns/risks; detects fragment risk, injects scaffolding items | `review`, `scaffold` | `Read,Glob,Grep` (+ `Edit,Write` with `--update-docs`) |
 
-### Data flow between agents
+### Data flow
 
-The agents communicate through files, not directly:
+Agents communicate through files:
 
-- **Backlog files** (`backlog.json`, `bugs.json`) are the shared work queue. The Groomer and Architect write to them (via CLI); the orchestrator reads from them to pick items.
-- **Sprint file** (`sprint.json`) carries the current item's spec. The orchestrator writes it; the Developer and Validator read it.
-- **Result file** (`result.json`) is the completion contract. Agents write `{"status": "pass", "summary": "..."}` or `{"status": "fail", "reason": "..."}` to signal they are done. The orchestrator polls for this file.
-- **Project context** (`CLAUDE.md`, `PRODUCT.md`, `ARCHITECTURE.md`) is auto-detected and injected into every agent's prompt for project awareness.
+| File | Written by | Read by | Purpose |
+|------|-----------|---------|---------|
+| `backlog.json`, `bugs.json` | Groomer, Architect (via CLI) | Orchestrator | Shared work queue |
+| `sprint.json` | Orchestrator | Developer, Validator | Current item spec |
+| `result.json` | Agents | Orchestrator | Completion signal |
+| `CLAUDE.md`, `PRODUCT.md`, `ARCHITECTURE.md` | Human | All agents (auto-injected) | Project context |
 
-### Agent permissions
+### Permission model
 
-Permissions are deliberately restricted by role. The Developer gets full file manipulation. The Validator can read and run commands but cannot silently fix code (it reports, not repairs). The Architect is read-only by default to prevent accidental changes during review. Permissions are configurable in `.aishore/config.yaml`.
+Developer gets full file manipulation. Validator can read and run commands but cannot modify code (reports, not repairs). Architect is read-only by default. Configurable in `.aishore/config.yaml`.
 
-## Git Branching Model
+## Git Branching
 
-Each sprint item runs on its own feature branch:
+1. Branch `aishore/<ITEM-ID>` created in isolated worktree from current branch
+2. Developer commits directly to feature branch
+3. **Success**: merge with `--no-ff`, push, pull latest before next item
+4. **Failure**: branch deleted, diagnostics preserved on base branch
+5. **`--no-merge`**: branch pushed to origin for PR review instead of merging
 
-1. Branch `aishore/<ITEM-ID>` is created from the current branch.
-2. The Developer agent commits its own work directly to the feature branch.
-3. On success: the branch is merged back with `--no-ff`, pushed, and the base branch pulls latest before the next item starts.
-4. On failure: the branch is deleted and the base branch is restored cleanly.
+Backlog mutations (mark complete, archive) happen on the base branch after merge — never in the worktree. This prevents merge conflicts on JSON files.
 
-The `--no-merge` flag changes this behavior: instead of merging, the branch is pushed to origin for PR review. This supports teams that require human review before merge.
+## Quality Gates
 
-**Safe failure recovery:** Pre-existing uncommitted changes are stashed before a sprint begins and restored afterward, regardless of outcome. The orchestrator includes a safety-net commit in case the Developer agent fails to commit. Sprint failures never leave the working tree in a dirty state.
+### Definition of Ready
+
+| Gate | Requirement |
+|------|-------------|
+| **Intent** | `intent` field >= 20 chars, must be a directive not a label (see `backlog/DEFINITIONS.md` for examples) |
+| **Steps** | Implementation steps clear enough to act on |
+| **AC** | Acceptance criteria are verifiable |
+| **No blockers** | Dependencies resolved |
+| **readyForSprint** | Groomer has marked it ready |
+
+Intent is a **hard gate at sprint time** — items without it are silently skipped.
+
+### Validation Sequence
+
+Three checks in order, all must pass:
+
+1. **Validation command** — your test suite/linter
+2. **AC verify commands** — shell commands from the item's acceptance criteria
+3. **Validator agent** — independent check of AC and intent fulfillment
+
+### Regression Suite
+
+Completed sprints' verify commands are saved to `backlog/archive/regression.jsonl`. Before every sprint, the full suite runs as pre-flight. Sprint 51 cannot break what sprint 12 proved. Grows automatically.
+
+### Executable AC
+
+AC entries can be plain strings or `{text, verify}` objects. `verify` is a shell command run by the orchestrator — failures trigger retries. Plain-string AC are validated by the Validator agent's judgment; verify commands are validated deterministically.
 
 ## Directory Structure
 
@@ -93,126 +127,29 @@ project/
 │   ├── DEFINITIONS.md       # DoR, DoD, priority/size definitions
 │   └── archive/
 │       ├── sprints.jsonl    # Completed sprint history
-│       └── regression.jsonl # Accumulated verify commands (regression suite)
-└── .aishore/                # Tool (can be updated independently)
-    ├── aishore              # Single-file CLI (Bash)
+│       └── regression.jsonl # Accumulated regression suite
+└── .aishore/                # Tool (replaceable via update)
+    ├── aishore              # Core orchestrator (Bash)
     ├── VERSION              # Version (single source of truth)
     ├── checksums.sha256     # SHA-256 checksums for update verification
     ├── agents/              # Agent prompts (one per role)
-    │   ├── architect.md
-    │   ├── developer.md
-    │   ├── groomer.md
-    │   └── validator.md
     ├── config.yaml          # Optional overrides
+    ├── lib/                 # Lazy-loaded command modules
     └── data/                # Runtime (not version controlled)
         ├── logs/
         └── status/
-            ├── result.json      # Agent completion signal
-            ├── .item_source     # Tracks which backlog the current item came from
-            └── .aishore.lock/   # mkdir+PID-based concurrency guard (self-healing)
+            ├── result.json
+            └── .aishore.lock/
 ```
 
-The separation between `backlog/` (user content) and `.aishore/` (tool) is fundamental. Updates replace `.aishore/` files but never touch `backlog/` or `config.yaml`. This means the tool can be upgraded without risk to user data.
+## Design Constraints
 
-## Design Decisions
-
-### Single-file CLI
-
-The core orchestrator is a single Bash script with lazy-loaded modules. This keeps the tool zero-dependency (beyond Bash 4.4+, jq, git, and the Claude CLI), makes installation a single `cp`, and ensures the entire system can be understood by reading one directory.
-
-### Separation of tool and content
-
-The `.aishore/` directory is the tool; `backlog/` is user data. Updates replace tool files via checksum-verified downloads but skip `config.yaml` and never touch `backlog/`. This lets teams version-control their backlogs alongside their code while still receiving tool updates.
-
-### Completion contract over streaming
-
-Agents signal completion by writing a JSON file (`result.json`) rather than through streaming output. This makes the interface between orchestrator and agent simple, testable, and resilient to agent output format changes.
-
-### Sensible defaults with layered overrides
-
-The tool works out of the box with no configuration. When customization is needed, configuration follows a clear precedence: environment variables override `config.yaml`, which overrides built-in defaults. This supports both local development (env vars) and team-wide settings (committed config).
-
-### Context auto-detection
-
-aishore automatically finds and injects `CLAUDE.md`, `PRODUCT.md`, and `ARCHITECTURE.md` from the project root or `docs/` directory. This means agents always have project context without requiring explicit configuration.
-
-### Concurrency guard
-
-Only one aishore process runs at a time, enforced via `mkdir` on `.aishore/data/status/.aishore.lock/`. The lock directory contains a PID file; if the owning process is no longer running, the lock self-heals automatically. This prevents race conditions on shared state files (sprint.json, result.json) without requiring a database, external coordinator, or platform-specific tools like `flock`.
-
-### Checksum-verified updates
-
-The `update` command resolves the latest GitHub release tag, fetches files listed in the remote `checksums.sha256` manifest, validates all paths (must start with `.aishore/`, no `..` traversal, no absolute paths), stages to a temp directory, verifies SHA-256 checksums, and installs only if all checks pass.
-
-## Quality Gates
-
-### Definition of Ready
-
-An item must pass these gates before it can enter a sprint:
-
-| Gate | Requirement |
-|------|-------------|
-| **Intent** | `intent` field states what must be true when done (>=20 chars, must be a directive not a label) |
-| **Steps** | Implementation steps are clear enough to act on |
-| **AC** | Acceptance criteria are verifiable |
-| **No blockers** | Dependencies are resolved |
-| **Right size** | Completable in one sprint |
-| **readyForSprint** | Groomer has marked it ready |
-
-Intent is a **hard gate at sprint time** — items without intent (or with intent shorter than 20 characters) are silently skipped by auto-pick and explicitly rejected when run by ID.
-
-### Commander's Intent
-
-The `intent` field is a non-negotiable directive — what must be true when done. When the spec is unclear or steps seem wrong, intent is the order the developer follows. It is written as an outcome ("Users authenticate securely or are told why not"), never as an implementation label ("Add auth").
-
-### Definition of Done
-
-| Gate |
-|------|
-| Implementation matches all acceptance criteria |
-| All tests pass (existing + new) |
-| Type-check, lint, and test suites all pass |
-| Each AC individually verified |
-| No regressions introduced |
-
-### Completion Contract
-
-Agents signal completion by writing to `.aishore/data/status/result.json`:
-
-```json
-{"status": "pass", "summary": "what was done"}
-```
-
-The orchestrator polls for this file. On `"pass"`, it proceeds to the next pipeline stage. On `"fail"`, it triggers retry logic (if configured) or aborts the sprint.
-
-### Scope Checking
-
-Items can declare a `scope` array of glob patterns (e.g., `["src/**", "tests/**"]`). After the Developer agent runs, changed files are checked against these patterns. In `warn` mode (default), out-of-scope changes are logged. In `strict` mode, they fail the sprint. This prevents feature creep and unintended side effects.
-
-### Executable Acceptance Criteria
-
-AC entries can be plain strings or `{text, verify}` objects. The `verify` field is a shell command — a concrete eval that proves the AC is met. Groom agents are instructed to generate verify commands for every AC where behavior is observable via shell command. Items with 0% verify coverage trigger advisory warnings.
-
-```json
-{"text": "CLI prints usage on --help", "verify": ".aishore/aishore help | grep -q Usage"}
-```
-
-Plain-string AC are validated by the Validator agent's judgment. Verify commands are validated by the orchestrator deterministically. The gap between these two modes is the gap between opinion and proof.
-
-### Regression Suite
-
-When a sprint completes, all verify commands from its AC are saved to `backlog/archive/regression.jsonl`. Before every subsequent sprint, the full regression suite runs as pre-flight — if any prior sprint's verify command fails, the sprint is aborted. This means:
-
-- Sprint 1 passes with 3 verify commands → 3 regression checks
-- Sprint 50 passes → 150+ regression checks run before every sprint
-- Sprint 51 cannot silently break what sprint 12 proved worked
-
-The regression suite grows automatically from the specs groom agents write. No manual test maintenance required.
-
-### Adversarial Validation
-
-The Validator agent has Bash access and is instructed by the orchestrator to actively probe implementations — not just read diffs. When AC claims observable behavior, the validator must execute commands to verify it. This is injected at runtime by the orchestrator, keeping the agent prompt simple.
-
-### Spec Refinement
-
-When all retries are exhausted, the orchestrator automatically invokes an AI agent to refine the item's steps and acceptance criteria based on what went wrong, then attempts one more developer cycle. This closes the loop between failure and specification quality.
+| Constraint | Implication |
+|-----------|-------------|
+| Pure Bash, no build step | Only Bash 4.4+, jq, git, claude required. Lazy-loaded modules in `.aishore/lib/`. |
+| Tool and content separated | `.aishore/` is the tool, `backlog/` is user data. Updates replace tool files, never user data or `config.yaml`. |
+| Completion via file, not streaming | Agents write `result.json`. Interface is simple, testable, resilient to output format changes. |
+| Config precedence: env > yaml > defaults | Supports local development (env vars) and team settings (committed config). Full yaml requires `yq`. |
+| Context auto-detection | `CLAUDE.md`, `PRODUCT.md`, `ARCHITECTURE.md` found from project root or `docs/` and injected into agent prompts. |
+| Single process | `mkdir` + PID lock at `.aishore/data/status/.aishore.lock/`. Self-healing on stale PIDs. |
+| Checksum-verified updates | Remote `checksums.sha256` manifest drives file list. All paths validated (must start `.aishore/`, no traversal). |
