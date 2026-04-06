@@ -18,33 +18,93 @@ cmd_update() {
     echo ""
 
     # Check for curl or wget
-    local fetch_cmd=""
+    local _update_use_curl=false
     if command -v curl &> /dev/null; then
-        fetch_cmd="curl -fsSL"
-    elif command -v wget &> /dev/null; then
-        fetch_cmd="wget -qO-"
-    else
+        _update_use_curl=true
+    elif ! command -v wget &> /dev/null; then
         log_error "curl or wget required for update"
         return 1
     fi
 
+    # Detect GitHub auth token for authenticated access
+    local _update_gh_token=""
+    if command -v gh &> /dev/null; then
+        _update_gh_token=$(gh auth token 2>/dev/null) || true
+    fi
+    if [[ -z "$_update_gh_token" && -n "${GITHUB_TOKEN:-}" ]]; then
+        _update_gh_token="$GITHUB_TOKEN"
+    fi
+    [[ -n "$_update_gh_token" ]] && log_info "Using authenticated GitHub access"
+
+    local _update_repo="simonplant/aishore"
+
+    # Low-level fetch — handles auth header injection for any URL
+    _update_fetch() {
+        if [[ "$_update_use_curl" == "true" ]]; then
+            if [[ -n "$_update_gh_token" ]]; then
+                curl -fsSL -H "Authorization: token $_update_gh_token" "$@"
+            else
+                curl -fsSL "$@"
+            fi
+        else
+            if [[ -n "$_update_gh_token" ]]; then
+                wget --header="Authorization: token $_update_gh_token" -qO- "$@"
+            else
+                wget -qO- "$@"
+            fi
+        fi
+    }
+
+    # Fetch a repo file to stdout — tries raw.githubusercontent.com, falls back to Contents API
+    # Usage: _update_fetch_file <relative_path>
+    _update_fetch_file() {
+        local file_path="$1"
+        local raw_url="https://raw.githubusercontent.com/$_update_repo/$release_tag/$file_path"
+
+        # Route 1: raw.githubusercontent.com (fast, no rate limit)
+        local content
+        if content=$(_update_fetch "$raw_url" 2>/dev/null); then
+            printf '%s' "$content"
+            return 0
+        fi
+
+        # Route 2: GitHub Contents API (always fresh, base64-encoded)
+        local api_url="https://api.github.com/repos/$_update_repo/contents/$file_path?ref=$release_tag"
+        local json
+        if json=$(_update_fetch "$api_url" 2>/dev/null); then
+            printf '%s' "$json" | jq -r '.content' | base64 -d
+            return 0
+        fi
+
+        return 1
+    }
+
+    # Fetch a repo file and save to disk
+    _update_fetch_file_to() {
+        local file_path="$1" dest="$2"
+        local content
+        if content=$(_update_fetch_file "$file_path"); then
+            printf '%s' "$content" > "$dest"
+            return 0
+        fi
+        return 1
+    }
+
     # Resolve latest release tag
-    local api_url="https://api.github.com/repos/simonplant/aishore/releases/latest"
+    local api_url="https://api.github.com/repos/$_update_repo/releases/latest"
     log_info "Checking for updates..."
     local release_tag=""
-    release_tag=$($fetch_cmd "$api_url" 2>/dev/null | jq -r '.tag_name // empty') || true
+    release_tag=$(_update_fetch "$api_url" 2>/dev/null | jq -r '.tag_name // empty') || true
 
     if [[ -z "$release_tag" ]]; then
         log_warning "Could not resolve latest release — falling back to main"
         release_tag="main"
     fi
 
-    local repo_url="https://raw.githubusercontent.com/simonplant/aishore/$release_tag"
-
     # Fetch remote version from VERSION file
     local remote_version
-    remote_version=$($fetch_cmd "$repo_url/.aishore/VERSION" 2>/dev/null | tr -d '[:space:]') || {
-        log_error "Failed to fetch remote version from $repo_url/.aishore/VERSION"
+    remote_version=$(_update_fetch_file ".aishore/VERSION" | tr -d '[:space:]') || {
+        log_error "Failed to fetch remote version"
         return 1
     }
 
@@ -64,7 +124,7 @@ cmd_update() {
     # Fetch checksums manifest (needed for file discovery and verification)
     log_info "Fetching checksums..."
     local checksums_content=""
-    checksums_content=$($fetch_cmd "$repo_url/.aishore/checksums.sha256" 2>/dev/null) || {
+    checksums_content=$(_update_fetch_file ".aishore/checksums.sha256") || {
         log_error "Cannot fetch checksums manifest — check connectivity and try again"
         return 1
     }
@@ -118,7 +178,7 @@ cmd_update() {
     _fetch_and_stage() {
         local remote_path="$1" local_path="$2" label="$3" checksum_key="$4"
         local required="${5:-false}"
-        if ! $fetch_cmd "$repo_url/$remote_path" > "$local_path" 2>/dev/null; then
+        if ! _update_fetch_file_to "$remote_path" "$local_path"; then
             if [[ "$required" == "true" ]]; then
                 log_error "Failed to fetch $label"
                 return 1

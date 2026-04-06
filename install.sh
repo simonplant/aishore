@@ -18,19 +18,74 @@ set -euo pipefail
 REPO="simonplant/aishore"
 API_URL="https://api.github.com/repos/$REPO/releases/latest"
 
-resolve_base_url() {
-    local tag
-    tag=$(curl -sSfL "$API_URL" 2>/dev/null | jq -r '.tag_name // empty') || true
-    if [[ -z "$tag" ]]; then
-        warn "Could not resolve latest release — falling back to main" >&2
-        tag="main"
-    else
-        log "Latest release: $tag" >&2
+# GitHub auth token (gh CLI or GITHUB_TOKEN env var)
+_GH_TOKEN=""
+_resolve_gh_token() {
+    [[ -n "$_GH_TOKEN" ]] && return
+    if command -v gh >/dev/null 2>&1; then
+        _GH_TOKEN=$(gh auth token 2>/dev/null) || true
     fi
-    echo "https://raw.githubusercontent.com/$REPO/$tag"
+    if [[ -z "$_GH_TOKEN" && -n "${GITHUB_TOKEN:-}" ]]; then
+        _GH_TOKEN="$GITHUB_TOKEN"
+    fi
 }
 
-BASE_URL=""
+# Low-level curl with auth header injection
+_curl() {
+    _resolve_gh_token
+    if [[ -n "$_GH_TOKEN" ]]; then
+        curl -H "Authorization: token $_GH_TOKEN" "$@"
+    else
+        curl "$@"
+    fi
+}
+
+# Resolved release tag
+_RELEASE_TAG=""
+
+resolve_tag() {
+    _RELEASE_TAG=$(_curl -sSfL "$API_URL" 2>/dev/null | jq -r '.tag_name // empty') || true
+    if [[ -z "$_RELEASE_TAG" ]]; then
+        warn "Could not resolve latest release — falling back to main"
+        _RELEASE_TAG="main"
+    else
+        log "Latest release: $_RELEASE_TAG"
+    fi
+}
+
+# Fetch a repo file to stdout — tries raw.githubusercontent.com, falls back to Contents API
+_fetch_repo_file() {
+    local file_path="$1"
+    local raw_url="https://raw.githubusercontent.com/$REPO/$_RELEASE_TAG/$file_path"
+
+    # Route 1: raw.githubusercontent.com (fast, no rate limit)
+    local content
+    if content=$(_curl -sSfL "$raw_url" 2>/dev/null); then
+        printf '%s' "$content"
+        return 0
+    fi
+
+    # Route 2: GitHub Contents API (always fresh, base64-encoded)
+    local api_url="https://api.github.com/repos/$REPO/contents/$file_path?ref=$_RELEASE_TAG"
+    local json
+    if json=$(_curl -sSfL "$api_url" 2>/dev/null); then
+        printf '%s' "$json" | jq -r '.content' | base64 -d
+        return 0
+    fi
+
+    return 1
+}
+
+# Fetch a repo file and save to disk
+_fetch_repo_file_to() {
+    local file_path="$1" dest="$2"
+    local content
+    if content=$(_fetch_repo_file "$file_path"); then
+        printf '%s' "$content" > "$dest"
+        return 0
+    fi
+    return 1
+}
 
 # Colors
 RED='\033[0;31m'
@@ -144,11 +199,11 @@ install_aishore() {
     echo ""
 
     # Resolve latest release tag
-    BASE_URL=$(resolve_base_url)
+    resolve_tag
 
     # Fetch checksums manifest and discover files
     log "Fetching file manifest..."
-    CHECKSUMS_CONTENT=$(curl -sSfL "$BASE_URL/.aishore/checksums.sha256" 2>/dev/null) || \
+    CHECKSUMS_CONTENT=$(_fetch_repo_file ".aishore/checksums.sha256") || \
         die "Failed to fetch checksums manifest"
     local file_list
     file_list=$(discover_files)
@@ -169,9 +224,8 @@ install_aishore() {
     local total=${#FILES[@]}
     local fetched=0
     for file in "${FILES[@]}"; do
-        local url="$BASE_URL/$file"
         local dest="$STAGING_DIR/$file"
-        if curl -sSfL "$url" -o "$dest" 2>/dev/null; then
+        if _fetch_repo_file_to "$file" "$dest"; then
             if ! verify_file "$dest" "$file"; then
                 error "Checksum mismatch: $file"
                 ((failed++))
