@@ -5,6 +5,12 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2026-04-06
+
+### Fixed
+
+- **Install/update resilient to GitHub CDN blocking** — both `install.sh` and `cmd-update.sh` now try `raw.githubusercontent.com` first, then fall back to the GitHub Contents API (base64-decoded). Auth tokens from `gh` CLI or `GITHUB_TOKEN` env var are injected into both routes automatically.
+
 ## [0.5.5] - 2026-04-06
 
 ### Fixed
