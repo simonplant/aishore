@@ -106,7 +106,7 @@ Subcommands:
     --depends-on ID   Dependency (repeatable, replaces all deps)
   show <ID>         Show full detail of one item
   edit <ID>         Update fields on an item (same flags as add, plus --status,
-                    --no-ready, --groomed-at, --groomed-notes)
+                    --no-ready, --clear-depends, --groomed-at, --groomed-notes)
   check <ID>        Check readiness gates for an item
     --all             Audit every non-done item
   rm <ID>           Remove an item (--force to skip confirmation)

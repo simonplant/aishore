@@ -31,7 +31,8 @@ Commands:
     --steps "text"  Set implementation steps (repeatable, replaces all steps),
     --scope "glob"  Set scope globs (repeatable, replaces all scope),
     --ac "text", --ac-verify "cmd"  Set acceptance criteria (repeatable, replaces all AC),
-    --depends-on ID  Set dependencies (repeatable, replaces all deps)
+    --depends-on ID  Set dependencies (repeatable, replaces all deps),
+    --clear-depends  Remove all dependencies
   backlog check <ID> Check readiness gates (title, intent, steps, AC, step length)
     --all           Audit every non-done item and print a summary table
   backlog rm <ID>   Remove an item (with confirmation)
@@ -60,6 +61,8 @@ Commands:
   status            Show backlog overview and sprint readiness
   update            Update from upstream (--dry-run to check, --force to override)
   clean             Archive and remove done items (--dry-run to preview, --no-archive to skip)
+    --regression    Clear the regression suite (backup created before removal)
+  checksums         Regenerate checksums.sha256 manifest
   init              Setup wizard — checks prerequisites, configures project
     -y, --yes       Accept all detected defaults (non-interactive)
   version, -v, --version   Show version

@@ -30,6 +30,10 @@ validation:
   command: ""
   timeout: 120
 
+# Setup command runs in each worktree before sprint (e.g., "npm install")
+# setup:
+#   command: ""
+
 # Auto-fix command run after developer agent (e.g., "npm run lint -- --fix")
 # fix:
 #   command: ""
@@ -111,6 +115,16 @@ validation:
 | **Env var** | `AISHORE_VALIDATE_TIMEOUT` |
 | **What it controls** | How long the validation command can run before being killed. |
 | **When to change** | Increase for slow test suites; decrease to fail fast. |
+
+#### `setup.command`
+
+| | |
+|---|---|
+| **Type** | string |
+| **Default** | `""` (empty — no setup) |
+| **Env var** | `AISHORE_SETUP_CMD` |
+| **What it controls** | Shell command run in each worktree before the sprint starts. Use for installing dependencies that aren't in git (node_modules, venv, etc.). |
+| **When to change** | Set to your dependency installer (e.g., `npm install`, `pip install -e .`). |
 
 #### `fix.command`
 
@@ -304,6 +318,7 @@ All `AISHORE_*` environment variables and what they map to:
 |---|---|---|---|
 | `AISHORE_VALIDATE_CMD` | `validation.command` | `""` | Validation command (tests, lint) |
 | `AISHORE_VALIDATE_TIMEOUT` | `validation.timeout` | `120` | Validation timeout (seconds) |
+| `AISHORE_SETUP_CMD` | `setup.command` | `""` | Worktree setup command (dependency install) |
 | `AISHORE_FIX_CMD` | `fix.command` | `""` | Auto-fix command (formatters) |
 | `AISHORE_MODEL_PRIMARY` | `models.primary` | `claude-opus-4-6` | Primary AI model |
 | `AISHORE_MODEL_FAST` | `models.fast` | `claude-sonnet-4-6` | Fast AI model |
@@ -492,6 +507,7 @@ Validates: title, commander's intent (>= 20 chars, must be a directive), steps, 
 |------|-------------|
 | `--dry-run` | Preview what would be removed |
 | `--no-archive` | Skip archiving removed items |
+| `--regression` | Clear the regression suite (backup created before removal) |
 
 ### `update` — Update from upstream
 

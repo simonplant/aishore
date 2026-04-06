@@ -308,7 +308,7 @@ if [[ -f "$GUIDE" ]]; then
     done
 
     # Check that flags mentioned in the guide actually exist in help
-    guide_flags=$(grep -oP '\-\-[\w-]+' "$GUIDE" | sort -u)
+    guide_flags=$(grep -oP '\-\-[a-zA-Z][\w-]*' "$GUIDE" | sort -u)
     while IFS= read -r flag; do
         [[ -z "$flag" ]] && continue
         if grep -Fq -- "$flag" <<< "$all_help_flags" 2>/dev/null; then

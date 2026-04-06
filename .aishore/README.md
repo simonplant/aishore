@@ -21,7 +21,9 @@ This directory contains the aishore sprint orchestration tool. It is self-contai
 .aishore/aishore help               # Full usage
 .aishore/aishore run [N|ID|scope]   # Run sprints (scope: done, p0, p1, p2)
 .aishore/aishore groom              # Groom backlog items
+.aishore/aishore review             # Architecture review
 .aishore/aishore status             # Backlog overview
+.aishore/aishore clean              # Archive done items
 .aishore/aishore update             # Self-update from GitHub
 ```
 

@@ -73,6 +73,10 @@ The orchestrator polls for this file. On pass, the pipeline continues. On fail, 
 # Maintenance
 .aishore/aishore clean [--dry-run]          # Archive done items
 .aishore/aishore update [--dry-run]         # Self-update
+.aishore/aishore init [-y]                  # Setup wizard
+.aishore/aishore checksums                   # Regenerate checksums
+.aishore/aishore version                    # Show version
+.aishore/aishore help [command]             # Help
 ```
 
 ## Code Style
