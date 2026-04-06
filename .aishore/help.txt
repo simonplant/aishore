@@ -60,7 +60,7 @@ Commands:
     --since <hash>  Review since specific commit
 
   status            Show backlog overview and sprint readiness
-  update            Update from upstream (--dry-run to check, --force to override)
+  update            Update from upstream (--dry-run to check, --force to override, --ref SHA)
   clean             Archive and remove done items (--dry-run to preview, --no-archive to skip)
     --regression    Clear the regression suite (backup created before removal)
   checksums         Regenerate checksums.sha256 manifest

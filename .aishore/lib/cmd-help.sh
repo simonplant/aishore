@@ -184,6 +184,7 @@ Usage: aishore update [options]
 Options:
   --dry-run     Check for updates without applying
   --force       Update even if already on latest version
+  --ref REF     Update to a specific git ref (commit SHA, branch, or tag)
 EOF
 }
 

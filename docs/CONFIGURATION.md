@@ -519,6 +519,7 @@ Validates: title, commander's intent (>= 20 chars, must be a directive), steps, 
 |------|-------------|
 | `--dry-run` | Check for updates without applying |
 | `--force` | Update even if already on latest |
+| `--ref` | Update to a specific git ref (commit SHA, branch, or tag) |
 | `--no-verify` | Skip checksum verification (requires `--force`) |
 
 ### `status` — Backlog overview

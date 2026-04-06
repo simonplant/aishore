@@ -5,8 +5,8 @@
 # parse_opts, verify_checksum, ensure_tmpdir) come from the main script.
 
 cmd_update() {
-    local dry_run=false force=false no_verify=false
-    parse_opts "bool:dry_run:--dry-run" "bool:force:--force" "bool:no_verify:--no-verify" -- "$@" || return 1
+    local dry_run=false force=false no_verify=false pin_ref=""
+    parse_opts "bool:dry_run:--dry-run" "bool:force:--force" "bool:no_verify:--no-verify" "val:pin_ref:--ref" -- "$@" || return 1
 
     if [[ "$no_verify" == "true" && "$force" != "true" ]]; then
         log_error "--no-verify requires --force"
@@ -78,18 +78,22 @@ cmd_update() {
         return 1
     }
 
-    # Resolve latest release tag
-    local api_url="https://api.github.com/repos/$_update_repo/releases/latest"
-    log_info "Checking for updates..."
+    # Resolve target ref
     local release_tag=""
-    release_tag=$(_update_fetch "$api_url" 2>/dev/null | jq -r '.tag_name // empty') || true
-
-    if [[ -z "$release_tag" ]]; then
-        log_warning "Could not resolve latest release — falling back to main"
-        release_tag="main"
+    if [[ -n "$pin_ref" ]]; then
+        release_tag="$pin_ref"
+        log_info "Using ref: $release_tag"
+    else
+        local api_url="https://api.github.com/repos/$_update_repo/releases/latest"
+        log_info "Checking for updates..."
+        release_tag=$(_update_fetch "$api_url" 2>/dev/null | jq -r '.tag_name // empty') || true
+        if [[ -z "$release_tag" ]]; then
+            log_warning "Could not resolve latest release — falling back to main"
+            release_tag="main"
+        fi
     fi
 
-    # Fetch remote version and checksums via temp files (preserves content exactly)
+    # Fetch remote version
     local _tmp_ver _tmp_ck
     _tmp_ver="$(ensure_tmpdir)/remote_version.txt"
     _tmp_ck="$(ensure_tmpdir)/remote_checksums.txt"
@@ -107,10 +111,10 @@ cmd_update() {
         return 1
     fi
 
-    echo "Remote version: $remote_version (tag: $release_tag)"
+    echo "Remote: $remote_version (ref: $release_tag)"
     echo ""
 
-    if [[ "$AISHORE_VERSION" == "$remote_version" ]] && [[ "$force" != "true" ]]; then
+    if [[ -z "$pin_ref" && "$AISHORE_VERSION" == "$remote_version" && "$force" != "true" ]]; then
         log_success "Already up to date"
         return 0
     fi

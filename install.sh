@@ -14,6 +14,7 @@
 # Options:
 #   --init      Run 'aishore init' after install (creates backlog/)
 #   --force     Reinstall over existing installation (preserves config.yaml and backlog/)
+#   --ref REF   Install from a specific git ref (commit SHA, branch, or tag)
 #   --dir PATH  Install to PATH instead of current directory
 
 set -euo pipefail
@@ -48,6 +49,11 @@ _curl() {
 _RELEASE_TAG=""
 
 resolve_tag() {
+    if [[ -n "$PIN_REF" ]]; then
+        _RELEASE_TAG="$PIN_REF"
+        log "Using ref: $_RELEASE_TAG"
+        return
+    fi
     _RELEASE_TAG=$(_curl -sSfL "$API_URL" 2>/dev/null | jq -r '.tag_name // empty') || true
     if [[ -z "$_RELEASE_TAG" ]]; then
         warn "Could not resolve latest release — falling back to main"
@@ -96,6 +102,7 @@ die()     { error "$1"; exit 1; }
 INSTALL_DIR="."
 DO_INIT=false
 FORCE=false
+PIN_REF=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -106,6 +113,10 @@ while [[ $# -gt 0 ]]; do
         --force)
             FORCE=true
             shift
+            ;;
+        --ref)
+            PIN_REF="$2"
+            shift 2
             ;;
         --dir)
             INSTALL_DIR="$2"
