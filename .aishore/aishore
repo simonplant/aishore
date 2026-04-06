@@ -2108,7 +2108,7 @@ _run_developer_cycle() {
     local dev_extra_prompt=""
     [[ -n "$initial_dev_context" ]] && dev_extra_prompt="$initial_dev_context"
 
-    # Build prior failure context for retries (structured, capped at 2000 chars)
+    # Build prior failure context for retries (last 2 attempts)
     if [[ $attempt -gt 0 ]]; then
         dev_extra_prompt="${dev_extra_prompt:+${dev_extra_prompt}
 }$(_build_prior_failure_context)"
@@ -2278,8 +2278,6 @@ Fix the issues identified above. Address each specific failure point."
     return 0
 }
 
-# Failure-reason labels for _record_sprint_failure, keyed by _validation_failure value.
-
 # Build targeted retry context from structured ac_results JSON.
 # Extracts only failed ACs with their issue and file:line references.
 # Args: $1 = ac_results JSON array string
@@ -2421,7 +2419,7 @@ _sync_remote() {
 # JSON backlog files that previously corrupted sprints.
 # Uses outer-scope locals: ITEM_ID, item_source, total_attempts, sprint_start,
 #   passed, failed, consecutive_failures, groom_exhausted, no_merge, base_branch,
-#   sprint_results, sprint_items, sprint_times, FAILED_IDS, session_lines_added, session_lines_removed
+#   sprint_items, FAILED_IDS
 # Returns 1 on merge conflict (caller should break).
 _handle_sprint_success() {
     # Phase 1: Commit code changes on feature branch (no backlog mutations)
@@ -2528,23 +2526,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
         passed=$((passed + 1))
         consecutive_failures=0
         groom_exhausted=false
-        sprint_results+=("pass")
         sprint_items+=("$ITEM_ID")
-        sprint_times+=("$(( $(date +%s) - sprint_start ))")
 
         # Save verify commands to regression suite
         _save_regression_entries "$BACKLOG_DIR/sprint.json"
-
-        # Accumulate line stats from the archive entry just written
-        local _archive_lines
-        _archive_lines=$(tail -1 "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null || true)
-        if [[ -n "$_archive_lines" ]]; then
-            local _la _lr
-            _la=$(printf '%s' "$_archive_lines" | jq -r '.linesAdded // 0' 2>/dev/null || echo 0)
-            _lr=$(printf '%s' "$_archive_lines" | jq -r '.linesRemoved // 0' 2>/dev/null || echo 0)
-            session_lines_added=$((session_lines_added + _la))
-            session_lines_removed=$((session_lines_removed + _lr))
-        fi
 
         if [[ -n "$NOTIFY_CMD" ]]; then
             bash -c "$NOTIFY_CMD" -- "pass" "$ITEM_ID" 2>/dev/null || log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
@@ -2563,9 +2548,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
         log_error "Failed to mark $ITEM_ID complete"
         failed=$((failed + 1))
         FAILED_IDS["$ITEM_ID"]="Archival failed"
-        sprint_results+=("fail")
         sprint_items+=("$ITEM_ID")
-        sprint_times+=("$(( $(date +%s) - sprint_start ))")
         if [[ -n "$NOTIFY_CMD" ]]; then
             bash -c "$NOTIFY_CMD" -- "fail" "$ITEM_ID" 2>/dev/null || log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
         fi
@@ -2602,7 +2585,7 @@ cmd_run_parse_args() {
 # initialize tracking variables, and build the item queue.
 # Sets outer-scope locals: scope_label, auto_priorities, base_branch,
 #   passed, failed, batch_start, consecutive_failures, groom_exhausted,
-#   sprint_results, sprint_items, sprint_times, session_failures, queued_ids, skipped_ids
+#   sprint_items, session_failures, queued_ids, skipped_ids
 setup_sprint_environment() {
     acquire_lock
     load_config
@@ -2661,17 +2644,12 @@ setup_sprint_environment() {
     passed=0
     failed=0
     batch_start=$(date +%s)
-    sprint_results=()
     sprint_items=()
-    sprint_times=()
     consecutive_failures=0
     groom_exhausted=false
     session_failures=()
     queued_ids=()
     skipped_ids=()
-    session_lines_added=0
-    session_lines_removed=0
-
     # Pre-build ordered list of all items that could be attempted in this batch
     if [[ -n "$specific_id" ]]; then
         queued_ids=("$specific_id")
@@ -2723,9 +2701,7 @@ _record_sprint_failure() {
     consecutive_failures=$((consecutive_failures + 1))
     FAILED_IDS["$ITEM_ID"]="$reason"
     session_failures+=("$ITEM_ID: $reason")
-    sprint_results+=("fail")
     sprint_items+=("$ITEM_ID")
-    sprint_times+=("$(( $(date +%s) - sprint_start ))")
 
     # Destroy worktree (preserves diagnostics internally, resets paths to base)
     handle_sprint_failure
@@ -3006,11 +2982,10 @@ cmd_run() {
     fi
 
     local scope_label="" base_branch
-    local session_lines_added=0 session_lines_removed=0
     local passed=0 failed=0
     declare -A FAILED_IDS
     declare -A COMPLETED_IDS
-    local batch_start sprint_results=() sprint_items=() sprint_times=()
+    local batch_start sprint_items=()
     local consecutive_failures=0 groom_exhausted=false
     local -a session_failures=() session_successes=() queued_ids=() skipped_ids=()
 

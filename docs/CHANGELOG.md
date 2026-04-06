@@ -5,6 +5,17 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.9] - 2026-04-06
+
+### Changed
+
+- **Main script: 3096 → 3057 lines** — removed dead variable writes (`session_lines_added/removed`, `sprint_results`, `sprint_times`), stale comments, orphaned references from prior refactoring
+- **`--ref` flag** for `update` and `install.sh` — install/update from any git ref (commit SHA, branch, or tag), not just releases
+- **Download checksum fix** — files now downloaded directly to disk; command substitution was stripping trailing newlines causing 100% checksum mismatch on update/install
+- **`backlog populate` restored** as lazy-loaded module for creating items from PRODUCT.md
+- **Checksum failure hint** — install and update now show `gh api` fallback command when verification fails
+- **`gh api` install route** documented in README, QUICKSTART, and install.sh header
+
 ## [0.5.8] - 2026-04-06
 
 ### Removed
