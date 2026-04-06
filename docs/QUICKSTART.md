@@ -36,6 +36,9 @@ From your project root:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash
+
+# Or via GitHub API (authenticated, bypasses CDN cache):
+gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d | bash
 ```
 
 Output (approximate):
@@ -271,7 +274,7 @@ rm -rf .aishore/data/status/.aishore.lock   # Clear concurrency lock
 
 **Reinstall (preserves backlog):**
 ```bash
-rm -rf .aishore && curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash
+gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d | bash -s -- --force
 .aishore/aishore init
 ```
 

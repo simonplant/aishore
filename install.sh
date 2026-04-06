@@ -4,8 +4,12 @@
 # Usage:
 #   curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash
 #
-# Or with options:
-#   curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash -s -- --init
+# Via GitHub API (authenticated, bypasses CDN cache):
+#   gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d | bash
+#
+# With options:
+#   ... | bash -s -- --force    # Reinstall over existing
+#   ... | bash -s -- --init     # Run init after install
 #
 # Options:
 #   --init      Run 'aishore init' after install (creates backlog/)

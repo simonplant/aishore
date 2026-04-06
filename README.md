@@ -61,6 +61,9 @@ Failed items retry with failure context fed back to the developer. A circuit bre
 # Install (into .aishore/ — no global dependencies)
 curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash
 
+# Or via GitHub API (authenticated, no CDN cache issues)
+gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d | bash
+
 # Initialize (auto-detects your stack and test command)
 .aishore/aishore init -y
 
