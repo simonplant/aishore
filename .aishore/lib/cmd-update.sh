@@ -55,38 +55,26 @@ cmd_update() {
         fi
     }
 
-    # Fetch a repo file to stdout — tries raw.githubusercontent.com, falls back to Contents API
-    # Usage: _update_fetch_file <relative_path>
-    _update_fetch_file() {
-        local file_path="$1"
+    # Fetch a repo file and save directly to disk.
+    # Downloads to file (not shell variable) to preserve trailing newlines.
+    # Usage: _update_fetch_file_to <relative_path> <dest_path>
+    _update_fetch_file_to() {
+        local file_path="$1" dest="$2"
         local raw_url="https://raw.githubusercontent.com/$_update_repo/$release_tag/$file_path"
 
         # Route 1: raw.githubusercontent.com (fast, no rate limit)
-        local content
-        if content=$(_update_fetch "$raw_url" 2>/dev/null); then
-            printf '%s' "$content"
+        if _update_fetch "$raw_url" > "$dest" 2>/dev/null; then
             return 0
         fi
 
-        # Route 2: GitHub Contents API (always fresh, base64-encoded)
+        # Route 2: GitHub Contents API (base64-encoded)
         local api_url="https://api.github.com/repos/$_update_repo/contents/$file_path?ref=$release_tag"
         local json
         if json=$(_update_fetch "$api_url" 2>/dev/null); then
-            printf '%s' "$json" | jq -r '.content' | base64 -d
+            printf '%s' "$json" | jq -r '.content' | base64 -d > "$dest"
             return 0
         fi
 
-        return 1
-    }
-
-    # Fetch a repo file and save to disk
-    _update_fetch_file_to() {
-        local file_path="$1" dest="$2"
-        local content
-        if content=$(_update_fetch_file "$file_path"); then
-            printf '%s' "$content" > "$dest"
-            return 0
-        fi
         return 1
     }
 
@@ -101,12 +89,18 @@ cmd_update() {
         release_tag="main"
     fi
 
-    # Fetch remote version from VERSION file
-    local remote_version
-    remote_version=$(_update_fetch_file ".aishore/VERSION" | tr -d '[:space:]') || {
+    # Fetch remote version and checksums via temp files (preserves content exactly)
+    local _tmp_ver _tmp_ck
+    _tmp_ver="$(ensure_tmpdir)/remote_version.txt"
+    _tmp_ck="$(ensure_tmpdir)/remote_checksums.txt"
+
+    if ! _update_fetch_file_to ".aishore/VERSION" "$_tmp_ver"; then
         log_error "Failed to fetch remote version"
         return 1
-    }
+    fi
+    local remote_version
+    remote_version=$(tr -d '[:space:]' < "$_tmp_ver")
+    rm -f "$_tmp_ver"
 
     if [[ -z "$remote_version" ]]; then
         log_error "Could not determine remote version"
@@ -123,11 +117,13 @@ cmd_update() {
 
     # Fetch checksums manifest (needed for file discovery and verification)
     log_info "Fetching checksums..."
-    local checksums_content=""
-    checksums_content=$(_update_fetch_file ".aishore/checksums.sha256") || {
+    if ! _update_fetch_file_to ".aishore/checksums.sha256" "$_tmp_ck"; then
         log_error "Cannot fetch checksums manifest — check connectivity and try again"
         return 1
-    }
+    fi
+    local checksums_content
+    checksums_content=$(cat "$_tmp_ck")
+    rm -f "$_tmp_ck"
 
     # Build file list from checksums manifest (with path validation)
     local update_files=()

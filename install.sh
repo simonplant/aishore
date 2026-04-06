@@ -53,37 +53,25 @@ resolve_tag() {
     fi
 }
 
-# Fetch a repo file to stdout — tries raw.githubusercontent.com, falls back to Contents API
-_fetch_repo_file() {
-    local file_path="$1"
+# Fetch a repo file and save directly to disk.
+# Downloads to file (not shell variable) to preserve trailing newlines for checksums.
+_fetch_repo_file_to() {
+    local file_path="$1" dest="$2"
     local raw_url="https://raw.githubusercontent.com/$REPO/$_RELEASE_TAG/$file_path"
 
     # Route 1: raw.githubusercontent.com (fast, no rate limit)
-    local content
-    if content=$(_curl -sSfL "$raw_url" 2>/dev/null); then
-        printf '%s' "$content"
+    if _curl -sSfL "$raw_url" > "$dest" 2>/dev/null; then
         return 0
     fi
 
-    # Route 2: GitHub Contents API (always fresh, base64-encoded)
+    # Route 2: GitHub Contents API (base64-encoded)
     local api_url="https://api.github.com/repos/$REPO/contents/$file_path?ref=$_RELEASE_TAG"
     local json
     if json=$(_curl -sSfL "$api_url" 2>/dev/null); then
-        printf '%s' "$json" | jq -r '.content' | base64 -d
+        printf '%s' "$json" | jq -r '.content' | base64 -d > "$dest"
         return 0
     fi
 
-    return 1
-}
-
-# Fetch a repo file and save to disk
-_fetch_repo_file_to() {
-    local file_path="$1" dest="$2"
-    local content
-    if content=$(_fetch_repo_file "$file_path"); then
-        printf '%s' "$content" > "$dest"
-        return 0
-    fi
     return 1
 }
 
@@ -203,8 +191,12 @@ install_aishore() {
 
     # Fetch checksums manifest and discover files
     log "Fetching file manifest..."
-    CHECKSUMS_CONTENT=$(_fetch_repo_file ".aishore/checksums.sha256") || \
+    local _ck_tmp
+    _ck_tmp=$(mktemp)
+    _fetch_repo_file_to ".aishore/checksums.sha256" "$_ck_tmp" || \
         die "Failed to fetch checksums manifest"
+    CHECKSUMS_CONTENT=$(cat "$_ck_tmp")
+    rm -f "$_ck_tmp"
     local file_list
     file_list=$(discover_files)
     while IFS= read -r f; do
