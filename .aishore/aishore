@@ -26,11 +26,14 @@ LAST_AGENT_LOG=""
 cleanup_exit() {
     # Restore tool file permissions on unexpected exit
     _unlock_tool_files 2>/dev/null || true
-    # Clean up worktree on unexpected exit
+    # Clean up worktree directory but KEEP the branch so work is recoverable
     if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
-        _remove_worktree "$AISHORE_WORKTREE_DIR" "$AISHORE_FEATURE_BRANCH"
+        _remove_worktree "$AISHORE_WORKTREE_DIR"
         AISHORE_WORKTREE_DIR=""
-        AISHORE_FEATURE_BRANCH=""
+        if [[ -n "$AISHORE_FEATURE_BRANCH" ]]; then
+            log_warning "Branch '$AISHORE_FEATURE_BRANCH' preserved — recover with: git checkout $AISHORE_FEATURE_BRANCH"
+            AISHORE_FEATURE_BRANCH=""
+        fi
     fi
     release_lock
     [[ -n "$AISHORE_TMPDIR" && -d "$AISHORE_TMPDIR" ]] && rm -rf "$AISHORE_TMPDIR"
@@ -359,14 +362,17 @@ run_validated_command() {
 }
 
 # Ensure agent's work is committed (safety net if agent missed it)
+# Excludes backlog/ and .aishore/ — only code changes belong on the feature branch.
 _safety_commit() {
     local item_id="$1"
-    if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
+    if ! git diff -- ':!backlog/' ':!.aishore/' --quiet 2>/dev/null \
+        || ! git diff --cached -- ':!backlog/' ':!.aishore/' --quiet 2>/dev/null \
+        || [[ -n "$(git ls-files --others --exclude-standard -- ':!backlog/' ':!.aishore/' 2>/dev/null)" ]]; then
         log_warning "Agent left uncommitted changes — committing"
         local summary
         summary=$(jq -r '.summary // ""' "$STATUS_DIR/result.json" 2>/dev/null || echo "")
         summary="${summary:0:500}"
-        git add -A || { log_error "git add failed in safety commit"; return 1; }
+        git add -A -- ':!backlog/' ':!.aishore/' || { log_error "git add failed in safety commit"; return 1; }
         git commit -m "feat($item_id): ${summary:-implement sprint item}
 
 Co-Authored-By: Claude <noreply@anthropic.com>" || { log_error "git commit failed in safety commit"; return 1; }
@@ -378,8 +384,8 @@ _remove_worktree() {
     local wt_dir="$1" branch="${2:-}"
     cd "$PROJECT_ROOT" || { log_error "Cannot cd to $PROJECT_ROOT"; return 1; }
     git worktree remove "$wt_dir" --force 2>/dev/null || true
-    [[ -d "$wt_dir" ]] && rm -rf "$wt_dir" 2>/dev/null || true
-    [[ -n "$branch" ]] && git branch -D "$branch" 2>/dev/null || true
+    if [[ -d "$wt_dir" ]]; then rm -rf "$wt_dir" 2>/dev/null || true; fi
+    if [[ -n "$branch" ]]; then git branch -D "$branch" 2>/dev/null || true; fi
 }
 
 # ============================================================================
@@ -1341,10 +1347,11 @@ mark_complete() {
     local files_changed=0 lines_added=0 lines_removed=0
     local diffstat
     local diff_base="${AISHORE_BASE_BRANCH:-}"
+    local diff_target="${AISHORE_DIFF_TARGET:-HEAD}"
     if [[ -z "$diff_base" ]]; then
         diff_base="HEAD~1"
     fi
-    diffstat=$(git diff --shortstat "$diff_base" HEAD 2>/dev/null || true)
+    diffstat=$(git diff --shortstat "$diff_base" "$diff_target" 2>/dev/null || true)
     if [[ -n "$diffstat" ]]; then
         files_changed=$(printf '%s\n' "$diffstat" | sed -En 's/[^0-9]*([0-9]+) file.*/\1/p')
         lines_added=$(printf '%s\n' "$diffstat" | sed -En 's/.*[^0-9]([0-9]+) insertion.*/\1/p')
@@ -2154,11 +2161,23 @@ handle_sprint_failure() {
     log_warning "Resetting working tree after sprint failure"
 
     if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
+        # Preserve diagnostics from worktree before it's destroyed
+        local _base_status="$DATA_DIR/status"
+        local _base_logs="$DATA_DIR/logs"
+        mkdir -p "$_base_status" "$_base_logs"
+        if [[ -f "$STATUS_DIR/result.json" ]]; then
+            cp "$STATUS_DIR/result.json" "$_base_status/result.json" 2>/dev/null || true
+        fi
+        if [[ -n "$LAST_AGENT_LOG" && -f "$LAST_AGENT_LOG" ]]; then
+            local _base_log="$_base_logs/$(basename "$LAST_AGENT_LOG")"
+            cp "$LAST_AGENT_LOG" "$_base_log" 2>/dev/null || true
+            LAST_AGENT_LOG="$_base_log"
+        fi
         # Worktree mode: remove worktree and delete the branch
         local fb="$AISHORE_FEATURE_BRANCH"
         AISHORE_FEATURE_BRANCH=""
         _cleanup_worktree
-        [[ -n "$fb" ]] && git branch -D "$fb" 2>/dev/null || true
+        if [[ -n "$fb" ]]; then git branch -D "$fb" 2>/dev/null || true; fi
     elif [[ -n "$AISHORE_FEATURE_BRANCH" && -n "$AISHORE_BASE_BRANCH" ]]; then
         # Fallback: switch back to base and delete the branch
         # (base branch still has backlog state from earlier successful sprints)
@@ -2759,7 +2778,7 @@ _build_prior_failure_context() {
     [[ $max_body_chars -lt 100 ]] && max_body_chars=100
 
     # Build body from newest to oldest, prepending each entry
-    local body="" entry_text
+    local body="" entry_text i
     for ((i=count-1; i>=0; i--)); do
         entry_text="${retry_failure_history[$i]}"
         if [[ $(( ${#body} + ${#entry_text} + 2 )) -gt $max_body_chars && -n "$body" ]]; then
@@ -2846,12 +2865,127 @@ _sync_remote() {
     fi
 }
 
-# Handle post-sprint success: mark complete, safety commit, merge/push.
+# Handle post-sprint success: safety commit, merge/push, then bookkeeping on base.
+# Backlog mutations (mark complete, archive, remove) happen AFTER merge on the base
+# branch — never inside the worktree. This prevents stash/pop merge conflicts on
+# JSON backlog files that previously corrupted sprints.
 # Uses outer-scope locals: ITEM_ID, item_source, total_attempts, sprint_start,
 #   passed, failed, consecutive_failures, groom_exhausted, no_merge, base_branch,
 #   sprint_results, sprint_items, sprint_times, FAILED_IDS, session_lines_added, session_lines_removed
 # Returns 1 on merge conflict (caller should break).
 _handle_sprint_success() {
+    # Phase 1: Commit code changes on feature branch (no backlog mutations)
+    _safety_commit "$ITEM_ID" || log_warning "Safety commit failed — continuing with merge"
+
+    # Phase 2: Capture data from worktree, then destroy it
+    if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
+        # Preserve result.json for merge message / PR body
+        if [[ -f "$STATUS_DIR/result.json" ]]; then
+            cp "$STATUS_DIR/result.json" "$DATA_DIR/status/result.json" 2>/dev/null || true
+        fi
+        _cleanup_worktree
+    fi
+
+    # Phase 3: Merge or push feature branch (code-only — no backlog files to conflict)
+    # Save pre-merge commit for diff stats in mark_complete
+    local _pre_merge_sha
+    _pre_merge_sha=$(git rev-parse HEAD 2>/dev/null || echo "")
+
+    if [[ "$no_merge" == "true" ]]; then
+        log_info "Branch $AISHORE_FEATURE_BRANCH kept for review"
+        if git remote get-url origin &>/dev/null; then
+            git push -u origin "$AISHORE_FEATURE_BRANCH" 2>/dev/null || \
+                log_warning "Failed to push $AISHORE_FEATURE_BRANCH — push manually"
+        fi
+
+        # Create GitHub PR if requested (sprint.json is on base branch, current and valid)
+        if [[ "$create_pr" == "true" ]]; then
+            local pr_title pr_body dev_summary
+            pr_title="$ITEM_ID: $(jq -r '.item.title // ""' "$BACKLOG_DIR/sprint.json" 2>/dev/null)"
+            dev_summary=$(jq -r '.summary // ""' "$STATUS_DIR/result.json" 2>/dev/null || echo "")
+            pr_body="## Summary"$'\n\n'"$dev_summary"
+            if gh pr create --base "$base_branch" --head "$AISHORE_FEATURE_BRANCH" \
+                --title "$pr_title" --body "$pr_body" 2>/dev/null; then
+                log_success "GitHub PR created for $ITEM_ID"
+            else
+                log_warning "Failed to create PR — branch pushed for manual review"
+            fi
+        fi
+
+        git checkout "$base_branch" || { log_error "Cannot checkout $base_branch after no-merge push"; return 1; }
+    else
+        # Save sprint.json content (mark_complete needs it after merge), then reset
+        # the working copy to committed state so git merge doesn't refuse due to
+        # uncommitted changes. Restored after merge.
+        local _saved_sprint_json=""
+        _saved_sprint_json=$(cat "$BACKLOG_DIR/sprint.json" 2>/dev/null || true)
+        git checkout -- "$BACKLOG_DIR/sprint.json" 2>/dev/null || true
+
+        # Clean merge — no stash needed since backlog files are not mutated in worktree
+        local merge_summary
+        merge_summary=$(jq -r '.summary // ""' "$STATUS_DIR/result.json" 2>/dev/null || echo "")
+        merge_summary="${merge_summary:0:500}"
+        local merge_msg="merge: $ITEM_ID ${merge_summary:-sprint branch}"
+
+        git checkout "$base_branch" || {
+            log_error "Cannot checkout $base_branch for merge"
+            AISHORE_FEATURE_BRANCH=""
+            return 1
+        }
+
+        if [[ "$MERGE_STRATEGY" == "squash" ]]; then
+            log_info "Squash-merging $AISHORE_FEATURE_BRANCH → $base_branch"
+            if git merge --squash "$AISHORE_FEATURE_BRANCH"; then
+                git commit -m "feat($ITEM_ID): ${merge_summary:-implement sprint item}
+
+Co-Authored-By: Claude <noreply@anthropic.com>" || {
+                    log_error "Commit failed after squash merge"
+                    return 1
+                }
+            else
+                log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
+                git merge --abort 2>/dev/null || true
+                AISHORE_FEATURE_BRANCH=""
+                return 1
+            fi
+        else
+            log_info "Merging $AISHORE_FEATURE_BRANCH → $base_branch"
+            if ! git merge --no-ff "$AISHORE_FEATURE_BRANCH" -m "$merge_msg
+
+Co-Authored-By: Claude <noreply@anthropic.com>"; then
+                log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
+                git merge --abort 2>/dev/null || true
+                AISHORE_FEATURE_BRANCH=""
+                return 1
+            fi
+        fi
+
+        # -D for squash (git can't detect merge), -d for no-ff
+        local delete_flag="-d"
+        [[ "$MERGE_STRATEGY" == "squash" ]] && delete_flag="-D"
+        git branch "$delete_flag" "$AISHORE_FEATURE_BRANCH" 2>/dev/null || true
+        log_success "Merged and cleaned up $AISHORE_FEATURE_BRANCH"
+
+        _sync_remote "$base_branch"
+
+        # Restore sprint.json for mark_complete (was reset to clear the merge path)
+        if [[ -n "$_saved_sprint_json" ]]; then
+            printf '%s\n' "$_saved_sprint_json" > "$BACKLOG_DIR/sprint.json"
+        fi
+    fi
+    # Phase 4: Bookkeeping on the base branch (mark complete, archive, remove)
+    # Set diff base/target so mark_complete computes accurate line stats
+    local _saved_base="$AISHORE_BASE_BRANCH"
+    local _saved_diff_target="${AISHORE_DIFF_TARGET:-}"
+    if [[ -n "$_pre_merge_sha" ]]; then
+        AISHORE_BASE_BRANCH="$_pre_merge_sha"
+    fi
+    if [[ "$no_merge" == "true" && -n "$AISHORE_FEATURE_BRANCH" ]]; then
+        # --no-merge: HEAD is base (no merge happened), diff against feature branch tip
+        AISHORE_DIFF_TARGET="$AISHORE_FEATURE_BRANCH"
+    fi
+    AISHORE_FEATURE_BRANCH=""
+
     if mark_complete "$ITEM_ID" "$item_source" "$total_attempts"; then
         log_success "Sprint complete: $ITEM_ID"
         COMPLETED_IDS["$ITEM_ID"]=1
@@ -2862,7 +2996,7 @@ _handle_sprint_success() {
         sprint_items+=("$ITEM_ID")
         sprint_times+=("$(( $(date +%s) - sprint_start ))")
 
-        # Save verify commands to regression suite — evals compound across sprints
+        # Save verify commands to regression suite
         _save_regression_entries "$BACKLOG_DIR/sprint.json"
 
         # Accumulate line stats from the archive entry just written
@@ -2880,7 +3014,7 @@ _handle_sprint_success() {
             bash -c "$NOTIFY_CMD" -- "pass" "$ITEM_ID" 2>/dev/null || log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
         fi
 
-        # Record compact success summary for groom agents (read before removing item)
+        # Record compact success summary for groom agents
         local _ss_title _ss_ac_count
         _ss_title=$(jq -r '.item.title // ""' "$BACKLOG_DIR/sprint.json" 2>/dev/null || true)
         _ss_ac_count=$(jq -r '.item.acceptanceCriteria | length' "$BACKLOG_DIR/sprint.json" 2>/dev/null || echo 0)
@@ -2899,130 +3033,10 @@ _handle_sprint_success() {
         if [[ -n "$NOTIFY_CMD" ]]; then
             bash -c "$NOTIFY_CMD" -- "fail" "$ITEM_ID" 2>/dev/null || log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
         fi
-        # Return to base branch so subsequent sprints branch correctly
-        log_warning "Abandoning feature branch $AISHORE_FEATURE_BRANCH due to archival failure"
-        git checkout "$base_branch" >/dev/null 2>&1 || true
-        git branch -D "$AISHORE_FEATURE_BRANCH" >/dev/null 2>&1 || true
-        AISHORE_FEATURE_BRANCH=""
-        return 0
     fi
 
-    _safety_commit "$ITEM_ID" || log_warning "Safety commit failed — continuing with merge"
-
-    # Worktree mode: copy result.json back, then remove worktree and restore paths
-    # The feature branch (with all commits) is shared via git, so merge works from original dir
-    if [[ -n "$AISHORE_WORKTREE_DIR" ]]; then
-        # Preserve result.json for PR body / squash message
-        [[ -f "$STATUS_DIR/result.json" ]] && cp "$STATUS_DIR/result.json" "$DATA_DIR/status/result.json"
-        # Capture archive entry before worktree is destroyed (needed for --no-merge)
-        local _wt_archive_entry
-        _wt_archive_entry=$(tail -1 "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null || true)
-        _cleanup_worktree
-        if [[ "$no_merge" == "true" ]]; then
-            # No merge will happen — manually replicate tracking data to main
-            if [[ -n "$_wt_archive_entry" ]]; then
-                mkdir -p "$ARCHIVE_DIR"
-                printf '%s\n' "$_wt_archive_entry" >> "$ARCHIVE_DIR/sprints.jsonl"
-            fi
-        else
-            # Merge will bring all worktree changes — discard stale uncommitted
-            # tracking files on main so the merge applies cleanly
-            git checkout -- "$BACKLOG_DIR/sprint.json" 2>/dev/null || true
-            git checkout -- "$ARCHIVE_DIR/sprints.jsonl" 2>/dev/null || true
-        fi
-    fi
-
-    # Merge feature branch back to base, push, and pull before next item
-    # no-merge: push branch for review, optionally create PR, then return
-    if [[ "$no_merge" == "true" ]]; then
-        log_info "Branch $AISHORE_FEATURE_BRANCH kept for review"
-        if git remote get-url origin &>/dev/null; then
-            git push -u origin "$AISHORE_FEATURE_BRANCH" 2>/dev/null || \
-                log_warning "Failed to push $AISHORE_FEATURE_BRANCH — push manually"
-        fi
-
-        # Create GitHub PR if requested
-        if [[ "$create_pr" == "true" ]]; then
-            local pr_title pr_body dev_summary
-            pr_title="$ITEM_ID: $(jq -r '.item.title // ""' "$BACKLOG_DIR/sprint.json" 2>/dev/null)"
-            dev_summary=$(jq -r '.summary // ""' "$STATUS_DIR/result.json" 2>/dev/null || echo "")
-            pr_body="## Summary"$'\n\n'"$dev_summary"
-            if gh pr create --base "$base_branch" --head "$AISHORE_FEATURE_BRANCH" \
-                --title "$pr_title" --body "$pr_body" 2>/dev/null; then
-                log_success "GitHub PR created for $ITEM_ID"
-            else
-                log_warning "Failed to create PR — branch pushed for manual review"
-            fi
-        fi
-
-        git checkout "$base_branch" || { log_error "Cannot checkout $base_branch after no-merge push"; return 1; }
-    else
-        # Shared merge path: squash or no-ff, branching only on the git merge command
-        local merge_summary
-        merge_summary=$(jq -r '.summary // ""' "$STATUS_DIR/result.json" 2>/dev/null || echo "")
-        merge_summary="${merge_summary:0:500}"
-        local merge_msg="merge: $ITEM_ID ${merge_summary:-sprint branch}"
-
-        # Stash all uncommitted changes before checkout+merge
-        local _had_stash=false
-        if ! git diff --quiet 2>/dev/null; then
-            git stash push -q && _had_stash=true
-        fi
-
-        git checkout "$base_branch" || {
-            log_error "Cannot checkout $base_branch for merge"
-            [[ "$_had_stash" == "true" ]] && git stash pop -q 2>/dev/null || true
-            AISHORE_FEATURE_BRANCH=""
-            return 1
-        }
-
-        if [[ "$MERGE_STRATEGY" == "squash" ]]; then
-            log_info "Squash-merging $AISHORE_FEATURE_BRANCH → $base_branch"
-            if git merge --squash "$AISHORE_FEATURE_BRANCH"; then
-                git commit -m "feat($ITEM_ID): ${merge_summary:-implement sprint item}
-
-Co-Authored-By: Claude <noreply@anthropic.com>" || {
-                    log_error "Commit failed after squash merge — worktree may need manual cleanup"
-                    return 1
-                }
-            else
-                log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
-                if ! git merge --abort 2>/dev/null; then
-                    log_warning "git merge --abort failed — worktree may need manual cleanup"
-                fi
-                [[ "$_had_stash" == "true" ]] && git stash pop -q 2>/dev/null || true
-                AISHORE_FEATURE_BRANCH=""
-                return 1
-            fi
-        else
-            log_info "Merging $AISHORE_FEATURE_BRANCH → $base_branch"
-            if ! git merge --no-ff "$AISHORE_FEATURE_BRANCH" -m "$merge_msg
-
-Co-Authored-By: Claude <noreply@anthropic.com>"; then
-                log_error "Merge conflict on $AISHORE_FEATURE_BRANCH — resolve manually"
-                if ! git merge --abort 2>/dev/null; then
-                    log_warning "git merge --abort failed — worktree may need manual cleanup"
-                fi
-                [[ "$_had_stash" == "true" ]] && git stash pop -q 2>/dev/null || true
-                AISHORE_FEATURE_BRANCH=""
-                return 1
-            fi
-        fi
-
-        # -D for squash (git can't detect merge), -d for no-ff
-        local delete_flag="-d"
-        [[ "$MERGE_STRATEGY" == "squash" ]] && delete_flag="-D"
-        git branch "$delete_flag" "$AISHORE_FEATURE_BRANCH" 2>/dev/null || true
-        log_success "Merged and cleaned up $AISHORE_FEATURE_BRANCH"
-
-        # Restore stashed backlog/tracking changes after merge
-        if [[ "$_had_stash" == "true" ]]; then
-            git stash pop -q 2>/dev/null || log_warning "Failed to restore stashed backlog changes — may need manual git stash pop"
-        fi
-
-        _sync_remote "$base_branch"
-    fi
-    AISHORE_FEATURE_BRANCH=""
+    AISHORE_BASE_BRANCH="$_saved_base"
+    AISHORE_DIFF_TARGET="$_saved_diff_target"
     return 0
 }
 
@@ -3248,7 +3262,8 @@ _count_total_ready() {
     sum_backlog_count count_ready_items
 }
 
-# Record a sprint failure: update counters, mark item, store context, notify
+# Record a sprint failure: destroy worktree first, then update counters and
+# write metadata on the base branch (so failure tracking persists).
 # Uses outer-scope locals from cmd_run and setup_sprint_environment.
 _record_sprint_failure() {
     local reason="$1" detail="$2"
@@ -3256,18 +3271,20 @@ _record_sprint_failure() {
     consecutive_failures=$((consecutive_failures + 1))
     FAILED_IDS["$ITEM_ID"]="$reason"
     session_failures+=("$ITEM_ID: $reason")
-    mark_item_failed "$ITEM_ID" "$detail" "$item_source"
     sprint_results+=("fail")
     sprint_items+=("$ITEM_ID")
     sprint_times+=("$(( $(date +%s) - sprint_start ))")
 
-    # Store failure context for later diagnosis
+    # Destroy worktree (preserves diagnostics internally, resets paths to base)
+    handle_sprint_failure
+
+    # Now paths point to base — write failure metadata here so it persists
     _store_failure_context "$ITEM_ID" "$reason" "$detail"
+    mark_item_failed "$ITEM_ID" "$detail" "$item_source"
 
     if [[ -n "$NOTIFY_CMD" ]]; then
         bash -c "$NOTIFY_CMD" -- "fail" "$ITEM_ID" 2>/dev/null || log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
     fi
-    handle_sprint_failure
 }
 
 
@@ -3446,14 +3463,8 @@ run_sprint_loop() {
             log_info "Running setup: $SETUP_CMD"
             if ! bash -c "$SETUP_CMD" 2>&1; then
                 log_error "Setup command failed — aborting sprint"
-                _record_sprint_failure "$ITEM_ID" "$item_source" "Setup failed" "Setup command '$SETUP_CMD' failed in worktree"
-                _cleanup_worktree
-                cd "$PROJECT_ROOT" || { log_error "Cannot return to project root"; break; }
-                failed=$((failed + 1))
-                FAILED_IDS["$ITEM_ID"]="Setup failed"
-                sprint_results+=("fail")
-                sprint_items+=("$ITEM_ID")
-                sprint_times+=("$(( $(date +%s) - sprint_start ))")
+                _record_sprint_failure "Setup failed" "Setup command '$SETUP_CMD' failed in worktree"
+                cd "$PROJECT_ROOT" 2>/dev/null || true
                 continue
             fi
         fi

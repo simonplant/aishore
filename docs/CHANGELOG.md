@@ -5,6 +5,21 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.4] - 2026-04-06
+
+### Fixed
+
+- **Backlog JSON corruption on multi-sprint sessions** — backlog mutations (mark complete, archive, remove) moved from worktree to base branch post-merge, eliminating stash/pop conflicts that corrupted JSON and stopped subsequent sprints
+- **Stash/pop removed from merge path** — feature branches now contain only code changes; merges are clean with no backlog file conflicts
+- **Ctrl+C no longer destroys committed work** — EXIT trap preserves the feature branch for recovery, only cleans up the worktree directory
+- **Failure metadata lost with worktree** — agent logs, result.json, and failure context are now copied to base branch before worktree destruction; failCount and lastFailReason persist across sessions
+- **`_record_sprint_failure` called with wrong arguments** — was passing 4 args (ITEM_ID, source, reason, detail) to a 2-arg function, corrupting failure tracking
+- **Double-counted failures on setup command failure** — removed duplicate counter increments and redundant `_cleanup_worktree` call
+- **Sprint loop counter corruption** — `_build_prior_failure_context` now declares `local i`, preventing clobber of the outer sprint loop variable when retries > 0
+- **Safety commit scope** — `_safety_commit` now excludes `backlog/` and `.aishore/` via pathspec, preventing operational files from landing on feature branches
+- **`--no-merge` diff stats** — archive entries now record accurate line stats by diffing against the feature branch tip instead of HEAD
+- **`_remove_worktree` `&&`/`||` precedence** — restructured to prevent silent error swallowing
+
 ## [0.5.3] - 2026-04-03
 
 ### Added

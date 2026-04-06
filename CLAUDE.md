@@ -69,7 +69,7 @@ Pick Item → Create Branch (aishore/<ID>) → Preflight (regression + baseline)
 
 **Top-down scaffolding enforcement:** The system prevents fragment accumulation — building isolated pieces that never connect into a working whole. The architect agent (`scaffold`, also runs in auto-groom) detects fragment risk signals (stub entry points, mock-only dependencies, disconnected modules) and creates scaffolding backlog items with `must` priority and `dependsOn` chains. The developer agent is instructed to wire code to real entry points. The validator flags disconnected code as advisory notes. The groomer watches for feature priorities outrunning the skeleton during grooming.
 
-**Git branching model:** Each sprint item runs on its own feature branch (`aishore/<ITEM-ID>`), created from the current branch. The developer agent commits its own work. On success, the branch is merged back with `--no-ff`, pushed, and the base branch pulls latest before the next item. On failure, the branch is deleted. Use `--no-merge` to keep branches for PR review (they get pushed to origin instead).
+**Git branching model:** Each sprint item runs in an isolated worktree on its own feature branch (`aishore/<ITEM-ID>`). The worktree contains only code changes — backlog mutations (mark complete, archive, remove) happen on the base branch after merge, never inside the worktree. This prevents merge conflicts on JSON backlog files. On success, the branch is merged back with `--no-ff`, pushed, and the base branch pulls latest before the next item. On failure, the branch is deleted but diagnostics (agent logs, result.json, failure metadata) are preserved on the base branch. On unexpected exit (Ctrl+C, crash), the feature branch is preserved for recovery. Use `--no-merge` to keep branches for PR review (they get pushed to origin instead).
 
 **Modular architecture:** The CLI is split into a core orchestrator (`.aishore/aishore`) and lazy-loaded command modules in `.aishore/lib/`. Modules are loaded on demand via `_load_module <name>`, which sources `.aishore/lib/<name>.sh` once per process. This keeps startup fast and the main script focused on orchestration (agent invocation, git branching, sprint loop).
 
@@ -125,7 +125,7 @@ The orchestrator polls for this file, then proceeds to the next step.
 
 **Concurrency:** Only one aishore process runs at a time, enforced via a mkdir+PID lock at `.aishore/data/status/.aishore.lock/`. The lock is self-healing — stale locks from crashed processes are detected via PID liveness check and automatically cleaned up.
 
-**Safe failure recovery:** Sprint failures delete the feature branch and return to the base branch cleanly. The developer agent commits directly; the orchestrator has a safety net commit if the agent misses it.
+**Safe failure recovery:** Sprint failures preserve diagnostics (agent logs, result.json, failure context) to the base branch before destroying the worktree, then delete the feature branch. Failure metadata (failCount, lastFailReason) is written to the base branch's backlog so it persists across sessions. On unexpected exit (Ctrl+C, OOM), the worktree is cleaned up but the feature branch is preserved for manual recovery. The safety commit excludes `backlog/` and `.aishore/` — only code changes belong on the feature branch.
 
 **Scope checking:** Items can have a `scope` array of glob patterns (e.g., `["src/**", "tests/**"]`). Scope is advisory — injected into the developer prompt as preferred file constraints but not mechanically enforced post-commit.
 
