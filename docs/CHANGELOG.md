@@ -5,6 +5,28 @@ All notable changes to aishore will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7] - 2026-04-06
+
+### Changed
+
+- **CLAUDE.md restructured for agent consumption** — 193→114 lines. Removed orchestrator internals (module loading, PID locks, checksums, update integrity) that wasted context on every agent session. Removed duplicate template section. Restructured as scannable sections: overview, sprint flow, agent roles, completion contract, quality model, key rules, commands, code style, directory layout.
+- **ARCHITECTURE.md tightened for agent parsing** — Design Decisions converted from narrative paragraphs to constraint table. Pipeline stages converted to scannable table. Completion Contract promoted above agent system. Data flow table added for inter-agent communication.
+- **PRODUCT.md boundaries reframed** — Non-Goals converted from negative framing ("no standups, no coverage targets") to positive Boundaries that agents can apply as constraints.
+- **claude-section.md addresses agents directly** — "Agent rules (mandatory)" replaces hedging "What this means for you (if you're an AI agent)". Added "commit before signaling" rule.
+
+### Added
+
+- **Completion contract fallback in developer.md** — result.json schema included so agent isn't 100% reliant on orchestrator injection. Default phase sequence for when orchestrator instructions are truncated.
+- **Mode gates in groomer.md** — explicit groom/populate mode markers so agents skip irrelevant sections.
+
+### Fixed
+
+- README version v0.5.3→v0.5.7, dead `auto done` command refs in PROBLEMS.md, "Tech Lead"→"Groomer" in both DEFINITIONS files, missing step 6 in CONTRIBUTING.md, incomplete `run [N|ID]` in claude-section template, stale max_turns defaults (25/15/15→75/45/45) in CONFIGURATION.md sample config
+- Deleted stale `docs/FEAT-065-auto-mode-trace.md` (completed historical trace with wrong line numbers)
+- Removed 7 hollow "Evidence" sections from PROBLEMS.md (uncited "studies show" claims)
+- Gitignored `.aishore/data/code-analysis.md` and `.aishore/data/code-audit.md` (runtime artifacts that were tracked)
+- Synced DEFINITIONS.md: template now has full intent examples, backlog version now has archive schemas
+
 ## [0.5.6] - 2026-04-06
 
 ### Fixed

@@ -134,7 +134,7 @@ Those are agents that solve individual tasks. aishore manages the *sprint*, not 
 
 ## Status
 
-**Alpha** (v0.5.6). Battle-tested on its own codebase, used daily on real projects.
+**Alpha** (v0.5.7). Battle-tested on its own codebase, used daily on real projects.
 
 Known limits: single-repo only, Claude Code CLI as the only AI backend, macOS/Linux only.
 
