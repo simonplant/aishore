@@ -9,7 +9,7 @@
 | 3 | **AC** | Acceptance criteria are verifiable |
 | 4 | **No blockers** | Dependencies resolved |
 | 5 | **Right size** | Completable in one sprint |
-| 6 | **readyForSprint** | Tech Lead has marked it ready |
+| 6 | **readyForSprint** | Groomer has marked it ready |
 
 ## Definition of Done (DoD)
 
@@ -109,3 +109,35 @@ AC entries with a `verify` field are **evals** — shell commands that prove the
 3. **Run before every future sprint** as pre-flight (protects prior work from regressions)
 
 Prefer verify commands over plain-string AC wherever behavior is observable via shell command. Plain-string AC are validated by the Validator agent's judgment; verify commands are validated deterministically.
+
+## Archive Schemas
+
+### `backlog/archive/sprints.jsonl`
+
+One JSON object per line, appended on each sprint completion:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `date` | string | Completion date (`YYYY-MM-DD`) |
+| `sprintId` | string | Unique sprint ID |
+| `itemId` | string | Backlog item ID |
+| `status` | string | `complete` |
+| `attempts` | integer | Number of attempts (including retries) |
+| `filesChanged` | integer | Files modified |
+| `linesAdded` | integer | Lines added |
+| `linesRemoved` | integer | Lines removed |
+| `duration` | integer | Wall-clock seconds |
+| `priority` | string | Item priority at completion |
+| `category` | string | Item category at completion |
+| `title` | string | Item title |
+
+### `backlog/archive/regression.jsonl`
+
+Accumulated verify commands from completed sprints. Run as pre-flight before every sprint:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `itemId` | string | Source backlog item ID |
+| `date` | string | Date saved (`YYYY-MM-DD`) |
+| `text` | string | AC description |
+| `verify` | string | Shell command that must exit 0 |

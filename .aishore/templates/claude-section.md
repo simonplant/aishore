@@ -14,7 +14,7 @@ This project uses aishore for autonomous sprint execution. Backlog lives in `bac
 - **Stay in scope.** Implement the item you're assigned. Don't fix unrelated code, add unrequested features, or refactor surrounding code.
 
 ```bash
-.aishore/aishore run [N|ID]         # Run sprints (branch, commit, merge, push per item)
+.aishore/aishore run [N|ID|scope]    # Run sprints (scope: done, p0, p1, p2)
 .aishore/aishore groom              # Groom bugs, features, and tech debt
 .aishore/aishore scaffold           # Scaffolding review
 .aishore/aishore review             # Architecture review

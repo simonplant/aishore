@@ -21,7 +21,7 @@ Verify everything at once:
 bash --version | head -1 && git --version && jq --version && claude --version
 ```
 
-Expected output:
+Output (approximate):
 
 ```
 GNU bash, version 5.2.37(1)-release ...
@@ -38,7 +38,7 @@ From your project root:
 curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash
 ```
 
-Expected output:
+Output (approximate):
 
 ```
 Installing aishore...
@@ -68,7 +68,7 @@ Run the setup wizard:
 
 The wizard checks prerequisites, detects your project type, configures validation, and creates `backlog/`. Accept the defaults or customize as prompted.
 
-Expected output:
+Output (approximate):
 
 ```
 aishore init
@@ -93,7 +93,7 @@ Accept? [Y/n]: Y
 Ready! Add your first backlog item with: .aishore/aishore backlog add
 ```
 
-For fully automated setup (no prompts): `.aishore/aishore init --yes`
+For fully automated setup (no prompts): `.aishore/aishore init -y`
 
 **Set your validation command** in `.aishore/config.yaml` if auto-detection missed it:
 
@@ -125,7 +125,7 @@ Intent guides the developer agent when the spec is ambiguous and the validator w
   --priority must
 ```
 
-Expected output:
+Output (approximate):
 
 ```
 Added FEAT-001: Add health check endpoint
@@ -139,7 +139,7 @@ Verify it was added:
 .aishore/aishore backlog list
 ```
 
-Expected output:
+Output (approximate):
 
 ```
 backlog.json (1 item)
@@ -154,7 +154,7 @@ Grooming adds implementation steps, acceptance criteria, and marks the item spri
 .aishore/aishore groom
 ```
 
-Expected output:
+Output (approximate):
 
 ```
 Grooming 1 item...
@@ -170,7 +170,7 @@ Verify readiness:
 .aishore/aishore backlog check FEAT-001
 ```
 
-Expected output:
+Output (approximate):
 
 ```
 FEAT-001: Add health check endpoint
@@ -231,7 +231,7 @@ Check the git log to see the merge:
 git log --oneline -5
 ```
 
-Expected output:
+Output (approximate):
 
 ```
 abc1234 Merge branch 'aishore/FEAT-001'

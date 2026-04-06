@@ -67,7 +67,7 @@ jq empty backlog/*.json
 3. Make your changes
 4. Run shellcheck and smoke tests (see above)
 5. Commit using conventional commits (see below)
-7. Push and open a PR
+6. Push and open a PR
 
 ## Commit Convention
 

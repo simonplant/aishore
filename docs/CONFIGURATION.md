@@ -49,9 +49,9 @@ validation:
 # agent:
 #   timeout: 3600
 #   max_turns:
-#     developer: 25
-#     validator: 15
-#     groomer: 15
+#     developer: 75
+#     validator: 45
+#     groomer: 45
 
 # Permissions (restrict for tighter sandbox)
 # permissions:

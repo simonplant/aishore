@@ -4,22 +4,7 @@ Where aishore is, where it's going, and what's not worth building yet.
 
 ## Current (v0.5.x)
 
-aishore ships working autonomous sprints today:
-
-- **Full sprint lifecycle** — branch, pre-flight, develop (with maturity protocol), validate, merge, archive — per item, hands-off
-- **Autonomous mode** — `run done` drains the backlog with priority scoping, auto-grooming, failure tracking, and circuit breaker
-- **Intent as hard gate** — items without commander's intent don't enter sprints. Validator checks intent fulfillment, not just AC pass/fail.
-- **Executable evals** — AC verify commands run real behavior checks. Regression suite compounds automatically across sprints.
-- **Scaffolding detection** — architect agent identifies fragment risk before features sprint. Scaffolding items wire the skeleton first.
-- **Retry with structured context** — failures feed back file:line references from validator AC results. Retry cap increased to 4000 chars with compact summaries preserved on truncation. Spec refinement rewrites steps/AC as a last resort.
-- **Maturity protocol enforcement** — `check_result("developer")` rejects pass results missing `.phases` evidence. Developer must prove critique findings and harden verification counts.
-- **Mandatory validator ac_results** — validator must include structured per-AC results (ac_index, met, issue, file, line). Warning on degraded retry when missing.
-- **AC verify deduplication** — developer runs verify commands for feedback, orchestrator runs authoritatively, validator trusts results and focuses on intent and integration.
-- **Integration enforcement** — disconnected code is a hard failure when item has verify commands, advisory for scaffolding items.
-- **Scope enforcement** — post-commit warning when files modified outside declared scope globs.
-- **Regression suite management** — `clean --regression` with backup, `regression-skip.json` to skip flaky entries by item ID.
-- **Agent output streaming** — real-time visibility into what the developer agent is doing during long sprints.
-- **Checksum-verified updates** — self-update from GitHub releases with SHA-256 integrity checks
+aishore ships working autonomous sprints: full sprint lifecycle (branch, develop, validate, merge, archive), autonomous batch execution with priority scoping, intent-gated quality, executable evals with a compounding regression suite, and structured retry with spec refinement. See the [changelog](CHANGELOG.md) for the complete feature history.
 
 ## Next
 
