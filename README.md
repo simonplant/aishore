@@ -25,6 +25,14 @@ gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d 
 .aishore/aishore init -y
 ```
 
+**Update:**
+
+```bash
+.aishore/aishore update                # Latest release
+.aishore/aishore update --ref main     # Latest commit on main
+.aishore/aishore update --ref abc123f  # Specific commit
+```
+
 **Requirements:** Bash 4.4+, jq, git, [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code). Optional: yq (full config.yaml support).
 
 ## Usage
