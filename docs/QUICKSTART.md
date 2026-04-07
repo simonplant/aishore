@@ -105,85 +105,51 @@ validation:
   command: "npm test && npm run lint"   # Your stack's test/lint command
 ```
 
-## 4. Write Your First Intent
+## 4. Write Your Product Doc
 
-Every backlog item needs a **commander's intent** — a non-negotiable directive stating what must be true when done. This is the most important field. Without it, items cannot enter a sprint.
+aishore works best when you start from a product requirements document. Write a `docs/PRODUCT.md` (or fill in the template `init` created) describing what you're building — vision, features, constraints. This is the input the groomer uses to create backlog items.
 
-Write intent like an order, not a description:
+Even a short description helps. The more specific you are, the better the generated items will be.
 
-| Good | Bad |
-|------|-----|
-| "Ops must know instantly if the service is alive or dead." | "Add health check endpoint" (implementation, not outcome) |
-| "Users authenticate securely or are told why not. Never a blank screen." | "Improve auth" (vague, no bar) |
+## 5. Populate the Backlog
 
-Intent guides the developer agent when the spec is ambiguous and the validator when checking results.
-
-## 5. Add a Backlog Item
+Generate backlog items from your product doc:
 
 ```bash
-.aishore/aishore backlog add \
-  --title "Add health check endpoint" \
-  --intent "Ops must know instantly if the service is alive or dead." \
-  --desc "GET /health returns 200 with {status: ok}" \
-  --priority must
+.aishore/aishore backlog populate
 ```
 
-Output (approximate):
+The groomer agent reads your PRODUCT.md, creates sprint-ready items with intent, steps, and executable acceptance criteria. It scaffolds top-down (skeleton before features) and right-sizes items for single sprints.
 
-```
-Added FEAT-001: Add health check endpoint
-  Priority: must
-  Intent: Ops must know instantly if the service is alive or dead.
-```
-
-Verify it was added:
+Verify what was created:
 
 ```bash
 .aishore/aishore backlog list
+.aishore/aishore backlog show FEAT-001   # Full detail of one item
 ```
 
-Output (approximate):
+**Edit, add, or remove items** to shape the backlog:
 
+```bash
+.aishore/aishore backlog edit FEAT-001 --priority must --intent "..."
+.aishore/aishore backlog add --title "..." --intent "..." --ac "..." --ac-verify "..."
+.aishore/aishore backlog rm FEAT-003 --force
 ```
-backlog.json (1 item)
-  FEAT-001  todo  must  Add health check endpoint
-```
+
+Every item needs a **commander's intent** — a directive stating what must be true when done. Not "add health check" but "ops must know instantly if the service is alive or dead." Intent gates sprint entry and guides the developer when specs are ambiguous.
 
 ## 6. Groom
 
-Grooming adds implementation steps, acceptance criteria, and marks the item sprint-ready:
+Grooming refines items — adds steps, tightens AC, attaches verify commands, and marks items sprint-ready:
 
 ```bash
 .aishore/aishore groom
 ```
 
-Output (approximate):
-
-```
-Grooming 1 item...
-  ✓ FEAT-001: Added 3 steps, 2 acceptance criteria
-  ✓ FEAT-001: Marked ready for sprint
-
-Grooming complete. 1 item ready.
-```
-
-Verify readiness:
+Check readiness:
 
 ```bash
-.aishore/aishore backlog check FEAT-001
-```
-
-Output (approximate):
-
-```
-FEAT-001: Add health check endpoint
-  ✓ Intent present (52 chars)
-  ✓ Steps defined (3)
-  ✓ Acceptance criteria defined (2)
-  ✓ No blocking dependencies
-  ✓ Marked ready for sprint
-
-All gates pass — item is sprint-ready.
+.aishore/aishore backlog check --all
 ```
 
 ## 7. Run Your First Sprint
@@ -280,8 +246,10 @@ gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d 
 
 ## Next Steps
 
-- Run multiple sprints: `.aishore/aishore run 5`
-- Autonomous mode: `.aishore/aishore run done` (drains the entire backlog)
+- Drain the backlog: `.aishore/aishore run done`
+- Must-haves only: `.aishore/aishore run p0`
+- With retries: `.aishore/aishore run done --retries 2`
+- Detect fragment risk: `.aishore/aishore scaffold`
 - Architecture review: `.aishore/aishore review`
 - Full command reference: `.aishore/aishore help`
 - Full docs: [README.md](../README.md)

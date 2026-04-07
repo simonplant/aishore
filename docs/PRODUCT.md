@@ -2,9 +2,9 @@
 
 ## Vision
 
-aishore is a sprint orchestration layer for AI coding agents. It exists because AI can write code but can't ship a sprint — there's no batch execution, no quality gates, no failure recovery, and no memory of what was already built.
+aishore is a sprint orchestration layer for AI coding agents. You write a product doc describing what to build. AI turns it into a backlog, implements each item, validates against intent, and merges — autonomously, item by item, while you sleep.
 
-The core belief: **humans own what to build, machines own how fast and how correctly.** A human writes intent and priority. An AI implements, critiques its own work, and hardens it — all in one session while context is hot. A separate AI validates against intent, not just acceptance criteria. A regression suite compounds proof that prior work still holds. The result is merged, working code — not a PR waiting for review, not a green CI badge on broken software, not a demo that works once.
+**The workflow:** Write PRODUCT.md → `backlog populate` → `groom` → `run done`. Humans own what to build. Machines own how fast and how correctly. The backlog is the contract between the two.
 
 aishore rejects process-as-product. No standups, no velocity charts, no sprint retrospectives, no test coverage targets. The only measure is: does the code work, does it fulfill intent, and did it break anything that worked before?
 
