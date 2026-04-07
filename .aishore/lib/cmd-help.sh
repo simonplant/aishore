@@ -15,6 +15,7 @@ cmd_help() {
         backlog) _help_backlog ;;
         groom)    _help_groom ;;
         scaffold) _help_scaffold ;;
+        refine) _help_refine ;;
         review) _help_review ;;
         status) _help_status ;;
         update) _help_update ;;
@@ -35,6 +36,7 @@ Commands:
   run [N|ID|scope] Run sprints, or drain backlog with scope (done|p0|p1|p2)
   backlog <sub>    Manage backlog (list|add|show|edit|check|rm)
   groom            Groom bugs, features, and tech debt
+  refine           Improve PRODUCT.md through interactive interview
   scaffold         Detect fragment risk, inject scaffolding items
   review           Architecture review
   status           Backlog overview and sprint readiness
@@ -217,5 +219,31 @@ Checks prerequisites, detects project settings, and configures aishore.
 
 Options:
   -y, --yes     Accept all detected defaults (non-interactive)
+EOF
+}
+
+_help_refine() {
+    cat <<EOF
+aishore refine — Improve PRODUCT.md interactively
+
+Usage: aishore refine [options]
+
+Launches an interactive AI interview to improve your product requirements
+document. The Refiner agent reads the codebase and existing backlog, then
+asks targeted questions to fill gaps in PRODUCT.md.
+
+Options:
+  --from-sprints    Feed sprint learnings back into PRODUCT.md
+
+The refine → populate → groom → run cycle:
+  1. aishore refine                # Improve PRODUCT.md
+  2. aishore backlog populate      # Generate backlog items
+  3. aishore groom                 # Polish items for sprint
+  4. aishore run done              # Execute sprints
+  5. aishore refine --from-sprints # Learn and iterate
+
+Examples:
+  aishore refine                   # Interactive interview
+  aishore refine --from-sprints    # Post-sprint feedback loop
 EOF
 }

@@ -53,6 +53,8 @@ Commands:
     --dry-run       Preview without running agents
 
   groom             Groom bugs, features, and tech debt
+  refine            Improve PRODUCT.md through interactive interview
+    --from-sprints  Feed sprint learnings back into PRODUCT.md
   scaffold          Detect fragment risk, inject scaffolding items (Architect)
 
   review            Architecture review (read-only)

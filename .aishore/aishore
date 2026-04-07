@@ -102,6 +102,7 @@ SESSION_LIMIT=""
 MAX_TURNS_DEVELOPER="75"
 MAX_TURNS_VALIDATOR="45"
 MAX_TURNS_GROOMER="45"
+MAX_TURNS_REFINER="60"
 
 # Detect timeout command once at startup (macOS uses gtimeout from coreutils)
 if command -v timeout &>/dev/null; then
@@ -144,6 +145,7 @@ PERMS_VALIDATOR="Bash,Read,Glob,Grep"
 PERMS_REVIEWER="Read,Glob,Grep"
 # shellcheck disable=SC2034 # used in cmd-review.sh (sourced at runtime)
 PERMS_REVIEWER_DOCS="Read,Glob,Grep,Edit,Write"
+PERMS_REFINER="AskUserQuestion,Edit,Write,Read,Glob,Grep"
 
 # Shared constants (hardcoded — not configurable)
 readonly BACKLOG_FILES=("backlog.json" "bugs.json")
@@ -386,7 +388,7 @@ build_context() {
         [[ -n "$context" ]] && context="$context $arg" || context="$arg"
     done
     # Developer/architect need CLAUDE.md and ARCHITECTURE.md/PRODUCT.md
-    if [[ "$agent_role" == "developer" || "$agent_role" == "architect" ]]; then
+    if [[ "$agent_role" == "developer" || "$agent_role" == "architect" || "$agent_role" == "refiner" ]]; then
         local claude_md; claude_md=$(find_claude_md)
         [[ -n "$claude_md" ]] && context="$context @$claude_md"
         local project_docs; project_docs=$(find_project_docs)
@@ -580,6 +582,7 @@ load_config() {
             ".agent.max_turns.developer MAX_TURNS_DEVELOPER"
             ".agent.max_turns.validator MAX_TURNS_VALIDATOR"
             ".agent.max_turns.groomer   MAX_TURNS_GROOMER"
+            ".agent.max_turns.refiner   MAX_TURNS_REFINER"
         )
         local cfg_val _key _var
         for _entry in "${_cfg_map[@]}"; do
@@ -634,6 +637,7 @@ _apply_env_overrides() {
         "AISHORE_MAX_TURNS_DEVELOPER MAX_TURNS_DEVELOPER"
         "AISHORE_MAX_TURNS_VALIDATOR MAX_TURNS_VALIDATOR"
         "AISHORE_MAX_TURNS_GROOMER   MAX_TURNS_GROOMER"
+        "AISHORE_MAX_TURNS_REFINER   MAX_TURNS_REFINER"
     )
     local _env_name _target_var
     for _entry in "${_env_map[@]}"; do
@@ -1442,6 +1446,94 @@ run_agent_process() {
         "$(portable_date_iso)|$agent_label|${AGENT_MODE:-unknown}|${duration}s|$model"
 }
 
+# Run an agent interactively in the foreground (for agents that use AskUserQuestion).
+# Unlike run_agent_process, this does NOT background via setsid or poll for result.json.
+# Uses --system-prompt (not -p) so claude runs interactively and AskUserQuestion works.
+run_agent_interactive() {
+    local agent_name="$1"
+    local mode="$2"
+    local model="${3:-$MODEL_PRIMARY}"
+    local _rai_ctx_name="${4:-}"
+    local extra_prompt="${5:-}"
+
+    local prompt_file="$AGENTS_DIR/${agent_name}.md"
+    [[ ! -f "$prompt_file" ]] && { log_error "Agent not found: $agent_name"; return 1; }
+
+    rm -f "$STATUS_DIR/result.json"
+
+    local context_files
+    if [[ -n "$_rai_ctx_name" ]]; then
+        local -n _rai_ctx_ref="$_rai_ctx_name"
+        context_files=$(AGENT_CONTEXT_ROLE="$agent_name" build_context "${_rai_ctx_ref[@]}")
+    else
+        context_files=$(AGENT_CONTEXT_ROLE="$agent_name" build_context)
+    fi
+
+    # Resolve @file references into inline content (--system-prompt doesn't expand @file)
+    local resolved_context=""
+    local _token
+    for _token in $context_files; do
+        if [[ "$_token" == @* ]]; then
+            local _file="${_token#@}"
+            if [[ -f "$_file" ]]; then
+                resolved_context+="
+--- ${_file} ---
+$(cat "$_file")
+"
+            fi
+        fi
+    done
+
+    local agent_perms="$PERMS_REFINER"
+    local max_turns="$MAX_TURNS_REFINER"
+
+    local prompt
+    prompt=$(build_agent_prompt "$agent_name" "$mode" "$extra_prompt")
+
+    # Combine resolved context files + agent prompt into system prompt
+    local system_prompt="${resolved_context}
+
+${prompt}"
+
+    local agent_log
+    agent_log="$LOGS_DIR/${agent_name}-$(date +%Y%m%dT%H%M%S).log"
+    LAST_AGENT_LOG="$agent_log"
+
+    log_agent "$agent_name" "Starting interactive session (model: $model, max_turns: $max_turns)"
+
+    local start_time
+    start_time=$(date +%s)
+
+    local claude_args=(
+        --model "$model"
+        --permission-mode acceptEdits
+        --allowedTools "$agent_perms"
+        --system-prompt "$system_prompt"
+    )
+    if [[ -n "$max_turns" ]] && [[ "$max_turns" -gt 0 ]] 2>/dev/null; then
+        claude_args+=(--max-turns "$max_turns")
+    fi
+
+    # Run INTERACTIVELY in foreground — no -p, no setsid, no piping.
+    # AskUserQuestion prompts appear in the user's terminal.
+    # Cannot pipe through tee — claude detects non-tty stdout and switches to print mode.
+    # Use script(1) to capture output while preserving the pty.
+    if command -v script &>/dev/null; then
+        script -q -e -c "env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT claude $(printf '%q ' "${claude_args[@]}")" "$agent_log"
+    else
+        # Fallback: no logging for interactive sessions
+        env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+            claude "${claude_args[@]}"
+    fi
+
+    local duration
+    duration=$(($(date +%s) - start_time))
+    log_agent "$agent_name" "Completed in ${duration}s"
+
+    append_log "$LOGS_DIR/agent-runs.log" \
+        "$(portable_date_iso)|$agent_name|${mode}|${duration}s|$model"
+}
+
 build_agent_prompt() {
     local agent_name="$1"
     local mode="$2"
@@ -1465,6 +1557,16 @@ ${prompt_content}"
         prompt_content="$(sed '/^## Groom Mode/,$d' "$prompt_file" | sed -e :a -e '/^[[:space:]]*$/{ $d; N; ba; }')"
         # Inject explicit mode indicator so the architect knows its mode without inferring from stripped sections
         prompt_content="You are in review mode.
+${prompt_content}"
+    elif [[ "$agent_name" == "refiner" && "$mode" == "feedback" ]]; then
+        # Strip Refine Mode section, keep Feedback Mode section
+        prompt_content="$(sed '/^## Refine Mode/,/^## Feedback Mode/{/^## Feedback Mode/!d}' "$prompt_file")"
+        prompt_content="You are in feedback mode.
+${prompt_content}"
+    elif [[ "$agent_name" == "refiner" ]]; then
+        # Strip Feedback Mode section (refine mode)
+        prompt_content="$(sed '/^## Feedback Mode/,$d' "$prompt_file" | sed -e :a -e '/^[[:space:]]*$/{ $d; N; ba; }')"
+        prompt_content="You are in refine mode.
 ${prompt_content}"
     else
         prompt_content="$(cat "$prompt_file")"
@@ -1591,6 +1693,15 @@ Every AC you write MUST have an \`--ac-verify\` command wherever the outcome is 
 - **Maximum items per session:** $GROOM_MAX_ITEMS — stop adding new items after this cap. Focus on the highest-value items first.
 - **Minimum priority threshold:** $GROOM_MIN_PRIORITY — only add items at \`$GROOM_MIN_PRIORITY\` priority or higher. Skip lower-priority items (log them in your summary but do not add them).
 - When you reach the cap or run out of items above the threshold, stop and signal completion. Do not generate busywork."
+    elif [[ "$agent_name" == "refiner" ]]; then
+        local prd_path
+        prd_path=$(_find_prd)
+        validate_hint="
+## Target Document
+Edit \`$prd_path\` directly. Preserve section structure. Be specific and concrete — write for the groomer agent that will decompose this into backlog items.
+
+## Interview Tool
+Use \`AskUserQuestion\` to interview the user. Ask 1-2 questions at a time. The user can answer or say \"done\" to end the interview."
     fi
 
     local prompt
@@ -1638,6 +1749,7 @@ run_agent() {
                 agent_perms="$PERMS_REVIEWER"
             fi ;;
         groomer)    agent_perms="$PERMS_DEVELOPER" ;;
+        refiner)    agent_perms="$PERMS_REFINER" ;;
         *)          agent_perms="$PERMS_DEVELOPER" ;;
     esac
 
@@ -1650,6 +1762,8 @@ run_agent() {
             max_turns="$MAX_TURNS_VALIDATOR" ;;
         groomer|architect)
             max_turns="$MAX_TURNS_GROOMER" ;;
+        refiner)
+            max_turns="$MAX_TURNS_REFINER" ;;
         *)
             max_turns="$MAX_TURNS_DEVELOPER" ;;
     esac
@@ -3044,6 +3158,7 @@ main() {
         backlog) _load_module cmd-backlog-read; cmd_backlog "$@" ;;
         groom)    _load_module cmd-groom; cmd_groom "$@" ;;
         scaffold) _load_module cmd-scaffold; cmd_scaffold "$@" ;;
+        refine)  _load_module cmd-refine; cmd_refine "$@" ;;
         review)  _load_module cmd-review; cmd_review "$@" ;;
         status)  _load_module cmd-status; cmd_status "$@" ;;
         update)  _load_module cmd-update; cmd_update "$@" ;;
