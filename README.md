@@ -9,28 +9,31 @@
 Autonomous sprint orchestration for Claude Code. You write a backlog with intent. AI implements, validates, and merges — item by item, branch by branch, hands-off.
 
 ```bash
-.aishore/aishore run done   # drain the entire backlog autonomously
+.aishore/aishore run done    # drain the entire backlog autonomously
 ```
 
 ## Install
 
 ```bash
-# One-line install (into .aishore/ — no global dependencies)
 curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash
-
-# Or via GitHub API (authenticated, bypasses CDN cache)
+```
+```bash
 gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d | bash
-
-# Initialize (auto-detects your stack and test command)
+```
+```bash
 .aishore/aishore init -y
 ```
 
 **Update:**
 
 ```bash
-.aishore/aishore update                # Latest release
-.aishore/aishore update --ref main     # Latest commit on main
-.aishore/aishore update --ref abc123f  # Specific commit
+.aishore/aishore update                # latest release
+```
+```bash
+.aishore/aishore update --ref main     # latest commit on main
+```
+```bash
+.aishore/aishore update --ref abc123f  # specific commit
 ```
 
 **Requirements:** Bash 4.4+, jq, git, [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code). Optional: yq (full config.yaml support).
@@ -38,17 +41,25 @@ gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d 
 ## Usage
 
 ```bash
-# Populate backlog from your @docs/PRODUCT.md doc
-.aishore/aishore backlog populate
-
-# Groom items for sprint readiness
-.aishore/aishore groom
-
-# Run sprints
-.aishore/aishore run              # one item
-.aishore/aishore run done         # drain entire backlog
-.aishore/aishore run p0           # must-haves only
-.aishore/aishore run p1 --retries 2  # must + should, with retries
+.aishore/aishore refine                # improve PRODUCT.md interactively
+```
+```bash
+.aishore/aishore backlog populate      # create backlog items from PRODUCT.md
+```
+```bash
+.aishore/aishore groom                 # groom items for sprint readiness
+```
+```bash
+.aishore/aishore run                   # one item
+```
+```bash
+.aishore/aishore run done              # drain entire backlog
+```
+```bash
+.aishore/aishore run p0                # must-haves only
+```
+```bash
+.aishore/aishore run p1 --retries 2    # must + should, with retries
 ```
 
 ## Intent-Based Development
@@ -108,14 +119,31 @@ This item demonstrates what makes aishore work:
 ## Commands
 
 ```bash
-.aishore/aishore run [N|ID|done|p0|p1|p2]   # Run sprints
-.aishore/aishore backlog populate             # Create items from PRODUCT.md
-.aishore/aishore backlog add --title "..."    # Add item manually
-.aishore/aishore groom                        # Groom backlog items
-.aishore/aishore scaffold                     # Detect fragment risk
-.aishore/aishore review [--update-docs]       # Architecture review
-.aishore/aishore status                       # Backlog overview
-.aishore/aishore update [--ref main]          # Self-update (or pin to commit/branch)
+.aishore/aishore run [N|ID|done|p0|p1|p2]    # run sprints
+```
+```bash
+.aishore/aishore backlog populate              # create items from PRODUCT.md
+```
+```bash
+.aishore/aishore backlog add --title "..."     # add item manually
+```
+```bash
+.aishore/aishore refine                        # improve PRODUCT.md interactively
+```
+```bash
+.aishore/aishore groom                         # groom backlog items
+```
+```bash
+.aishore/aishore scaffold                      # detect fragment risk
+```
+```bash
+.aishore/aishore review [--update-docs]        # architecture review
+```
+```bash
+.aishore/aishore status                        # backlog overview
+```
+```bash
+.aishore/aishore update [--ref main]           # self-update
 ```
 
 ## Documentation
