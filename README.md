@@ -38,7 +38,7 @@ gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d 
 ## Usage
 
 ```bash
-# Populate backlog from your product doc
+# Populate backlog from your @docs/PRODUCT.md doc
 .aishore/aishore backlog populate
 
 # Groom items for sprint readiness
