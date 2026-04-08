@@ -20,6 +20,21 @@ curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh |
 ```bash
 gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d | bash
 ```
+
+**Or clone and copy** (no piping to bash):
+
+```bash
+git clone --depth 1 https://github.com/simonplant/aishore.git /tmp/aishore-install
+```
+```bash
+cp -r /tmp/aishore-install/.aishore .
+```
+```bash
+rm -rf /tmp/aishore-install
+```
+
+Then initialize:
+
 ```bash
 .aishore/aishore init -y
 ```

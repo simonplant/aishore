@@ -7,6 +7,12 @@
 # Via GitHub API (authenticated, bypasses CDN cache):
 #   gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d | bash
 #
+# Or clone and copy (no piping to bash):
+#   git clone --depth 1 https://github.com/simonplant/aishore.git /tmp/aishore-install
+#   cp -r /tmp/aishore-install/.aishore .
+#   rm -rf /tmp/aishore-install
+#   .aishore/aishore init
+#
 # With options:
 #   ... | bash -s -- --force    # Reinstall over existing
 #   ... | bash -s -- --init     # Run init after install

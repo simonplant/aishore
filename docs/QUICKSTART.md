@@ -52,6 +52,14 @@ Installing aishore...
 aishore installed successfully. Run: .aishore/aishore init
 ```
 
+**Or clone and copy** (no piping to bash):
+
+```bash
+git clone --depth 1 https://github.com/simonplant/aishore.git /tmp/aishore-install
+cp -r /tmp/aishore-install/.aishore .
+rm -rf /tmp/aishore-install
+```
+
 <details>
 <summary>Manual install</summary>
 
