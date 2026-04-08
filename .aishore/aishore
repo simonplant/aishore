@@ -2593,6 +2593,8 @@ _handle_sprint_success() {
                 log_warning "Failed to push $AISHORE_FEATURE_BRANCH — push manually"
         fi
 
+        printf '\n  To open a PR:\n\n    gh pr create --head %s --base %s\n\n' "$AISHORE_FEATURE_BRANCH" "$base_branch"
+
         git checkout "$base_branch" || { log_error "Cannot checkout $base_branch after no-merge push"; return 1; }
     else
         # Save sprint.json content (mark_complete needs it after merge), then reset
