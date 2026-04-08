@@ -1856,6 +1856,29 @@ check_result() {
     fi
 }
 
+# Scope enforcement — warn on out-of-scope file modifications (advisory only).
+# Reads .item.scope from sprint.json, compares changed files against scope globs,
+# and calls log_warning for each file outside scope. Never fails the sprint.
+_check_scope_warnings() {
+    local _scope_globs
+    _scope_globs=$(jq -r '.item.scope // [] | .[]' "$BACKLOG_DIR/sprint.json" 2>/dev/null || true)
+    [[ -z "$_scope_globs" || -z "${AISHORE_BASE_BRANCH:-}" ]] && return 0
+    # Build combined regex from all scope globs
+    local _combined_re="" _sg _re
+    while IFS= read -r _sg; do
+        _re=$(printf '%s' "$_sg" | sed -e 's/\./\\./g' -e 's/\*\*/\x00/g' -e 's/\*/[^\/]*/g' -e 's/\x00/.*/g' -e 's/?/./g')
+        [[ -n "$_combined_re" ]] && _combined_re="${_combined_re}|"
+        _combined_re="${_combined_re}^${_re}\$"
+    done <<< "$_scope_globs"
+    # Compare changed files against scope globs and warn on mismatches
+    local _scope_diff _cf
+    _scope_diff=$(git diff --name-only "$AISHORE_BASE_BRANCH" 2>/dev/null || true)
+    while IFS= read -r _cf; do [[ -z "$_cf" ]] && continue
+        [[ "$_cf" =~ ${_combined_re} ]] || log_warning "Out-of-scope file modified: $_cf"
+    done <<< "$_scope_diff"
+    return 0
+}
+
 run_ac_verification() {
     local sprint_file="$BACKLOG_DIR/sprint.json"
     [[ ! -f "$sprint_file" ]] && return 0
@@ -2278,29 +2301,6 @@ _run_developer_cycle() {
 
 # Run validation cycle: scope check, validation command, AC verification, validator agent.
 # Uses outer-scope: retry_extra_prompt, VALIDATE_CMD
-# Scope enforcement — warn on out-of-scope file modifications (advisory only).
-# Reads .item.scope from sprint.json, compares changed files against scope globs,
-# and calls log_warning for each file outside scope. Never fails the sprint.
-_check_scope_warnings() {
-    local _scope_globs
-    _scope_globs=$(jq -r '.item.scope // [] | .[]' "$BACKLOG_DIR/sprint.json" 2>/dev/null || true)
-    [[ -z "$_scope_globs" || -z "${AISHORE_BASE_BRANCH:-}" ]] && return 0
-    # Build combined regex from all scope globs
-    local _combined_re="" _sg _re
-    while IFS= read -r _sg; do
-        _re=$(printf '%s' "$_sg" | sed -e 's/\./\\./g' -e 's/\*\*/\x00/g' -e 's/\*/[^\/]*/g' -e 's/\x00/.*/g' -e 's/?/./g')
-        [[ -n "$_combined_re" ]] && _combined_re="${_combined_re}|"
-        _combined_re="${_combined_re}^${_re}\$"
-    done <<< "$_scope_globs"
-    # Compare changed files against scope globs and warn on mismatches
-    local _scope_diff _cf
-    _scope_diff=$(git diff --name-only "$AISHORE_BASE_BRANCH" 2>/dev/null || true)
-    while IFS= read -r _cf; do [[ -z "$_cf" ]] && continue
-        [[ "$_cf" =~ ${_combined_re} ]] || log_warning "Out-of-scope file modified: $_cf"
-    done <<< "$_scope_diff"
-    return 0
-}
-
 _run_validation_cycle() {
     _validation_failure=""
     local validate_output=""
