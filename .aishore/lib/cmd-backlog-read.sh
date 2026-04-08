@@ -103,8 +103,8 @@ _backlog_check_all() {
 }
 
 cmd_backlog_list() {
-    local filter_status="" filter_type="" filter_priority="" filter_ready=false filter_no_ready=false
-    parse_opts "val:filter_status:--status" "val:filter_type:--type" "val:filter_priority:--priority" "bool:filter_ready:--ready" "bool:filter_no_ready:--no-ready" -- "$@" || return 1
+    local filter_status="" filter_type="" filter_priority="" filter_ready=false filter_no_ready=false filter_failed=false
+    parse_opts "val:filter_status:--status" "val:filter_type:--type" "val:filter_priority:--priority" "bool:filter_ready:--ready" "bool:filter_no_ready:--no-ready" "bool:filter_failed:--failed" -- "$@" || return 1
 
     # Determine which files to scan
     local files=()
@@ -129,6 +129,9 @@ cmd_backlog_list() {
         jq_filter="$jq_filter | select(.readyForSprint == true)"
     elif [[ "$filter_no_ready" == "true" ]]; then
         jq_filter="$jq_filter | select(.readyForSprint != true)"
+    fi
+    if [[ "$filter_failed" == "true" ]]; then
+        jq_filter="$jq_filter | select((.failCount // 0) > 0)"
     fi
 
     # Collect done IDs for dependency checking
