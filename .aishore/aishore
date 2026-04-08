@@ -908,6 +908,21 @@ check_readiness_gates() {
         done <<< "$deps"
     fi
 
+    # Run AC verify commands and report failures
+    local verify_cmds
+    verify_cmds=$(printf '%s\n' "$item" | jq -r '[.acceptanceCriteria // [] | .[] | select(type == "object" and .verify != null) | .verify] | .[]' 2>/dev/null)
+    if [[ -n "$verify_cmds" ]]; then
+        while IFS= read -r vcmd; do
+            [[ -z "$vcmd" ]] && continue
+            local vrc=0
+            (eval "$vcmd") >/dev/null 2>&1 || vrc=$?
+            if [[ "$vrc" -ne 0 ]]; then
+                warnings="${warnings}  - AC verify failed (exit ${vrc}): ${vcmd}\n"
+                has_warning=true
+            fi
+        done <<< "$verify_cmds"
+    fi
+
     [[ -n "$warnings" ]] && printf '%s\n' "$warnings"
     if [[ "$has_warning" == "true" ]]; then
         log_error "Readiness gate check failed for $item_id"

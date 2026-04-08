@@ -1,5 +1,5 @@
 dcdecbc7866cc9413935ee7a76b92beba1e4494f63aa0df5d8b5afe979d16260  .aishore/VERSION
-b20e9e38222eb3c4210dbefaf6a10d1cbd2fcb60442d5d3a79dddc4cf863e4dd  .aishore/aishore
+c3b4b258d6e7481c22647bd548024a5ea2b4427c6fcaca25ce0ac2467f95fe93  .aishore/aishore
 2e08484728292508c78e08877958044262689bd4cd3298b8fe3e15853a4d0687  .aishore/README.md
 8bd3c0993a03aebcd810156f21636c4255b9aa027579bec982ab7f1e39e0c21b  .aishore/gitignore-entries.txt
 36f5211a11c7f4b5286af49a237a43a9fb1b5939bb7226f127191840a95e3e2e  .aishore/help.txt
@@ -15,7 +15,7 @@ e55c7be469e5413430eea7da68733cc601a8b19c5139e088294c60aa9ce9772c  .aishore/templ
 5c40c7610f010936243e69913df7f6cbc9ac6dec192da10f1220c674e31f9d2c  .aishore/templates/config.yaml.tmpl
 63c0507bbad779e01f93a62d4c3d920b5f5cfe89728f218aa8cadb755d1a22d1  .aishore/templates/DEFINITIONS.md
 537f5df11dc02f983344d0d1e1be577fd1c1283d3d91d40904671b44fba95ad2  .aishore/templates/PRODUCT.md.tmpl
-7b5226a402f02e06dc25260fb6499177e630158c7812019bae5d181a81b88c29  .aishore/lib/cmd-backlog-read.sh
+9850a9949b29359c8dc7f1d046a599b515c013085f0b2697904e1a0991f732c7  .aishore/lib/cmd-backlog-read.sh
 273c7957fa0dd6605dbdcdb4ecb62bc01a285ea1bd1e024fb40b8cbbab215795  .aishore/lib/cmd-backlog-write.sh
 b5ce2140352828eaec5e9f6767b12f0f3e599e71c05983950853aa23a808f46c  .aishore/lib/cmd-clean.sh
 c790d2eb4da5060a694457c35e70c9e43c22dd4892424734acbaafdb886d0722  .aishore/lib/cmd-groom.sh
@@ -25,5 +25,5 @@ a63f746a6d57503b55d19698c10597843c685cc14efedccb2a3499c256170001  .aishore/lib/c
 487336b6afa0a3e11a24e37ef26c7ea467379c9441f9e1ec1cdc6ad8645bbc48  .aishore/lib/cmd-refine.sh
 c77dd59fbc6d072dc8d5f769610d6198e5e13fe4c6aeacbdd88b4b5bed5c5b4c  .aishore/lib/cmd-review.sh
 89f78bb527e3ce7218e0dbcc9f95a5e0809d9680b78a208f23f0fbe69f204bae  .aishore/lib/cmd-scaffold.sh
-eb2f5fb6c07ea846f8873ac5ba6615ce2ee6bb5027ee66dc4273d546107aa8c2  .aishore/lib/cmd-status.sh
+972c32d47876b22c9575795d013bfc56b49a3226b94b7e19547305db0cd15b5a  .aishore/lib/cmd-status.sh
 cdd83b6721f4e9da4ccc65c1ddfd55b192ff5e0dbdd219cbac7a35f7612af909  .aishore/lib/cmd-update.sh
