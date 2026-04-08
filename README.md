@@ -77,6 +77,20 @@ Then initialize:
 .aishore/aishore run p1 --retries 2    # must + should, with retries
 ```
 
+### PR Workflow (--no-merge)
+
+By default, aishore merges autonomously. Use `--no-merge` to push the feature branch without merging, so you can review via pull request:
+
+```bash
+.aishore/aishore run --no-merge
+```
+
+The branch is pushed to origin but left unmerged. When the sprint finishes, aishore prints the command to open a PR:
+
+```bash
+gh pr create --head aishore/FEAT-123 --base main
+```
+
 ## Intent-Based Development
 
 aishore doesn't work like TDD or agile ceremony. There are no standups, no velocity charts, no coverage targets. The quality model is: **prove the software works by running it, not by counting tests.**
