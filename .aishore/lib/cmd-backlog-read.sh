@@ -96,6 +96,7 @@ _backlog_check_all() {
     done
     echo ""
     printf '%s item(s): %s pass, %s fail\n' "$total" "$pass_count" "$fail_count"
+    log_info "$pass_count/$total items ready for sprint"
 
     [[ "$fail_count" -gt 0 ]] && return 1
     return 0
