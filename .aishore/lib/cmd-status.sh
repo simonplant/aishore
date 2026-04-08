@@ -53,6 +53,14 @@ _status_output() {
         log_warning "No items ready for sprint — run 'groom' or 'backlog edit <ID> --ready'"
     fi
 
+    # --- Ready count summary ---
+    local ready_total=0
+    for f in "${BACKLOG_FILES[@]}"; do
+        [[ -f "$BACKLOG_DIR/$f" ]] || continue
+        ready_total=$((ready_total + $(count_ready_items "$BACKLOG_DIR/$f")))
+    done
+    log_info "$ready_total/$total items ready for sprint"
+
     # --- Currently running ---
     local sprint_file="$BACKLOG_DIR/sprint.json"
     if [[ -f "$sprint_file" ]]; then
