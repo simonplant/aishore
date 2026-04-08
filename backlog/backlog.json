@@ -9,14 +9,50 @@
       "priority": "should",
       "category": null,
       "steps": [
-        "In cmd-backlog-read.sh, in the AC verify loop, capture the exit code of each verify command",
-        "When a verify command fails (exit code != 0), print the command text and exit code before the failure message",
-        "Keep format consistent with existing log_* style"
+        "In check_readiness_gates() in .aishore/aishore (around line 910), add a new section after the dependency check that iterates over AC entries with verify commands",
+        "For each AC with a verify field, run the verify command in a subshell and capture the exit code",
+        "When a verify command fails (exit code != 0), append the command text and exit code to warnings using the same format as other warnings, e.g. '  - AC verify failed (exit N): <command>'",
+        "Keep format consistent with existing log_* style — use the warnings string accumulation pattern already in the function"
       ],
       "acceptanceCriteria": [
         {
           "text": "Failed verify command text appears in backlog check output",
           "verify": "tid=$(.aishore/aishore backlog add --json \"{\\\"title\\\":\\\"_groom_ac_test\\\",\\\"intent\\\":\\\"groom test intent placeholder twenty chars\\\",\\\"type\\\":\\\"feat\\\",\\\"priority\\\":\\\"could\\\",\\\"steps\\\":[\\\"implement the test feature\\\"],\\\"acceptanceCriteria\\\":[{\\\"text\\\":\\\"fails\\\",\\\"verify\\\":\\\"exit 99\\\"}],\\\"readyForSprint\\\":false}\" 2>&1 | grep -oE \"[A-Z]+-[0-9]+\"); out=$(.aishore/aishore backlog check \"$tid\" 2>&1); .aishore/aishore backlog rm \"$tid\" --force 2>/dev/null; echo \"$out\" | grep -q \"exit 99\""
+        }
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-04-08",
+      "groomingNotes": "check_readiness_gates() in .aishore/aishore (line ~831) checks structural gates only. The new verify execution loop goes after the dependency check (line ~909), before the final return. It should iterate over AC entries with verify fields using jq, run each in a subshell, and append failures to the warnings string. Scope is .aishore/aishore, NOT cmd-backlog-read.sh.",
+      "lastFailReason": "AC verification failed",
+      "lastFailAt": "2026-04-08T15:37:36-07:00",
+      "failCount": 2
+    },
+    {
+      "id": "FEAT-108",
+      "title": "backlog list should show fail count for items with sprint failures",
+      "intent": "backlog list must show a FAILS column with the failure count for items where failCount > 0, so developers can immediately see which items are stuck without opening each one.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In cmd_backlog_list() in .aishore/lib/cmd-backlog-read.sh, add (.failCount // 0) to the jq projection alongside the existing fields",
+        "Add a FAILS column (6 chars wide) to the printf header and separator lines after the READY column",
+        "When rendering each row, show the failCount as a number when > 0, or \"-\" when 0"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "FAILS column header appears in backlog list output",
+          "verify": ".aishore/aishore backlog list 2>&1 | grep -q FAILS"
+        },
+        {
+          "text": "FEAT-105 shows fail count of 1 in backlog list",
+          "verify": ".aishore/aishore backlog list 2>&1 | grep '^FEAT-105' | grep -qP '\\s[1-9]\\d*\\s'"
         }
       ],
       "scope": [
@@ -27,9 +63,9 @@
       "passes": false,
       "readyForSprint": true,
       "groomedAt": "2026-04-08",
-      "groomingNotes": "AC creates a temp item with a known-failing verify command, runs check, confirms the command text appears in output, then cleans up. Fully behavioral and self-contained.",
+      "groomingNotes": "cmd_backlog_list() in cmd-backlog-read.sh has ID, PRI, STATUS, READY, BLOCKED, TITLE columns but no FAILS column. The jq projection and printf format need one more field: (.failCount // 0). When 0, print \"-\"; when > 0, print the number. AC verify uses awk to extract the 5th column for FEAT-105 (failCount:1) and checks it equals \"1\" exactly — avoids false-positives from \"1\" appearing in the ID string. Independent of FEAT-107.",
       "lastFailReason": "AC verification failed",
-      "lastFailAt": "2026-04-08T15:04:02-07:00",
+      "lastFailAt": "2026-04-08T15:41:05-07:00",
       "failCount": 1
     }
   ]
