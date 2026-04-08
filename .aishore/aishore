@@ -444,7 +444,7 @@ acquire_lock() {
     local attempt
     for (( attempt = 0; attempt < 2; attempt++ )); do
         if mkdir "$lockdir" 2>/dev/null; then
-            if ! echo $$ > "$lockdir/pid"; then
+            if ! echo "$$" > "$lockdir/pid"; then
                 rm -rf "$lockdir"
                 log_error "Failed to write PID to lock file"
                 return 1
@@ -749,7 +749,7 @@ pick_item() {
             '"$PICKABLE_ITEMS_FILTER"' |
             [.[] | '"$ITEM_PROJECTION"' + {_source: $src}]
         ' "$BACKLOG_DIR/$backlog" 2>/dev/null || echo "[]")
-        all_candidates=$(printf '%s\n%s\n' "$all_candidates" "$candidates" | jq -s 'add')
+        all_candidates=$(printf '%s\n%s\n' "$all_candidates" "$candidates" | jq -s 'add // []')
     }
     map_backlog_files _collect_candidates
 
@@ -1012,7 +1012,7 @@ collect_done_ids() {
         [[ -f "$BACKLOG_DIR/$f" ]] || return 0
         local ids
         ids=$(jq '[.items[] | select(.status == "done") | .id]' "$BACKLOG_DIR/$f" 2>/dev/null || echo "[]")
-        done_ids=$(printf '%s %s\n' "$done_ids" "$ids" | jq -s 'add | unique')
+        done_ids=$(printf '%s\n%s\n' "$done_ids" "$ids" | jq -s 'add | unique')
     }
     map_backlog_files _collect_done_one
     # Also include archived sprint item IDs (completed items removed via 'clean')
@@ -1020,7 +1020,7 @@ collect_done_ids() {
     if [[ -f "$archive_file" ]] && [[ -s "$archive_file" ]]; then
         local archived_ids
         archived_ids=$(jq -r '.itemId // empty' "$archive_file" 2>/dev/null | jq -R . | jq -s '.' 2>/dev/null || echo "[]")
-        done_ids=$(printf '%s %s\n' "$done_ids" "$archived_ids" | jq -s 'add | unique')
+        done_ids=$(printf '%s\n%s\n' "$done_ids" "$archived_ids" | jq -s 'add | unique')
     fi
     printf '%s\n' "$done_ids"
 }
@@ -2925,7 +2925,7 @@ _build_skip_list() {
     local -a _keys=()
     for _k in "${!FAILED_IDS[@]}"; do _keys+=("$_k"); done
     for _k in "${!COMPLETED_IDS[@]}"; do _keys+=("$_k"); done
-    IFS=,; printf '%s' "${_keys[*]}"
+    local IFS=,; printf '%s' "${_keys[*]}"
 }
 
 # Execute the core pick-implement-validate-merge cycle.
@@ -2991,9 +2991,10 @@ run_sprint_loop() {
         log_info "Creating branch: $branch_name"
 
         # Worktree isolation: create a separate working directory for the sprint
+        # Use mktemp -u to generate a unique path without creating the directory,
+        # avoiding a race between rmdir and git worktree add.
         local wt_dir
-        wt_dir=$(mktemp -d "${TMPDIR:-/tmp}/aishore-wt-${ITEM_ID}.XXXXXX")
-        rmdir "$wt_dir"
+        wt_dir=$(mktemp -u "${TMPDIR:-/tmp}/aishore-wt-${ITEM_ID}.XXXXXX")
         git branch -D "$branch_name" 2>/dev/null || true
         git worktree add "$wt_dir" -b "$branch_name"
         AISHORE_WORKTREE_DIR="$wt_dir"

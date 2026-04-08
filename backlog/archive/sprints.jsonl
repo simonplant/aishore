@@ -1,111 +1,21 @@
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769631702",
-  "itemId": "BUG-001",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769631910",
-  "itemId": "BUG-002",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769632163",
-  "itemId": "BUG-003",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769632336",
-  "itemId": "BUG-004",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769632509",
-  "itemId": "BUG-005",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769632797",
-  "itemId": "BUG-006",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769633075",
-  "itemId": "BUG-007",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769633364",
-  "itemId": "BUG-008",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769633572",
-  "itemId": "BUG-009",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769633860",
-  "itemId": "BUG-011",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769633993",
-  "itemId": "BUG-010",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769649054",
-  "itemId": "FEAT-007",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769649435",
-  "itemId": "FEAT-002",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769649668",
-  "itemId": "FEAT-003",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769649927",
-  "itemId": "FEAT-005",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769650155",
-  "itemId": "FEAT-004",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769650483",
-  "itemId": "FEAT-006",
-  "status": "complete"
-}
-{
-  "date": "2026-01-28",
-  "sprintId": "sprint-1769650727",
-  "itemId": "FEAT-008",
-  "status": "complete"
-}
+{"date":"2026-01-28","sprintId":"sprint-1769631702","itemId":"BUG-001","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769631910","itemId":"BUG-002","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769632163","itemId":"BUG-003","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769632336","itemId":"BUG-004","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769632509","itemId":"BUG-005","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769632797","itemId":"BUG-006","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769633075","itemId":"BUG-007","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769633364","itemId":"BUG-008","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769633572","itemId":"BUG-009","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769633860","itemId":"BUG-011","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769633993","itemId":"BUG-010","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769649054","itemId":"FEAT-007","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769649435","itemId":"FEAT-002","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769649668","itemId":"FEAT-003","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769649927","itemId":"FEAT-005","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769650155","itemId":"FEAT-004","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769650483","itemId":"FEAT-006","status":"complete"}
+{"date":"2026-01-28","sprintId":"sprint-1769650727","itemId":"FEAT-008","status":"complete"}
 {"date":"2026-03-20","sprintId":"sprint-1774029924","itemId":"BUG-001","status":"complete","attempts":1,"filesChanged":2,"linesAdded":3,"linesRemoved":3,"duration":114,"priority":"should","category":null}
 {"date":"2026-03-20","sprintId":"sprint-1774030040","itemId":"BUG-002","status":"complete","attempts":1,"filesChanged":2,"linesAdded":7,"linesRemoved":4,"duration":454,"priority":"should","category":null}
 {"date":"2026-03-20","sprintId":"sprint-1774030496","itemId":"BUG-004","status":"complete","attempts":1,"filesChanged":2,"linesAdded":6,"linesRemoved":3,"duration":164,"priority":"should","category":null}
@@ -322,3 +232,11 @@
 {"date":"2026-04-01","sprintId":"sprint-1775100274","itemId":"FEAT-097","status":"complete","attempts":1,"filesChanged":2,"linesAdded":4,"linesRemoved":2,"duration":112,"priority":null,"category":null,"title":null}
 {"date":"2026-04-01","sprintId":"sprint-1775100387","itemId":"FEAT-098","status":"complete","attempts":1,"filesChanged":2,"linesAdded":2,"linesRemoved":2,"duration":125,"priority":null,"category":null,"title":null}
 {"date":"2026-04-01","sprintId":"sprint-1775100659","itemId":"FEAT-100","status":"complete","attempts":1,"filesChanged":2,"linesAdded":7,"linesRemoved":1,"duration":96,"priority":null,"category":null,"title":null}
+{"date":"2026-04-08","sprintId":"sprint-1775684908","itemId":"FEAT-101","status":"complete","attempts":1,"filesChanged":3,"linesAdded":29,"linesRemoved":0,"duration":133,"priority":"should","category":null,"title":"Add git clone install method alongside curl | bash"}
+{"date":"2026-04-08","sprintId":"sprint-1775685042","itemId":"FEAT-102","status":"complete","attempts":1,"filesChanged":1,"linesAdded":2,"linesRemoved":0,"duration":97,"priority":"should","category":null,"title":"Print gh pr create command after --no-merge sprint"}
+{"date":"2026-04-08","sprintId":"sprint-1775685139","itemId":"FEAT-103","status":"complete","attempts":1,"filesChanged":1,"linesAdded":1,"linesRemoved":0,"duration":75,"priority":"should","category":null,"title":"backlog check --all should print a ready/total summary line"}
+{"date":"2026-04-08","sprintId":"sprint-1775685534","itemId":"FEAT-104","status":"complete","attempts":1,"filesChanged":1,"linesAdded":14,"linesRemoved":0,"duration":69,"priority":"should","category":null,"title":"Document --no-merge flag and PR workflow in README"}
+{"date":"2026-04-08","sprintId":"sprint-1775685842","itemId":"FEAT-106","status":"complete","attempts":1,"filesChanged":1,"linesAdded":8,"linesRemoved":0,"duration":111,"priority":"should","category":null,"title":"status output should include ready buffer count"}
+{"date":"2026-04-08","sprintId":"sprint-1775687004","itemId":"BUG-152","status":"complete","attempts":1,"filesChanged":1,"linesAdded":1,"linesRemoved":1,"duration":119,"priority":"must","category":null,"title":"status shows completed sprint as Currently running"}
+{"date":"2026-04-08","sprintId":"sprint-1775687856","itemId":"FEAT-107","status":"complete","attempts":1,"filesChanged":1,"linesAdded":5,"linesRemoved":0,"duration":92,"priority":"should","category":null,"title":"backlog show should display sprint failure history"}
+{"date":"2026-04-08","sprintId":"sprint-1775688065","itemId":"FEAT-109","status":"complete","attempts":1,"filesChanged":1,"linesAdded":5,"linesRemoved":2,"duration":94,"priority":"should","category":null,"title":"backlog list should support --failed filter to show only items with sprint failures"}
