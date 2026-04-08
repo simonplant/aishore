@@ -178,6 +178,11 @@ cmd_backlog_show() {
         "Category:    \(.category // "-")",
         "Ready:       \(if .readyForSprint then "yes" else "no" end)",
         "Passes:      \(if .passes then "yes" else "no" end)",
+        if (.failCount // 0) > 0 or .lastFailReason then
+            "Fail count:   \(.failCount // 0)",
+            if .lastFailReason then "Last failure: \(.lastFailReason)" else empty end,
+            if .lastFailAt then "Last fail at: \(.lastFailAt)" else empty end
+        else empty end,
         "",
         if .intent then "Intent:      \(.intent)\n" else empty end,
         "Description: \(.description // "-")",
