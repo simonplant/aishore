@@ -24,14 +24,11 @@
         ".aishore/aishore"
       ],
       "dependsOn": [],
-      "status": "todo",
-      "passes": false,
+      "status": "done",
+      "passes": true,
       "readyForSprint": true,
       "groomedAt": "2026-04-08",
-      "groomingNotes": "check_readiness_gates() in .aishore/aishore (line ~831) checks structural gates only. The new verify execution loop goes after the dependency check (line ~909), before the final return. It should iterate over AC entries with verify fields using jq, run each in a subshell, and append failures to the warnings string. Scope is .aishore/aishore, NOT cmd-backlog-read.sh.",
-      "lastFailReason": "AC verification failed",
-      "lastFailAt": "2026-04-08T15:37:36-07:00",
-      "failCount": 2
+      "groomingNotes": "Implemented in commit 692c488 — added AC verify execution loop to check_readiness_gates(). AC verified passing."
     },
     {
       "id": "FEAT-108",
