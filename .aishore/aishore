@@ -2705,6 +2705,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
 
     AISHORE_BASE_BRANCH="$_saved_base"
     AISHORE_DIFF_TARGET="$_saved_diff_target"
+    reset_sprint
     return 0
 }
 

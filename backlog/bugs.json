@@ -1,4 +1,70 @@
 {
   "description": "Bugs and tech debt",
-  "items": []
+  "items": [
+    {
+      "id": "BUG-152",
+      "title": "status shows completed sprint as Currently running",
+      "intent": "aishore status must never show a sprint as currently running unless one is actively in progress. A completed or idle sprint.json must produce no Currently running section.",
+      "description": "",
+      "priority": "must",
+      "category": null,
+      "steps": [
+        "In cmd-status.sh line ~69, change the condition from `sprint_status != idle` to `sprint_status == in_progress` so only actively running sprints show the Currently running section",
+        "Verify: status should hide the Currently running section when sprint.json status is completed, failed, idle, or any non-in_progress value"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "status does not show Currently running when sprint.json status is completed",
+          "verify": ".aishore/aishore status 2>&1 | grep -qvi currently.running"
+        },
+        {
+          "text": "status shows Currently running only when a sprint is actively in progress",
+          "verify": "echo \"{\\\"status\\\": \\\"in_progress\\\", \\\"item\\\": {\\\"id\\\": \\\"TEST-1\\\", \\\"title\\\": \\\"test\\\"}}\" > /tmp/test_sprint.json && orig=$(cat backlog/sprint.json) && cp /tmp/test_sprint.json backlog/sprint.json && result=$(.aishore/aishore status 2>&1) && echo \"$orig\" > backlog/sprint.json && echo \"$result\" | grep -qi currently.running"
+        }
+      ],
+      "scope": [
+        ".aishore/lib/cmd-status.sh"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "lastFailReason": "AC verification failed",
+      "lastFailAt": "2026-04-08T14:48:28-07:00",
+      "failCount": 3,
+      "groomedAt": "2026-04-08",
+      "groomingNotes": "Steps updated: fix is == in_progress (not running) since create_sprint writes in_progress. AC2 verify updated to use in_progress test payload to match actual sprint status values."
+    },
+    {
+      "id": "BUG-153",
+      "title": "sprint.json retains completed status after sprint finishes",
+      "intent": "After any sprint completes (pass or fail), sprint.json must be reset to idle state so subsequent runs start clean and status commands reflect reality. A stale completed or failed status in sprint.json must never persist between sprints.",
+      "description": "",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "In the orchestrator (.aishore/aishore), locate where sprint completion is finalized (after archive write and merge/no-merge path)",
+        "After the sprint is fully archived, write {\"status\": \"idle\"} to backlog/sprint.json",
+        "Ensure this happens in both the pass path and fail path so no residual status persists"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "sprint.json shows idle status after a sprint completes",
+          "verify": "jq -r .status backlog/sprint.json | grep -q idle"
+        }
+      ],
+      "scope": [
+        ".aishore/aishore"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-04-08",
+      "groomingNotes": "Complements BUG-152 (condition fix in cmd-status.sh). This is the root cleanup: ensure sprint.json is always left in idle state after a sprint. AC verify naturally fails before fix (current state is completed) and passes after the fix runs a sprint to completion.",
+      "lastFailReason": "AC verification failed",
+      "lastFailAt": "2026-04-08T15:07:22-07:00",
+      "failCount": 1
+    }
+  ]
 }

@@ -2,34 +2,35 @@
   "description": "Feature backlog - Product Owner owns priority",
   "items": [
     {
-      "id": "FEAT-101",
-      "title": "Add git clone install method alongside curl | bash",
-      "intent": "Users who prefer not to pipe curl to bash have a clear, documented alternative. Both methods produce the same result.",
-      "description": "Document a git clone install path in README.md, QUICKSTART.md, and install.sh help output. The clone method should sparse-checkout only .aishore/ into the target project, matching what the curl installer produces.",
+      "id": "FEAT-105",
+      "title": "backlog check should show which verify command failed",
+      "intent": "When backlog check <ID> fails an AC verify command, the output must print the exact command that failed and its exit code so a developer can reproduce and debug the failure without guessing which check broke.",
+      "description": "",
       "priority": "should",
       "category": null,
       "steps": [
-        "Add git clone install instructions to README.md Install section",
-        "Add same to docs/QUICKSTART.md",
-        "Ensure install.sh --help mentions the clone alternative"
+        "In cmd-backlog-read.sh, in the AC verify loop, capture the exit code of each verify command",
+        "When a verify command fails (exit code != 0), print the command text and exit code before the failure message",
+        "Keep format consistent with existing log_* style"
       ],
       "acceptanceCriteria": [
-        "README.md shows git clone as an install option alongside curl",
-        "QUICKSTART.md shows git clone as an install option",
         {
-          "text": "Git clone method produces a working .aishore/ directory",
-          "verify": "test -f .aishore/aishore && test -x .aishore/aishore"
+          "text": "Failed verify command text appears in backlog check output",
+          "verify": "tid=$(.aishore/aishore backlog add --json \"{\\\"title\\\":\\\"_groom_ac_test\\\",\\\"intent\\\":\\\"groom test intent placeholder twenty chars\\\",\\\"type\\\":\\\"feat\\\",\\\"priority\\\":\\\"could\\\",\\\"steps\\\":[\\\"implement the test feature\\\"],\\\"acceptanceCriteria\\\":[{\\\"text\\\":\\\"fails\\\",\\\"verify\\\":\\\"exit 99\\\"}],\\\"readyForSprint\\\":false}\" 2>&1 | grep -oE \"[A-Z]+-[0-9]+\"); out=$(.aishore/aishore backlog check \"$tid\" 2>&1); .aishore/aishore backlog rm \"$tid\" --force 2>/dev/null; echo \"$out\" | grep -q \"exit 99\""
         }
       ],
       "scope": [
-        "README.md",
-        "docs/QUICKSTART.md",
-        "install.sh"
+        ".aishore/lib/cmd-backlog-read.sh"
       ],
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": false
+      "readyForSprint": true,
+      "groomedAt": "2026-04-08",
+      "groomingNotes": "AC creates a temp item with a known-failing verify command, runs check, confirms the command text appears in output, then cleans up. Fully behavioral and self-contained.",
+      "lastFailReason": "AC verification failed",
+      "lastFailAt": "2026-04-08T15:04:02-07:00",
+      "failCount": 1
     }
   ]
 }
