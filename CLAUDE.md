@@ -58,15 +58,16 @@ The orchestrator polls for this file. On pass, the pipeline continues. On fail, 
 # Core workflow
 .aishore/aishore run [N|ID|done|p0|p1|p2]  # Run sprints
 .aishore/aishore groom                      # Groom backlog items
+.aishore/aishore refine                     # Improve PRODUCT.md interactively
 .aishore/aishore scaffold                   # Detect fragment risk
 .aishore/aishore review [--update-docs]     # Architecture review
 .aishore/aishore status                     # Backlog overview
 
 # Backlog management
 .aishore/aishore backlog list               # List items
-.aishore/aishore backlog add --title "..." --intent "..."  # Add item
+.aishore/aishore backlog add --json '{"title":"...","intent":"..."}'  # Add item
 .aishore/aishore backlog show <ID>          # Full item detail
-.aishore/aishore backlog edit <ID> [flags]  # Update item
+.aishore/aishore backlog edit <ID> --json '{...}'  # Update item
 .aishore/aishore backlog check <ID|--all>   # Validate readiness
 .aishore/aishore backlog rm <ID>            # Remove item
 .aishore/aishore backlog populate           # Populate from PRODUCT.md

@@ -10,14 +10,14 @@ Autonomous sprint orchestration for Claude Code. You write a backlog with intent
 .aishore/aishore run done                   # Drain the backlog autonomously
 ```
 
-Each item needs **intent** (what must be true when done), **steps**, and **executable AC** (`--ac-verify` commands that prove behavior). The verify commands compound into a regression suite — every future sprint proves prior work still holds.
+Each item needs **intent** (what must be true when done), **steps**, and **executable AC** (verify commands that prove behavior). The verify commands compound into a regression suite — every future sprint proves prior work still holds.
 
 ## Commands
 
 ```bash
 .aishore/aishore run [N|ID|done|p0|p1|p2]  # Run sprints
 .aishore/aishore backlog populate            # Create items from PRODUCT.md
-.aishore/aishore backlog add --title "..."   # Add item manually
+.aishore/aishore backlog add --json '{...}'   # Add item manually
 .aishore/aishore groom                       # Groom backlog items
 .aishore/aishore scaffold                    # Detect fragment risk
 .aishore/aishore review [--update-docs]      # Architecture review

@@ -131,8 +131,8 @@ Verify what was created:
 **Edit, add, or remove items** to shape the backlog:
 
 ```bash
-.aishore/aishore backlog edit FEAT-001 --priority must --intent "..."
-.aishore/aishore backlog add --title "..." --intent "..." --ac "..." --ac-verify "..."
+.aishore/aishore backlog edit FEAT-001 --json '{"priority": "must", "intent": "..."}'
+.aishore/aishore backlog add --json '{"title": "...", "intent": "...", "acceptanceCriteria": [{"text": "...", "verify": "..."}]}'
 .aishore/aishore backlog rm FEAT-003 --force
 ```
 

@@ -1,4 +1,35 @@
 {
   "description": "Feature backlog - Product Owner owns priority",
-  "items": []
+  "items": [
+    {
+      "id": "FEAT-101",
+      "title": "Add git clone install method alongside curl | bash",
+      "intent": "Users who prefer not to pipe curl to bash have a clear, documented alternative. Both methods produce the same result.",
+      "description": "Document a git clone install path in README.md, QUICKSTART.md, and install.sh help output. The clone method should sparse-checkout only .aishore/ into the target project, matching what the curl installer produces.",
+      "priority": "should",
+      "category": null,
+      "steps": [
+        "Add git clone install instructions to README.md Install section",
+        "Add same to docs/QUICKSTART.md",
+        "Ensure install.sh --help mentions the clone alternative"
+      ],
+      "acceptanceCriteria": [
+        "README.md shows git clone as an install option alongside curl",
+        "QUICKSTART.md shows git clone as an install option",
+        {
+          "text": "Git clone method produces a working .aishore/ directory",
+          "verify": "test -f .aishore/aishore && test -x .aishore/aishore"
+        }
+      ],
+      "scope": [
+        "README.md",
+        "docs/QUICKSTART.md",
+        "install.sh"
+      ],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    }
+  ]
 }

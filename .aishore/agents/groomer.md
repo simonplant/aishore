@@ -121,15 +121,19 @@ Scaffolding items should be:
 
 ### Example — Gold Standard Item
 ```bash
-.aishore/aishore backlog add \
-  --type feat \
-  --title "Export inventory to CSV" \
-  --intent "The user gets a complete, correct export file or a clear error. Never a partial write, corrupt file, or silent failure." \
-  --desc "Add a CSV export command that writes all inventory items to a file. Handle large datasets without excessive memory usage. Include a header row. Escape special characters correctly so the output opens cleanly in Excel and Google Sheets. Must follow the existing CLI command pattern." \
-  --priority should \
-  --ac "Running 'tool export --format csv' writes a valid CSV file to the specified path" \
-  --ac "The CSV includes a header row matching the item schema fields" \
-  --ac "Fields containing commas or quotes are properly escaped per RFC 4180" \
-  --ac "Exporting an empty inventory produces a file with only the header row" \
-  --ac "Export errors (invalid path, permission denied) display a specific message and exit non-zero"
+.aishore/aishore backlog add --json '{
+  "type": "feat",
+  "title": "Export inventory to CSV",
+  "intent": "The user gets a complete, correct export file or a clear error. Never a partial write, corrupt file, or silent failure.",
+  "description": "Add a CSV export command that writes all inventory items to a file. Handle large datasets without excessive memory usage. Include a header row. Escape special characters correctly so the output opens cleanly in Excel and Google Sheets. Must follow the existing CLI command pattern.",
+  "priority": "should",
+  "acceptanceCriteria": [
+    "Running tool export --format csv writes a valid CSV file to the specified path",
+    "The CSV includes a header row matching the item schema fields",
+    "Fields containing commas or quotes are properly escaped per RFC 4180",
+    "Exporting an empty inventory produces a file with only the header row",
+    "Export errors (invalid path, permission denied) display a specific message and exit non-zero"
+  ],
+  "readyForSprint": true
+}'
 ```

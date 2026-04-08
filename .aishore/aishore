@@ -3104,8 +3104,8 @@ cmd_run() {
 
     local scope_label="" base_branch
     local passed=0 failed=0
-    declare -A FAILED_IDS
-    declare -A COMPLETED_IDS
+    declare -A FAILED_IDS; FAILED_IDS[_]=1; unset 'FAILED_IDS[_]'
+    declare -A COMPLETED_IDS; COMPLETED_IDS[_]=1; unset 'COMPLETED_IDS[_]'
     local batch_start sprint_items=()
     local consecutive_failures=0 groom_exhausted=false
     local -a session_failures=() session_successes=() queued_ids=() skipped_ids=()

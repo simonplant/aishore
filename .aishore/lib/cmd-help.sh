@@ -93,22 +93,9 @@ Subcommands:
     --priority <p>    Filter by priority (must, should, could, future)
     --ready           Show only sprint-ready items
     --no-ready        Show only items not yet ready
-  add               Add a new item
-    --type <t>        Type: feat (default) or bug
-    --title "..."     Item title (required)
-    --intent "..."    Commander's intent
-    --desc "..."      Description
-    --priority <p>    must, should, could, or future (default: should)
-    --category "..."  Category
-    --ready           Mark as ready for sprint
-    --ac "text"       Acceptance criterion (repeatable, replaces all AC)
-    --ac-verify "cmd" Attach verify command to preceding --ac
-    --steps "text"    Implementation step (repeatable, replaces all steps)
-    --scope "glob"    Scope glob (repeatable, replaces all scope)
-    --depends-on ID   Dependency (repeatable, replaces all deps)
+  add --json '{..}' Add a new item (JSON object, or pipe via stdin)
   show <ID>         Show full detail of one item
-  edit <ID>         Update fields on an item (same flags as add, plus --status,
-                    --no-ready, --clear-depends, --groomed-at, --groomed-notes)
+  edit <ID> --json '{..}' Update fields on an item (merges onto existing)
   check <ID>        Check readiness gates for an item
     --all             Audit every non-done item
   rm <ID>           Remove an item (--force to skip confirmation)
@@ -116,8 +103,8 @@ Subcommands:
 
 Examples:
   aishore backlog list --ready         # Show sprint-ready items
-  aishore backlog add --title "Add auth" --intent "Users can log in" --ac "Login works"
-  aishore backlog edit FEAT-001 --priority must --ready
+  aishore backlog add --json '{"title": "Add auth", "intent": "Users can log in securely"}'
+  aishore backlog edit FEAT-001 --json '{"priority": "must", "readyForSprint": true}'
   aishore backlog check --all          # Audit all items
   aishore backlog populate             # Populate from PRODUCT.md
 EOF

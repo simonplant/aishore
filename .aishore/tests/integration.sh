@@ -163,16 +163,21 @@ echo ""
 echo -e "${CYAN}── Backlog CRUD workflow ──${RESET}"
 
 # Create
-assert_ok "backlog add feat" "$AISHORE" backlog add \
-    --type feat --title "Integration test item" \
-    --intent "Verify the full CRUD lifecycle works correctly in automated testing" \
-    --priority should --category test \
-    --steps "Step one" --steps "Step two" --steps "Step three" \
-    --ac "First AC" --ac-verify "echo pass" \
-    --ac "Second AC" \
-    --scope "tests/**" \
-    --desc "Temporary item for integration testing" \
-    --ready
+assert_ok "backlog add feat" "$AISHORE" backlog add --json '{
+    "type": "feat",
+    "title": "Integration test item",
+    "intent": "Verify the full CRUD lifecycle works correctly in automated testing",
+    "priority": "should",
+    "category": "test",
+    "steps": ["Step one", "Step two", "Step three"],
+    "acceptanceCriteria": [
+        {"text": "First AC", "verify": "echo pass"},
+        "Second AC"
+    ],
+    "scope": ["tests/**"],
+    "description": "Temporary item for integration testing",
+    "readyForSprint": true
+}'
 
 # Find the created ID (latest FEAT-*)
 local_test_id=$(jq -r '.items[-1].id' "$SCRIPT_DIR/backlog/backlog.json")
@@ -189,18 +194,18 @@ assert_contains "show has category" "test"                   "$AISHORE" backlog 
 assert_contains "show has desc"     "Temporary item"         "$AISHORE" backlog show "$local_test_id"
 
 # Update
-assert_ok "edit title"    "$AISHORE" backlog edit "$local_test_id" --title "Updated title"
-assert_ok "edit priority" "$AISHORE" backlog edit "$local_test_id" --priority must
-assert_ok "edit status"   "$AISHORE" backlog edit "$local_test_id" --status in-progress
-assert_ok "edit groomed"  "$AISHORE" backlog edit "$local_test_id" --groomed-at --groomed-notes "Test note"
-assert_ok "edit AC"       "$AISHORE" backlog edit "$local_test_id" --ac "New AC" --ac-verify "true"
-assert_ok "edit steps"    "$AISHORE" backlog edit "$local_test_id" --steps "Implement the new feature end to end"
-assert_ok "edit scope"    "$AISHORE" backlog edit "$local_test_id" --scope "new/**"
+assert_ok "edit title"    "$AISHORE" backlog edit "$local_test_id" --json '{"title": "Updated title"}'
+assert_ok "edit priority" "$AISHORE" backlog edit "$local_test_id" --json '{"priority": "must"}'
+assert_ok "edit status"   "$AISHORE" backlog edit "$local_test_id" --json '{"status": "in-progress"}'
+assert_ok "edit groomed"  "$AISHORE" backlog edit "$local_test_id" --json "{\"groomedAt\": \"$(date +%Y-%m-%d)\", \"groomingNotes\": \"Test note\"}"
+assert_ok "edit AC"       "$AISHORE" backlog edit "$local_test_id" --json '{"acceptanceCriteria": [{"text": "New AC", "verify": "true"}]}'
+assert_ok "edit steps"    "$AISHORE" backlog edit "$local_test_id" --json '{"steps": ["Implement the new feature end to end"]}'
+assert_ok "edit scope"    "$AISHORE" backlog edit "$local_test_id" --json '{"scope": ["new/**"]}'
 # Check readiness gates (before edits that break readiness)
 assert_ok "check item" "$AISHORE" backlog check "$local_test_id"
 
-assert_ok "edit deps"     "$AISHORE" backlog edit "$local_test_id" --depends-on "FAKE-001"
-assert_ok "edit no-ready" "$AISHORE" backlog edit "$local_test_id" --no-ready
+assert_ok "edit deps"     "$AISHORE" backlog edit "$local_test_id" --json '{"dependsOn": ["FAKE-001"]}'
+assert_ok "edit no-ready" "$AISHORE" backlog edit "$local_test_id" --json '{"readyForSprint": false}'
 
 # Verify edits
 assert_contains "edit applied: title"    "Updated title"  "$AISHORE" backlog show "$local_test_id"
@@ -220,10 +225,12 @@ echo ""
 
 echo -e "${CYAN}── Bug item routing ──${RESET}"
 
-assert_ok "add bug" "$AISHORE" backlog add --type bug \
-    --title "Integration test bug" \
-    --intent "Verify bug items get BUG- prefix and route to bugs.json file" \
-    --ac "Bug exists"
+assert_ok "add bug" "$AISHORE" backlog add --json '{
+    "type": "bug",
+    "title": "Integration test bug",
+    "intent": "Verify bug items get BUG- prefix and route to bugs.json file",
+    "acceptanceCriteria": ["Bug exists"]
+}'
 
 local_bug_id=$(jq -r '.items[-1].id' "$SCRIPT_DIR/backlog/bugs.json")
 assert_contains "bug has BUG- prefix" "BUG-" echo "$local_bug_id"
@@ -237,11 +244,13 @@ echo ""
 echo -e "${CYAN}── Clean & archive workflow ──${RESET}"
 
 # Create, mark done, clean, verify archived
-assert_ok "add for clean test" "$AISHORE" backlog add --type feat \
-    --title "Clean test item" \
-    --intent "Verify clean archives done items and removes them from active backlog"
+assert_ok "add for clean test" "$AISHORE" backlog add --json '{
+    "type": "feat",
+    "title": "Clean test item",
+    "intent": "Verify clean archives done items and removes them from active backlog"
+}'
 local_clean_id=$(jq -r '.items[-1].id' "$SCRIPT_DIR/backlog/backlog.json")
-assert_ok "mark done" "$AISHORE" backlog edit "$local_clean_id" --status done
+assert_ok "mark done" "$AISHORE" backlog edit "$local_clean_id" --json '{"status": "done"}'
 assert_contains "clean dry-run shows item" "1" "$AISHORE" clean --dry-run
 assert_ok "clean" "$AISHORE" clean
 assert_fail "item gone from backlog" "$AISHORE" backlog show "$local_clean_id"
@@ -254,13 +263,15 @@ echo ""
 echo -e "${CYAN}── Dry-run ──${RESET}"
 
 # Create a ready item for dry-run
-assert_ok "add for dry-run" "$AISHORE" backlog add --type feat \
-    --title "Dry run test" \
-    --intent "Verify dry-run shows correct developer prompt and scope advisory" \
-    --steps "Do the thing" \
-    --ac "Thing done" --ac-verify "echo done" \
-    --scope "src/**" --scope "tests/**" \
-    --ready
+assert_ok "add for dry-run" "$AISHORE" backlog add --json '{
+    "type": "feat",
+    "title": "Dry run test",
+    "intent": "Verify dry-run shows correct developer prompt and scope advisory",
+    "steps": ["Do the thing"],
+    "acceptanceCriteria": [{"text": "Thing done", "verify": "echo done"}],
+    "scope": ["src/**", "tests/**"],
+    "readyForSprint": true
+}'
 local_dr_id=$(jq -r '.items[-1].id' "$SCRIPT_DIR/backlog/backlog.json")
 
 assert_ok          "run --dry-run"              "$AISHORE" run --dry-run
@@ -305,16 +316,17 @@ echo ""
 
 echo -e "${CYAN}── Validation edge cases ──${RESET}"
 
-assert_fail "add without title"        "$AISHORE" backlog add --type feat
-assert_fail "add invalid priority"     "$AISHORE" backlog add --title "x" --priority invalid
-assert_fail "add invalid type"         "$AISHORE" backlog add --title "x" --type invalid
-assert_fail "edit invalid status"      "$AISHORE" backlog edit FEAT-001 --status invalid
+assert_fail "add without title"        "$AISHORE" backlog add --json '{"type": "feat"}'
+assert_fail "add invalid priority"     "$AISHORE" backlog add --json '{"title": "x", "priority": "invalid"}'
+assert_fail "add invalid type"         "$AISHORE" backlog add --json '{"title": "x", "type": "invalid"}'
+assert_fail "add unknown field"        "$AISHORE" backlog add --json '{"title": "x", "bogus": "nope"}'
+assert_fail "add no --json flag"       "$AISHORE" backlog add --title "x"
+assert_fail "edit invalid status"      "$AISHORE" backlog edit FEAT-001 --json '{"status": "invalid"}'
 assert_fail "edit no flags"            "$AISHORE" backlog edit FEAT-001
 assert_fail "check no args"            "$AISHORE" backlog check
 assert_fail "rm no args"               "$AISHORE" backlog rm
 assert_fail "show nonexistent"         "$AISHORE" backlog show NONEXISTENT
 assert_fail "unknown backlog sub"      "$AISHORE" backlog foobar
-assert_fail "ac-verify without ac"     "$AISHORE" backlog add --title "x" --intent "xxxxxxxxxxxxxxxxxxxx" --ac-verify "echo"
 
 echo ""
 

@@ -196,6 +196,16 @@ validation:
 | **What it controls** | Maximum conversation turns for grooming agents (groomer, architect). |
 | **When to change** | Increase for larger grooming sessions; decrease to keep grooming focused. |
 
+#### `agent.max_turns.refiner`
+
+| | |
+|---|---|
+| **Type** | integer |
+| **Default** | `45` |
+| **Env var** | `AISHORE_MAX_TURNS_REFINER` |
+| **What it controls** | Maximum conversation turns for the refiner agent during `aishore refine`. |
+| **When to change** | Increase for more thorough PRODUCT.md interviews; decrease to keep sessions focused. |
+
 #### `merge.strategy`
 
 | | |
@@ -338,6 +348,7 @@ All `AISHORE_*` environment variables and what they map to:
 | `AISHORE_MAX_TURNS_DEVELOPER` | `agent.max_turns.developer` | `75` | Max turns for developer agent |
 | `AISHORE_MAX_TURNS_VALIDATOR` | `agent.max_turns.validator` | `45` | Max turns for validator agent |
 | `AISHORE_MAX_TURNS_GROOMER` | `agent.max_turns.groomer` | `45` | Max turns for grooming agents |
+| `AISHORE_MAX_TURNS_REFINER` | `agent.max_turns.refiner` | `45` | Max turns for refiner agent |
 
 ---
 
@@ -392,6 +403,16 @@ When a scope (`done`, `p0`, `p1`, `p2`) is given, auto-grooming activates when r
 | `--backlog` | *(deprecated, no-op)* Groom now covers all items by default |
 | `--architect` | *(deprecated)* Redirects to `scaffold` command |
 
+### `refine` — Improve PRODUCT.md
+
+```
+.aishore/aishore refine [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--from-sprints` | Feed sprint learnings back into PRODUCT.md |
+
 ### `review` — Architecture review
 
 ```
@@ -406,52 +427,42 @@ When a scope (`done`, `p0`, `p1`, `p2`) is given, auto-grooming activates when r
 ### `backlog add` — Add item
 
 ```
-.aishore/aishore backlog add [flags]
+.aishore/aishore backlog add --json '<JSON>'
+echo '<JSON>' | .aishore/aishore backlog add --json -
 ```
 
-| Flag | Argument | Description |
-|------|----------|-------------|
-| `--title` | `"text"` | Item title |
-| `--intent` | `"text"` | Commander's intent (must be >= 20 chars for sprint readiness) |
-| `--type` | `feat` \| `bug` | Item type (default: `feat`) |
-| `--desc` | `"text"` | Full description |
-| `--priority` | `must` \| `should` \| `could` \| `future` | Priority level (default: `should`) |
-| `--category` | `"text"` | Category label |
-| `--ready` | — | Mark as sprint-ready immediately |
-| `--steps` | `"text"` | Implementation step *(repeatable, replaces all steps)* |
-| `--ac` | `"text"` | Add acceptance criterion *(repeatable)* |
-| `--ac-verify` | `"cmd"` | Attach verification command to preceding `--ac` |
-| `--depends-on` | `ID` | Add dependency on another item *(repeatable)* |
+Accepts a JSON object with these fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string *(required)* | Item title |
+| `intent` | string | Commander's intent (must be >= 20 chars for sprint readiness) |
+| `type` | `"feat"` \| `"bug"` | Item type (default: `"feat"`) |
+| `description` | string | Full description |
+| `priority` | `"must"` \| `"should"` \| `"could"` \| `"future"` | Priority level (default: `"should"`) |
+| `category` | string | Category label |
+| `steps` | array of strings | Implementation steps |
+| `acceptanceCriteria` | array | Strings or `{"text": "...", "verify": "..."}` objects |
+| `scope` | array of strings | File glob patterns |
+| `dependsOn` | array of strings | Item IDs this depends on |
+| `readyForSprint` | boolean | Mark as sprint-ready (default: `false`) |
+
+System-managed fields (`id`, `status`, `passes`) are set automatically. Unknown fields are rejected.
 
 ### `backlog edit` — Update item
 
 ```
-.aishore/aishore backlog edit <ID> [flags]
+.aishore/aishore backlog edit <ID> --json '<JSON>'
+echo '<JSON>' | .aishore/aishore backlog edit <ID> --json -
 ```
 
-| Flag | Argument | Description |
-|------|----------|-------------|
-| `--title` | `"text"` | Change title |
-| `--intent` | `"text"` | Set commander's intent |
-| `--desc` | `"text"` | Change description |
-| `--priority` | `must` \| `should` \| `could` \| `future` | Change priority |
-| `--category` | `"text"` | Change category |
-| `--status` | `todo` \| `in-progress` \| `done` | Change status |
-| `--ready` | — | Mark as sprint-ready |
-| `--no-ready` | — | Unmark from sprint-ready |
-| `--groomed-at` | `[YYYY-MM-DD]` | Set groomed date (defaults to today) |
-| `--groomed-notes` | `"text"` | Set grooming notes |
-| `--steps` | `"text"` | Implementation step *(repeatable, replaces all steps)* |
-| `--remove-step` | `N` | Remove step by 1-based index |
-| `--clear-steps` | — | Reset steps to empty |
-| `--ac` | `"text"` | Add acceptance criterion *(repeatable)* |
-| `--ac-verify` | `"cmd"` | Attach verification command to preceding `--ac` |
-| `--remove-ac` | `N` | Remove acceptance criterion by 1-based index |
-| `--clear-ac` | — | Reset acceptance criteria to empty |
-| `--scope` | `"glob"` | Add scope glob *(repeatable)* |
-| `--clear-scope` | — | Reset scope to empty |
-| `--depends-on` | `ID` | Add dependency *(repeatable)* |
-| `--clear-depends-on` | — | Reset dependencies to empty |
+Merges the provided fields onto the existing item. Only fields present in the JSON are updated — omitted fields are left unchanged. Accepts the same fields as `add`, plus:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `"todo"` \| `"in-progress"` \| `"done"` \| `"skip"` | Change status |
+| `groomedAt` | string | Date in `YYYY-MM-DD` format |
+| `groomingNotes` | string | Grooming notes |
 
 ### `backlog list` — List items
 

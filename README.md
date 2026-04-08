@@ -96,24 +96,29 @@ Pick ─→ Branch ─→ Preflight ─→ Develop ─→ Validate ─→ Merge/
 ## Example: A Well-Written Item
 
 ```bash
-.aishore/aishore backlog add \
-  --title "Add health check endpoint" \
-  --intent "Ops must know instantly if the service is alive or dead. No false positives." \
-  --steps "Add GET /health route that checks DB connection and returns 200/503" \
-  --steps "Return JSON {status: 'ok'|'error', db: bool} so monitors can parse it" \
-  --ac "Health endpoint returns 200 when service is running" \
-  --ac-verify "curl -sf http://localhost:3000/health | jq -e '.status == \"ok\"'" \
-  --ac "Health endpoint returns 503 when DB is unreachable" \
-  --ac-verify "DB_HOST=nowhere curl -s http://localhost:3000/health; test $? -ne 0" \
-  --ac "Response is valid JSON with status and db fields" \
-  --ac-verify "curl -sf http://localhost:3000/health | jq -e '.status and .db'"
+.aishore/aishore backlog add --json '{
+  "title": "Add health check endpoint",
+  "intent": "Ops must know instantly if the service is alive or dead. No false positives.",
+  "steps": [
+    "Add GET /health route that checks DB connection and returns 200/503",
+    "Return JSON {status: ok|error, db: bool} so monitors can parse it"
+  ],
+  "acceptanceCriteria": [
+    {"text": "Health endpoint returns 200 when service is running",
+     "verify": "curl -sf http://localhost:3000/health | jq -e '.status == \"ok\"'"},
+    {"text": "Health endpoint returns 503 when DB is unreachable",
+     "verify": "DB_HOST=nowhere curl -s http://localhost:3000/health; test $? -ne 0"},
+    {"text": "Response is valid JSON with status and db fields",
+     "verify": "curl -sf http://localhost:3000/health | jq -e '.status and .db'"}
+  ]
+}'
 ```
 
 This item demonstrates what makes aishore work:
 
 - **Intent is an order, not a description.** "Ops must know instantly" — when the spec is ambiguous, the developer follows this. When the validator checks results, this is the bar. "Add health check endpoint" would be useless as intent because it says nothing about what matters.
 - **Steps are concrete.** The developer doesn't have to guess what "health check" means. Two steps, specific enough to implement, loose enough to allow judgment.
-- **AC verify commands are smoke tests, not grep theater.** Each `--ac-verify` runs the actual endpoint and checks real behavior. `curl | jq -e` proves the response is valid JSON with correct fields. These are evals — they execute the code and verify the output, not grep a source file for a function name.
+- **AC verify commands are smoke tests, not grep theater.** Each verify command runs the actual endpoint and checks real behavior. `curl | jq -e` proves the response is valid JSON with correct fields. These are evals — they execute the code and verify the output, not grep a source file for a function name.
 - **Every verify command becomes a regression test.** After this sprint passes, these three curl commands run before every future sprint. If a later change breaks the health endpoint, pre-flight catches it before the developer even starts. The regression suite grows automatically from well-written AC.
 
 ## Commands
@@ -125,7 +130,7 @@ This item demonstrates what makes aishore work:
 .aishore/aishore backlog populate              # create items from PRODUCT.md
 ```
 ```bash
-.aishore/aishore backlog add --title "..."     # add item manually
+.aishore/aishore backlog add --json '{...}'     # add item manually
 ```
 ```bash
 .aishore/aishore refine                        # improve PRODUCT.md interactively
