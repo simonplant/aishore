@@ -1,33 +1,4 @@
 {
   "description": "Bugs and tech debt",
-  "items": [
-    {
-      "id": "BUG-153",
-      "title": "sprint.json retains completed status after sprint finishes",
-      "intent": "After any sprint completes (pass or fail), sprint.json must be reset to idle state so subsequent runs start clean and status commands reflect reality. A stale completed or failed status in sprint.json must never persist between sprints.",
-      "description": "",
-      "priority": "should",
-      "category": null,
-      "steps": [
-        "In the orchestrator (.aishore/aishore), locate where sprint completion is finalized (after archive write and merge/no-merge path)",
-        "After the sprint is fully archived, write {\"status\": \"idle\"} to backlog/sprint.json",
-        "Ensure this happens in both the pass path and fail path so no residual status persists"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "sprint.json shows idle status after a sprint completes",
-          "verify": "jq -r .status backlog/sprint.json | grep -q idle"
-        }
-      ],
-      "scope": [
-        ".aishore/aishore"
-      ],
-      "dependsOn": [],
-      "status": "done",
-      "passes": true,
-      "readyForSprint": true,
-      "groomedAt": "2026-04-08",
-      "groomingNotes": "Fixed in commit 56596bf — added reset_sprint call at end of _handle_sprint_success. AC verified passing."
-    }
-  ]
+  "items": []
 }
