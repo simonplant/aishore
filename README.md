@@ -91,16 +91,18 @@ The branch is pushed to origin but left unmerged. When the sprint finishes, aish
 gh pr create --head aishore/FEAT-123 --base main
 ```
 
-## Working Core First
+## Working Core First (upcoming)
+
+> **Note:** Working core is designed but not yet implemented in the engine. The documentation below describes the target behavior. See [Roadmap](docs/ROADMAP.md) for status.
 
 Every project has a core — the one end-to-end path the product exists for. A possessions app's core is GET /items returning real data from a real database, rendered on screen. An API's core is: request in, correct response out, persisted. A CLI's core is: primary command runs on real input, produces correct output.
 
-**Nothing gets built until the core works.** aishore manages two tracks:
+**Nothing gets built until the core works.** aishore will manage two tracks:
 
 - **Core track** — items that build, wire up, or fix the primary end-to-end path. Always pickable.
 - **Feature track** — items that extend or decorate the core. Blocked until the core passes.
 
-You declare the core in PRODUCT.md. The groomer assigns each item to a track. The architect generates the core verification. The engine enforces it: `CORE_CMD` runs before every pick and after every merge. If the core breaks, a heal item is auto-generated and jumps the queue. Features are decoration on a working core, never construction on a dead frame.
+You declare the core in PRODUCT.md. The groomer assigns each item to a track. The architect proposes the core verification command. The engine enforces it: `CORE_CMD` runs before every pick and after every merge. If the core breaks, a heal item is auto-generated and jumps the queue. Features are decoration on a working core, never construction on a dead frame.
 
 ## Intent-Based Development
 
@@ -127,7 +129,7 @@ Core Gate ─→ Pick ─→ Branch ─→ Preflight ─→ Develop ─→ Valid
    │ core passing → all items
 ```
 
-1. **Core Gate** — `CORE_CMD` runs. If it fails, only core-track items are pickable. Features stay blocked.
+1. **Core Gate** (upcoming) — `CORE_CMD` runs. If it fails, only core-track items are pickable. Features stay blocked.
 2. **Pick** — highest-priority ready item from the active track. Heal items jump the queue.
 3. **Branch** — isolated git worktree per sprint
 4. **Preflight** — regression suite + validation command on unmodified baseline

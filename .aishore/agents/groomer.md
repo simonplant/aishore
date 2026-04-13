@@ -50,11 +50,11 @@ For each item, ensure:
 
 Every backlog item has a `track` field: `"core"` or `"feature"` (default: `"feature"`). The orchestrator gates feature items on `CORE_CMD` passing — features cannot pick until the working core is verified.
 
-**Your responsibilities:**
+**The architect is the track authority** — it sets initial track assignments via `scaffold`. You preserve and validate those assignments during grooming. Your responsibilities:
 
-1. **Assign tracks** — read the core definition in PRODUCT.md. Items that build, wire up, or fix the primary end-to-end path are `track: "core"`. Everything else is `track: "feature"`. Use `backlog edit <ID> --json '{"track":"core"}'` to assign.
+1. **Preserve tracks** — if the architect has already assigned a `track`, do not override it. If a new item has no track and you're confident it belongs on core (it builds the primary end-to-end path), assign it. When in doubt, leave it as `feature` (the default) and flag for the architect.
 2. **Gate feature readiness on core** — before marking feature items ready, check: do core-track items exist and are they complete? If the core hasn't been built yet, feature items should not be marked `readyForSprint` — add a grooming note explaining that core work must complete first.
-3. **Watch for misassigned tracks** — a feature item that wires up the primary entry point is actually core. A core item that adds search filtering is actually a feature. Correct these.
+3. **Flag misassigned tracks** — if a feature item looks like it should be core (it wires up the primary entry point) or a core item looks like a feature (it adds search filtering), note it in grooming notes for the architect to review. Only correct obvious misassignments.
 
 Watch for these signals during grooming:
 - A backlog full of feature items but no core-track items

@@ -102,6 +102,7 @@ A non-negotiable directive — what must be true when done. The developer follow
 | `lastFailReason` | string | Orchestrator | Reason for most recent sprint failure |
 | `lastFailAt` | string | Orchestrator | ISO timestamp of most recent failure |
 | `failCount` | integer | Orchestrator | Number of sprint failures |
+| `healSource` | string | Orchestrator | (Heal items only) ID of the original item whose regression triggered this heal item. Heal items are auto-generated and removed from bugs.json if they fail. |
 
 ## Executable AC (Verify Commands)
 

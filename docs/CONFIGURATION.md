@@ -96,15 +96,17 @@ validation:
 | **What it controls** | Project name used in logs and agent context. |
 | **When to change** | When the directory name doesn't match the project name. |
 
-#### `core.command`
+#### `core.command` (upcoming)
+
+> **Note:** Core gating is designed but not yet implemented in the engine. Configuring this value today has no effect. See [Roadmap](ROADMAP.md).
 
 | | |
 |---|---|
 | **Type** | string |
 | **Default** | `""` (empty — no core gating) |
 | **Env var** | `AISHORE_CORE_CMD` |
-| **What it controls** | Shell command that verifies the project's working core — the primary end-to-end path the product exists for. This is NOT the test suite — it's the product doing its primary thing (e.g., build + start + hit main endpoint + verify response). Runs before every pick (gates feature-track items) and after every merge (detects core regressions). If it fails, only `track: "core"` items are pickable. If a merge breaks it, a heal item is auto-generated. |
-| **When to change** | Set after the core is first established. The architect agent can generate this from the core definition in PRODUCT.md. |
+| **What it controls** | Shell command that verifies the project's working core — the primary end-to-end path the product exists for. This is NOT the test suite — it's the product doing its primary thing (e.g., build + start + hit main endpoint + verify response). Will run before every pick (gates feature-track items) and after every merge (detects core regressions). If it fails, only `track: "core"` items are pickable. If a merge breaks it, a heal item is auto-generated. |
+| **When to change** | Set after the core is first established. The architect agent can propose this from the core definition in PRODUCT.md — review and refine it before relying on it. |
 
 #### `validation.command`
 

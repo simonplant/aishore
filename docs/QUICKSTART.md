@@ -171,16 +171,17 @@ Check readiness:
 The sprint goes through these stages:
 
 ```
-Core Gate → Pick Item → Create Branch → Pre-flight Check → Developer Agent → Validation → Validator Agent → Merge → Core Re-check → Archive
+[Core Gate] → Pick Item → Create Branch → Pre-flight Check → Developer Agent → Validation → Validator Agent → Merge → [Core Re-check] → Archive
 ```
+
+> Stages in brackets are upcoming — see [Roadmap](ROADMAP.md).
 
 Expected output (abbreviated):
 
 ```
 Sprint 1 of 1
 =============
-  → Core check: PASS (or: no CORE_CMD configured)
-  → Picked: FEAT-001 — Add health check endpoint [feature]
+  → Picked: FEAT-001 — Add health check endpoint
   → Branch: aishore/FEAT-001
   → Pre-flight: PASS
 
@@ -195,7 +196,6 @@ Sprint 1 of 1
   ✓ Validator: PASS
 
   → Merging aishore/FEAT-001 → main
-  → Core re-check: PASS
   → Pushing to origin
   → Archived FEAT-001
 
@@ -234,7 +234,7 @@ git diff HEAD~2..HEAD --stat
 - Dependency blocking → check `dependsOn` field
 - Run `backlog check <ID>` to see which gates fail
 
-**Core check fails and features are blocked?**
+**Core check fails and features are blocked?** (upcoming feature)
 The working core isn't passing. Only `track: "core"` items will be picked until it does. Run your `CORE_CMD` manually to see what's broken. If you don't have core items in the backlog, run `scaffold` to generate them.
 
 **Pre-flight fails?**

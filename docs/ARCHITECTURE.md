@@ -42,13 +42,14 @@ Every backlog item has a `track` field: `"core"` or `"feature"` (default: `"feat
 - **Core track** — items that build, wire up, or fix the primary end-to-end path. Pickable anytime.
 - **Feature track** — items that extend, decorate, or enhance the core. Gated: only pickable when `CORE_CMD` passes.
 
-The groomer assigns tracks by reading the core definition in PRODUCT.md and each item's intent/scope. The architect generates the `CORE_CMD` — a verification command derived from the core definition and the codebase (e.g., build, start, hit primary endpoint, verify response).
+The architect is the track authority — it sets initial track assignments via `scaffold`. The groomer preserves and validates them during grooming. The architect proposes the `CORE_CMD` — a verification command derived from the core definition and the codebase (e.g., build, start, hit primary endpoint, verify response). The user should review and refine it before relying on it.
 
 ### Core Gate
 
 Before picking an item, the orchestrator runs `CORE_CMD`:
 
-- **Fails** → only `track: "core"` items are pickable. Feature items are blocked.
+- **Fails + core items available** → only `track: "core"` items are pickable. Feature items are blocked.
+- **Fails + no core items available** → the system is stuck. A heal item is synthesized from the `CORE_CMD` failure (the command itself becomes the verify AC). If no heal can be generated, the circuit breaker fires with a clear message: "CORE_CMD fails but no core-track items exist — run `scaffold` or fix manually."
 - **Passes** → all items are pickable. Features are unlocked.
 - **Not configured** → no gating. All items pickable (backwards-compatible).
 
@@ -59,10 +60,10 @@ After every successful merge, `CORE_CMD` is re-checked. If a sprint broke the co
 When the core breaks (a previously-passing `CORE_CMD` or regression command fails), the orchestrator synthesizes a heal item:
 
 - Extracts the broken verification commands as acceptance criteria
-- Creates a `track: "core"`, `priority: "must"`, `category: "heal"` item in bugs.json
+- Creates a `track: "core"`, `priority: "must"`, `category: "heal"` item in bugs.json with a `healSource` field tracing back to the original item
 - The heal item jumps the pick queue — ahead of all other items
 - Goes through the normal sprint loop (worktree, developer, validation, merge)
-- Guard: heal items never spawn child heals. If a heal fails, the original item's `failCount` increments
+- Guard: heal items never spawn child heals. If a heal fails, the original item's `failCount` increments and the heal item is removed from bugs.json (no accumulation). If the heal fails and exhausts retries, the circuit breaker fires — the system stops rather than looping on an unfixable regression
 
 ## Completion Contract
 
@@ -94,7 +95,7 @@ The protocol is always on. Skipping it produces measurably worse outcomes.
 | **Developer** | Implements features following maturity protocol | `run` | `Agent,Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode` |
 | **Validator** | Checks AC and intent against actual changes | `run` | `Bash,Read,Glob,Grep` |
 | **Groomer** | Adds steps, testable AC, sets priorities, marks items ready | `groom` | CLI commands |
-| **Architect** | Establishes working core, generates `CORE_CMD`, assigns tracks, reviews patterns/risks | `review`, `scaffold` | `Read,Glob,Grep` (+ `Edit,Write` with `--update-docs`) |
+| **Architect** | Establishes working core, proposes `CORE_CMD`, assigns tracks (track authority), reviews patterns/risks | `review`, `scaffold` | `Read,Glob,Grep` (+ `Edit,Write` with `--update-docs`) |
 
 ### Data flow
 

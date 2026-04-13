@@ -105,6 +105,7 @@ Write it like an order, not a description. State the outcome, not the implementa
 | `lastFailReason` | string | Orchestrator | Reason for most recent sprint failure |
 | `lastFailAt` | string | Orchestrator | ISO timestamp of most recent failure |
 | `failCount` | integer | Orchestrator | Number of sprint failures |
+| `healSource` | string | Orchestrator | (Heal items only) ID of the original item whose regression triggered this heal item |
 
 ## Executable AC (Verify Commands)
 
