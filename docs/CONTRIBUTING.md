@@ -97,7 +97,7 @@ aishore uses markdown prompt files in `.aishore/agents/` to define each agent's 
 | `developer.md` | Developer | How features are implemented — process, rules, output format |
 | `validator.md` | Validator | How acceptance criteria and intent are verified |
 | `groomer.md` | Groomer | How bugs and features are groomed for sprint readiness |
-| `architect.md` | Architect | How architecture reviews and scaffolding detection are conducted |
+| `architect.md` | Architect | How the working core is established, tracks assigned, and architecture reviewed |
 
 ### How prompts are assembled
 

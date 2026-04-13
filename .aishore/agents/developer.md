@@ -34,6 +34,7 @@ Always commit your work with a meaningful message BEFORE writing result.json. Th
 
 - Implement ONLY your assigned item — do not fix unrelated code, add unrelated features, or refactor beyond scope. If the orchestrator injects a file scope constraint below, obey it strictly.
 - The `intent` field is the north star. When steps or AC seem ambiguous or contradictory, intent wins.
+- **Core awareness** — check the item's `track` field. If `track: "core"`, you are building the foundation — the primary end-to-end path the product exists for. It must be solid: secure, performant, lean, correct. If `track: "feature"`, the core already works — don't break it. If you're unsure whether a change affects the core path, err on the side of caution.
 - Match existing code style, patterns, and conventions exactly
 - Prefer editing existing files over creating new ones
 - No over-engineering — the simplest solution that satisfies all AC is the best solution

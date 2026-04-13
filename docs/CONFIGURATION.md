@@ -96,6 +96,16 @@ validation:
 | **What it controls** | Project name used in logs and agent context. |
 | **When to change** | When the directory name doesn't match the project name. |
 
+#### `core.command`
+
+| | |
+|---|---|
+| **Type** | string |
+| **Default** | `""` (empty — no core gating) |
+| **Env var** | `AISHORE_CORE_CMD` |
+| **What it controls** | Shell command that verifies the project's working core — the primary end-to-end path the product exists for. This is NOT the test suite — it's the product doing its primary thing (e.g., build + start + hit main endpoint + verify response). Runs before every pick (gates feature-track items) and after every merge (detects core regressions). If it fails, only `track: "core"` items are pickable. If a merge breaks it, a heal item is auto-generated. |
+| **When to change** | Set after the core is first established. The architect agent can generate this from the core definition in PRODUCT.md. |
+
 #### `validation.command`
 
 | | |
@@ -103,7 +113,7 @@ validation:
 | **Type** | string |
 | **Default** | `""` (empty — no validation) |
 | **Env var** | `AISHORE_VALIDATE_CMD` |
-| **What it controls** | Shell command that validates the codebase after the developer agent finishes. Also runs as a baseline pre-flight before the agent starts — if it fails, the sprint is aborted. |
+| **What it controls** | Shell command that validates the codebase after the developer agent finishes. Also runs as a baseline pre-flight before the agent starts — if it fails, the sprint is aborted. This is your test suite/linter — distinct from `core.command` which verifies the product works end-to-end. |
 | **When to change** | Set this to your test/lint command (e.g., `npm test && npm run lint`, `make check`, `pytest`). |
 
 #### `validation.timeout`

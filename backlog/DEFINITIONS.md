@@ -20,6 +20,7 @@
 | 3 | Type-check, lint, tests all pass |
 | 4 | Each AC verified (verify commands pass, validator confirms) |
 | 5 | Regression suite passes (no prior sprint's guarantees broken) |
+| 6 | Working core intact (if `CORE_CMD` configured, it must still pass after merge) |
 
 ## Priority Levels
 
@@ -63,6 +64,7 @@ A non-negotiable directive — what must be true when done. The developer follow
   "description": "Context and technical notes",
   "priority": "should",
   "category": "core",
+  "track": "core",
   "steps": ["Step 1", "Step 2"],
   "acceptanceCriteria": [
     "Plain string AC (validated by judgment)",
@@ -86,6 +88,7 @@ A non-negotiable directive — what must be true when done. The developer follow
 | `description` | string | User / groom agent | Full context and scope boundaries |
 | `priority` | string | User / groom agent | `must` \| `should` \| `could` \| `future` |
 | `category` | string | User / groom agent | Arbitrary tag for filtering (e.g., `api`, `docs`) |
+| `track` | string | Groom agent / CLI | `"core"` \| `"feature"` (default: `"feature"`). Core-track items build the primary end-to-end path. Feature-track items are gated: only pickable when `CORE_CMD` passes. Assigned by the groomer based on the core definition in PRODUCT.md. |
 | `steps` | string[] | User / groom agent | Implementation steps |
 | `acceptanceCriteria` | (string \| object)[] | User / groom agent | Plain strings or `{text, verify}` objects. `verify` is a shell command (an eval) |
 | `scope` | string[] | User / groom agent | File glob patterns constraining where changes should land |

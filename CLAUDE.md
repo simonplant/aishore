@@ -11,10 +11,12 @@
 ## Sprint Flow
 
 ```
-Pick Item → Branch (aishore/<ID>) → Preflight (regression + baseline) → Developer Agent → Validation Command → AC Verify Commands → Validator Agent → Merge → Archive
+Core Gate → Pick Item → Branch (aishore/<ID>) → Preflight (regression + baseline) → Developer Agent → Validation Command → AC Verify Commands → Validator Agent → Merge → Core Re-check → Archive
 ```
 
 Each item runs in an isolated git worktree on its own feature branch. Backlog mutations happen on the base branch after merge, never in the worktree.
+
+**Working core:** Every project has a core — the primary end-to-end path the product exists for, declared in PRODUCT.md. The `CORE_CMD` verifies it. Before picking, the core gate runs: if it fails, only `track: "core"` items are pickable (features are blocked). After merge, the core is re-checked: if a sprint broke it, a heal item is auto-generated and jumps the queue. Features are decoration on a working core, never construction on a dead frame.
 
 ## Agent Roles
 
@@ -23,7 +25,7 @@ Each item runs in an isolated git worktree on its own feature branch. Backlog mu
 | Developer | `run` | Agent,Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode |
 | Validator | `run` (after dev) | Bash,Read,Glob,Grep |
 | Groomer | `groom` | CLI commands |
-| Architect | `scaffold`, `review` | Read,Glob,Grep (+ Edit,Write with `--update-docs`) |
+| Architect | `scaffold`, `review` | Read,Glob,Grep (+ Edit,Write with `--update-docs`). Establishes working core, generates `CORE_CMD`, assigns tracks. |
 
 ## Completion Contract
 
@@ -38,6 +40,7 @@ The orchestrator polls for this file. On pass, the pipeline continues. On fail, 
 
 ## Quality Model
 
+- **Working core gate**: `CORE_CMD` runs before picking and after every merge. If the core is broken, only `track: "core"` items are pickable — features are blocked until the core passes. Core regressions auto-generate heal items that jump the queue.
 - **Maturity protocol**: Developer runs 3 phases in one session — implement, critique (re-read all changes, verify each AC, hunt bugs), harden (run validation, fix regressions, confirm all AC met)
 - **Validation sequence**: (1) validation command (test suite/linter), (2) AC verify commands, (3) Validator agent
 - **Regression suite**: All verify commands from completed sprints saved to `backlog/archive/regression.jsonl`, run as pre-flight before every future sprint
@@ -46,6 +49,7 @@ The orchestrator polls for this file. On pass, the pipeline continues. On fail, 
 
 ## Key Rules for Agents
 
+- **Core before features.** The working core — the primary end-to-end path — must pass before feature work proceeds. If you're working on a core-track item, you're building the foundation. If you're working on a feature-track item, the core already works — don't break it.
 - **Intent is the north star.** When steps or AC are ambiguous, follow intent.
 - **Prove it runs.** Wire code to real entry points. Working code that's reachable beats tested code that's isolated.
 - **No mocks or stubs** in production code unless the item explicitly requests them.
@@ -59,7 +63,7 @@ The orchestrator polls for this file. On pass, the pipeline continues. On fail, 
 .aishore/aishore run [N|ID|done|p0|p1|p2]  # Run sprints
 .aishore/aishore groom                      # Groom backlog items
 .aishore/aishore refine                     # Improve PRODUCT.md interactively
-.aishore/aishore scaffold                   # Detect fragment risk
+.aishore/aishore scaffold                   # Establish working core, detect fragment risk
 .aishore/aishore review [--update-docs]     # Architecture review
 .aishore/aishore status                     # Backlog overview
 

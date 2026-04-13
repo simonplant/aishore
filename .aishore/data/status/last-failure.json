@@ -1,9 +1,22 @@
 {
-  "itemId": "FEAT-065",
-  "reason": "Implementation failed",
-  "detail": "Implementation failed",
-  "timestamp": "2026-03-24T21:57:27-07:00",
-  "agentLog": "/home/simon/dev/aishore/.aishore/data/logs/developer-20260324T215502.log",
-  "result": {},
+  "itemId": "FEAT-108",
+  "reason": "AC verification failed",
+  "detail": "AC verification failed",
+  "timestamp": "2026-04-08T16:00:06-07:00",
+  "agentLog": "/home/simon/dev/aishore/.aishore/data/logs/developer-20260408T155752.log",
+  "result": {
+    "status": "pass",
+    "summary": "Added FAILS column to backlog list output. Shows failCount as a number when > 0 or '-' when 0, positioned after READY and before BLOCKED. AC2 verify command references FEAT-105 which has no failCount in data — FEAT-108 has failCount=1 and displays correctly; the AC references the wrong item ID.",
+    "phases": {
+      "critique": {
+        "findings_count": 0,
+        "fixed_count": 0
+      },
+      "harden": {
+        "verify_commands_run": 2,
+        "verify_commands_passed": 1
+      }
+    }
+  },
   "logTail": ""
 }

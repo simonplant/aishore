@@ -117,6 +117,8 @@ validation:
 
 aishore works best when you start from a product requirements document. Write a `docs/PRODUCT.md` (or fill in the template `init` created) describing what you're building — vision, features, constraints. This is the input the groomer uses to create backlog items.
 
+**Define the working core.** The single most important thing in PRODUCT.md is the core definition: the one end-to-end path the product exists for. "A user opens the app and sees their items list, populated from a real API, backed by a real database." This drives everything — the groomer assigns items to core vs feature tracks, the architect generates core verification, and the engine blocks feature work until the core passes. Be specific.
+
 Even a short description helps. The more specific you are, the better the generated items will be.
 
 ## 5. Populate the Backlog
@@ -127,7 +129,7 @@ Generate backlog items from your product doc:
 .aishore/aishore backlog populate
 ```
 
-The groomer agent reads your PRODUCT.md, creates sprint-ready items with intent, steps, and executable acceptance criteria. It scaffolds top-down (skeleton before features) and right-sizes items for single sprints.
+The groomer agent reads your PRODUCT.md, creates sprint-ready items with intent, steps, and executable acceptance criteria. It assigns each item to a track: `core` (builds the primary end-to-end path) or `feature` (decorates it). Core items are generated first and right-sized for single sprints.
 
 Verify what was created:
 
@@ -169,7 +171,7 @@ Check readiness:
 The sprint goes through these stages:
 
 ```
-Pick Item → Create Branch → Pre-flight Check → Developer Agent → Validation → Validator Agent → Merge → Archive
+Core Gate → Pick Item → Create Branch → Pre-flight Check → Developer Agent → Validation → Validator Agent → Merge → Core Re-check → Archive
 ```
 
 Expected output (abbreviated):
@@ -177,7 +179,8 @@ Expected output (abbreviated):
 ```
 Sprint 1 of 1
 =============
-  → Picked: FEAT-001 — Add health check endpoint
+  → Core check: PASS (or: no CORE_CMD configured)
+  → Picked: FEAT-001 — Add health check endpoint [feature]
   → Branch: aishore/FEAT-001
   → Pre-flight: PASS
 
@@ -192,6 +195,7 @@ Sprint 1 of 1
   ✓ Validator: PASS
 
   → Merging aishore/FEAT-001 → main
+  → Core re-check: PASS
   → Pushing to origin
   → Archived FEAT-001
 
@@ -230,6 +234,9 @@ git diff HEAD~2..HEAD --stat
 - Dependency blocking → check `dependsOn` field
 - Run `backlog check <ID>` to see which gates fail
 
+**Core check fails and features are blocked?**
+The working core isn't passing. Only `track: "core"` items will be picked until it does. Run your `CORE_CMD` manually to see what's broken. If you don't have core items in the backlog, run `scaffold` to generate them.
+
 **Pre-flight fails?**
 Your baseline is broken. Run your validation command manually and fix:
 ```bash
@@ -257,7 +264,7 @@ gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d 
 - Drain the backlog: `.aishore/aishore run done`
 - Must-haves only: `.aishore/aishore run p0`
 - With retries: `.aishore/aishore run done --retries 2`
-- Detect fragment risk: `.aishore/aishore scaffold`
+- Establish working core: `.aishore/aishore scaffold`
 - Architecture review: `.aishore/aishore review`
 - Full command reference: `.aishore/aishore help`
 - Full docs: [README.md](../README.md)

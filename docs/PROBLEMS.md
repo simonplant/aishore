@@ -4,6 +4,17 @@ Real problems that show up when you use AI coding tools on anything beyond a sin
 
 ---
 
+## AI builds 50 features on a dead frame
+
+The most expensive failure mode in AI-driven development: the AI implements feature after feature, each passing its own tests, and after 50 sprints you have 50 well-tested fragments and no evidence the system works end-to-end. The build command fails. The main screen is blank. The primary API endpoint returns 404. Every feature is technically correct and collectively useless — decoration on a dead frame.
+
+This happens because AI agents work bottom-up by default. They implement what you ask, validate what you specified, and move on. Nobody checks whether the system *as a whole* still works. A sprint can pass all its acceptance criteria while the core product is broken.
+
+**How aishore addresses this:**
+Every project declares its core — the one end-to-end path the product exists for — in PRODUCT.md. The groomer assigns each backlog item to a track: `core` (builds the primary path) or `feature` (decorates it). Before every sprint, the engine runs `CORE_CMD` to verify the core works. If it fails, only core-track items are pickable — feature items are blocked until the foundation is solid. After every merge, the core is re-checked: if a sprint broke it, a heal item is auto-generated and jumps the queue ahead of all other work. The machine builds the core first, proves it works, then decorates — and if decoration ever breaks the core, it heals before continuing. Features are never built on a dead frame.
+
+---
+
 ## AI coding sessions lose all context between runs
 
 Every time you start a new Claude Code session, the AI starts from zero. It doesn't remember what it built yesterday, what patterns it established, what decisions it made, or what it tried and rejected. You end up re-explaining context, watching the AI rediscover your codebase from scratch, and dealing with inconsistent approaches across sessions.

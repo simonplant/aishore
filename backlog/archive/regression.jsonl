@@ -17,3 +17,15 @@
 {"itemId":"FEAT-097","date":"2026-04-01","text":"Developer context mentions intent minimum length or hard gate","verify":"grep -Eqi 'intent.*char|intent.*gate|intent.*length|intent.*minimum|intent.*reject|20.*char|char.*20|intent.*skip' .aishore/aishore"}
 {"itemId":"FEAT-098","date":"2026-04-01","text":"Scope injection uses advisory language","verify":"grep -i 'scope' .aishore/aishore | grep -Eiq 'advisory|warning|prefer|not strict|do not fail'"}
 {"itemId":"FEAT-100","date":"2026-04-01","text":"Orchestrator injects mode indicator into architect prompt","verify":"grep -Eqi 'review mode|groom mode|mode.*=.*review|mode.*=.*groom|You are in' .aishore/aishore"}
+{"itemId":"FEAT-101","date":"2026-04-08","text":"Git clone method produces a working .aishore/ directory","verify":"test -f .aishore/aishore && test -x .aishore/aishore"}
+{"itemId":"FEAT-102","date":"2026-04-08","text":"Source contains gh pr create output template wired to branch variables","verify":"grep -q 'gh pr create' .aishore/aishore"}
+{"itemId":"FEAT-103","date":"2026-04-08","text":"backlog check --all output ends with a N/total ready summary line","verify":".aishore/aishore backlog check --all 2>&1 | grep -qE '[0-9]+/[0-9]+ items? ready'"}
+{"itemId":"FEAT-104","date":"2026-04-08","text":"README.md documents --no-merge flag","verify":"grep -q 'no-merge' README.md"}
+{"itemId":"FEAT-104","date":"2026-04-08","text":"README.md shows gh pr create as the follow-up step","verify":"grep -q 'gh pr create' README.md"}
+{"itemId":"FEAT-106","date":"2026-04-08","text":"status output includes a ready/total count line","verify":".aishore/aishore status 2>&1 | grep -qE \"[0-9]+/[0-9]+ items? ready\""}
+{"itemId":"BUG-152","date":"2026-04-08","text":"status does not show Currently running when sprint.json status is completed","verify":".aishore/aishore status 2>&1 | grep -qvi currently.running"}
+{"itemId":"BUG-152","date":"2026-04-08","text":"status shows Currently running only when a sprint is actively in progress","verify":"echo \"{\\\"status\\\": \\\"in_progress\\\", \\\"item\\\": {\\\"id\\\": \\\"TEST-1\\\", \\\"title\\\": \\\"test\\\"}}\" > /tmp/test_sprint.json && orig=$(cat backlog/sprint.json) && cp /tmp/test_sprint.json backlog/sprint.json && result=$(.aishore/aishore status 2>&1) && echo \"$orig\" > backlog/sprint.json && echo \"$result\" | grep -qi currently.running"}
+{"itemId":"FEAT-107","date":"2026-04-08","text":"Fail count line appears in backlog show output for a failed item","verify":".aishore/aishore backlog show FEAT-105 2>&1 | grep -q \"Fail count\""}
+{"itemId":"FEAT-107","date":"2026-04-08","text":"Last failure reason appears in backlog show output for a failed item","verify":".aishore/aishore backlog show FEAT-105 2>&1 | grep -q \"Last failure\""}
+{"itemId":"FEAT-109","date":"2026-04-08","text":"backlog list --failed shows FEAT-105 which has failCount 1","verify":".aishore/aishore backlog list --failed 2>&1 | grep -q FEAT-105"}
+{"itemId":"FEAT-109","date":"2026-04-08","text":"backlog list --failed excludes items with no sprint failures","verify":"! .aishore/aishore backlog list --failed 2>&1 | grep -q FEAT-107"}

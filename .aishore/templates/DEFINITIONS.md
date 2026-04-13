@@ -24,6 +24,7 @@ An item is done when:
 | 3 | **Validation Pass**   | Type-check, lint, tests all pass                  |
 | 4 | **AC Verified**       | Each AC met (verify commands pass, validator confirms) |
 | 5 | **No Regressions**    | Regression suite passes (prior sprints' guarantees hold) |
+| 6 | **Core Intact**       | Working core still passes after merge (if `CORE_CMD` configured) |
 
 ## Priority Levels
 
@@ -66,6 +67,7 @@ Write it like an order, not a description. State the outcome, not the implementa
   "description": "Full description — what to build, context, scope boundaries",
   "priority": "should",
   "category": "core",
+  "track": "core",
   "steps": ["Step 1", "Step 2"],
   "acceptanceCriteria": [
     "Plain string AC (validated by judgment)",
@@ -89,6 +91,7 @@ Write it like an order, not a description. State the outcome, not the implementa
 | `description` | string | User / groom agent | Full context and scope boundaries |
 | `priority` | string | User / groom agent | `must` \| `should` \| `could` \| `future` |
 | `category` | string | User / groom agent | Arbitrary tag for filtering (e.g., `api`, `docs`) |
+| `track` | string | Groom agent / CLI | `"core"` \| `"feature"` (default: `"feature"`). Core items build the primary end-to-end path. Feature items are gated on `CORE_CMD` passing. |
 | `steps` | string[] | User / groom agent | Implementation steps |
 | `acceptanceCriteria` | (string \| object)[] | User / groom agent | Plain strings or `{text, verify}` objects. `verify` is a shell command (an eval) |
 | `scope` | string[] | User / groom agent | File glob patterns constraining where changes should land |

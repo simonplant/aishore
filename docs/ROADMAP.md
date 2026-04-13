@@ -10,6 +10,7 @@ aishore ships working autonomous sprints: full sprint lifecycle (branch, develop
 
 Things that directly improve the core loop of shipping working code:
 
+- **Working core gate** — two-track backlog (`core` / `feature`), `CORE_CMD` verification before every pick and after every merge, heal-first queue for core regressions. Features blocked until core passes. The groomer assigns tracks; the architect generates `CORE_CMD`.
 - **PR workflow integration** — `--no-merge` keeps branches for external PR creation; tighter integration possible.
 
 ## Later

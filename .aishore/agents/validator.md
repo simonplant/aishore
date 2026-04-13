@@ -57,7 +57,14 @@ After checking AC and intent, assess whether the implementation is connected to 
 - **Mocks in production code** — test files can mock freely, but if production code (not test files) contains mock or stub implementations, flag it. Production code should use real implementations.
 - **Stub entry points** — does the diff leave any entry point as a stub ("not implemented", placeholder response, early return with no real logic)? If the item's intent is to wire something up and the entry point is still a stub, that's a fail.
 
-These are **advisory notes on pass, not automatic failures** — unless they directly contradict the item's intent. Include them in your `summary` field so the user has visibility into fragment risk. If the item is explicitly a scaffolding/wiring item, these checks become part of intent verification.
+These are **advisory notes on pass, not automatic failures** — unless they directly contradict the item's intent. Include them in your `summary` field so the user has visibility into fragment risk. If the item is explicitly a core-track item, these checks become part of intent verification.
+
+## Core Awareness
+
+Check the item's `track` field:
+
+- **`track: "core"`** — this item builds the primary end-to-end path. Hold it to a higher bar: the implementation must be solid (secure, performant, lean, correct), not just functional. Integration checks above are mandatory, not advisory. If the core path has stubs, mocks, or disconnected pieces after this item, that's a fail.
+- **`track: "feature"`** — this item decorates the core. The core already works. If the diff introduces changes that could break the core path (modifying shared infrastructure, changing entry points, altering the primary data flow), flag it as a risk in your summary.
 
 ## Rules
 

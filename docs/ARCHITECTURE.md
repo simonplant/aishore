@@ -7,27 +7,62 @@ aishore is an autonomous sprint orchestration tool for Claude Code. It takes a p
 ## Pipeline
 
 ```
-┌───────────────────────────────────────────────────────────────────────────────────────┐
-│                                  Sprint Orchestrator                                  │
-│                                                                                       │
-│  ┌──────┐  ┌────────┐  ┌───────────┐  ┌───────────┐  ┌────────┐  ┌─────────┐  ┌──────────┐
-│  │ Pick │->│ Branch │->│ Preflight │->│ Developer │->│ Verify │->│Validator│->│  Merge   │
-│  │ Item │  │ Create │  │  Check    │  │   Agent   │  │  Suite │  │  Agent  │  │ Archive  │
-│  └──────┘  └────────┘  └───────────┘  └───────────┘  └────────┘  └─────────┘  └──────────┘
-│                                              │                         │              │
-│                                              └──── retry on failure ───┘              │
-└───────────────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    Sprint Orchestrator                                         │
+│                                                                                                │
+│  ┌──────┐  ┌──────┐  ┌────────┐  ┌───────────┐  ┌───────────┐  ┌────────┐  ┌─────────┐  ┌────────┐
+│  │ Core │->│ Pick │->│ Branch │->│ Preflight │->│ Developer │->│ Verify │->│Validator│->│ Merge  │
+│  │ Gate │  │ Item │  │ Create │  │  Check    │  │   Agent   │  │  Suite │  │  Agent  │  │Archive │
+│  └──────┘  └──────┘  └────────┘  └───────────┘  └───────────┘  └────────┘  └─────────┘  └────────┘
+│      │                                                  │                         │          │
+│      │ core broken → only core-track items pickable     └──── retry on failure ───┘          │
+│      │ core passing → all items pickable                                                     │
+└────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 | Stage | What happens |
 |-------|-------------|
-| **Pick** | Selects highest-priority ready item. Must pass readiness gates (intent >= 20 chars, steps, AC). Priority scoping filters by `p0`/`p1`/`p2`/`done`. |
+| **Core Gate** | Runs `CORE_CMD` (if configured). If it fails, only `track: "core"` items are pickable — feature items are blocked. If it passes (or is unconfigured), all items are pickable. |
+| **Pick** | Selects highest-priority ready item from the active track. Heal items (auto-generated from regressions) jump the queue. Must pass readiness gates (intent >= 20 chars, steps, AC). Priority scoping filters by `p0`/`p1`/`p2`/`done`. |
 | **Branch** | Creates isolated feature branch `aishore/<ITEM-ID>` in a git worktree. |
 | **Preflight** | Runs validation command + full regression suite against unmodified codebase. Aborts if baseline is broken. |
 | **Develop** | Developer agent implements via maturity protocol (implement → critique → harden). |
 | **Verify** | Validation command runs, then all AC verify commands execute. |
 | **Validate** | Validator agent reviews changes against AC and commander's intent. |
-| **Merge** | Branch merged with `--no-ff`, pushed, item archived to `sprints.jsonl`. |
+| **Merge** | Branch merged with `--no-ff`, pushed, item archived to `sprints.jsonl`. Core gate re-checked after merge — if a feature broke the core, a heal item is synthesized and jumps the queue. |
+
+## Working Core
+
+Every project has a core — the one end-to-end path the product exists for. The core is declared in PRODUCT.md as a product-level statement (e.g., "A user opens the app and sees their items list, populated from a real API, backed by a real database"). The system manages it through three mechanisms:
+
+### Two-Track Backlog
+
+Every backlog item has a `track` field: `"core"` or `"feature"` (default: `"feature"`).
+
+- **Core track** — items that build, wire up, or fix the primary end-to-end path. Pickable anytime.
+- **Feature track** — items that extend, decorate, or enhance the core. Gated: only pickable when `CORE_CMD` passes.
+
+The groomer assigns tracks by reading the core definition in PRODUCT.md and each item's intent/scope. The architect generates the `CORE_CMD` — a verification command derived from the core definition and the codebase (e.g., build, start, hit primary endpoint, verify response).
+
+### Core Gate
+
+Before picking an item, the orchestrator runs `CORE_CMD`:
+
+- **Fails** → only `track: "core"` items are pickable. Feature items are blocked.
+- **Passes** → all items are pickable. Features are unlocked.
+- **Not configured** → no gating. All items pickable (backwards-compatible).
+
+After every successful merge, `CORE_CMD` is re-checked. If a sprint broke the core, a heal item is auto-generated.
+
+### Heal-First Queue
+
+When the core breaks (a previously-passing `CORE_CMD` or regression command fails), the orchestrator synthesizes a heal item:
+
+- Extracts the broken verification commands as acceptance criteria
+- Creates a `track: "core"`, `priority: "must"`, `category: "heal"` item in bugs.json
+- The heal item jumps the pick queue — ahead of all other items
+- Goes through the normal sprint loop (worktree, developer, validation, merge)
+- Guard: heal items never spawn child heals. If a heal fails, the original item's `failCount` increments
 
 ## Completion Contract
 
@@ -59,7 +94,7 @@ The protocol is always on. Skipping it produces measurably worse outcomes.
 | **Developer** | Implements features following maturity protocol | `run` | `Agent,Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode` |
 | **Validator** | Checks AC and intent against actual changes | `run` | `Bash,Read,Glob,Grep` |
 | **Groomer** | Adds steps, testable AC, sets priorities, marks items ready | `groom` | CLI commands |
-| **Architect** | Reviews patterns/risks; detects fragment risk, injects scaffolding items | `review`, `scaffold` | `Read,Glob,Grep` (+ `Edit,Write` with `--update-docs`) |
+| **Architect** | Establishes working core, generates `CORE_CMD`, assigns tracks, reviews patterns/risks | `review`, `scaffold` | `Read,Glob,Grep` (+ `Edit,Write` with `--update-docs`) |
 
 ### Data flow
 
@@ -67,10 +102,10 @@ Agents communicate through files:
 
 | File | Written by | Read by | Purpose |
 |------|-----------|---------|---------|
-| `backlog.json`, `bugs.json` | Groomer, Architect (via CLI) | Orchestrator | Shared work queue |
+| `backlog.json`, `bugs.json` | Groomer, Architect (via CLI), Orchestrator (heal items) | Orchestrator | Shared work queue (items have `track: "core"\|"feature"`) |
 | `sprint.json` | Orchestrator | Developer, Validator | Current item spec |
 | `result.json` | Agents | Orchestrator | Completion signal |
-| `CLAUDE.md`, `PRODUCT.md`, `ARCHITECTURE.md` | Human | All agents (auto-injected) | Project context |
+| `CLAUDE.md`, `PRODUCT.md`, `ARCHITECTURE.md` | Human | All agents (auto-injected) | Project context (PRODUCT.md includes core definition) |
 
 ### Permission model
 
@@ -99,6 +134,10 @@ Backlog mutations (mark complete, archive) happen on the base branch after merge
 | **readyForSprint** | Groomer has marked it ready |
 
 Intent is a **hard gate at sprint time** — items without it are silently skipped.
+
+### Core Check
+
+`CORE_CMD` runs before picking (gates which track is available) and after every merge (detects core regressions). If a merge breaks the core, a heal item is synthesized and jumps the queue. See [Working Core](#working-core) above.
 
 ### Validation Sequence
 

@@ -3,6 +3,13 @@
 project:
   name: "aishore"
 
+# Working core verification — proves the primary end-to-end path works.
+# Not the test suite — the product doing its primary thing.
+# Runs before every pick (gates feature-track items) and after every merge.
+# The architect agent can generate this from the core definition in PRODUCT.md.
+# core:
+#   command: ""
+
 validation:
   command: ""
   timeout: 120
