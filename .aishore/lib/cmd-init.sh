@@ -156,14 +156,10 @@ _init_scaffold_files() {
     project_name_safe=$(printf '%s' "$project_name" | _sed_escape)
     core_cmd_safe=$(printf '%s' "$core_cmd" | _sed_escape)
 
-    if [[ ! -f "$CONFIG_FILE" || "$reinit" == true ]]; then
-        sed -e "s|\\\$PROJECT_NAME|$project_name_safe|g" \
-            -e "s|\\\$CORE_CMD|$core_cmd_safe|g" \
-            "$AISHORE_ROOT/templates/config.yaml.tmpl" > "$CONFIG_FILE"
-        log_success "Wrote .aishore/config.yaml"
-    else
-        log_info "Kept existing .aishore/config.yaml"
-    fi
+    sed -e "s|\\\$PROJECT_NAME|$project_name_safe|g" \
+        -e "s|\\\$CORE_CMD|$core_cmd_safe|g" \
+        "$AISHORE_ROOT/templates/config.yaml.tmpl" > "$CONFIG_FILE"
+    log_success "Wrote .aishore/config.yaml"
 
     # Create backlogs (never overwrite existing)
     if [[ ! -f "$BACKLOG_DIR/backlog.json" ]]; then
