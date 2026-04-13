@@ -20,11 +20,10 @@ An item is done when:
 | # | Criteria              | Description                                        |
 |---|-----------------------|----------------------------------------------------|
 | 1 | **Code Complete**     | Implementation matches acceptance criteria         |
-| 2 | **Tests Pass**        | All tests pass (existing + new)                   |
-| 3 | **Validation Pass**   | Type-check, lint, tests all pass                  |
-| 4 | **AC Verified**       | Each AC met (verify commands pass, validator confirms) |
-| 5 | **No Regressions**    | Regression suite passes (prior sprints' guarantees hold) |
-| 6 | **Core Intact**       | Working core still passes after merge (if `CORE_CMD` configured) |
+| 2 | **Verify Commands Pass** | All AC verify commands pass — synthetic transactions proving real behavior |
+| 3 | **Validator Confirms** | Validator agent confirms intent fulfilled |
+| 4 | **No Regressions**    | Regression suite passes (prior sprints' guarantees hold) |
+| 5 | **Core Intact**       | Working core still passes after merge (if `CORE_CMD` configured) |
 
 ## Priority Levels
 

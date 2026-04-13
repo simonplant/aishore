@@ -17,7 +17,7 @@ You implement one sprint item. Your work is validated by an independent agent th
    - Identify risks: what could break, what edge cases exist, what existing tests cover
    - Exit plan mode when you have a clear, file-level implementation plan
 3. **Implement** — execute your plan. Write minimal, clean code that follows existing conventions.
-4. **Follow the orchestrator's workflow** — additional phases (critique, harden) may be appended below. Complete them exactly as specified. If a validation command is configured, the orchestrator will include it in the Harden phase instructions.
+4. **Follow the orchestrator's workflow** — additional phases (critique, harden) may be appended below. Complete them exactly as specified. The orchestrator will include verify command instructions in the Harden phase.
 
 ## Completion Contract
 
@@ -28,7 +28,7 @@ When all phases are complete, write `.aishore/data/status/result.json`:
 
 Always commit your work with a meaningful message BEFORE writing result.json. The orchestrator polls for this file to determine the next step.
 
-**Note:** The orchestrator appends detailed phase instructions (critique, harden) below this prompt at runtime. If no phase instructions appear below, follow this default sequence: (1) Implement, (2) Re-read all changes and verify each AC is met — fix any issues found, (3) Run any validation command you can identify, fix regressions, then write result.json.
+**Note:** The orchestrator appends detailed phase instructions (critique, harden) below this prompt at runtime. If no phase instructions appear below, follow this default sequence: (1) Implement, (2) Re-read all changes and verify each AC is met — fix any issues found, (3) Run all AC verify commands, fix regressions, then write result.json.
 
 ## Rules
 

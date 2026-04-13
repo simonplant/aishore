@@ -11,7 +11,7 @@
 ## Sprint Flow
 
 ```
-Core Gate → Pick Item → Branch (aishore/<ID>) → Preflight (regression + baseline) → Developer Agent → Validation Command → AC Verify Commands → Validator Agent → Merge → Core Re-check → Archive
+Core Gate → Pick Item → Branch (aishore/<ID>) → Preflight (regression suite) → Developer Agent → AC Verify Commands → Validator Agent → Merge → Core Re-check → Archive
 ```
 
 Each item runs in an isolated git worktree on its own feature branch. Backlog mutations happen on the base branch after merge, never in the worktree.
@@ -42,7 +42,7 @@ The orchestrator polls for this file. On pass, the pipeline continues. On fail, 
 
 - **Working core gate**: `CORE_CMD` runs before picking and after every merge. If the core is broken, only `track: "core"` items are pickable — features are blocked until the core passes. Core regressions auto-generate heal items that jump the queue.
 - **Maturity protocol**: Developer runs 3 phases in one session — implement, critique (re-read all changes, verify each AC, hunt bugs), harden (run validation, fix regressions, confirm all AC met)
-- **Validation sequence**: (1) validation command (test suite/linter), (2) AC verify commands, (3) Validator agent
+- **Synthetic validation**: (1) AC verify commands (synthetic transactions that prove each feature works for real), (2) Validator agent (independent intent check)
 - **Regression suite**: All verify commands from completed sprints saved to `backlog/archive/regression.jsonl`, run as pre-flight before every future sprint
 - **Intent gate**: Items without `intent` (or < 20 chars) cannot enter a sprint
 - **Scope**: Items can declare `scope` glob patterns — advisory, not strict

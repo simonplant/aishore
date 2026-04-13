@@ -77,7 +77,7 @@ Run the setup wizard:
 .aishore/aishore init
 ```
 
-The wizard checks prerequisites, detects your project type, configures validation, and creates `backlog/`. Accept the defaults or customize as prompted.
+The wizard checks prerequisites, detects your project type, and creates `backlog/`. Accept the defaults or customize as prompted.
 
 Output (approximate):
 
@@ -90,12 +90,6 @@ Checking prerequisites...
   ✓ git 2.47
   ✓ claude 1.0.x
 
-Detecting project type...
-  → Node.js project detected
-
-Validation command: npm test && npm run lint
-Accept? [Y/n]: Y
-
   ✓ Created backlog/backlog.json
   ✓ Created backlog/bugs.json
   ✓ Created backlog/sprint.json
@@ -105,13 +99,6 @@ Ready! Add your first backlog item with: .aishore/aishore backlog add
 ```
 
 For fully automated setup (no prompts): `.aishore/aishore init -y`
-
-**Set your validation command** in `.aishore/config.yaml` if auto-detection missed it:
-
-```yaml
-validation:
-  command: "npm test && npm run lint"   # Your stack's test/lint command
-```
 
 ## 4. Write Your Product Doc
 
@@ -238,10 +225,7 @@ git diff HEAD~2..HEAD --stat
 The working core isn't passing. Only `track: "core"` items will be picked until it does. Run your `CORE_CMD` manually to see what's broken. If you don't have core items in the backlog, run `scaffold` to generate them.
 
 **Pre-flight fails?**
-Your baseline is broken. Run your validation command manually and fix:
-```bash
-npm test && npm run lint   # or whatever your validation command is
-```
+A prior sprint's verify command is failing — something that worked before is now broken. Check the pre-flight output to see which regression failed and fix it manually.
 
 **Sprint failing after developer runs?**
 - Use retries: `.aishore/aishore run --retries 2` (failure context is fed back to the developer on retry)

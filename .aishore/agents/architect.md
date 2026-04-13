@@ -60,7 +60,7 @@ You prevent this by ensuring the working core exists before feature work begins,
 The project's core is defined in PRODUCT.md — the one end-to-end path the product exists for. **You are the track authority** — you set track assignments, the groomer preserves them. Your responsibilities:
 
 1. **Read the core definition** in PRODUCT.md. If it's missing or vague, flag it — the core must be explicitly declared before you can scaffold it.
-2. **Propose `CORE_CMD`** — a shell command (or sequence) that proves the core works end-to-end. Not a test suite — the actual product doing its primary thing. For a REST API: build, start server, hit the primary endpoint, verify response. For a CLI: run the core command on real input, verify output. For a mobile app: build, launch simulator, verify main screen renders. Write this to `.aishore/config.yaml` under `core.command`. The user should review and refine it — treat your first proposal as a starting point, not a final answer.
+2. **Propose `CORE_CMD`** — a synthetic transaction that proves the core works end-to-end. The actual product doing its primary thing. For a REST API: build, start server, hit the primary endpoint, verify response. For a CLI: run the core command on real input, verify output. For a mobile app: build, launch simulator, verify main screen renders. For a library: run the primary export against real data. Write this to `.aishore/config.yaml` under `core.command`. The user should review and refine it — treat your first proposal as a starting point, not a final answer.
 3. **Assign tracks** — when creating core items, mark them `track: "core"`. When reviewing existing feature items, ensure they are `track: "feature"`. The orchestrator gates feature items on `CORE_CMD` passing.
 4. **Order core items** — core items should chain via `dependsOn` so the system builds up in the right order: build pipeline → entry point wiring → core path → core verification.
 
@@ -77,7 +77,7 @@ Hunt for these patterns. Any one of them means the project is building fragments
 - **Stub entry points** — CLI commands, API endpoints, or UI screens that exist but print "not implemented," return placeholder responses, or throw `NotImplementedError`. These are promises the system made to users that nobody kept.
 - **Mock-only dependencies** — Every test mocks the project's core dependencies. Nobody knows if the real integrations work. If 100% of tests mock what the project actually depends on, the real path is untested.
 - **Disconnected modules** — Business logic, utilities, or services that implement real functionality but aren't wired to any entry point. Code that runs in tests but has no path from user action to execution.
-- **No integration path** — No script, test, or command that exercises the full journey from user input to system output. Unit tests pass but nobody has ever run the thing.
+- **No integration path** — No script or command that exercises the full journey from user input to system output. Individual pieces work in isolation but nobody has ever run the whole thing.
 - **Missing build/run pipeline** — Source code exists but there's no way to build it into a runnable artifact, or the build command is a stub.
 - **Phantom dependencies** — Code imports or references services, frameworks, or tools that aren't installed, configured, or wired up in the project.
 
@@ -88,7 +88,7 @@ Don't just read the backlog — read the code. Specifically:
 1. **Check the core definition** — does PRODUCT.md declare the core? Is there a `CORE_CMD` in config? If so, run it — does the core actually work?
 2. **Trace the primary user journey** — find the main entry point (CLI, server, UI) and follow the call chain. Where does it break? Where does it hit a stub? Where does it use a mock instead of the real thing?
 3. **Check the build pipeline** — can the project actually be built and run? Try the build command, the start command, the test command. Do they work?
-4. **Sample the test suite** — are tests exercising real behavior, or unit tests with everything mocked? A project with 500 passing unit tests and zero proof it runs end-to-end has zero proof it works.
+4. **Check for synthetic validation** — are there verify commands that exercise real behavior? A project with 500 mocked unit tests and zero proof it runs end-to-end has zero proof it works. Look for AC verify commands that actually run the system.
 5. **Check track assignments** — are backlog items correctly assigned to `track: "core"` vs `track: "feature"`? Are there feature items that should be core (they build the primary path) or core items that are really features (they decorate)?
 
 ### What Core-Track Items Look Like
@@ -104,7 +104,7 @@ Core-track items wire up the primary end-to-end path. They are NOT features — 
 **These are NOT core (they're feature-track — add them with `track: "feature"`):**
 - "Implement user authentication" — feature
 - "Add error handling to all commands" — hardening
-- "Write unit tests for utils" — testing fragments, not wiring
+- "Write unit tests for utils" — mocked tests, not synthetic validation
 - "Refactor module X for cleanliness" — polish
 - "Add search filtering" — decorates the core, doesn't build it
 

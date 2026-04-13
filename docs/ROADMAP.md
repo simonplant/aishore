@@ -29,7 +29,7 @@ Things that sound useful but conflict with the core philosophy:
 - **Dashboard / web UI** — aishore is a CLI tool. A dashboard is process visualization, not working code. Use `status` and the archive.
 - **Team coordination features** — shared backlogs, role assignments, approval workflows. These are project management; aishore is sprint execution.
 - **Plugin system for custom agents** — agent prompts are already configurable text files. A plugin API adds abstraction without adding capability until there's a proven need.
-- **Test generation** — aishore validates against intent, not coverage. Generating tests to hit a coverage number is the ceremony it exists to replace.
+- **Test generation** — aishore validates via synthetic transactions (verify commands that exercise the real system), not test suites. Generating mocked unit tests to hit a coverage number is the ceremony it exists to replace.
 
 ## Known Limitations
 
@@ -37,4 +37,4 @@ Things that sound useful but conflict with the core philosophy:
 - Bash-only, macOS/Linux only (no Windows)
 - Single-repo — one backlog, one project
 - No remote/headless mode — requires a terminal with Claude Code installed
-- Config requires `yq` for anything beyond validation command — most settings silently ignored without it
+- Config requires `yq` for full yaml support — most settings silently ignored without it

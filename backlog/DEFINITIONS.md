@@ -16,11 +16,10 @@
 | # | Gate |
 |---|------|
 | 1 | Implementation matches AC |
-| 2 | All tests pass (existing + new) |
-| 3 | Type-check, lint, tests all pass |
-| 4 | Each AC verified (verify commands pass, validator confirms) |
-| 5 | Regression suite passes (no prior sprint's guarantees broken) |
-| 6 | Working core intact (if `CORE_CMD` configured, it must still pass after merge) |
+| 2 | All AC verify commands pass — synthetic transactions proving real behavior |
+| 3 | Validator agent confirms intent fulfilled |
+| 4 | Regression suite passes (no prior sprint's guarantees broken) |
+| 5 | Working core intact (if `CORE_CMD` configured, it must still pass after merge) |
 
 ## Priority Levels
 

@@ -3,16 +3,13 @@
 project:
   name: "aishore"
 
-# Working core verification — proves the primary end-to-end path works.
-# Not the test suite — the product doing its primary thing.
+# Working core verification — a synthetic transaction that proves the primary
+# end-to-end path works. The product doing its primary thing for real.
 # Runs before every pick (gates feature-track items) and after every merge.
-# The architect agent can generate this from the core definition in PRODUCT.md.
+# The architect agent can propose this from the core definition in PRODUCT.md.
 # core:
 #   command: ""
-
-validation:
-  command: ""
-  timeout: 120
+#   timeout: 120
 
 # Setup command runs in each worktree before the sprint starts.
 # Use this to install dependencies that aren't in git (node_modules, venv, etc.)

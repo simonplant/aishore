@@ -105,7 +105,7 @@ Each item must be completable in a single sprint — one focused change. If you 
 
 ### Working Core First — Core Before Features
 
-The number one failure mode in AI-driven sprints: 50 features get implemented as isolated fragments, all tests pass (mocked), and then nobody can prove the system actually works. Features built on a dead frame.
+The number one failure mode in AI-driven sprints: 50 features get implemented as isolated fragments, each with mocked unit tests that pass, and then nobody can prove the system actually works. Features built on a dead frame.
 
 **Before generating feature items, generate core-track items that establish the working core:**
 

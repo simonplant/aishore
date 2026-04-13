@@ -106,7 +106,7 @@ You declare the core in PRODUCT.md. The groomer assigns each item to a track. Th
 
 ## Intent-Based Development
 
-aishore doesn't work like TDD or agile ceremony. There are no standups, no velocity charts, no coverage targets. The quality model is: **prove the software works by running it, not by counting tests.**
+aishore doesn't work like TDD or agile ceremony. There are no standups, no velocity charts, no coverage targets, no test suites. The quality model is: **prove the software works by running it for real — synthetic transactions that exercise the actual system, not mocked tests that exercise an abstraction.**
 
 **The backlog item is the unit of quality.** Each item has three things:
 
@@ -114,9 +114,9 @@ aishore doesn't work like TDD or agile ceremony. There are no standups, no veloc
 
 2. **Steps and acceptance criteria** — specific enough that an AI developer can implement without guessing. Bad AC: "it works." Good AC: "health endpoint returns 200 when the service is running."
 
-3. **Executable evals** — `--ac-verify` shell commands that prove the AC is met. Not `grep -q 'healthCheck' src/app.js` (that's structure, not behavior). Instead: `curl -sf http://localhost:3000/health` (that's proof it runs). These are the difference between testing and hoping.
+3. **Synthetic transactions** — AC verify commands that exercise the real system. Not `grep -q 'healthCheck' src/app.js` (that's structure, not behavior). Instead: `curl -sf http://localhost:3000/health` (that's the machine using the product). These are the difference between proving it works and hoping it works.
 
-**Evals compound into a regression suite.** Every passing sprint's verify commands are saved. Before every future sprint, the full suite runs as pre-flight. Sprint 51 cannot silently break what sprint 12 proved. No manual test maintenance — the suite grows automatically from well-written AC.
+**Transactions compound into a regression suite.** Every passing sprint's verify commands are saved. Before every future sprint, the full suite runs as pre-flight. Sprint 51 cannot silently break what sprint 12 proved. No manual test maintenance — the suite grows automatically from well-written AC.
 
 **The groomer is the quality bottleneck.** A vague backlog produces vague implementations that fail validation and burn retries. A precise backlog — clear intent, right-sized steps, executable AC — produces sprints that pass autonomously. `backlog populate` and `groom` exist because the quality of the input determines the quality of the output.
 
@@ -132,9 +132,9 @@ Core Gate ─→ Pick ─→ Branch ─→ Preflight ─→ Develop ─→ Valid
 1. **Core Gate** (upcoming) — `CORE_CMD` runs. If it fails, only core-track items are pickable. Features stay blocked.
 2. **Pick** — highest-priority ready item from the active track. Heal items jump the queue.
 3. **Branch** — isolated git worktree per sprint
-4. **Preflight** — regression suite + validation command on unmodified baseline
+4. **Preflight** — regression suite (all prior verify commands) on unmodified baseline
 5. **Develop** — implement, critique (re-read all changes, verify each AC), harden (run all verify commands, fix regressions)
-6. **Validate** — validation command, AC verify commands, then independent Validator agent probes against intent
+6. **Validate** — AC verify commands (synthetic transactions proving real behavior), then independent Validator agent probes against intent
 7. **Merge** — feature branch merged, pushed, item archived. Core re-checked — if broken, heal item auto-generated.
 
 ## Example: A Well-Written Item

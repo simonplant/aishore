@@ -28,12 +28,12 @@ aishore's backlog system (`backlog/backlog.json`) persists the full specificatio
 
 ## AI-generated code has no quality gate before merge
 
-When you vibe code a feature, the output goes straight from "AI wrote it" to "it's in main." There's no review step, no self-check, no structured validation. The AI generates code, you glance at it, and it ships. Bugs that a reviewer would catch in five seconds survive because nobody reviewed — not the AI, not you, not a test suite.
+When you vibe code a feature, the output goes straight from "AI wrote it" to "it's in main." There's no review step, no self-check, no structured validation. The AI generates code, you glance at it, and it ships. Bugs that a reviewer would catch in five seconds survive because nobody reviewed — not the AI, not you, not anyone.
 
-This isn't about test coverage. Even with tests, the AI can write code that passes tests but misses the actual intent, introduces subtle regressions, or adds dead code and unnecessary complexity.
+This isn't about test coverage. Mocked unit tests give false confidence — the AI writes code that passes tests but misses the actual intent, introduces subtle regressions, or adds dead code and unnecessary complexity. The tests pass. The product is broken.
 
 **How aishore addresses this:**
-Every sprint item goes through a maturity protocol: implement, then critique, then harden — all inside a single session while context is hot. In the critique phase, the developer agent re-reads every changed file, verifies each acceptance criterion is provably met, and hunts for bugs and edge cases. In the harden phase, it runs validation again and fixes regressions. After the developer finishes, a separate Validator agent independently checks whether the acceptance criteria and commander's intent were actually fulfilled. The validation command (your test suite, linter, type checker) runs as a gate between development and merge. Code doesn't reach your main branch until it passes the developer's self-review, automated validation, and an independent validator check.
+Every sprint item goes through a maturity protocol: implement, then critique, then harden — all inside a single session while context is hot. In the critique phase, the developer agent re-reads every changed file, verifies each acceptance criterion is provably met, and hunts for bugs and edge cases. In the harden phase, it runs verify commands — synthetic transactions that exercise the real system — and fixes regressions. After the developer finishes, a separate Validator agent independently checks whether the acceptance criteria and commander's intent were actually fulfilled. Code doesn't reach your main branch until it passes the developer's self-review, synthetic validation via verify commands, and an independent validator check.
 
 ---
 

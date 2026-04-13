@@ -25,9 +25,9 @@ aishore is an autonomous sprint orchestration tool for Claude Code. It takes a p
 | **Core Gate** | Runs `CORE_CMD` (if configured). If it fails, only `track: "core"` items are pickable — feature items are blocked. If it passes (or is unconfigured), all items are pickable. |
 | **Pick** | Selects highest-priority ready item from the active track. Heal items (auto-generated from regressions) jump the queue. Must pass readiness gates (intent >= 20 chars, steps, AC). Priority scoping filters by `p0`/`p1`/`p2`/`done`. |
 | **Branch** | Creates isolated feature branch `aishore/<ITEM-ID>` in a git worktree. |
-| **Preflight** | Runs validation command + full regression suite against unmodified codebase. Aborts if baseline is broken. |
+| **Preflight** | Runs full regression suite (accumulated verify commands from prior sprints) against unmodified codebase. Aborts if baseline is broken. |
 | **Develop** | Developer agent implements via maturity protocol (implement → critique → harden). |
-| **Verify** | Validation command runs, then all AC verify commands execute. |
+| **Verify** | All AC verify commands execute — synthetic transactions that prove each feature works for real. |
 | **Validate** | Validator agent reviews changes against AC and commander's intent. |
 | **Merge** | Branch merged with `--no-ff`, pushed, item archived to `sprints.jsonl`. Core gate re-checked after merge — if a feature broke the core, a heal item is synthesized and jumps the queue. |
 
@@ -140,13 +140,14 @@ Intent is a **hard gate at sprint time** — items without it are silently skipp
 
 `CORE_CMD` runs before picking (gates which track is available) and after every merge (detects core regressions). If a merge breaks the core, a heal item is synthesized and jumps the queue. See [Working Core](#working-core) above.
 
-### Validation Sequence
+### Synthetic Validation
 
-Three checks in order, all must pass:
+All validation in aishore is synthetic — commands that exercise the real system, not tests that mock it. Two mechanisms, both must pass:
 
-1. **Validation command** — your test suite/linter
-2. **AC verify commands** — shell commands from the item's acceptance criteria
-3. **Validator agent** — independent check of AC and intent fulfillment
+1. **AC verify commands** — shell commands from the item's acceptance criteria that prove each feature works for real (e.g., `curl -sf localhost:3000/items | jq -e '.length > 0'`). These are the primary quality signal.
+2. **Validator agent** — independent check of AC and intent fulfillment against the actual code changes.
+
+`CORE_CMD` runs separately — before pick (gates tracks) and after merge (detects regressions). It is not part of the per-item validation sequence; it validates the system as a whole.
 
 ### Regression Suite
 

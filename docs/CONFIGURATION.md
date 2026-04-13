@@ -10,7 +10,7 @@ Settings are resolved in this order (first match wins):
 2. **Config file** (`.aishore/config.yaml`)
 3. **Built-in defaults**
 
-Example: if `AISHORE_VALIDATE_CMD="pytest"` is set and `config.yaml` has `validation.command: "npm test"`, the environment variable wins and `pytest` is used.
+Example: if `AISHORE_CORE_CMD="./run-smoke-test.sh"` is set and `config.yaml` has `core.command: "./verify-core.sh"`, the environment variable wins.
 
 ---
 
@@ -25,10 +25,10 @@ All settings live in `.aishore/config.yaml`. The file is optional — aishore wo
 project:
   name: "your-project"
 
-# Validation command for your stack (e.g., "npm test && npm run lint")
-validation:
-  command: ""
-  timeout: 120
+# Core verification — proves the product's primary path works (see docs/ARCHITECTURE.md)
+# core:
+#   command: ""
+#   timeout: 120
 
 # Setup command runs in each worktree before sprint (e.g., "npm install")
 # setup:
@@ -105,28 +105,18 @@ validation:
 | **Type** | string |
 | **Default** | `""` (empty — no core gating) |
 | **Env var** | `AISHORE_CORE_CMD` |
-| **What it controls** | Shell command that verifies the project's working core — the primary end-to-end path the product exists for. This is NOT the test suite — it's the product doing its primary thing (e.g., build + start + hit main endpoint + verify response). Will run before every pick (gates feature-track items) and after every merge (detects core regressions). If it fails, only `track: "core"` items are pickable. If a merge breaks it, a heal item is auto-generated. |
-| **When to change** | Set after the core is first established. The architect agent can propose this from the core definition in PRODUCT.md — review and refine it before relying on it. |
+| **What it controls** | Shell command that verifies the project's working core — the primary end-to-end path the product exists for. This is the product doing its primary thing: build, start, exercise the core path, verify the response. For a REST API: start server, hit the primary endpoint, check response. For a CLI: run the core command on real input, verify output. For a library: run the primary export against real data. Runs before every pick (gates feature-track items) and after every merge (detects core regressions). If it fails, only `track: "core"` items are pickable. If a merge breaks it, a heal item is auto-generated. |
+| **When to change** | Set after the core is first established. The architect agent can propose this from the core definition in PRODUCT.md — review and refine it before relying on it. For libraries/SDKs without a running system, this can be your integration test command — the point is proving the thing works for real, not counting coverage. |
 
-#### `validation.command`
-
-| | |
-|---|---|
-| **Type** | string |
-| **Default** | `""` (empty — no validation) |
-| **Env var** | `AISHORE_VALIDATE_CMD` |
-| **What it controls** | Shell command that validates the codebase after the developer agent finishes. Also runs as a baseline pre-flight before the agent starts — if it fails, the sprint is aborted. This is your test suite/linter — distinct from `core.command` which verifies the product works end-to-end. |
-| **When to change** | Set this to your test/lint command (e.g., `npm test && npm run lint`, `make check`, `pytest`). |
-
-#### `validation.timeout`
+#### `core.timeout`
 
 | | |
 |---|---|
 | **Type** | integer (seconds) |
 | **Default** | `120` |
-| **Env var** | `AISHORE_VALIDATE_TIMEOUT` |
-| **What it controls** | How long the validation command can run before being killed. |
-| **When to change** | Increase for slow test suites; decrease to fail fast. |
+| **Env var** | `AISHORE_CORE_TIMEOUT` |
+| **What it controls** | How long the core command can run before being killed. |
+| **When to change** | Increase if core verification involves starting servers or simulators; decrease to fail fast. |
 
 #### `setup.command`
 
@@ -338,8 +328,8 @@ All `AISHORE_*` environment variables and what they map to:
 
 | Environment Variable | Config Path | Default | Description |
 |---|---|---|---|
-| `AISHORE_VALIDATE_CMD` | `validation.command` | `""` | Validation command (tests, lint) |
-| `AISHORE_VALIDATE_TIMEOUT` | `validation.timeout` | `120` | Validation timeout (seconds) |
+| `AISHORE_CORE_CMD` | `core.command` | `""` | Core verification command (upcoming) |
+| `AISHORE_CORE_TIMEOUT` | `core.timeout` | `120` | Core verification timeout (seconds) |
 | `AISHORE_SETUP_CMD` | `setup.command` | `""` | Worktree setup command (dependency install) |
 | `AISHORE_FIX_CMD` | `fix.command` | `""` | Auto-fix command (formatters) |
 | `AISHORE_MODEL_PRIMARY` | `models.primary` | `claude-opus-4-6` | Primary AI model |
@@ -598,7 +588,7 @@ Full access. The developer agent can run shell commands, read and write files, s
 
 **Default:** `Bash,Read,Glob,Grep`
 
-Can run tests and read files, but cannot use `Edit` or `Write`. The validator checks the developer's work by running the validation command and inspecting outputs. The result signal file is written via Bash (`echo`/`jq` to file).
+Can run commands and read files, but cannot use `Edit` or `Write`. The validator checks the developer's work by running verify commands and inspecting outputs. The result signal file is written via Bash (`echo`/`jq` to file).
 
 ### Reviewer Agent
 
