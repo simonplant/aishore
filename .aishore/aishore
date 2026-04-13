@@ -763,7 +763,7 @@ pick_item() {
     # Pick highest priority across all files
     local best
     best=$(printf '%s\n' "$all_candidates" | jq -r "$JQ_PRIO_RANK"'
-        sort_by((if .category == "heal" then 0 else 1 end), .priority // "should" | prio_rank) | first // empty
+        sort_by([(if .category == "heal" then 0 else 1 end), (.priority // "should" | prio_rank)]) | first // empty
     ' 2>/dev/null)
 
     if [[ -n "$best" && "$best" != "null" ]]; then
