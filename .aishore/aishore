@@ -2227,9 +2227,14 @@ _run_dry_run() {
     fi
     echo ""
 
+    # Run core gate to determine track filtering (same as real run)
+    _run_core_gate
+
     local item_json
     if ! item_json=$(pick_item "$specific_id"); then
-        if [[ -z "$specific_id" ]]; then
+        if [[ "$CORE_HEALTHY" == "false" ]]; then
+            log_error "Core is broken and no core-track items available — run '.aishore/aishore scaffold' or fix CORE_CMD manually"
+        elif [[ -z "$specific_id" ]]; then
             log_warning "No ready items in backlog. Items need readyForSprint: true AND a commander's intent (>=20 chars). Run '.aishore/aishore groom' to prepare items."
         fi
         return 1
