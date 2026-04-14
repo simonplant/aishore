@@ -98,6 +98,7 @@ Subcommands:
     --status <s>      Filter by status (todo, in-progress, done)
     --type <t>        Filter by type (feat, bug)
     --priority <p>    Filter by priority (must, should, could, future)
+    --track <t>       Filter by track (core, feature)
     --ready           Show only sprint-ready items
     --no-ready        Show only items not yet ready
   add --json '{..}' Add a new item (JSON object, or pipe via stdin)
