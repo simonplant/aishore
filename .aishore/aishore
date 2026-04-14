@@ -86,6 +86,7 @@ CORE_TIMEOUT="120"
 CORE_HEALTHY=true
 SETUP_CMD=""
 FIX_CMD=""
+DEVELOPER_CMD=""
 NOTIFY_CMD=""
 AUTO_GROOM_THRESHOLD="3"
 AUTO_MAX_FAILURES="5"
@@ -569,6 +570,7 @@ load_config() {
             ".core.timeout          CORE_TIMEOUT"
             ".setup.command         SETUP_CMD"
             ".fix.command           FIX_CMD"
+            ".developer.command    DEVELOPER_CMD"
             ".models.primary        MODEL_PRIMARY"
             ".models.fast           MODEL_FAST"
             ".agent.timeout         AGENT_TIMEOUT"
@@ -627,6 +629,7 @@ _apply_env_overrides() {
         "AISHORE_VALIDATE_TIMEOUT   CORE_TIMEOUT"
         "AISHORE_CORE_CMD           CORE_CMD"
         "AISHORE_CORE_TIMEOUT       CORE_TIMEOUT"
+        "AISHORE_DEVELOPER_CMD      DEVELOPER_CMD"
         "AISHORE_SETUP_CMD          SETUP_CMD"
         "AISHORE_FIX_CMD            FIX_CMD"
         "AISHORE_NOTIFY_CMD         NOTIFY_CMD"
@@ -1798,6 +1801,26 @@ run_agent() {
 
     rm -f "$STATUS_DIR/result.json"
 
+    # Developer command override: run a shell command instead of Claude
+    # The command runs in the worktree with sprint.json available, and must write result.json
+    if [[ "$agent_name" == "developer" && -n "$DEVELOPER_CMD" ]]; then
+        log_agent "developer" "Running developer command: $DEVELOPER_CMD"
+        local agent_log
+        agent_log="$LOGS_DIR/developer-$(date +%Y%m%dT%H%M%S).log"
+        LAST_AGENT_LOG="$agent_log"
+        if bash -c "$DEVELOPER_CMD" > "$agent_log" 2>&1; then
+            log_agent "developer" "Command completed"
+        else
+            local _dc_exit=$?
+            log_error "Developer command failed (exit $_dc_exit)"
+            if [[ ! -f "$STATUS_DIR/result.json" ]]; then
+                printf '{"status":"fail","reason":"Developer command exited %d"}\n' "$_dc_exit" \
+                    > "$STATUS_DIR/result.json"
+            fi
+        fi
+        return 0
+    fi
+
     local context_files
     if [[ -n "$_ra_ctx_name" ]]; then
         local -n _ra_ctx_ref="$_ra_ctx_name"
@@ -2470,10 +2493,6 @@ ${agent_fail_reason}"
 ## Validator Log (last 40 lines)
 ${validator_log_tail}"
         fi
-        [[ -n "$validate_output" ]] && retry_extra_prompt="${retry_extra_prompt}
-
-## Validation Command Output
-${validate_output}"
         retry_extra_prompt="${retry_extra_prompt}
 
 Fix the issues identified above. Address each specific failure point."
