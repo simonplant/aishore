@@ -50,7 +50,11 @@ _status_output() {
     done
 
     if [[ "$has_ready" == "false" ]]; then
-        log_warning "No items ready for sprint — run 'groom' or 'backlog edit <ID> --ready'"
+        if [[ "$total" -eq 0 ]]; then
+            log_warning "Backlog is empty — add items with 'backlog add' or 'backlog populate'"
+        else
+            log_warning "No items ready for sprint — run 'groom' (AI prepares steps, AC, and priority) or 'backlog check --all' to diagnose"
+        fi
     fi
 
     # --- Ready count summary ---
@@ -116,14 +120,33 @@ _status_output() {
     fi
 
     # --- Warnings ---
-    if [[ "$any_file" == "false" ]]; then
+    local prd_path
+    prd_path=$(_find_prd)
+    if [[ -z "$prd_path" ]] || _is_template_prd "$prd_path"; then
         echo ""
-        log_warning "Backlog is empty — run 'backlog add' to create items"
+        if [[ -z "$prd_path" ]]; then
+            log_warning "No PRODUCT.md found — agents work better with product context"
+            echo "  Create one: .aishore/aishore refine"
+        else
+            log_warning "PRODUCT.md is still a template — fill it in so agents understand what you're building"
+            echo "  Edit: $prd_path"
+            echo "  Or run: .aishore/aishore refine"
+        fi
     fi
 
     if [[ "$total" -gt 0 && "$total" -eq "$done_total" ]]; then
         echo ""
         log_info "All items completed"
+    fi
+
+    # --- Quickstart hint for empty projects ---
+    if [[ "$total" -eq 0 ]]; then
+        echo ""
+        echo "  Getting started:"
+        echo "    1. .aishore/aishore refine              # describe what you're building"
+        echo "    2. .aishore/aishore backlog populate     # create items from PRODUCT.md"
+        echo "    3. .aishore/aishore groom                # prepare items for sprint"
+        echo "    4. .aishore/aishore run                  # execute first sprint"
     fi
 }
 

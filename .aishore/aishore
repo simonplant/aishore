@@ -545,6 +545,24 @@ _find_prd() {
     return 0
 }
 
+# Check if a PRODUCT.md is still the unfilled template.
+# Returns 0 (true) if it's a template, 1 if it has real content.
+_is_template_prd() {
+    local prd_path="$1"
+    [[ -z "$prd_path" ]] && return 1
+    [[ ! -f "$prd_path" ]] && return 1
+    grep -q '<!-- TODO: Fill in the sections below' "$prd_path" 2>/dev/null
+}
+
+# Count total non-done items across all backlog files.
+_count_total_items() {
+    local _ct=0 _cf
+    for _cf in "${BACKLOG_FILES[@]}"; do
+        [[ -f "$BACKLOG_DIR/$_cf" ]] && _ct=$((_ct + $(count_items "$BACKLOG_DIR/$_cf")))
+    done
+    printf '%s\n' "$_ct"
+}
+
 # Return path to a temp file with only the last N lines of sprints.jsonl
 recent_sprints_file() {
     local max_lines="${1:-20}"
@@ -1994,7 +2012,15 @@ _run_dry_run() {
         if [[ "$CORE_HEALTHY" == "false" ]]; then
             log_error "Core is broken and no core-track items available — run '.aishore/aishore scaffold' or fix CORE_CMD manually"
         elif [[ -z "$specific_id" ]]; then
-            log_warning "No ready items in backlog. Items need readyForSprint: true AND a commander's intent (>=20 chars). Run '.aishore/aishore groom' to prepare items."
+            local _total_items
+            _total_items=$(_count_total_items)
+            if [[ "$_total_items" -eq 0 ]]; then
+                log_warning "Backlog is empty — nothing to run"
+                echo "  Start with: .aishore/aishore backlog populate (from PRODUCT.md) or backlog add"
+            else
+                log_warning "No sprint-ready items. ${_total_items} item(s) exist but none are ready."
+                echo "  Run '.aishore/aishore groom' to prepare items, or '.aishore/aishore backlog check --all'"
+            fi
         fi
         return 1
     fi
@@ -2803,7 +2829,25 @@ _sprint_pick_and_validate() {
         elif [[ "$auto_mode" == "true" ]]; then
             log_success "No more ready items — backlog drained"
         else
-            log_warning "No ready items in backlog. Items need readyForSprint: true AND a commander's intent (>=20 chars). Run '.aishore/aishore groom' to prepare items."
+            local _total_items
+            _total_items=$(_count_total_items)
+            if [[ "$_total_items" -eq 0 ]]; then
+                log_warning "Backlog is empty — nothing to run"
+                echo ""
+                echo "  Get started:"
+                echo "    1. Fill in docs/PRODUCT.md with what you're building"
+                echo "    2. .aishore/aishore backlog populate   # create items from PRODUCT.md"
+                echo "    3. .aishore/aishore groom               # prepare items for sprint"
+                echo "    4. .aishore/aishore run                 # execute first sprint"
+                echo ""
+                echo "  Or add items directly:"
+                echo "    .aishore/aishore backlog add --json '{\"title\": \"...\", \"intent\": \"...\"}'"
+            else
+                log_warning "No sprint-ready items. ${_total_items} item(s) exist but none are ready."
+                echo "  Items need readyForSprint: true AND a commander's intent (>=20 chars)."
+                echo "  Run '.aishore/aishore groom' to prepare items, or check individual items:"
+                echo "    .aishore/aishore backlog check --all"
+            fi
         fi
         return 1
     fi
@@ -3058,6 +3102,11 @@ main() {
 
     local cmd="${1:-usage}"
     shift || true
+
+    # Handle <command> --help / <command> -h → redirect to help <command>
+    if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]] && [[ "$cmd" != "help" && "$cmd" != "-h" && "$cmd" != "--help" ]]; then
+        _load_module cmd-help; cmd_help "$cmd"; return $?
+    fi
 
     case "$cmd" in
         run) cmd_run "$@" ;;

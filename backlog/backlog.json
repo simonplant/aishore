@@ -1,4 +1,273 @@
 {
   "description": "Feature backlog - Product Owner owns priority",
-  "items": []
+  "items": [
+    {
+      "id": "FEAT-110",
+      "title": "backlog list --track filter to show only core or feature items",
+      "intent": "Running backlog list --track core shows only core-track items, and --track feature shows only feature-track items. Without a track filter, users cannot isolate core work from feature work in one command.",
+      "description": "",
+      "priority": "should",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "In .aishore/lib/cmd-backlog-read.sh, add val:filter_track:--track to the parse_opts call in cmd_backlog_list",
+        "Validate filter_track after parsing: if set, must be core or feature; call log_error and return 1 on invalid value",
+        "When filter_track is set, append a jq filter segment: select((.track // \"feature\") == \"$filter_track\") to the existing jq_filter pipeline",
+        "In .aishore/lib/cmd-help.sh, add --track <t> entry under backlog list options in _help_backlog(), aligned with existing filter flags"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "backlog list --track core exits 0",
+          "verify": ".aishore/aishore backlog list --track core"
+        },
+        {
+          "text": "backlog list --track feature exits 0",
+          "verify": ".aishore/aishore backlog list --track feature"
+        },
+        {
+          "text": "invalid track value exits non-zero",
+          "verify": "! .aishore/aishore backlog list --track invalid 2>/dev/null"
+        },
+        {
+          "text": "help backlog documents --track",
+          "verify": ".aishore/aishore help backlog | grep -q track"
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "lastFailReason": "Baseline validation failed before developer ran",
+      "lastFailAt": "2026-04-14T14:54:59-07:00",
+      "failCount": 1,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "Track filter missing from backlog list despite TRACK column being shown. Pattern matches --type/--priority/--status. 4-line implementation."
+    },
+    {
+      "id": "FEAT-111",
+      "title": "status shows core not-configured hint when CORE_CMD is absent",
+      "intent": "When no CORE_CMD is configured, aishore status must print a visible hint pointing to scaffold. Silent omission leaves users unaware that the working core gate is inactive and they do not know to run scaffold.",
+      "description": "",
+      "priority": "should",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "In .aishore/lib/cmd-status.sh, in _status_output(), locate the if [[ -n \"$CORE_CMD\" ]] block that shows core health",
+        "Add an else branch: print a line such as Core: not configured — run scaffold to establish CORE_CMD, using log_info or log_warning styling",
+        "Place the hint in the same visual section as core health (after the ready summary), so it is visible without scrolling"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "status shows not-configured hint when CORE_CMD is empty",
+          "verify": ".aishore/aishore status 2>&1 | grep -qi \"not configured\""
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "lastFailReason": "Baseline validation failed before developer ran",
+      "lastFailAt": "2026-04-14T14:55:04-07:00",
+      "failCount": 1,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "UX gap: status silently omits core section when CORE_CMD is absent. Adding else branch with scaffold hint."
+    },
+    {
+      "id": "FEAT-112",
+      "title": "backlog show displays sprint history from archive for the item",
+      "intent": "When an item has sprint runs in archive/sprints.jsonl, backlog show must display a Sprint history section listing each run: date, status, and attempts. Without this, sprint history is invisible — users must manually grep the archive file.",
+      "description": "",
+      "priority": "should",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "In cmd_backlog_show in .aishore/lib/cmd-backlog-read.sh, after the existing jq output block, look up the item ID in $ARCHIVE_DIR/sprints.jsonl",
+        "Use jq to select all entries where .itemId == the queried ID, sorted by .date ascending, limited to 10 most recent",
+        "If matching entries exist, print a Sprint history: header followed by each entry formatted as: date  status  (attempts: N)",
+        "If no archive entries exist for the item, omit the section entirely — do not print an empty header"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "show exits 0 for item with no archive entries",
+          "verify": "id=$(.aishore/aishore backlog add --json \"{\\\"title\\\":\\\"tmp-show-test\\\",\\\"intent\\\":\\\"temp item to verify backlog show works without archive data\\\"}\" 2>&1 | grep -o \"FEAT-[0-9]*\") && .aishore/aishore backlog show \"$id\" && .aishore/aishore backlog rm \"$id\" --force"
+        },
+        {
+          "text": "Sprint history section appears for item with archive entry",
+          "verify": "id=$(.aishore/aishore backlog add --json \"{\\\"title\\\":\\\"tmp-arch-test\\\",\\\"intent\\\":\\\"temp item to verify sprint archive section display\\\"}\" 2>&1 | grep -o \"FEAT-[0-9]*\") && printf \"{\\\"date\\\":\\\"2026-04-14\\\",\\\"itemId\\\":\\\"%s\\\",\\\"status\\\":\\\"complete\\\",\\\"attempts\\\":1}\\n\" \"$id\" >> backlog/archive/sprints.jsonl && result=$(.aishore/aishore backlog show \"$id\" 2>&1) && .aishore/aishore backlog rm \"$id\" --force && echo \"$result\" | grep -q \"^Sprint history\""
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "lastFailReason": "Baseline validation failed before developer ran",
+      "lastFailAt": "2026-04-14T14:55:09-07:00",
+      "failCount": 1,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "Visibility gap: sprint history only in item failCount field, not the archive. Implementation: jq lookup in sprints.jsonl after existing show output. Verify uses ^Sprint history anchor to avoid false positives."
+    },
+    {
+      "id": "FEAT-114",
+      "title": "backlog list summary line includes ready count",
+      "intent": "The final summary line of backlog list must show both total and ready counts, e.g. N item(s), M ready. Currently it shows only N item(s), requiring a separate status run to see how many items are sprint-ready.",
+      "description": "",
+      "priority": "should",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "In cmd_backlog_list in .aishore/lib/cmd-backlog-read.sh, add a ready_count=0 variable before the output loop",
+        "Inside the while-read loop, increment ready_count when the ready column value equals yes",
+        "Change the final printf at the end of the function from printf %s item(s) to printf %s item(s), %s ready using ready_count as the second argument"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "backlog list summary includes ready count",
+          "verify": "id=$(.aishore/aishore backlog add --json \"{\\\"title\\\":\\\"tmp-ready-test\\\",\\\"intent\\\":\\\"temp item to verify ready count appears in list summary\\\",\\\"readyForSprint\\\":true}\" 2>&1 | grep -o \"FEAT-[0-9]*\") && list_out=$(.aishore/aishore backlog list 2>&1) && .aishore/aishore backlog rm \"$id\" --force && echo \"$list_out\" | tail -3 | grep -q ready"
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "One-line change to printf in cmd_backlog_list. Need ready_count counter in the while-read loop."
+    },
+    {
+      "id": "FEAT-115",
+      "title": "status shows core/feature split for ready items when CORE_CMD is configured",
+      "intent": "When CORE_CMD is configured and core is healthy, aishore status must show how many ready items are core-track vs feature-track. Without this split, users cannot tell if the ready buffer contains core work or only feature work.",
+      "description": "",
+      "priority": "should",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "In .aishore/lib/cmd-status.sh, in _status_output(), after the ready-count summary line (log_info N/total items ready), compute core_ready and feature_ready counts across all backlog files using jq",
+        "Print the split only when CORE_CMD is set: echo indented core: N ready, feature: M ready",
+        "Reuse the same jq pattern already present in the CORE_CMD failing branch (around line 78-87 of cmd-status.sh) for consistency"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "status shows core and feature ready counts when CORE_CMD is set",
+          "verify": "AISHORE_CORE_CMD=true .aishore/aishore status 2>&1 | grep -qi \"core.*ready\\|feature.*ready\""
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "Reuses existing jq pattern from the core-FAILING branch. Only shown when CORE_CMD is set. Verify uses AISHORE_CORE_CMD=true to force a core check context."
+    },
+    {
+      "id": "FEAT-117",
+      "title": "backlog show falls back to archive for done/cleaned items",
+      "intent": "backlog show <ID> must succeed for any item aishore has ever tracked — active or archived. Running backlog show on a done item that was cleaned must display the item with an [archived] label rather than failing with item not found.",
+      "description": "dal_find_item searches only the active BACKLOG_DIR files. Once aishore clean archives completed items, backlog show <ID> returns an error. Fix: after find_item fails in cmd_backlog_show, search archive/backlog_done.json and archive/bugs_done.json, display with an archived label, exit 0.",
+      "priority": "must",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "In cmd_backlog_show in lib/cmd-backlog-read.sh, after find_item fails, search ARCHIVE_DIR/backlog_done.json and ARCHIVE_DIR/bugs_done.json for the item ID",
+        "Archive files store items as a JSON array at the top level. Use: jq -e --arg id ID .[] | select(.id == $id) on each archive file",
+        "If found in archive, print an [archived] header line then display the item with the existing jq display block",
+        "Return 0 so callers do not treat archived item display as a failure",
+        "Only error when the item is not found in any file — active backlog or archive"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "backlog show on an archived done item displays the item with archived label",
+          "verify": ".aishore/aishore backlog show FEAT-094 2>&1 | grep -qi archived"
+        },
+        {
+          "text": "backlog show on archived item exits 0",
+          "verify": ".aishore/aishore backlog show FEAT-094 >/dev/null 2>&1"
+        },
+        {
+          "text": "backlog show on an unknown ID still exits non-zero",
+          "verify": "! .aishore/aishore backlog show NONEXISTENT-9999 >/dev/null 2>&1"
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "lastFailReason": "Baseline validation failed before developer ran",
+      "lastFailAt": "2026-04-14T14:55:15-07:00",
+      "failCount": 2
+    },
+    {
+      "id": "FEAT-118",
+      "title": "backlog list --track filter for core or feature track",
+      "intent": "backlog list --track core must show only core-track items and backlog list --track feature must show only feature items. Invalid values must be rejected with an error. This lets users review the core pipeline independently from features before starting a session.",
+      "description": "cmd_backlog_list has no --track filter. With core/feature tracks gating sprint picks, users need to quickly audit the core pipeline separately. The fix is a --track flag in parse_opts that narrows the jq filter.",
+      "priority": "should",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "Add filter_track local variable and bool:filter_track or val:filter_track:--track to parse_opts in cmd_backlog_list in lib/cmd-backlog-read.sh",
+        "Validate the value is core or feature; reject anything else with a clear error message",
+        "When filter_track is set, append select(.track // \"feature\" == $track) to jq_filter and pass the value as --arg track to the jq call"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "backlog list --track core exits 0",
+          "verify": ".aishore/aishore backlog list --track core >/dev/null 2>&1"
+        },
+        {
+          "text": "backlog list --track feature exits 0",
+          "verify": ".aishore/aishore backlog list --track feature >/dev/null 2>&1"
+        },
+        {
+          "text": "backlog list --track invalid exits non-zero with an error message",
+          "verify": "! .aishore/aishore backlog list --track invalid >/dev/null 2>&1"
+        },
+        {
+          "text": "backlog list --track core header line is present in output",
+          "verify": ".aishore/aishore backlog list --track core 2>&1 | grep -q TRACK"
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    },
+    {
+      "id": "FEAT-119",
+      "title": "run batch session prints sprint summary table at end",
+      "intent": "After any auto-mode run session completes, a sprint summary must print — one row per item attempted showing ID, pass/fail, and attempts — followed by totals and elapsed time. The operator must not have to scroll the full log to know the session outcome.",
+      "description": "cmd_run exits after run_sprint_loop without printing a summary. In auto mode (run done / run p0 / run p1), the operator has no quick recap. The fix is to print a summary table at the end of cmd_run when auto_mode is true, using the sprint_items, COMPLETED_IDS, and FAILED_IDS state already tracked in the loop.",
+      "priority": "should",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "After run_sprint_loop returns in cmd_run (aishore main script, cmd_run function), check if auto_mode is true",
+        "Print a Sprint Session Summary header using log_header",
+        "Print a table: ITEM | STATUS | ATTEMPTS for each item in sprint_items[], looking up pass/fail from COMPLETED_IDS and FAILED_IDS associative arrays",
+        "Print totals line: X complete, Y failed, Z skipped",
+        "Print elapsed time from batch_start to now in minutes"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "run done with no items drains cleanly and exits 0",
+          "verify": ".aishore/aishore run done >/dev/null 2>&1"
+        },
+        {
+          "text": "Sprint Session Summary header appears in auto-mode output",
+          "verify": ".aishore/aishore run done 2>&1 | grep -qiE \"Sprint.*Summary|Session.*Summary\""
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true
+    }
+  ]
 }

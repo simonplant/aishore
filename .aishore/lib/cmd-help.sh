@@ -32,10 +32,17 @@ aishore - iterative intent-based development with evals (v${AISHORE_VERSION})
 
 Usage: aishore <command> [options]
 
+Getting started:
+  1. aishore init                  # setup wizard
+  2. aishore refine                # describe what you're building (PRODUCT.md)
+  3. aishore backlog populate      # create items from PRODUCT.md
+  4. aishore groom                 # prepare items for sprint
+  5. aishore run                   # execute first sprint
+
 Commands:
   run [N|ID|scope] Run sprints, or drain backlog with scope (done|p0|p1|p2)
-  backlog <sub>    Manage backlog (list|add|show|edit|check|rm)
-  groom            Groom bugs, features, and tech debt
+  backlog <sub>    Manage backlog (list|add|show|edit|check|rm|populate)
+  groom            Groom backlog items (AI adds steps, AC, priority)
   refine           Improve PRODUCT.md through interactive interview
   scaffold         Detect fragment risk, inject scaffolding items
   review           Architecture review

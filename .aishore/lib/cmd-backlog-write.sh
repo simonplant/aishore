@@ -138,6 +138,12 @@ cmd_backlog_add() {
             log_warning "Readiness warnings for $new_id:"
             printf '%b\n' "$gates_warnings"
         fi
+    else
+        # Show what's missing for items not marked ready
+        local gates_warnings
+        if ! gates_warnings=$(check_readiness_gates "$new_id" 2>/dev/null); then
+            log_info "Not sprint-ready yet. Check what's missing: .aishore/aishore backlog check $new_id"
+        fi
     fi
 }
 

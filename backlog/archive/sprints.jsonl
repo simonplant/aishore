@@ -240,3 +240,4 @@
 {"date":"2026-04-08","sprintId":"sprint-1775687004","itemId":"BUG-152","status":"complete","attempts":1,"filesChanged":1,"linesAdded":1,"linesRemoved":1,"duration":119,"priority":"must","category":null,"title":"status shows completed sprint as Currently running"}
 {"date":"2026-04-08","sprintId":"sprint-1775687856","itemId":"FEAT-107","status":"complete","attempts":1,"filesChanged":1,"linesAdded":5,"linesRemoved":0,"duration":92,"priority":"should","category":null,"title":"backlog show should display sprint failure history"}
 {"date":"2026-04-08","sprintId":"sprint-1775688065","itemId":"FEAT-109","status":"complete","attempts":1,"filesChanged":1,"linesAdded":5,"linesRemoved":2,"duration":94,"priority":"should","category":null,"title":"backlog list should support --failed filter to show only items with sprint failures"}
+{"date":"2026-04-14","itemId":"FEAT-113","status":"complete","attempts":1}

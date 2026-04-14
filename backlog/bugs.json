@@ -1,4 +1,64 @@
 {
   "description": "Bugs and tech debt",
-  "items": []
+  "items": [
+    {
+      "id": "BUG-153",
+      "title": "help backlog missing --failed filter documentation",
+      "intent": "aishore help backlog must list the --failed flag. FEAT-109 added --failed to backlog list but cmd-help.sh was not updated — users reading help to discover filters will not find it.",
+      "description": "",
+      "priority": "should",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "In .aishore/lib/cmd-help.sh, in _help_backlog(), add --failed flag under the list subcommand options, aligned with the other filter flags (--ready, --no-ready)"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "help backlog documents --failed",
+          "verify": ".aishore/aishore help backlog | grep -q failed"
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "Doc regression from FEAT-109: one-line fix in cmd-help.sh _help_backlog(). Small scope, clean verify."
+    },
+    {
+      "id": "BUG-154",
+      "title": "Regression suite pre-flight fails due to stale FEAT-105 references",
+      "intent": "Every sprint pre-flight must pass when all shipped features still work. The regression.jsonl must not contain verify commands that reference archived items by ID — those commands fail the moment the item is cleaned from the active backlog.",
+      "description": "regression.jsonl has 3 entries (from FEAT-107 and FEAT-109 sprints) that reference FEAT-105 directly: two run 'backlog show FEAT-105' expecting failCount output, and one runs 'backlog list --failed | grep FEAT-105'. FEAT-105 is archived — not in backlog.json — so all three fail on pre-flight before every future sprint. This blocks all sprint execution.",
+      "priority": "must",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "Identify the 3 stale lines in backlog/archive/regression.jsonl: two with itemId FEAT-107 that use backlog show FEAT-105, and one with itemId FEAT-109 that greps for FEAT-105 in backlog list --failed output",
+        "Remove those 3 lines from regression.jsonl using a targeted delete (jq filter, not sed) so the file remains valid JSONL",
+        "Verify the remaining regression entries parse correctly with jq"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "regression.jsonl has no entries containing FEAT-105",
+          "verify": "! grep -q FEAT-105 backlog/archive/regression.jsonl"
+        },
+        {
+          "text": "regression.jsonl remains valid JSONL after the fix",
+          "verify": "jq -s . backlog/archive/regression.jsonl >/dev/null"
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "lastFailReason": "Baseline validation failed before developer ran",
+      "lastFailAt": "2026-04-14T14:55:20-07:00",
+      "failCount": 2,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "Confirmed: 3 stale entries in regression.jsonl reference FEAT-105 (archived). Blocks all sprint pre-flights. Must priority correct. Fix: remove those 3 JSONL lines."
+    }
+  ]
 }

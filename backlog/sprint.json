@@ -1,1 +1,38 @@
-{"sprintId": null, "status": "idle", "item": null}
+{
+  "sprintId": "sprint-1776203721",
+  "startedAt": "2026-04-14T14:55:21-07:00",
+  "status": "in_progress",
+  "item": {
+    "id": "FEAT-110",
+    "title": "backlog list --track filter to show only core or feature items",
+    "intent": "Running backlog list --track core shows only core-track items, and --track feature shows only feature-track items. Without a track filter, users cannot isolate core work from feature work in one command.",
+    "description": "",
+    "sourceBacklog": "backlog.json",
+    "steps": [
+      "In .aishore/lib/cmd-backlog-read.sh, add val:filter_track:--track to the parse_opts call in cmd_backlog_list",
+      "Validate filter_track after parsing: if set, must be core or feature; call log_error and return 1 on invalid value",
+      "When filter_track is set, append a jq filter segment: select((.track // \"feature\") == \"$filter_track\") to the existing jq_filter pipeline",
+      "In .aishore/lib/cmd-help.sh, add --track <t> entry under backlog list options in _help_backlog(), aligned with existing filter flags"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "backlog list --track core exits 0",
+        "verify": ".aishore/aishore backlog list --track core"
+      },
+      {
+        "text": "backlog list --track feature exits 0",
+        "verify": ".aishore/aishore backlog list --track feature"
+      },
+      {
+        "text": "invalid track value exits non-zero",
+        "verify": "! .aishore/aishore backlog list --track invalid 2>/dev/null"
+      },
+      {
+        "text": "help backlog documents --track",
+        "verify": ".aishore/aishore help backlog | grep -q track"
+      }
+    ],
+    "scope": [],
+    "startedAt": "2026-04-14T14:55:21-07:00"
+  }
+}
