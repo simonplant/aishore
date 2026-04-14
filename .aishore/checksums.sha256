@@ -1,5 +1,5 @@
 2da849baedaff4885fb7e3c079a8d07587a30c30fb0358d0977e338e1860d497  .aishore/VERSION
-dd340f8931079543298e0fc0de25d9a85abd4035ae428915aa20f36b0c38a7e1  .aishore/aishore
+2bd56e4f0915b163acecb92c53e0bda0729723d6ba154e1609ed9b32938ebbc7  .aishore/aishore
 320b524e1d66381f025476bc64f64bc288a87c9497e40859e7c481198f5eaca8  .aishore/README.md
 8bd3c0993a03aebcd810156f21636c4255b9aa027579bec982ab7f1e39e0c21b  .aishore/gitignore-entries.txt
 36f5211a11c7f4b5286af49a237a43a9fb1b5939bb7226f127191840a95e3e2e  .aishore/help.txt
@@ -15,6 +15,10 @@ f58e6ecd013ed92efd76221661c844a7e156b4d4e8c5e4cb5bfe788ccf797e83  .aishore/templ
 ef51fa6099e7b752a622bbb477b93aa2f2cab0f42682921bd5118a63f2256bda  .aishore/templates/config.yaml.tmpl
 59b07f7ec9a97b32f984594d40e70d7a30e8a3806d5563de3f314410f9423bab  .aishore/templates/DEFINITIONS.md
 537f5df11dc02f983344d0d1e1be577fd1c1283d3d91d40904671b44fba95ad2  .aishore/templates/PRODUCT.md.tmpl
+f3978b7a624c4bb4246625c1854874cb4cafd4eae7dc152f6633f6abd2b77bf8  .aishore/templates/prompt-developer-hints.md
+744aa2473cc001a3731711b6150f56898284db820e6679938c6f3296337c9488  .aishore/templates/prompt-groom-hints.md
+cdb92067329a99c35675d56d47c1d9e5acf1e5c33e9fd4c6811821fa96e12a1e  .aishore/templates/prompt-validator-hints.md
+fe3c6ed059ab4da2f911361a6af16c96b713453e97b176bec478bc08f7be4587  .aishore/lib/backlog-dal.sh
 b413fa29cb4c3f739081c162f8b86a84237801bffd41a64245b7a0ec3f267e83  .aishore/lib/cmd-backlog-read.sh
 4fdff860401b53a08b652a3339957d423600123d781d0206c909c69963d40008  .aishore/lib/cmd-backlog-write.sh
 b5ce2140352828eaec5e9f6767b12f0f3e599e71c05983950853aa23a808f46c  .aishore/lib/cmd-clean.sh
@@ -27,3 +31,4 @@ c77dd59fbc6d072dc8d5f769610d6198e5e13fe4c6aeacbdd88b4b5bed5c5b4c  .aishore/lib/c
 89f78bb527e3ce7218e0dbcc9f95a5e0809d9680b78a208f23f0fbe69f204bae  .aishore/lib/cmd-scaffold.sh
 13eff0a25ba991c3b1be758c9d0d4568b242429f161ed02b091a201675fae98a  .aishore/lib/cmd-status.sh
 9376c633ac41a73a98327a9fc710c95cd8ceb34f6c8e01ccf88138e34cd830de  .aishore/lib/cmd-update.sh
+d486822620c5ef853fa77598bd53d9bc69edabce9eea3e7521a0cd95b5114578  .aishore/lib/jq-filters.sh
