@@ -178,9 +178,12 @@ cmd_backlog_show() {
         local archive_file
         for archive_file in "$ARCHIVE_DIR/backlog_done.json" "$ARCHIVE_DIR/bugs_done.json"; do
             [[ -f "$archive_file" ]] || continue
-            item=$(jq -e --arg id "$id" '.[] | select(.id == $id)' "$archive_file" 2>/dev/null) && { archived=true; break; }
+            if item=$(jq -e --arg id "$id" '.[] | select(.id == $id)' "$archive_file" 2>/dev/null); then
+                archived=true
+                break
+            fi
         done
-        if [[ "$archived" != "true" ]]; then
+        if [[ "$archived" == "false" ]]; then
             log_error "Item not found: $id"
             return 1
         fi
@@ -188,8 +191,7 @@ cmd_backlog_show() {
 
     echo ""
     if [[ "$archived" == "true" ]]; then
-        echo "[archived]"
-        echo ""
+        log_info "[archived]"
     fi
     printf '%s\n' "$item" | jq -r '
         "ID:          \(.id)",
