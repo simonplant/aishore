@@ -172,10 +172,27 @@ cmd_backlog_show() {
     [[ -z "$id" ]] && { log_error "Usage: backlog show <ID>"; return 1; }
     [[ $# -gt 1 ]] && { log_error "Unexpected argument: ${2}"; return 1; }
 
-    local item
-    item=$(find_item "$id") || return 1
+    local item archived=false
+    if ! item=$(find_item "$id" 2>/dev/null); then
+        # Search archive files for done/cleaned items
+        local archive_file
+        for archive_file in "$ARCHIVE_DIR/backlog_done.json" "$ARCHIVE_DIR/bugs_done.json"; do
+            [[ -f "$archive_file" ]] || continue
+            if item=$(jq -e --arg id "$id" '.[] | select(.id == $id)' "$archive_file" 2>/dev/null); then
+                archived=true
+                break
+            fi
+        done
+        if [[ "$archived" == "false" ]]; then
+            log_error "Item not found: $id"
+            return 1
+        fi
+    fi
 
     echo ""
+    if [[ "$archived" == "true" ]]; then
+        log_info "[archived]"
+    fi
     printf '%s\n' "$item" | jq -r '
         "ID:          \(.id)",
         "Title:       \(.title)",
