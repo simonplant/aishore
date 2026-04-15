@@ -101,6 +101,7 @@ Subcommands:
     --track <t>       Filter by track (core, feature)
     --ready           Show only sprint-ready items
     --no-ready        Show only items not yet ready
+    --failed          Show only items that have failed
   add --json '{..}' Add a new item (JSON object, or pipe via stdin)
   show <ID>         Show full detail of one item
   edit <ID> --json '{..}' Update fields on an item (merges onto existing)
