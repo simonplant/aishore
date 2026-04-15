@@ -242,6 +242,23 @@ cmd_backlog_show() {
         if .resolved_at then "Resolved:     \(.resolved_at)" else empty end,
         if .completedAt then "Completed:    \(.completedAt)" else empty end
     '
+
+    # Sprint history from archive
+    local sprints_file="$ARCHIVE_DIR/sprints.jsonl"
+    if [[ -f "$sprints_file" ]]; then
+        local history
+        history=$(jq -s --arg id "$id" '
+            [.[] | select(.itemId == $id)] | sort_by(.date) | .[-10:]
+        ' "$sprints_file" 2>/dev/null) || history="[]"
+
+        if [[ "$(printf '%s' "$history" | jq 'length')" -gt 0 ]]; then
+            echo ""
+            echo "Sprint history:"
+            printf '%s' "$history" | jq -r '.[] |
+                "  \(.date)  \(.status)  (attempts: \(.attempts // 1))"
+            '
+        fi
+    fi
 }
 
 cmd_backlog_rm() {
