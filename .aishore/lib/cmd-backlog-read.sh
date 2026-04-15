@@ -174,8 +174,15 @@ cmd_backlog_list() {
         fi
     done
 
+    # Count ready items across listed files
+    local ready_count=0
+    for f in "${files[@]}"; do
+        [[ -f "$BACKLOG_DIR/$f" ]] || continue
+        ready_count=$((ready_count + $(count_ready_items "$BACKLOG_DIR/$f")))
+    done
+
     echo ""
-    printf '%s item(s)\n' "$count"
+    printf '%s item(s), %s ready for sprint\n' "$count" "$ready_count"
 }
 
 cmd_backlog_show() {
