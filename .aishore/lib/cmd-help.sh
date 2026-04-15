@@ -76,6 +76,7 @@ activate automatically.
 Options:
   --dry-run             Preview without running agents
   --no-merge            Keep feature branches for review
+  --pr                  Create GitHub PRs instead of merging (requires gh CLI)
   --retries N           Retry attempts on validation failure
   --max-failures N      Circuit breaker: stop after N consecutive failures
   --limit N             Stop after N successful items
@@ -83,6 +84,7 @@ Options:
 Examples:
   aishore run FEAT-001               # Run specific item
   aishore run --no-merge 3           # Keep branches for review
+  aishore run --pr done              # Drain backlog, open PRs for review
   aishore run done                   # Drain entire backlog
   aishore run p1 --retries 2         # Must + should, with retries
 EOF
