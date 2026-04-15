@@ -20,6 +20,7 @@ cmd_help() {
         status) _help_status ;;
         update) _help_update ;;
         clean)  _help_clean ;;
+        insights) _help_insights ;;
         init)   _help_init ;;
         "")     _help_compact ;;
         *)      log_error "No help topic for: $arg"; _help_compact >&2; return 1 ;;
@@ -51,7 +52,7 @@ Commands:
   help <command>   Show detailed help for a command
   help --full      Show complete reference
 
-Other: clean, update, checksums, version
+Other: clean, insights, update, checksums, version
 EOF
 }
 
@@ -202,6 +203,23 @@ Examples:
   aishore clean                          # Archive and remove done items
   aishore clean --regression --dry-run   # Preview regression suite entries
   aishore clean --regression             # Backup and clear regression suite
+EOF
+}
+
+_help_insights() {
+    cat <<EOF
+aishore insights — Cross-session sprint insights from archive analysis
+
+Usage: aishore insights
+
+Analyzes sprint archive (sprints.jsonl, regression.jsonl) to reveal patterns:
+  - Failure patterns: which items needed retries, failure rates by priority/type
+  - Fragile files: files most referenced in regression checks
+  - Velocity trends: sprints per session, duration stats, code churn
+  - Actionable recommendations based on the data
+
+Examples:
+  aishore insights             # Full insights report
 EOF
 }
 
