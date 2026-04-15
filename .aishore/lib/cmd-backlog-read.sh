@@ -103,8 +103,16 @@ _backlog_check_all() {
 }
 
 cmd_backlog_list() {
-    local filter_status="" filter_type="" filter_priority="" filter_ready=false filter_no_ready=false filter_failed=false
-    parse_opts "val:filter_status:--status" "val:filter_type:--type" "val:filter_priority:--priority" "bool:filter_ready:--ready" "bool:filter_no_ready:--no-ready" "bool:filter_failed:--failed" -- "$@" || return 1
+    local filter_status="" filter_type="" filter_priority="" filter_track="" filter_ready=false filter_no_ready=false filter_failed=false
+    parse_opts "val:filter_status:--status" "val:filter_type:--type" "val:filter_priority:--priority" "val:filter_track:--track" "bool:filter_ready:--ready" "bool:filter_no_ready:--no-ready" "bool:filter_failed:--failed" -- "$@" || return 1
+
+    # Validate --track value
+    if [[ -n "$filter_track" ]]; then
+        case "$filter_track" in
+            core|feature) ;;
+            *) log_error "Invalid track: $filter_track (must be: core, feature)"; return 1 ;;
+        esac
+    fi
 
     # Determine which files to scan
     local files=()
@@ -129,6 +137,9 @@ cmd_backlog_list() {
         jq_filter="$jq_filter | select(.readyForSprint == true)"
     elif [[ "$filter_no_ready" == "true" ]]; then
         jq_filter="$jq_filter | select(.readyForSprint != true)"
+    fi
+    if [[ -n "$filter_track" ]]; then
+        jq_filter="$jq_filter | select((.track // \"feature\") == \"$filter_track\")"
     fi
     if [[ "$filter_failed" == "true" ]]; then
         jq_filter="$jq_filter | select((.failCount // 0) > 0)"
@@ -163,8 +174,15 @@ cmd_backlog_list() {
         fi
     done
 
+    # Count ready items across listed files
+    local ready_count=0
+    for f in "${files[@]}"; do
+        [[ -f "$BACKLOG_DIR/$f" ]] || continue
+        ready_count=$((ready_count + $(count_ready_items "$BACKLOG_DIR/$f")))
+    done
+
     echo ""
-    printf '%s item(s)\n' "$count"
+    printf '%s item(s), %s ready for sprint\n' "$count" "$ready_count"
 }
 
 cmd_backlog_show() {
