@@ -1152,7 +1152,20 @@ run_agent_process() {
                 [[ -f "$agent_log" ]] && _log_size=$(wc -c < "$agent_log" 2>/dev/null || echo 0)
                 log_error "Agent process exited (code $_exit_code) without writing result.json (log: ${_log_size} bytes)"
                 local _crash_detail="Agent crashed or was killed (exit code $_exit_code)"
-                [[ "$_log_size" -lt 100 ]] && _crash_detail="$_crash_detail — empty log suggests startup failure or resource limit"
+                if [[ "$_log_size" -lt 100 ]]; then
+                    _crash_detail="$_crash_detail — empty log suggests startup failure or resource limit"
+                    # Log environment diagnostics to help debug recurring empty-log crashes
+                    {
+                        echo "--- crash diagnostics ---"
+                        echo "agent: $agent_label | model: $model | elapsed: ${elapsed}s"
+                        echo "claude path: $(command -v claude 2>/dev/null || echo 'NOT FOUND')"
+                        echo "claude version: $(claude --version 2>/dev/null || echo 'UNKNOWN')"
+                        echo "disk free (tmp): $(df -h /tmp 2>/dev/null | tail -1 | awk '{print $4}' || echo 'UNKNOWN')"
+                        echo "memory avail: $(awk '/MemAvailable/{printf "%.0fM", $2/1024}' /proc/meminfo 2>/dev/null || echo 'UNKNOWN')"
+                        echo "claude procs: $(pgrep -c -f 'claude' 2>/dev/null || echo 0)"
+                        echo "--- end diagnostics ---"
+                    } >> "$agent_log" 2>/dev/null || true
+                fi
                 printf '{"status":"fail","reason":"CRASH: %s"}\n' "$_crash_detail" \
                     > "$STATUS_DIR/result.json"
             fi
@@ -1509,17 +1522,42 @@ run_agent() {
     local prompt
     prompt=$(build_agent_prompt "$agent_name" "$mode" "$extra_prompt")
 
-    if [[ -n "$output_file" ]]; then
-        AGENT_OUTPUT_FILE="$output_file" AGENT_MODE="$mode" run_agent_process "$agent_name" "$model" \
-            "$agent_perms" "" \
-            "$context_files
-$prompt" "$max_turns"
-    else
-        AGENT_MODE="$mode" run_agent_process "$agent_name" "$model" \
-            "$agent_perms" "text" \
-            "$context_files
-$prompt" "$max_turns"
-    fi
+    local _ra_full_prompt="$context_files
+$prompt"
+
+    local _ra_attempt=0
+    local _ra_max_retries="${AGENT_CRASH_RETRIES:-1}"
+
+    while true; do
+        rm -f "$STATUS_DIR/result.json"
+        if [[ -n "$output_file" ]]; then
+            AGENT_OUTPUT_FILE="$output_file" AGENT_MODE="$mode" run_agent_process "$agent_name" "$model" \
+                "$agent_perms" "" \
+                "$_ra_full_prompt" "$max_turns"
+        else
+            AGENT_MODE="$mode" run_agent_process "$agent_name" "$model" \
+                "$agent_perms" "text" \
+                "$_ra_full_prompt" "$max_turns"
+        fi
+
+        # Check for empty-log crash pattern: agent exited but produced < 100 bytes of output.
+        # This typically means the claude CLI failed to start (resource contention, session limits).
+        # Retry once after a delay — transient failures often resolve on second attempt.
+        if [[ -f "$STATUS_DIR/result.json" ]] && \
+           grep -q '"CRASH:' "$STATUS_DIR/result.json" 2>/dev/null && \
+           [[ "$_ra_attempt" -lt "$_ra_max_retries" ]]; then
+            local _ra_log_size=0
+            [[ -n "$LAST_AGENT_LOG" && -f "$LAST_AGENT_LOG" ]] && \
+                _ra_log_size=$(wc -c < "$LAST_AGENT_LOG" 2>/dev/null || echo 0)
+            if [[ "$_ra_log_size" -lt 100 ]]; then
+                _ra_attempt=$((_ra_attempt + 1))
+                log_warning "Empty-log crash detected (attempt $_ra_attempt/$_ra_max_retries) — retrying in 15s"
+                sleep 15
+                continue
+            fi
+        fi
+        break
+    done
 }
 
 show_failure_log_tail() {
@@ -1692,6 +1730,17 @@ _save_regression_entries() {
     [[ -z "$entries" ]] && return 0
 
     mkdir -p "$ARCHIVE_DIR"
+
+    # Deduplicate: remove any existing entries for this item before appending new ones.
+    # This prevents duplicate regression checks when items are re-sprinted.
+    if [[ -f "$regression_file" ]] && grep -q "\"$item_id\"" "$regression_file" 2>/dev/null; then
+        local tmp_regression
+        tmp_regression="$(ensure_tmpdir)/regression_dedup.jsonl"
+        grep -v "\"itemId\":\"$item_id\"" "$regression_file" > "$tmp_regression" 2>/dev/null || true
+        mv "$tmp_regression" "$regression_file"
+        log_info "Regression suite: replaced existing entries for $item_id"
+    fi
+
     printf '%s\n' "$entries" >> "$regression_file"
     local count
     count=$(printf '%s\n' "$entries" | wc -l)
