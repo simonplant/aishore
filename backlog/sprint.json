@@ -1,9 +1,9 @@
 {
-  "sprintId": "sprint-1776212013",
-  "startedAt": "2026-04-14T17:13:33-07:00",
+  "sprintId": "sprint-1776212078",
+  "startedAt": "2026-04-14T17:14:38-07:00",
   "status": "in_progress",
   "item": {
-    "id": "FEAT-135",
+    "id": "FEAT-138",
     "title": "tmp-ready-test",
     "intent": "temp item to verify ready count appears in list summary",
     "description": "",
@@ -11,6 +11,6 @@
     "steps": [],
     "acceptanceCriteria": [],
     "scope": [],
-    "startedAt": "2026-04-14T17:13:33-07:00"
+    "startedAt": "2026-04-14T17:14:38-07:00"
   }
 }
