@@ -235,6 +235,9 @@ Checks prerequisites, detects project settings, and configures aishore.
 
 Options:
   -y, --yes     Accept all detected defaults (non-interactive)
+  --demo        Create a tiny demo project and run sprints on it so you
+                can experience the full lifecycle before configuring your
+                own project
 EOF
 }
 
