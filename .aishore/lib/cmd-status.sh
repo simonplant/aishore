@@ -65,6 +65,20 @@ _status_output() {
     done
     log_info "$ready_total/$total items ready for sprint"
 
+    # --- Core/feature split for ready items ---
+    if [[ -n "${CORE_CMD:-}" ]] && [[ "$ready_total" -gt 0 ]]; then
+        local core_ready=0 feature_ready=0
+        for f in "${BACKLOG_FILES[@]}"; do
+            [[ -f "$BACKLOG_DIR/$f" ]] || continue
+            local _cr _fr
+            _cr=$(jq '[.items[] | select(.readyForSprint == true and (.status == "todo" or .status == null) and (.track // "feature") == "core")] | length' "$BACKLOG_DIR/$f" 2>/dev/null || echo 0)
+            _fr=$(jq '[.items[] | select(.readyForSprint == true and (.status == "todo" or .status == null) and (.track // "feature") == "feature")] | length' "$BACKLOG_DIR/$f" 2>/dev/null || echo 0)
+            core_ready=$((core_ready + _cr))
+            feature_ready=$((feature_ready + _fr))
+        done
+        echo "  core: $core_ready ready, feature: $feature_ready ready"
+    fi
+
     # --- Core health ---
     if [[ -n "$CORE_CMD" ]]; then
         echo ""
