@@ -104,6 +104,9 @@ _status_output() {
             echo "  Core items:    $core_ready ready"
             echo "  Feature items: $feature_ready ready (blocked until core passes)"
         fi
+    else
+        echo ""
+        log_warning "Core: not configured — run 'scaffold' to establish CORE_CMD"
     fi
 
     # --- Currently running ---
