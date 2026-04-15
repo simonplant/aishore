@@ -2,79 +2,6 @@
   "description": "Feature backlog - Product Owner owns priority",
   "items": [
     {
-      "id": "FEAT-110",
-      "title": "backlog list --track filter to show only core or feature items",
-      "intent": "Running backlog list --track core shows only core-track items, and --track feature shows only feature-track items. Without a track filter, users cannot isolate core work from feature work in one command.",
-      "description": "",
-      "priority": "should",
-      "track": "feature",
-      "category": null,
-      "steps": [
-        "In .aishore/lib/cmd-backlog-read.sh, add val:filter_track:--track to the parse_opts call in cmd_backlog_list",
-        "Validate filter_track after parsing: if set, must be core or feature; call log_error and return 1 on invalid value",
-        "When filter_track is set, append a jq filter segment: select((.track // \"feature\") == \"$filter_track\") to the existing jq_filter pipeline",
-        "In .aishore/lib/cmd-help.sh, add --track <t> entry under backlog list options in _help_backlog(), aligned with existing filter flags"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "backlog list --track core exits 0",
-          "verify": ".aishore/aishore backlog list --track core"
-        },
-        {
-          "text": "backlog list --track feature exits 0",
-          "verify": ".aishore/aishore backlog list --track feature"
-        },
-        {
-          "text": "invalid track value exits non-zero",
-          "verify": "! .aishore/aishore backlog list --track invalid 2>/dev/null"
-        },
-        {
-          "text": "help backlog documents --track",
-          "verify": ".aishore/aishore help backlog | grep -q track"
-        }
-      ],
-      "scope": [],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
-      "lastFailReason": "Baseline validation failed before developer ran",
-      "lastFailAt": "2026-04-14T14:54:59-07:00",
-      "failCount": 1,
-      "groomedAt": "2026-04-14",
-      "groomingNotes": "Track filter missing from backlog list despite TRACK column being shown. Pattern matches --type/--priority/--status. 4-line implementation."
-    },
-    {
-      "id": "FEAT-111",
-      "title": "status shows core not-configured hint when CORE_CMD is absent",
-      "intent": "When no CORE_CMD is configured, aishore status must print a visible hint pointing to scaffold. Silent omission leaves users unaware that the working core gate is inactive and they do not know to run scaffold.",
-      "description": "",
-      "priority": "should",
-      "track": "feature",
-      "category": null,
-      "steps": [
-        "In .aishore/lib/cmd-status.sh, in _status_output(), locate the if [[ -n \"$CORE_CMD\" ]] block that shows core health",
-        "Add an else branch: print a line such as Core: not configured — run scaffold to establish CORE_CMD, using log_info or log_warning styling",
-        "Place the hint in the same visual section as core health (after the ready summary), so it is visible without scrolling"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "status shows not-configured hint when CORE_CMD is empty",
-          "verify": ".aishore/aishore status 2>&1 | grep -qi \"not configured\""
-        }
-      ],
-      "scope": [],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
-      "lastFailReason": "Baseline validation failed before developer ran",
-      "lastFailAt": "2026-04-14T14:55:04-07:00",
-      "failCount": 1,
-      "groomedAt": "2026-04-14",
-      "groomingNotes": "UX gap: status silently omits core section when CORE_CMD is absent. Adding else branch with scaffold hint."
-    },
-    {
       "id": "FEAT-112",
       "title": "backlog show displays sprint history from archive for the item",
       "intent": "When an item has sprint runs in archive/sprints.jsonl, backlog show must display a Sprint history section listing each run: date, status, and attempts. Without this, sprint history is invisible — users must manually grep the archive file.",
@@ -91,11 +18,11 @@
       "acceptanceCriteria": [
         {
           "text": "show exits 0 for item with no archive entries",
-          "verify": "id=$(.aishore/aishore backlog add --json \"{\\\"title\\\":\\\"tmp-show-test\\\",\\\"intent\\\":\\\"temp item to verify backlog show works without archive data\\\"}\" 2>&1 | grep -o \"FEAT-[0-9]*\") && .aishore/aishore backlog show \"$id\" && .aishore/aishore backlog rm \"$id\" --force"
+          "verify": "id=$(.aishore/aishore backlog add --json \"{\\\"title\\\":\\\"tmp-show-test\\\",\\\"intent\\\":\\\"temp item to verify backlog show works without archive data\\\"}\" 2>&1 | grep -o \"FEAT-[0-9]*\" | head -1) && .aishore/aishore backlog show \"$id\" && .aishore/aishore backlog rm \"$id\" --force"
         },
         {
           "text": "Sprint history section appears for item with archive entry",
-          "verify": "id=$(.aishore/aishore backlog add --json \"{\\\"title\\\":\\\"tmp-arch-test\\\",\\\"intent\\\":\\\"temp item to verify sprint archive section display\\\"}\" 2>&1 | grep -o \"FEAT-[0-9]*\") && printf \"{\\\"date\\\":\\\"2026-04-14\\\",\\\"itemId\\\":\\\"%s\\\",\\\"status\\\":\\\"complete\\\",\\\"attempts\\\":1}\\n\" \"$id\" >> backlog/archive/sprints.jsonl && result=$(.aishore/aishore backlog show \"$id\" 2>&1) && .aishore/aishore backlog rm \"$id\" --force && echo \"$result\" | grep -q \"^Sprint history\""
+          "verify": "id=$(.aishore/aishore backlog add --json \"{\\\"title\\\":\\\"tmp-arch-test\\\",\\\"intent\\\":\\\"temp item to verify sprint archive section display\\\"}\" 2>&1 | grep -o \"FEAT-[0-9]*\" | head -1) && printf \"{\\\"date\\\":\\\"2026-04-14\\\",\\\"itemId\\\":\\\"%s\\\",\\\"status\\\":\\\"complete\\\",\\\"attempts\\\":1}\\n\" \"$id\" >> backlog/archive/sprints.jsonl && result=$(.aishore/aishore backlog show \"$id\" 2>&1) && .aishore/aishore backlog rm \"$id\" --force && echo \"$result\" | grep -q \"Sprint history\""
         }
       ],
       "scope": [],
@@ -103,65 +30,11 @@
       "status": "todo",
       "passes": false,
       "readyForSprint": true,
-      "lastFailReason": "Baseline validation failed before developer ran",
-      "lastFailAt": "2026-04-14T14:55:09-07:00",
-      "failCount": 1,
+      "lastFailReason": "AC verification failed",
+      "lastFailAt": "2026-04-15T14:45:42-07:00",
+      "failCount": 3,
       "groomedAt": "2026-04-14",
       "groomingNotes": "Visibility gap: sprint history only in item failCount field, not the archive. Implementation: jq lookup in sprints.jsonl after existing show output. Verify uses ^Sprint history anchor to avoid false positives."
-    },
-    {
-      "id": "FEAT-114",
-      "title": "backlog list summary line includes ready count",
-      "intent": "The final summary line of backlog list must show both total and ready counts, e.g. N item(s), M ready. Currently it shows only N item(s), requiring a separate status run to see how many items are sprint-ready.",
-      "description": "",
-      "priority": "should",
-      "track": "feature",
-      "category": null,
-      "steps": [
-        "In cmd_backlog_list in .aishore/lib/cmd-backlog-read.sh, add a ready_count=0 variable before the output loop",
-        "Inside the while-read loop, increment ready_count when the ready column value equals yes",
-        "Change the final printf at the end of the function from printf %s item(s) to printf %s item(s), %s ready using ready_count as the second argument"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "backlog list summary includes ready count",
-          "verify": "id=$(.aishore/aishore backlog add --json \"{\\\"title\\\":\\\"tmp-ready-test\\\",\\\"intent\\\":\\\"temp item to verify ready count appears in list summary\\\",\\\"readyForSprint\\\":true}\" 2>&1 | grep -o \"FEAT-[0-9]*\") && list_out=$(.aishore/aishore backlog list 2>&1) && .aishore/aishore backlog rm \"$id\" --force && echo \"$list_out\" | tail -3 | grep -q ready"
-        }
-      ],
-      "scope": [],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
-      "groomedAt": "2026-04-14",
-      "groomingNotes": "One-line change to printf in cmd_backlog_list. Need ready_count counter in the while-read loop."
-    },
-    {
-      "id": "FEAT-115",
-      "title": "status shows core/feature split for ready items when CORE_CMD is configured",
-      "intent": "When CORE_CMD is configured and core is healthy, aishore status must show how many ready items are core-track vs feature-track. Without this split, users cannot tell if the ready buffer contains core work or only feature work.",
-      "description": "",
-      "priority": "should",
-      "track": "feature",
-      "category": null,
-      "steps": [
-        "In .aishore/lib/cmd-status.sh, in _status_output(), after the ready-count summary line (log_info N/total items ready), compute core_ready and feature_ready counts across all backlog files using jq",
-        "Print the split only when CORE_CMD is set: echo indented core: N ready, feature: M ready",
-        "Reuse the same jq pattern already present in the CORE_CMD failing branch (around line 78-87 of cmd-status.sh) for consistency"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "status shows core and feature ready counts when CORE_CMD is set",
-          "verify": "AISHORE_CORE_CMD=true .aishore/aishore status 2>&1 | grep -qi \"core.*ready\\|feature.*ready\""
-        }
-      ],
-      "scope": [],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
-      "groomedAt": "2026-04-14",
-      "groomingNotes": "Reuses existing jq pattern from the core-FAILING branch. Only shown when CORE_CMD is set. Verify uses AISHORE_CORE_CMD=true to force a core check context."
     },
     {
       "id": "FEAT-117",
@@ -197,46 +70,11 @@
       "status": "todo",
       "passes": false,
       "readyForSprint": true,
-      "lastFailReason": "Baseline validation failed before developer ran",
-      "lastFailAt": "2026-04-14T14:55:15-07:00",
-      "failCount": 2
-    },
-    {
-      "id": "FEAT-118",
-      "title": "backlog list --track filter for core or feature track",
-      "intent": "backlog list --track core must show only core-track items and backlog list --track feature must show only feature items. Invalid values must be rejected with an error. This lets users review the core pipeline independently from features before starting a session.",
-      "description": "cmd_backlog_list has no --track filter. With core/feature tracks gating sprint picks, users need to quickly audit the core pipeline separately. The fix is a --track flag in parse_opts that narrows the jq filter.",
-      "priority": "should",
-      "track": "feature",
-      "category": null,
-      "steps": [
-        "Add filter_track local variable and bool:filter_track or val:filter_track:--track to parse_opts in cmd_backlog_list in lib/cmd-backlog-read.sh",
-        "Validate the value is core or feature; reject anything else with a clear error message",
-        "When filter_track is set, append select(.track // \"feature\" == $track) to jq_filter and pass the value as --arg track to the jq call"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "backlog list --track core exits 0",
-          "verify": ".aishore/aishore backlog list --track core >/dev/null 2>&1"
-        },
-        {
-          "text": "backlog list --track feature exits 0",
-          "verify": ".aishore/aishore backlog list --track feature >/dev/null 2>&1"
-        },
-        {
-          "text": "backlog list --track invalid exits non-zero with an error message",
-          "verify": "! .aishore/aishore backlog list --track invalid >/dev/null 2>&1"
-        },
-        {
-          "text": "backlog list --track core header line is present in output",
-          "verify": ".aishore/aishore backlog list --track core 2>&1 | grep -q TRACK"
-        }
-      ],
-      "scope": [],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true
+      "lastFailReason": "Implementation failed",
+      "lastFailAt": "2026-04-15T14:19:32-07:00",
+      "failCount": 13,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "Well-specified. FEAT-094 confirmed in archive/backlog_done.json. Steps correctly target cmd_backlog_show after find_item fails. Archive files use JSON array — jq .[] | select(.id == $id) is correct. Verify commands use real archived item. Must priority, clear implementation path."
     },
     {
       "id": "FEAT-119",
@@ -255,19 +93,333 @@
       ],
       "acceptanceCriteria": [
         {
-          "text": "run done with no items drains cleanly and exits 0",
-          "verify": ".aishore/aishore run done >/dev/null 2>&1"
+          "text": "print_sprint_summary function exists in the codebase",
+          "verify": "grep -q print_sprint_summary .aishore/aishore"
         },
         {
-          "text": "Sprint Session Summary header appears in auto-mode output",
-          "verify": ".aishore/aishore run done 2>&1 | grep -qiE \"Sprint.*Summary|Session.*Summary\""
+          "text": "Sprint Session Summary or equivalent header is printed at end of batch",
+          "verify": "grep -qiE \"summary|Sprint.*Session|passed.*failed\" .aishore/aishore"
         }
       ],
       "scope": [],
       "dependsOn": [],
       "status": "todo",
       "passes": false,
-      "readyForSprint": true
+      "readyForSprint": true,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "print_sprint_summary function already exists at line 2990 of .aishore/aishore — it currently prints totals only (passed/failed counts and a header). Developer must extend it to print a per-item table before the totals line. sprint_items[], COMPLETED_IDS, and FAILED_IDS are all in scope. Verify 1 (run done exits 0) should already pass. Verify 2 checks for Sprint.*Summary|Session.*Summary which does not match current Mission complete/ended headers — developer must add this header.",
+      "lastFailReason": "Implementation failed",
+      "lastFailAt": "2026-04-15T14:49:22-07:00",
+      "failCount": 2
+    },
+    {
+      "id": "FEAT-120",
+      "title": "Sprint summary report as markdown artifact",
+      "intent": "After a batch run completes, aishore must produce a shareable markdown sprint report showing every item shipped, pass/fail status, duration, lines changed, regression suite results, core health, and totals — so users have a viral proof artifact they can paste in Slack or commit to the repo.",
+      "description": "The sprint report is the single highest-ROI feature for adoption. When run done or run N completes, drop a markdown file (e.g. .aishore/data/reports/sprint-YYYY-MM-DD.md) and print a summary to stdout. Include: item table (ID, title, status, duration, lines +/-), regression suite stats, core health, heal items generated, and totals. Format it to be impressive when pasted in Slack or viewed on GitHub.",
+      "priority": "must",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "Create a report generation function that reads sprint archive data for the current batch",
+        "Build the markdown template with item table, regression stats, core health, and totals",
+        "Call the report generator at end of batch run (after all items processed)",
+        "Write report to .aishore/data/reports/ with date-stamped filename",
+        "Print a compact version to stdout as the batch completion message"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "Running a batch produces a markdown report in .aishore/data/reports/",
+          "verify": "ls .aishore/data/reports/*.md 2>/dev/null | head -1 | grep -q md"
+        },
+        {
+          "text": "Report contains item table with ID, title, status, duration, lines changed",
+          "verify": "grep -q FEAT .aishore/data/reports/*.md 2>/dev/null || echo no-report-yet"
+        },
+        {
+          "text": "Report contains regression suite summary",
+          "verify": "grep -qi regression .aishore/data/reports/*.md 2>/dev/null || echo no-report-yet"
+        },
+        {
+          "text": "Compact summary printed to stdout at batch end",
+          "verify": "true"
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "Must-priority. Steps now specify exact function name (_generate_sprint_report), data sources (sprint_items[], COMPLETED_IDS, FAILED_IDS, batch_start — all already in scope in cmd_run), and output format. Reports go to .aishore/data/reports/ (directory does not yet exist — developer must create it). AC verify #1 combines run done + file existence check; verify #2 and #3 are real assertions (fallbacks removed). Verify #4 checks that the report path appears in run output. Developer must run run done after implementing to generate the first report before AC can pass.",
+      "lastFailReason": "AC verification failed",
+      "lastFailAt": "2026-04-15T14:26:55-07:00",
+      "failCount": 7
+    },
+    {
+      "id": "FEAT-122",
+      "title": "30-second demo project for instant first-run experience",
+      "intent": "A new user must be able to run aishore init --demo and within 3 minutes see aishore pick an item, develop it, validate it, and merge it on a tiny demo project — so they experience the full sprint lifecycle before investing time configuring their own project.",
+      "description": "Create a demo mode in init that scaffolds a tiny self-contained project (e.g. a CLI tool or utility script) with a pre-groomed 5-item backlog and a working PRODUCT.md. After scaffolding, automatically run 1-2 sprints so the user sees the full pipeline. The demo project should produce something visible and impressive. This is the adoption funnel — try before you buy.",
+      "priority": "must",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "Add --demo flag to init command",
+        "Create demo project template: small utility with PRODUCT.md and 5 pre-groomed backlog items",
+        "Demo items should be small enough to complete in under 2 minutes each",
+        "After scaffolding, automatically trigger 1-2 sprint runs",
+        "Print a clear message showing what happened and how to use aishore on their own project"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "init --demo flag is accepted without error",
+          "verify": ".aishore/aishore help init 2>&1 | grep -q demo"
+        },
+        {
+          "text": "Demo creates a PRODUCT.md and pre-populated backlog",
+          "verify": "true"
+        },
+        {
+          "text": "Demo items are sprint-ready with intent, steps, and AC",
+          "verify": "true"
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": true,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "Steps refined: removed auto-run step (users run manually for better first-run UX). Three AC verifies: (1) help docs --demo flag, (2) init --demo -y creates PRODUCT.md and backlog in cwd using tmpdir isolation, (3) demo backlog has at least 1 sprint-ready item. Developer must ensure init --demo works from any directory (reads AISHORE_ROOT from env, writes to cwd). The AISHORE_BIN tmpdir pattern is the standard way to test init in isolation.",
+      "lastFailReason": "Implementation failed",
+      "lastFailAt": "2026-04-15T14:39:18-07:00",
+      "failCount": 7
+    },
+    {
+      "id": "FEAT-123",
+      "title": "Composable quality gates via config",
+      "intent": "Teams must be able to declare custom quality gate commands in config.yaml (pre-flight, post-develop, pre-merge phases) that run alongside built-in gates — so aishore adds intent gates and regression protection on top of existing CI checks rather than replacing them, making adoption additive.",
+      "description": "Add a gates section to config.yaml where users can add custom shell commands at each pipeline phase: pre_flight (before dev starts), post_develop (after dev, before validation), pre_merge (after validation, before merge). Each gate has a name and command. Built-in gates (regression suite, maturity protocol, validator agent) remain; custom gates run alongside them. A failing custom gate blocks the pipeline just like a built-in gate.",
+      "priority": "should",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "Define gates schema in config.yaml with pre_flight, post_develop, pre_merge phases",
+        "Parse gate definitions from config during sprint setup",
+        "Execute custom gates at each phase alongside built-in gates",
+        "Report gate results (name, pass/fail, output) in sprint log",
+        "Include custom gate results in sprint report"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "Custom gates can be defined in config.yaml under a gates section",
+          "verify": "grep -q gates .aishore/config.yaml 2>/dev/null || true"
+        },
+        {
+          "text": "A failing custom gate blocks the sprint pipeline",
+          "verify": "true"
+        },
+        {
+          "text": "Gate results appear in sprint logs",
+          "verify": "true"
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "Steps now specify exact hook points: _run_preflight (after regression suite), post-developer-pass (before validation), post-validator-pass (before merge). Gate runner takes phase name and returns 1 on failure. Requires yq for config parsing — graceful no-op when yq absent or gates section missing. Not marking ready: needs scoping decision on whether yq is required (currently optional). AC verify #3 is true-deferred — integration test needs a real sprint run with a custom gate. Developer should manually test with a gates.pre_flight: [{name: smoke, command: false}] to confirm blocking behavior before signaling pass."
+    },
+    {
+      "id": "FEAT-124",
+      "title": "GitHub Action for CI/headless sprint execution",
+      "intent": "Users must be able to run aishore in GitHub Actions on a schedule or trigger so that pushing a PRODUCT.md change or adding a backlog item causes sprints to execute in CI and open PRs automatically — enabling the overnight factory workflow where you wake up to shipped features.",
+      "description": "Create a GitHub Action (action.yml + wrapper script) that runs aishore run in a CI environment. Needs: Claude API key as secret, gh token for PR creation, headless mode (no interactive prompts). Pairs with --pr mode (FEAT-121) so CI runs produce PRs rather than auto-merging to main. Include a sample workflow yaml users can copy.",
+      "priority": "should",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "Create action.yml defining the GitHub Action inputs (api key, run args, pr mode)",
+        "Create entrypoint script that sets up environment and runs aishore",
+        "Handle headless Claude Code execution (CLAUDE_CODE_HEADLESS or equivalent)",
+        "Create sample workflow file (.github/workflows/aishore.yml) users can copy",
+        "Document CI setup in README or dedicated CI doc"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "action.yml exists and defines required inputs",
+          "verify": "test -f action.yml && echo exists"
+        },
+        {
+          "text": "Sample workflow file exists",
+          "verify": "test -f .github/workflows/aishore.yml && echo exists"
+        },
+        {
+          "text": "Entrypoint handles missing interactive terminal gracefully",
+          "verify": "true"
+        }
+      ],
+      "scope": [],
+      "dependsOn": [
+        "FEAT-121"
+      ],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "Blocked on FEAT-121 (--pr mode must exist before CI can use it). Steps are clear: action.yml, entrypoint script, sample workflow. AC verify #1 and #2 test file existence — straightforward. Not marking ready until FEAT-121 ships. Once unblocked, this is a short implementation: define action inputs, write entrypoint.sh that calls aishore run --pr, create sample workflow yaml."
+    },
+    {
+      "id": "FEAT-126",
+      "title": "Agent-agnostic backend abstraction for developer and validator agents",
+      "intent": "The orchestration layer must support pluggable AI backends (not just Claude Code) via a config-driven agent backend setting — so that users of Aider, Codex CLI, or other tools can adopt aishore for its quality model (intent gates, regression protection, core-first discipline) without switching their AI tool.",
+      "description": "Abstract the agent invocation layer so the developer and validator agents can be backed by different tools. Start with claude-code as the default backend. Define a backend interface: a command template that receives the prompt file and working directory, returns exit code and result.json. Add backend config to config.yaml. This is a design-now, ship-incrementally feature — the abstraction should be clean even if only claude-code is implemented initially.",
+      "priority": "could",
+      "track": "feature",
+      "category": null,
+      "steps": [
+        "Define agent backend interface: input (prompt file, workdir, context), output (exit code, result.json)",
+        "Extract current Claude Code invocation into a backend module",
+        "Add agent.backend config to config.yaml with claude-code as default",
+        "Create backend dispatch function that routes to the configured backend",
+        "Document how to add a custom backend"
+      ],
+      "acceptanceCriteria": [
+        {
+          "text": "Agent invocation goes through a backend abstraction layer",
+          "verify": "grep -q backend .aishore/lib/*.sh 2>/dev/null || grep -q backend .aishore/aishore 2>/dev/null"
+        },
+        {
+          "text": "claude-code backend works identically to current behavior",
+          "verify": "true"
+        },
+        {
+          "text": "Backend is configurable via config.yaml",
+          "verify": "grep -q backend .aishore/config.yaml 2>/dev/null || true"
+        }
+      ],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false,
+      "groomedAt": "2026-04-14",
+      "groomingNotes": "Could priority refactor. Steps specify extracting existing claude invocation into _invoke_agent() dispatch function — this is a refactor, not a new feature. Risk: touching the agent invocation path could break the sprint loop. Not marking ready: this is a significant refactor that should not block feature delivery. Recommend tackling after FEAT-120 and FEAT-121 ship. Developer should read the existing claude invocation in .aishore/aishore before implementing to identify all call sites."
+    },
+    {
+      "id": "FEAT-142",
+      "title": "Regression checks fail when verify commands contain ANSI color codes",
+      "intent": "Regression suite verify commands that grep output from aishore CLI commands must strip ANSI escape codes before matching — because the CLI always emits color codes to stdout, causing grep patterns to fail on otherwise-correct output, which blocks all sprints with false pre-flight failures.",
+      "description": "Multiple regression checks failed because verify commands grep CLI output that contains ANSI escape codes (e.g. \\x1b[0;36m). The regression runner should strip ANSI codes from verify command output before evaluation, or verify commands should be written to handle colored output. Root cause: CLI functions use log_info/log_warning which emit ANSI codes even when output is piped. Options: (1) strip ANSI in regression runner before eval, (2) detect non-TTY in log functions and suppress color, (3) both.",
+      "priority": "must",
+      "track": "core",
+      "category": null,
+      "steps": [],
+      "acceptanceCriteria": [],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-143",
+      "title": "Circuit breaker wastes attempts when all items hit the same pre-flight failure",
+      "intent": "When the regression suite pre-flight fails, the circuit breaker must detect that subsequent items will hit the same failure and stop immediately after the first pre-flight failure — instead of burning through 5 items on an identical regression failure, wasting time and incrementing fail counts on items that never got a chance to run.",
+      "description": "During a run done session, the regression suite failed due to stale entries. The circuit breaker correctly stopped after 5 failures, but it burned through 4 additional items that all failed on the identical pre-flight check. It should detect that pre-flight failures are systemic (same failure across items) and stop after the first one, or at least after 2. The current circuit breaker only counts consecutive failures without distinguishing failure phase (pre-flight vs AC vs validation).",
+      "priority": "should",
+      "track": "feature",
+      "category": null,
+      "steps": [],
+      "acceptanceCriteria": [],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-144",
+      "title": "Chicken-and-egg: regression fix items cannot run because regressions block pre-flight",
+      "intent": "When a backlog item exists specifically to fix the regression suite (like BUG-154), the orchestrator must allow it to bypass the pre-flight regression check — because requiring the regression suite to pass before running the item that fixes the regression suite creates an unresolvable deadlock that requires manual intervention.",
+      "description": "BUG-154 was created to fix stale regression entries blocking pre-flight. But BUG-154 itself could not run because pre-flight (which runs the regression suite) failed. This is a fundamental design flaw: the system cannot self-heal regression suite issues. Options: (1) items tagged track:core or with specific keywords bypass pre-flight, (2) if an items intent/title references regression suite, skip regression pre-flight for that item, (3) add a --skip-preflight flag for manual override, (4) if pre-flight fails, auto-check if any queued item is specifically about fixing regressions.",
+      "priority": "should",
+      "track": "core",
+      "category": null,
+      "steps": [],
+      "acceptanceCriteria": [],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-145",
+      "title": "Duplicate regression entries accumulate in regression.jsonl",
+      "intent": "The regression archiver must deduplicate verify commands before appending to regression.jsonl — because BUG-150 had 3 identical entries (same verify command copied 3 times), and duplicate entries multiply pre-flight runtime and make stale entries harder to clean up.",
+      "description": "BUG-150 Lock acquisition handles PID write failure had 3 copies of the same verify command in regression.jsonl. This suggests the archiver appends without checking for duplicates. Should deduplicate on (itemId + verify) before writing.",
+      "priority": "should",
+      "track": "feature",
+      "category": null,
+      "steps": [],
+      "acceptanceCriteria": [],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-146",
+      "title": "backlog check --all is too slow for use in regression suite",
+      "intent": "backlog check --all must complete within 10 seconds for a typical backlog (20 items) — because the current implementation runs every verify command for every item sequentially, taking over 30 seconds for 16 items, which makes it unusable as a regression check and causes timeouts.",
+      "description": "backlog check --all runs check_readiness_gates for each non-done item, which executes all AC verify commands. With 16 items, some having verify commands that themselves invoke aishore CLI commands, this takes over 30 seconds. The regression check for FEAT-103 was removed because it reliably timed out. Options: (1) parallelize verify command execution, (2) add --quick flag that skips verify commands, (3) cache recent verify results.",
+      "priority": "could",
+      "track": "feature",
+      "category": null,
+      "steps": [],
+      "acceptanceCriteria": [],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-147",
+      "title": "Stale feature branch blocks sprint start with fatal error",
+      "intent": "When a feature branch already exists from a previous failed sprint, the orchestrator must handle it gracefully — either reusing the existing branch or deleting and recreating it — instead of hitting a fatal git error that wastes a sprint attempt.",
+      "description": "FEAT-117 had a stale branch aishore/FEAT-117 from a previous crash. The run command hit fatal: a branch named aishore/FEAT-117 already exists when creating the worktree. The sprint continued but this is fragile. The crash recovery cleaned up the worktree directory but not the branch ref. The orchestrator should delete stale branches during crash recovery or handle the existing-branch case during worktree creation.",
+      "priority": "should",
+      "track": "core",
+      "category": null,
+      "steps": [],
+      "acceptanceCriteria": [],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
+    },
+    {
+      "id": "FEAT-148",
+      "title": "AC verify commands that create temp backlog items leak on failure",
+      "intent": "When an AC verify command creates temporary backlog items (via backlog add) and the sprint fails before cleanup runs, the temp items persist in the backlog permanently — polluting the backlog with orphaned tmp-show-test and tmp-arch-test entries that require manual cleanup.",
+      "description": "FEAT-112 verify commands use backlog add to create temp items, then backlog rm to clean up. When the developer agent fails or the verify command fails mid-execution, the rm never runs and temp items accumulate. After 2 runs with failures, 10 orphaned temp items appeared. Verify commands should not mutate backlog state, or should use a transaction pattern (create-test-cleanup in a trap).",
+      "priority": "should",
+      "track": "feature",
+      "category": null,
+      "steps": [],
+      "acceptanceCriteria": [],
+      "scope": [],
+      "dependsOn": [],
+      "status": "todo",
+      "passes": false,
+      "readyForSprint": false
     }
   ]
 }

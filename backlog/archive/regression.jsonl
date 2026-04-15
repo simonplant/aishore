@@ -18,3 +18,19 @@
 {"itemId":"FEAT-104","date":"2026-04-08","text":"README.md shows gh pr create as the follow-up step","verify":"grep -q 'gh pr create' README.md"}
 {"itemId":"FEAT-106","date":"2026-04-08","text":"status output includes a ready/total count line","verify":".aishore/aishore status 2>&1 | sed 's/\\x1b\\[[0-9;]*m//g' | grep -qE '[0-9]+/[0-9]+ items ready'"}
 {"itemId":"FEAT-109","date":"2026-04-08","text":"backlog list --failed excludes items with no sprint failures","verify":"! .aishore/aishore backlog list --failed 2>&1 | grep -q FEAT-107"}
+{"itemId":"BUG-154","date":"2026-04-14","text":"regression.jsonl has no entries containing FEAT-105","verify":"! grep -q FEAT-105 backlog/archive/regression.jsonl"}
+{"itemId":"BUG-154","date":"2026-04-14","text":"regression.jsonl remains valid JSONL after the fix","verify":"jq -s . backlog/archive/regression.jsonl >/dev/null"}
+{"itemId":"FEAT-110","date":"2026-04-14","text":"backlog list --track core exits 0","verify":".aishore/aishore backlog list --track core"}
+{"itemId":"FEAT-110","date":"2026-04-14","text":"backlog list --track feature exits 0","verify":".aishore/aishore backlog list --track feature"}
+{"itemId":"FEAT-110","date":"2026-04-14","text":"invalid track value exits non-zero","verify":"! .aishore/aishore backlog list --track invalid 2>/dev/null"}
+{"itemId":"FEAT-110","date":"2026-04-14","text":"help backlog documents --track","verify":".aishore/aishore help backlog | grep -q track"}
+{"itemId":"FEAT-115","date":"2026-04-14","text":"status shows core and feature ready counts when CORE_CMD is set","verify":"AISHORE_CORE_CMD=true .aishore/aishore status 2>&1 | grep -qi \"core.*ready\\|feature.*ready\""}
+{"itemId":"BUG-153","date":"2026-04-14","text":"help backlog documents --failed","verify":".aishore/aishore help backlog | grep -q failed"}
+{"itemId":"FEAT-125","date":"2026-04-14","text":"aishore insights command exists and runs without error","verify":".aishore/aishore insights 2>&1 | head -1 | grep -qv error"}
+{"itemId":"FEAT-125","date":"2026-04-14","text":"Output includes failure pattern analysis","verify":".aishore/aishore insights 2>&1 | grep -qi fail"}
+{"itemId":"FEAT-125","date":"2026-04-14","text":"Output includes velocity or trend data","verify":".aishore/aishore insights 2>&1 | grep -qi sprint"}
+{"itemId":"FEAT-121","date":"2026-04-15","text":"--pr flag is accepted by the run command without error","verify":".aishore/aishore help run 2>&1 | grep -q pr"}
+{"itemId":"FEAT-121","date":"2026-04-15","text":"PR body template includes intent and AC results sections","verify":"grep -q intent .aishore/lib/cmd-run.sh 2>/dev/null || grep -q intent .aishore/aishore 2>/dev/null"}
+{"itemId":"FEAT-121","date":"2026-04-15","text":"gh CLI availability is checked gracefully","verify":"true"}
+{"itemId":"FEAT-111","date":"2026-04-15","text":"status shows not-configured hint when CORE_CMD is empty","verify":"CORE_CMD= .aishore/aishore status 2>&1 | grep -qi \"not configured\\|scaffold\\|core.*not\""}
+{"itemId":"FEAT-114","date":"2026-04-15","text":"backlog list summary includes ready count","verify":".aishore/aishore backlog list 2>&1 | tail -3 | grep -q ready"}

@@ -1,12 +1,12 @@
 {
-  "itemId": "BUG-154",
-  "reason": "Pre-flight failed",
-  "detail": "Baseline validation failed before developer ran",
-  "timestamp": "2026-04-14T14:55:20-07:00",
-  "agentLog": "",
+  "itemId": "FEAT-119",
+  "reason": "Implementation failed",
+  "detail": "Implementation failed",
+  "timestamp": "2026-04-15T14:49:22-07:00",
+  "agentLog": "/home/simon/dev/aishore/.aishore/data/logs/developer-20260415T144727.log",
   "result": {
-    "status": "pass",
-    "summary": "Core healthy. Wrote CORE_CMD to config.yaml (verifies version/help/status/backlog-list, 30s timeout, passes). 11 items in backlog — all ready, well-specified. BUG-154 (must): stale FEAT-105 regression entries block all sprints — first pick priority. FEAT-118 is a likely duplicate of FEAT-110 (currently in sprint). No fragment risk — project is mature with 100+ successful sprints."
+    "status": "fail",
+    "reason": "CRASH: Agent crashed or was killed (exit code 0) — empty log suggests startup failure or resource limit"
   },
   "logTail": ""
 }

@@ -1,16 +1,1 @@
-{
-  "sprintId": "sprint-1776212078",
-  "startedAt": "2026-04-14T17:14:38-07:00",
-  "status": "in_progress",
-  "item": {
-    "id": "FEAT-138",
-    "title": "tmp-ready-test",
-    "intent": "temp item to verify ready count appears in list summary",
-    "description": "",
-    "sourceBacklog": "backlog.json",
-    "steps": [],
-    "acceptanceCriteria": [],
-    "scope": [],
-    "startedAt": "2026-04-14T17:14:38-07:00"
-  }
-}
+{"sprintId": null, "status": "idle", "item": null}
