@@ -84,6 +84,21 @@ Options:
   --max-failures N      Circuit breaker: stop after N consecutive failures
   --limit N             Stop after N successful items
 
+Custom gates (config.yaml):
+  Add a gates section to run user-defined commands at each pipeline phase.
+  A failing gate blocks the pipeline just like a built-in gate.
+
+    gates:
+      pre_flight:              # Before dev starts (alongside regression suite)
+        - name: "lint"
+          command: "npm run lint"
+      post_develop:            # After dev, before validation
+        - name: "unit-tests"
+          command: "npm test"
+      pre_merge:               # After validation, before merge
+        - name: "integration"
+          command: "npm run test:integration"
+
 Examples:
   aishore run FEAT-001               # Run specific item
   aishore run --no-merge 3           # Keep branches for review

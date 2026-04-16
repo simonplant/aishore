@@ -67,6 +67,10 @@ Files:
   backlog/backlog.json    Your feature backlog (user content)
   backlog/bugs.json       Your bugs/tech debt (user content)
   backlog/sprint.json     Current sprint state
-  .aishore/config.yaml    Optional configuration overrides
+  .aishore/config.yaml    Optional configuration overrides (including custom gates)
+
+Custom gates:
+  Add a gates section to config.yaml to run custom commands at each pipeline
+  phase (pre_flight, post_develop, pre_merge). See: aishore help run
 
 See README.md for environment variables, agent permissions, and configuration.
