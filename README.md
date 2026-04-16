@@ -202,6 +202,7 @@ This item demonstrates what makes aishore work:
 | **[Quickstart](docs/QUICKSTART.md)** | Install, configure, first sprint walkthrough |
 | **[Configuration](docs/CONFIGURATION.md)** | Config file, env vars, all CLI flags |
 | **[Architecture](docs/ARCHITECTURE.md)** | Pipeline, agents, quality model |
+| **[CI / GitHub Actions](docs/CI.md)** | Run sprints in CI, overnight factory workflow |
 | **[Changelog](docs/CHANGELOG.md)** | Release history |
 
 Additional: [Product vision](docs/PRODUCT.md) | [Problems solved](docs/PROBLEMS.md) | [Roadmap](docs/ROADMAP.md) | [Contributing](docs/CONTRIBUTING.md)

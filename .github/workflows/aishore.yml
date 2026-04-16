@@ -1,0 +1,80 @@
+# aishore — Autonomous Sprint Execution
+#
+# This workflow runs aishore sprints in CI. It can be triggered:
+#   - On a schedule (e.g. nightly)
+#   - Manually via workflow_dispatch
+#   - On push (when backlog or product docs change)
+#
+# Prerequisites:
+#   1. ANTHROPIC_API_KEY repository secret (https://console.anthropic.com/)
+#   2. Claude Code CLI (installed automatically by the action)
+#   3. .aishore/ directory in the repo (run install.sh first)
+#
+# The action creates PRs by default (--pr mode) so you can review changes
+# before merging. Set pr_mode to 'false' to auto-merge instead.
+
+name: aishore
+
+on:
+  # Nightly sprint execution
+  schedule:
+    - cron: '0 6 * * *'  # 06:00 UTC daily — adjust to your timezone
+
+  # Manual trigger with configurable inputs
+  workflow_dispatch:
+    inputs:
+      run_args:
+        description: 'Run arguments (e.g. "done", "p0", "FEAT-123", "3")'
+        required: false
+        default: 'done'
+      pr_mode:
+        description: 'Create PRs instead of merging'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+  # Run when backlog or product docs change
+  push:
+    branches: [main]
+    paths:
+      - 'backlog/backlog.json'
+      - 'backlog/bugs.json'
+      - 'PRODUCT.md'
+      - 'docs/PRODUCT.md'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: aishore-sprint
+  cancel-in-progress: false  # let running sprints finish
+
+jobs:
+  sprint:
+    name: Sprint
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # full history for branching
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run aishore
+        uses: ./
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          run_args: ${{ inputs.run_args || 'done' }}
+          pr_mode: ${{ inputs.pr_mode || 'true' }}
+          retries: '1'
