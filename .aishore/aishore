@@ -3057,10 +3057,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
 
 # Parse command-line arguments for cmd_run.
 # Sets outer-scope locals: count, dry_run, specific_id, retries, no_merge,
-#   pr_mode, auto_mode, auto_scope, max_consecutive_failures, dev_hint, filter_keyword, max_runtime
+#   pr_mode, once, auto_mode, auto_scope, max_consecutive_failures, dev_hint, filter_keyword, max_runtime
 cmd_run_parse_args() {
     parse_opts --positional \
-        "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:pr_mode:--pr" \
+        "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:pr_mode:--pr" "bool:once:--once" \
         "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" \
         "num:max_runtime:--max-runtime" \
         "val:dev_hint:--context" "val:filter_keyword:--filter" \
@@ -3510,6 +3510,7 @@ run_sprint_loop() {
             _sm_clear
             _record_sprint_failure "${_retry_failure_reason:-Unknown}" "${_retry_failure_detail:-Sprint failed}"
             [[ "$auto_mode" == "true" ]] && log_info "Progress: $passed passed, $failed failed, $(_count_total_ready) remaining ready"
+            [[ "$once" == "true" ]] && break
             continue
         fi
 
@@ -3523,6 +3524,7 @@ run_sprint_loop() {
         _sm_clear
 
         [[ "$auto_mode" == "true" ]] && log_info "Progress: $passed passed, $failed failed, $(_count_total_ready) remaining ready"
+        [[ "$once" == "true" ]] && break
 
         # Session limit: exit cleanly after N successful items
         if [[ -n "$session_limit" && "$passed" -ge "$session_limit" ]]; then
@@ -3617,7 +3619,7 @@ cmd_run() {
     require_tool git
 
     local count=1 dry_run=false specific_id="" retries=0
-    local no_merge=false pr_mode=false
+    local no_merge=false pr_mode=false once=false
     local auto_mode=false auto_scope="" auto_priorities=""
     local max_consecutive_failures="" session_limit=""
     local max_runtime=""
