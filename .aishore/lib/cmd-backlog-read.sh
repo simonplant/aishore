@@ -21,9 +21,10 @@ cmd_backlog() {
         requeue)    cmd_backlog_requeue "$@" ;;
         populate)   _load_module cmd-populate; cmd_backlog_populate "$@" ;;
         stats)      cmd_backlog_stats "$@" ;;
+        next)       cmd_backlog_next "$@" ;;
         *)
             log_error "Unknown backlog command: $subcmd"
-            echo "Usage: backlog {list|add|show|edit|check|rm|requeue|populate|stats}" >&2
+            echo "Usage: backlog {list|add|show|edit|check|rm|requeue|populate|stats|next}" >&2
             return 1
             ;;
     esac
@@ -452,4 +453,38 @@ cmd_backlog_stats() {
         printf "  %-24s %s\n" "(no priority):" "$pri_unset"
     fi
     echo ""
+}
+
+cmd_backlog_next() {
+    local skip_json="[]"
+    local done_ids_json
+    done_ids_json=$(collect_done_ids)
+    local core_healthy="${CORE_HEALTHY:-true}"
+
+    local all_candidates="[]"
+    _next_collect() {
+        local backlog="$1"
+        [[ -f "$BACKLOG_DIR/$backlog" ]] || return 0
+        local candidates
+        candidates=$(jq -r --argjson skip "$skip_json" --argjson done_ids "$done_ids_json" --arg core_healthy "$core_healthy" '
+            '"$PICKABLE_ITEMS_FILTER"' |
+            [.[] | '"$ITEM_PROJECTION"']
+        ' "$BACKLOG_DIR/$backlog" 2>/dev/null || echo "[]")
+        all_candidates=$(printf '%s\n%s\n' "$all_candidates" "$candidates" | jq -s 'add // []')
+    }
+    map_backlog_files _next_collect
+
+    local best
+    best=$(printf '%s\n' "$all_candidates" | jq -r "$JQ_PRIO_RANK"'
+        sort_by([(if .category == "heal" then 0 else 1 end), (.priority // "should" | prio_rank)]) | first // empty
+    ' 2>/dev/null)
+
+    if [[ -z "$best" || "$best" == "null" ]]; then
+        log_warning "No pickable items found"
+        return 1
+    fi
+
+    printf '%s\n' "$best" | jq -r '"\(.id)  \(.title)",
+        "  Priority: \(.priority // "-")",
+        "  Track:    \(.track // "feature")"'
 }

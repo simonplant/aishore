@@ -21,6 +21,7 @@ Commands:
     --force         Skip confirmation
   backlog populate  Populate backlog from PRODUCT.md (AI-assisted)
   backlog stats     Show sprint velocity and success metrics from archive
+  backlog next      Show what item would be auto-picked next (read-only)
 
   run [count]       Run N sprints (default: 1, feature branches, push/pull)
   run <ID>          Run specific item by ID (e.g., TEST-006)
