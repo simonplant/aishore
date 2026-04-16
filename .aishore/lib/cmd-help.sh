@@ -24,6 +24,7 @@ cmd_help() {
         insights) _help_insights ;;
         init)   _help_init ;;
         doctor) _help_doctor ;;
+        log)    _help_log ;;
         logs)   _help_logs ;;
         "")     _help_compact ;;
         *)      log_error "No help topic for: $arg"; _help_compact >&2; return 1 ;;
@@ -56,7 +57,7 @@ Commands:
   help <command>   Show detailed help for a command
   help --full      Show complete reference
 
-Other: clean, doctor, insights, logs, update, checksums, version
+Other: clean, doctor, insights, log, logs, update, checksums, version
 EOF
 }
 
@@ -354,6 +355,24 @@ The refine → populate → groom → run cycle:
 Examples:
   aishore refine                   # Interactive interview
   aishore refine --from-sprints    # Post-sprint feedback loop
+EOF
+}
+
+_help_log() {
+    cat <<EOF
+aishore log — Show recent sprint history
+
+Usage: aishore log [options]
+
+Displays the last 20 sprint attempts from the archive (backlog/archive/sprints.jsonl)
+as a formatted table with date, item ID, title, status, duration, and attempt count.
+
+Options:
+  --limit N    Show last N entries (default: 20)
+
+Examples:
+  aishore log                        # Show last 20 sprint entries
+  aishore log --limit 5              # Show last 5 entries
 EOF
 }
 
