@@ -85,6 +85,7 @@ AGENT_TIMEOUT="3600"
 MAX_AGENT_TIME="600"
 CORE_CMD=""
 CORE_TIMEOUT="120"
+VERIFY_TIMEOUT="${AISHORE_VERIFY_TIMEOUT:-30}"
 CORE_HEALTHY=true
 SETUP_CMD=""
 FIX_CMD=""
@@ -336,14 +337,12 @@ truncate_output() {
     printf '%s' "$output"
 }
 
-# Run a command with optional timeout, capturing output to a file.
-# Usage: run_timed_command <command_string> <output_file>
-# Returns: 0 on success, 1 on failure. Output is written to output_file.
 run_timed_command() {
     local cmd="$1"
     local outfile="$2"
+    local secs="${3:-$CORE_TIMEOUT}"
     if [[ -n "$TIMEOUT_CMD" ]]; then
-        "$TIMEOUT_CMD" "$CORE_TIMEOUT" bash -c "$cmd" >"$outfile" 2>&1
+        "$TIMEOUT_CMD" "$secs" bash -c "$cmd" >"$outfile" 2>&1
     else
         bash -c "$cmd" >"$outfile" 2>&1
     fi
@@ -612,7 +611,7 @@ get_claudemd_snippet() {
 readonly VALID_CONFIG_KEYS="validation core setup fix developer models agent notifications auto groom streaming output merge timeout_minutes run project backlog_files gates"
 
 # Keys whose leaf values must be integers
-readonly NUMERIC_CONFIG_PATHS=".core.timeout .agent.timeout .agent.max_agent_time_seconds .auto.groom_threshold .auto.max_failures .groom.max_items .streaming.max_lines .output.truncate_lines .timeout_minutes .run.retries .run.limit .agent.max_turns.developer .agent.max_turns.validator .agent.max_turns.groomer .agent.max_turns.refiner .validation.timeout"
+readonly NUMERIC_CONFIG_PATHS=".core.timeout .agent.timeout .agent.max_agent_time_seconds .auto.groom_threshold .auto.max_failures .groom.max_items .streaming.max_lines .output.truncate_lines .timeout_minutes .run.retries .run.limit .agent.max_turns.developer .agent.max_turns.validator .agent.max_turns.groomer .agent.max_turns.refiner .validation.timeout .validation.verify_timeout"
 
 # Keys whose leaf values must be strings (not maps or arrays)
 readonly STRING_CONFIG_PATHS=".core.command .setup.command .fix.command .developer.command .models.primary .models.fast .notifications.on_complete .groom.min_priority .merge.strategy .validation.command"
@@ -728,6 +727,7 @@ load_config() {
             ".validation.timeout    CORE_TIMEOUT"
             ".core.command          CORE_CMD"
             ".core.timeout          CORE_TIMEOUT"
+            ".validation.verify_timeout VERIFY_TIMEOUT"
             ".setup.command         SETUP_CMD"
             ".fix.command           FIX_CMD"
             ".developer.command    DEVELOPER_CMD"
@@ -791,6 +791,7 @@ _apply_env_overrides() {
         "AISHORE_VALIDATE_TIMEOUT   CORE_TIMEOUT"
         "AISHORE_CORE_CMD           CORE_CMD"
         "AISHORE_CORE_TIMEOUT       CORE_TIMEOUT"
+        "AISHORE_VERIFY_TIMEOUT     VERIFY_TIMEOUT"
         "AISHORE_DEVELOPER_CMD      DEVELOPER_CMD"
         "AISHORE_SETUP_CMD          SETUP_CMD"
         "AISHORE_FIX_CMD            FIX_CMD"
@@ -1883,17 +1884,21 @@ run_ac_verification() {
     while IFS=$'\t' read -r ac_text ac_cmd; do
         idx=$((idx + 1))
 
-        local ac_ok=true
+        local ac_rc=0
         local ac_tmpfile
         ac_tmpfile="$(ensure_tmpdir)/ac_verify_${idx}.txt"
-        run_timed_command "$ac_cmd" "$ac_tmpfile" || ac_ok=false
+        run_timed_command "$ac_cmd" "$ac_tmpfile" "$VERIFY_TIMEOUT" || ac_rc=$?
         local ac_output
         ac_output=$(truncate_output "$ac_tmpfile")
         rm -f "$ac_tmpfile"
 
-        if [[ "$ac_ok" == "true" ]]; then
+        if [[ "$ac_rc" -eq 0 ]]; then
             report="${report}  PASS: ${ac_text}"$'\n'
             log_success "AC: $ac_text" >&2
+        elif [[ "$ac_rc" -eq 124 ]]; then
+            report="${report}  TIMEOUT: AC verify [${idx}] timed out after ${VERIFY_TIMEOUT}s: ${ac_cmd}"$'\n'"    Output: ${ac_output}"$'\n'
+            log_error "AC verify [${idx}] timed out after ${VERIFY_TIMEOUT}s: ${ac_cmd}"
+            all_passed=false
         else
             report="${report}  FAIL: ${ac_text} (cmd: ${ac_cmd})"$'\n'"    Output: ${ac_output}"$'\n'
             log_error "AC: $ac_text"

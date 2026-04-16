@@ -11,6 +11,9 @@ core:
   command: ".aishore/aishore version >/dev/null && .aishore/aishore help >/dev/null && .aishore/aishore status 2>&1 | grep -qi backlog && .aishore/aishore backlog list >/dev/null"
   timeout: 30
 
+# validation:
+#   verify_timeout: 30           # Per-AC-verify-command timeout in seconds (env: AISHORE_VERIFY_TIMEOUT)
+
 # Setup command runs in each worktree before the sprint starts.
 # Use this to install dependencies that aren't in git (node_modules, venv, etc.)
 # setup:
