@@ -228,6 +228,9 @@ _help_status() {
 aishore status — Backlog overview and sprint readiness
 
 Shows item counts, ready items, currently running sprint, and recent history.
+
+Options:
+  --json   Output backlog summary as JSON object
 EOF
 }
 

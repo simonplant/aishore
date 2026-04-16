@@ -170,5 +170,45 @@ _status_output() {
 cmd_status() {
     require_tool jq
     load_config
+
+    local json_mode=false
+    parse_opts "bool:json_mode:--json" -- "$@" || return 1
+
+    if [[ "$json_mode" == "true" ]]; then
+        _status_json
+        return 0
+    fi
+
     _status_output
+}
+
+_status_json() {
+    local total=0 todo=0 in_progress=0 done_count=0 ready=0 failed=0
+    local f
+    for f in "${BACKLOG_FILES[@]}"; do
+        local full_path="$BACKLOG_DIR/$f"
+        [[ -f "$full_path" ]] || continue
+        local f_total f_todo f_inprog f_done f_ready f_failed
+        read -r f_total f_todo f_inprog f_done f_ready f_failed < <(jq -r '[
+            (.items | length),
+            ([.items[] | select((.status // "todo") == "todo")] | length),
+            ([.items[] | select(.status == "in-progress")] | length),
+            ([.items[] | select(.status == "done")] | length),
+            ([.items[] | select(.readyForSprint == true and ((.status // "todo") == "todo"))] | length),
+            ([.items[] | select((.failCount // 0) > 0)] | length)
+        ] | @tsv' "$full_path" 2>/dev/null || echo "0 0 0 0 0 0")
+        total=$((total + ${f_total:-0}))
+        todo=$((todo + ${f_todo:-0}))
+        in_progress=$((in_progress + ${f_inprog:-0}))
+        done_count=$((done_count + ${f_done:-0}))
+        ready=$((ready + ${f_ready:-0}))
+        failed=$((failed + ${f_failed:-0}))
+    done
+    jq -n --argjson total "$total" \
+          --argjson todo "$todo" \
+          --argjson in_progress "$in_progress" \
+          --argjson done "$done_count" \
+          --argjson ready "$ready" \
+          --argjson failed "$failed" \
+          '{total: $total, todo: $todo, in_progress: $in_progress, done: $done, ready: $ready, failed: $failed}'
 }
