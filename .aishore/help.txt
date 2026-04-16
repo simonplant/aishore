@@ -16,6 +16,7 @@ Commands:
   backlog edit <ID> --json '{..}'  Update fields (merges onto existing item)
   backlog check <ID> Check readiness gates (title, intent, steps, AC, step length)
     --all           Audit every non-done item and print a summary table
+    --quick         Skip verify command execution (metadata gates only)
   backlog rm <ID>   Remove an item (with confirmation)
     --force         Skip confirmation
   backlog populate  Populate backlog from PRODUCT.md (AI-assisted)
