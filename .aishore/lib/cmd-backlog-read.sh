@@ -19,12 +19,13 @@ cmd_backlog() {
         rm|remove)  cmd_backlog_rm "$@" ;;
         check)      cmd_backlog_check "$@" ;;
         requeue)    cmd_backlog_requeue "$@" ;;
+        move)       _load_module cmd-backlog-write; cmd_backlog_move "$@" ;;
         populate)   _load_module cmd-populate; cmd_backlog_populate "$@" ;;
         stats)      cmd_backlog_stats "$@" ;;
         next)       cmd_backlog_next "$@" ;;
         *)
             log_error "Unknown backlog command: $subcmd"
-            echo "Usage: backlog {list|add|show|edit|check|rm|requeue|populate|stats|next}" >&2
+            echo "Usage: backlog {list|add|show|edit|check|rm|move|requeue|populate|stats|next}" >&2
             return 1
             ;;
     esac
