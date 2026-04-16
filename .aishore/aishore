@@ -606,7 +606,7 @@ get_claudemd_snippet() {
 # ============================================================================
 
 # Valid top-level keys in config.yaml (derived from _cfg_map paths)
-readonly VALID_CONFIG_KEYS="validation core setup fix developer models agent notifications auto groom streaming output merge timeout_minutes run project backlog_files"
+readonly VALID_CONFIG_KEYS="validation core setup fix developer models agent notifications auto groom streaming output merge timeout_minutes run project backlog_files gates"
 
 # Keys whose leaf values must be integers
 readonly NUMERIC_CONFIG_PATHS=".core.timeout .agent.timeout .auto.groom_threshold .auto.max_failures .groom.max_items .streaming.max_lines .output.truncate_lines .timeout_minutes .run.retries .run.limit .agent.max_turns.developer .agent.max_turns.validator .agent.max_turns.groomer .agent.max_turns.refiner .validation.timeout"
@@ -686,6 +686,22 @@ validate_config() {
                    _errors=$(( _errors + 1 )) ;;
             esac
         fi
+    done
+
+    # Validate gates section: each phase must be an array of {name, command} objects
+    local _gates_phases="pre_flight post_develop pre_merge"
+    for _phase in $_gates_phases; do
+        local _gcount
+        _gcount=$(yq -r ".gates.${_phase} | length // 0" "$CONFIG_FILE" 2>/dev/null) || _gcount=0
+        local _gi
+        for ((_gi=0; _gi<_gcount; _gi++)); do
+            local _gcmd
+            _gcmd=$(yq -r ".gates.${_phase}[$_gi].command // \"\"" "$CONFIG_FILE" 2>/dev/null) || _gcmd=""
+            if [[ -z "$_gcmd" ]]; then
+                log_error "Config error: gates.${_phase}[$_gi] missing required \"command\" field"
+                _errors=$(( _errors + 1 ))
+            fi
+        done
     done
 
     if [[ "$_errors" -gt 0 ]]; then
@@ -2351,6 +2367,44 @@ _run_core_gate() {
     return 0
 }
 
+# Run user-defined custom gates from config.yaml for a given phase.
+# Args: $1 = phase name (pre_flight, post_develop, pre_merge)
+# Returns 0 if all gates pass (or no gates configured), 1 if any gate fails.
+_run_custom_gates() {
+    local phase="$1"
+    [[ ! -f "$CONFIG_FILE" ]] && return 0
+    command -v yq &>/dev/null || return 0
+
+    local gate_count
+    gate_count=$(yq -r ".gates.${phase} | length // 0" "$CONFIG_FILE" 2>/dev/null) || gate_count=0
+    [[ "$gate_count" -eq 0 ]] && return 0
+
+    log_info "Running $gate_count custom gate(s) for phase: $phase"
+    local i gate_name gate_cmd gate_tmpfile gate_output
+    gate_tmpfile="$(ensure_tmpdir)/custom_gate_output.txt"
+
+    for ((i=0; i<gate_count; i++)); do
+        gate_name=$(yq -r ".gates.${phase}[$i].name // \"gate-${phase}-${i}\"" "$CONFIG_FILE" 2>/dev/null)
+        gate_cmd=$(yq -r ".gates.${phase}[$i].command // \"\"" "$CONFIG_FILE" 2>/dev/null)
+        [[ -z "$gate_cmd" ]] && continue
+
+        log_info "  Gate '$gate_name': $gate_cmd"
+        if run_timed_command "$gate_cmd" "$gate_tmpfile"; then
+            log_success "  Gate '$gate_name': passed"
+        else
+            gate_output=$(truncate_output "$gate_tmpfile")
+            log_error "Custom gate failed: '$gate_name' (phase: $phase)"
+            [[ -n "$gate_output" ]] && log_error "  Output: $gate_output"
+            rm -f "$gate_tmpfile"
+            return 1
+        fi
+    done
+
+    rm -f "$gate_tmpfile"
+    log_success "All custom gates passed for phase: $phase"
+    return 0
+}
+
 # Pre-flight: run regression suite on the baseline before developer touches anything.
 # Returns 0 if preflight passes, 1 on failure.
 _run_preflight() {
@@ -2358,6 +2412,10 @@ _run_preflight() {
     # This runs even when CORE_CMD is empty — the regression suite IS the eval
     if ! _run_regression_suite; then
         log_error "Pre-flight: regression suite failed — a prior sprint's guarantees are broken"
+        return 1
+    fi
+    if ! _run_custom_gates "pre_flight"; then
+        log_error "Pre-flight: custom gate failed — blocking sprint"
         return 1
     fi
     log_success "Pre-flight passed"
@@ -2639,6 +2697,18 @@ _run_retry_loop() {
             break
         fi
 
+        if ! _run_custom_gates "post_develop"; then
+            retry_extra_prompt="Previous attempt failed a post-develop custom gate. Check config.yaml gates.post_develop for the failing command and fix the issue."
+            if [[ $attempt -lt $retries ]]; then
+                _capture_retry_failure
+                log_info "Will retry with failure context"
+                continue
+            fi
+            _retry_failure_reason="Custom gate failed (post_develop)"
+            _retry_failure_detail="A user-defined post_develop gate command failed"
+            break
+        fi
+
         if ! _run_validation_cycle; then
             if [[ $attempt -lt $retries ]]; then
                 _capture_retry_failure
@@ -2689,6 +2759,12 @@ _handle_sprint_success() {
             cp "$STATUS_DIR/result.json" "$DATA_DIR/status/result.json" 2>/dev/null || true
         fi
         _cleanup_worktree
+    fi
+
+    # Pre-merge custom gates — run before merging to base branch
+    if ! _run_custom_gates "pre_merge"; then
+        log_error "Pre-merge custom gate failed for $ITEM_ID — blocking merge"
+        return 1
     fi
 
     # Phase 3: Merge or push feature branch (code-only — no backlog files to conflict)
