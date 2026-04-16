@@ -247,7 +247,7 @@ _help_doctor() {
     cat <<EOF
 aishore doctor — Diagnose health and configuration
 
-Usage: aishore doctor
+Usage: aishore doctor [options]
 
 Checks the runtime environment and reports health:
   - Required tools: jq, git, claude (PASS/FAIL)
@@ -256,12 +256,19 @@ Checks the runtime environment and reports health:
   - Config: checks config.yaml is parseable (PASS/WARN/FAIL)
   - Core status: reports CORE_CMD value (PASS/WARN)
 
+Options:
+  --regression    Run the regression suite (backlog/archive/regression.jsonl)
+                  Reports PASS/FAIL per entry with item ID and description.
+                  Useful for debugging pre-flight failures without running
+                  a full sprint.
+
 Exit code:
-  0   All required checks pass
-  1   One or more required checks failed
+  0   All checks pass (or regression file absent/empty)
+  1   One or more checks failed
 
 Examples:
   aishore doctor                   # Run all health checks
+  aishore doctor --regression      # Run regression suite diagnostics
 EOF
 }
 
