@@ -46,7 +46,7 @@ Getting started:
 Commands:
   run [N|ID|scope] Run sprints, or drain backlog with scope (done|p0|p1|p2)
   stop             Graceful stop: finish current item then exit
-  backlog <sub>    Manage backlog (list|add|show|edit|check|rm|move|requeue|populate|stats|next)
+  backlog <sub>    Manage backlog (list|add|show|edit|check|rm|move|set-priority|requeue|populate|stats|next)
   groom            Groom backlog items (AI adds steps, AC, priority)
   refine           Improve PRODUCT.md through interactive interview
   scaffold         Detect fragment risk, inject scaffolding items
@@ -157,6 +157,8 @@ Subcommands:
   rm <ID>           Remove an item (--force to skip confirmation)
   move <ID> --to <bugs|backlog>
                     Move item between backlog.json and bugs.json
+  set-priority <ID> <priority>
+                    Change item priority (must/should/could/future)
   requeue <ID>      Reset a failed item back to todo (clears failure tracking)
   populate          Create items from PRODUCT.md (AI-assisted)
   stats             Show sprint velocity and success metrics from archive

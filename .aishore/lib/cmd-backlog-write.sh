@@ -381,6 +381,33 @@ cmd_backlog_move() {
     log_success "Moved $id from $src_file to $dest_file"
 }
 
+cmd_backlog_set_priority() {
+    local id="${1:-}"
+    local priority="${2:-}"
+
+    if [[ -z "$id" || -z "$priority" || "$id" == "--help" || "$id" == "-h" ]]; then
+        log_error "Usage: backlog set-priority <ID> <priority>"
+        echo "  Priority must be one of: must, should, could, future" >&2
+        return 1
+    fi
+
+    validate_priority "$priority" || return 1
+
+    find_item "$id" >/dev/null || return 1
+
+    local file
+    file=$(resolve_backlog_file "$id") || return 1
+
+    if ! dal_update_item "$file" "$id" \
+        '| .priority = $p' \
+        --arg p "$priority"; then
+        log_error "Failed to update priority for $id"
+        return 1
+    fi
+
+    log_success "$id priority set to $priority"
+}
+
 _backlog_move_usage() {
     cat <<'EOF'
 Usage: aishore backlog move <ID> --to <bugs|backlog>
