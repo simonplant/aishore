@@ -44,7 +44,7 @@ Getting started:
 
 Commands:
   run [N|ID|scope] Run sprints, or drain backlog with scope (done|p0|p1|p2)
-  backlog <sub>    Manage backlog (list|add|show|edit|check|rm|requeue|populate)
+  backlog <sub>    Manage backlog (list|add|show|edit|check|rm|requeue|populate|stats)
   groom            Groom backlog items (AI adds steps, AC, priority)
   refine           Improve PRODUCT.md through interactive interview
   scaffold         Detect fragment risk, inject scaffolding items
@@ -132,6 +132,7 @@ Subcommands:
   rm <ID>           Remove an item (--force to skip confirmation)
   requeue <ID>      Reset a failed item back to todo (clears failure tracking)
   populate          Create items from PRODUCT.md (AI-assisted)
+  stats             Show sprint velocity and success metrics from archive
 
 Examples:
   aishore backlog list --ready         # Show sprint-ready items
