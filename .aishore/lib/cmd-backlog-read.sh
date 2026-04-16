@@ -18,10 +18,11 @@ cmd_backlog() {
         edit)       _load_module cmd-backlog-write; cmd_backlog_edit "$@" ;;
         rm|remove)  cmd_backlog_rm "$@" ;;
         check)      cmd_backlog_check "$@" ;;
+        requeue)    cmd_backlog_requeue "$@" ;;
         populate)   _load_module cmd-populate; cmd_backlog_populate "$@" ;;
         *)
             log_error "Unknown backlog command: $subcmd"
-            echo "Usage: backlog {list|add|show|edit|check|rm|populate}" >&2
+            echo "Usage: backlog {list|add|show|edit|check|rm|requeue|populate}" >&2
             return 1
             ;;
     esac
@@ -312,4 +313,37 @@ cmd_backlog_rm() {
     done
 
     log_success "Removed $id: $title"
+}
+
+cmd_backlog_requeue() {
+    local id="${1:-}"
+    [[ -z "$id" ]] && { log_error "Usage: backlog requeue <ID>"; return 1; }
+    [[ $# -gt 1 ]] && { log_error "Unexpected argument: ${2}"; return 1; }
+
+    local item
+    item=$(find_item "$id") || return 1
+
+    local title status
+    title=$(printf '%s\n' "$item" | jq -r '.title')
+    status=$(printf '%s\n' "$item" | jq -r '.status // "todo"')
+
+    if [[ "$status" == "todo" ]]; then
+        local fail_count
+        fail_count=$(printf '%s\n' "$item" | jq -r '.failCount // 0')
+        if [[ "$fail_count" -eq 0 ]]; then
+            log_info "$id is already todo with no failure history"
+            return 0
+        fi
+    fi
+
+    local file
+    file=$(resolve_backlog_file "$id") || return 1
+
+    if ! dal_update_item "$file" "$id" \
+        '| .status = "todo" | .passes = false | del(.lastFailReason) | del(.lastFailAt) | del(.failCount)'; then
+        log_error "Failed to requeue item $id"
+        return 1
+    fi
+
+    log_success "Requeued $id: $title (status → todo, failure tracking cleared)"
 }
