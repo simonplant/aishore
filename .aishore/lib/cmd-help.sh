@@ -149,6 +149,7 @@ Subcommands:
     --no-ready        Show only items not yet ready
     --failed          Show only items that have failed
     --done            Show completed items from sprint archive
+    --no-verify       Show only items with no executable AC verify commands
   add --json '{..}' Add a new item (JSON object, or pipe via stdin)
   show <ID>         Show full detail of one item
   edit <ID> --json '{..}' Update fields on an item (merges onto existing)
