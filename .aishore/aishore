@@ -3052,11 +3052,12 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
 
 # Parse command-line arguments for cmd_run.
 # Sets outer-scope locals: count, dry_run, specific_id, retries, no_merge,
-#   pr_mode, auto_mode, auto_scope, max_consecutive_failures, dev_hint, filter_keyword
+#   pr_mode, auto_mode, auto_scope, max_consecutive_failures, dev_hint, filter_keyword, max_runtime
 cmd_run_parse_args() {
     parse_opts --positional \
         "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:pr_mode:--pr" \
         "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" \
+        "num:max_runtime:--max-runtime" \
         "val:dev_hint:--context" "val:filter_keyword:--filter" \
         -- "$@" || return 1
     local _arg
@@ -3472,6 +3473,13 @@ run_sprint_loop() {
             break
         fi
         _sprint_check_circuit_breaker && break
+        if [[ -n "$max_runtime" ]]; then
+            local _elapsed=$(( $(date +%s) - sprint_session_start ))
+            if (( _elapsed >= max_runtime * 60 )); then
+                log_info "Max runtime ${max_runtime}m reached — stopping cleanly"
+                break
+            fi
+        fi
         _sprint_report_progress
         local sprint_start
         # shellcheck disable=SC2034  # used by _run_retry_loop via outer scope
@@ -3607,6 +3615,7 @@ cmd_run() {
     local no_merge=false pr_mode=false
     local auto_mode=false auto_scope="" auto_priorities=""
     local max_consecutive_failures="" session_limit=""
+    local max_runtime=""
     local dev_hint=""
     local filter_keyword=""
 
@@ -3635,6 +3644,9 @@ cmd_run() {
     local -a session_failures=() session_successes=() queued_ids=() skipped_ids=()
 
     setup_sprint_environment || return $?
+
+    local sprint_session_start
+    sprint_session_start=$(date +%s)
 
     trap '_STOP_REQUESTED=true; log_warning "Graceful stop requested — will exit after current item"' SIGUSR1
 

@@ -86,6 +86,7 @@ Options:
   --retries N           Retry attempts on validation failure
   --max-failures N      Circuit breaker: stop after N consecutive failures
   --limit N             Stop after N successful items
+  --max-runtime N       Stop after N minutes (finishes current item before exiting)
 
 Custom gates (config.yaml):
   Add a gates section to run user-defined commands at each pipeline phase.
