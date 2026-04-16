@@ -224,11 +224,17 @@ cmd_backlog_show() {
         fi
     fi
 
+    # Collect done IDs for dependency status display
+    local done_ids="[]"
+    if printf '%s\n' "$item" | jq -e '.dependsOn // [] | length > 0' >/dev/null 2>&1; then
+        done_ids=$(collect_done_ids)
+    fi
+
     echo ""
     if [[ "$archived" == "true" ]]; then
         log_info "[archived]"
     fi
-    printf '%s\n' "$item" | jq -r '
+    printf '%s\n' "$item" | jq -r --argjson done_ids "$done_ids" '
         "ID:          \(.id)",
         "Title:       \(.title)",
         "Status:      \(.status // "todo")",
@@ -253,7 +259,10 @@ cmd_backlog_show() {
         (.acceptanceCriteria // [] | .[] | if type == "object" then "  - \(.text)" + (if .verify then " (verify: \(.verify))" else "" end) else "  - \(.)" end),
         if (.scope // [] | length) > 0 then "\nScope:" else empty end,
         (.scope // [] | .[] | "  - \(.)"),
-        if (.dependsOn // [] | length) > 0 then "\nDependencies: \(.dependsOn | join(", "))" else empty end,
+        if (.dependsOn // [] | length) > 0 then
+            "\nDependencies:",
+            (.dependsOn[] | . as $dep | if ($done_ids | index($dep) != null) then "  \($dep) [done]" else "  \($dep) [pending]" end)
+        else empty end,
         if .groomedAt then "\nGroomed:      \(.groomedAt)" else empty end,
         if .groomingNotes then "Notes:        \(.groomingNotes)" else empty end,
         if .resolved_at then "Resolved:     \(.resolved_at)" else empty end,
