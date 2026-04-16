@@ -2056,7 +2056,7 @@ _run_dry_run() {
         log_header "aishore run $auto_scope - Dry Run"
         echo "Project: $PROJECT_ROOT"
         echo "Auto-groom: when ready < $AUTO_GROOM_THRESHOLD"
-        echo "Circuit breaker: $AUTO_MAX_FAILURES consecutive failures"
+        echo "Circuit breaker: $AUTO_MAX_FAILURES consecutive failures (preflight: 2)"
     else
         log_header "aishore - Dry Run"
         echo "Project: $PROJECT_ROOT"
@@ -2693,6 +2693,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
         ITEM_ATTEMPTS["$ITEM_ID"]="$total_attempts"
         passed=$((passed + 1))
         consecutive_failures=0
+        preflight_consecutive_failures=0
         groom_exhausted=false
         sprint_items+=("$ITEM_ID")
 
@@ -2798,7 +2799,7 @@ setup_sprint_environment() {
     echo "Project: $PROJECT_ROOT"
     if [[ "$auto_mode" == "true" ]]; then
         echo "Scope: $scope_label"
-        echo "Circuit breaker: $max_consecutive_failures consecutive failures"
+        echo "Circuit breaker: $max_consecutive_failures consecutive failures (preflight: 2)"
     elif [[ -n "$specific_id" ]]; then
         echo "Item: $specific_id"
     else
@@ -2821,6 +2822,7 @@ setup_sprint_environment() {
     batch_start=$(date +%s)
     sprint_items=()
     consecutive_failures=0
+    preflight_consecutive_failures=0
     groom_exhausted=false
     session_failures=()
     queued_ids=()
@@ -2874,6 +2876,12 @@ _record_sprint_failure() {
     local reason="$1" detail="$2"
     failed=$((failed + 1))
     consecutive_failures=$((consecutive_failures + 1))
+    # Track preflight failures separately — systemic preflight failures waste attempts
+    if [[ "$reason" == "Pre-flight failed" ]]; then
+        preflight_consecutive_failures=$((preflight_consecutive_failures + 1))
+    else
+        preflight_consecutive_failures=0
+    fi
     FAILED_IDS["$ITEM_ID"]="$reason"
     ITEM_ATTEMPTS["$ITEM_ID"]="$total_attempts"
     session_failures+=("$ITEM_ID: $reason")
@@ -2965,6 +2973,10 @@ _build_skip_list() {
 # Execute the core pick-implement-validate-merge cycle.
 # Uses and modifies outer-scope locals from cmd_run and setup_sprint_environment.
 _sprint_check_circuit_breaker() {
+    if [[ "$auto_mode" == "true" && "$preflight_consecutive_failures" -ge 2 ]]; then
+        log_error "Circuit breaker: $preflight_consecutive_failures consecutive preflight failures — same systemic failure, stopping batch"
+        return 0
+    fi
     [[ "$auto_mode" == "true" && "$consecutive_failures" -ge "$max_consecutive_failures" ]] || return 1
     log_error "Circuit breaker: $consecutive_failures consecutive failures — stopping"
     return 0
@@ -3202,6 +3214,9 @@ print_sprint_summary() {
     if [[ "$auto_mode" == "true" ]]; then
         if [[ $failed -eq 0 && $passed -gt 0 ]]; then
             log_header "Mission complete: $passed items done"
+            tput bel 2>/dev/null || printf '\a'
+        elif [[ "$preflight_consecutive_failures" -ge 2 ]]; then
+            log_header "Mission aborted: preflight circuit breaker ($passed passed, $failed failed)"
             tput bel 2>/dev/null || printf '\a'
         elif [[ "$consecutive_failures" -ge "$max_consecutive_failures" ]]; then
             log_header "Mission aborted: circuit breaker ($passed passed, $failed failed)"
