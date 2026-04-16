@@ -571,14 +571,17 @@ cmd_init() {
     fi
     echo ""
 
+    # shellcheck disable=SC2034  # documented as outer-scope local for future use
     local reinit=false
     if [[ -f "$BACKLOG_DIR/backlog.json" ]]; then
         log_warning "aishore already initialized (backlog.json exists)"
         if [[ "$auto_yes" == "true" ]]; then
+            # shellcheck disable=SC2034
             reinit=true
         else
             read -r -p "  Reinitialize? This preserves existing backlogs. [y/N] " c
             [[ $c != [yY] ]] && return 0
+            # shellcheck disable=SC2034
             reinit=true
         fi
         echo ""

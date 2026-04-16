@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # cmd-report.sh — Sprint report generation
 # Generates a shareable markdown sprint report after batch runs.
 # Loaded via _load_module from print_sprint_summary().
@@ -10,6 +11,9 @@
 #   REGRESSION_PASSED, REGRESSION_FAILED, AISHORE_VERSION, PROJECT_ROOT
 # Writes report to .aishore/data/reports/sprint-<date>.md
 # Prints compact summary to stdout.
+# shellcheck disable=SC2154 # sprint_items, COMPLETED_IDS, FAILED_IDS, ITEM_ATTEMPTS,
+# batch_start, passed, failed, queued_ids, session_failures, auto_mode, auto_scope
+# are outer-scope locals from cmd_run in the main script
 generate_sprint_report() {
     local reports_dir="$DATA_DIR/reports"
     mkdir -p "$reports_dir"

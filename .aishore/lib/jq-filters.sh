@@ -3,14 +3,17 @@
 # Loaded once at startup; used by the main script and cmd modules.
 
 # Project an item to sprint-relevant fields with defaults
+# shellcheck disable=SC2034  # used by sourcing scripts
 ITEM_PROJECTION='{id, title, intent, description, steps, acceptanceCriteria, priority, scope, category, track: (.track // "feature"), status: (.status // "todo"), passes: (.passes // false)}'
 
 # Priority ordering function — used inline via string interpolation in jq expressions
+# shellcheck disable=SC2034  # used by sourcing scripts
 JQ_PRIO_RANK='def prio_rank: {"must":0,"should":1,"could":2}[.] // 3;'
 
 # Filter for pickable items — used by pick_item() and list_pickable_ids()
 # Expects $skip (JSON array of IDs to skip), $done_ids (JSON array of completed IDs),
 # and $core_healthy ("true"/"false") for track gating
+# shellcheck disable=SC2034  # used by sourcing scripts
 PICKABLE_ITEMS_FILTER='[.items[] |
             select(.readyForSprint == true and (.passes == false or .passes == null) and (.status == "todo" or .status == null)) |
             select(.intent != null and .intent != "" and (.intent | length) >= 20) |
