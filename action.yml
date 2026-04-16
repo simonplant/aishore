@@ -1,0 +1,56 @@
+name: 'aishore'
+description: 'Run autonomous sprints with aishore — backlog to PRs in CI'
+author: 'Simon Plant'
+
+branding:
+  icon: 'zap'
+  color: 'purple'
+
+inputs:
+  anthropic_api_key:
+    description: 'Anthropic API key for Claude Code'
+    required: true
+  run_args:
+    description: 'Arguments passed to .aishore/aishore run (e.g. "done", "p0", "FEAT-123", "3 --retries 2")'
+    required: false
+    default: '1'
+  pr_mode:
+    description: 'Create PRs instead of merging (true/false). Recommended for CI.'
+    required: false
+    default: 'true'
+  model:
+    description: 'Claude model for developer agent (e.g. claude-opus-4-6, claude-sonnet-4-6)'
+    required: false
+    default: ''
+  agent_timeout:
+    description: 'Agent timeout in seconds'
+    required: false
+    default: '3600'
+  setup_command:
+    description: 'Command to run in worktree before sprint (e.g. "npm install")'
+    required: false
+    default: ''
+  core_command:
+    description: 'Core verification command (overrides config.yaml)'
+    required: false
+    default: ''
+  retries:
+    description: 'Per-item retry count'
+    required: false
+    default: '1'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run aishore sprint
+      shell: bash
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        AISHORE_RUN_ARGS: ${{ inputs.run_args }}
+        AISHORE_PR_MODE: ${{ inputs.pr_mode }}
+        AISHORE_MODEL_PRIMARY: ${{ inputs.model }}
+        AISHORE_AGENT_TIMEOUT: ${{ inputs.agent_timeout }}
+        AISHORE_SETUP_CMD: ${{ inputs.setup_command }}
+        AISHORE_CORE_CMD: ${{ inputs.core_command }}
+        AISHORE_RETRIES: ${{ inputs.retries }}
+      run: ${{ github.action_path }}/scripts/ci-entrypoint.sh
