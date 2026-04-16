@@ -1734,7 +1734,7 @@ _save_regression_entries() {
     local entries
     entries=$(jq -c --arg id "$item_id" --arg date "$(date +%Y-%m-%d)" '
         [.item.acceptanceCriteria // [] | .[] | select(type == "object" and .verify != null)] |
-        .[] | {itemId: $id, date: $date, text: .text, verify: .verify}
+        unique_by(.verify) | .[] | {itemId: $id, date: $date, text: .text, verify: .verify}
     ' "$sprint_file" 2>/dev/null) || return 0
 
     [[ -z "$entries" ]] && return 0
