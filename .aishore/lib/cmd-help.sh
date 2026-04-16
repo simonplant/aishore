@@ -171,7 +171,7 @@ Subcommands:
     --all             Reset all failed items back to todo
   populate          Create items from PRODUCT.md (AI-assisted)
   stats             Show sprint velocity and success metrics from archive
-  next              Show what item would be auto-picked next (read-only)
+  next [--json]     Show what item would be auto-picked next (read-only)
 
 Examples:
   aishore backlog list --ready         # Show sprint-ready items

@@ -648,6 +648,9 @@ cmd_backlog_stats() {
 }
 
 cmd_backlog_next() {
+    local json_mode=false
+    parse_opts "bool:json_mode:--json" -- "$@" || return 1
+
     local skip_json="[]"
     local done_ids_json
     done_ids_json=$(collect_done_ids)
@@ -674,6 +677,11 @@ cmd_backlog_next() {
     if [[ -z "$best" || "$best" == "null" ]]; then
         log_warning "No pickable items found"
         return 1
+    fi
+
+    if [[ "$json_mode" == "true" ]]; then
+        printf '%s\n' "$best"
+        return 0
     fi
 
     printf '%s\n' "$best" | jq -r '"\(.id)  \(.title)",
