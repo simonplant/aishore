@@ -605,9 +605,103 @@ get_claudemd_snippet() {
 # CONFIGURATION (optional config.yaml, sensible defaults)
 # ============================================================================
 
+# Valid top-level keys in config.yaml (derived from _cfg_map paths)
+readonly VALID_CONFIG_KEYS="validation core setup fix developer models agent notifications auto groom streaming output merge timeout_minutes run project backlog_files"
+
+# Keys whose leaf values must be integers
+readonly NUMERIC_CONFIG_PATHS=".core.timeout .agent.timeout .auto.groom_threshold .auto.max_failures .groom.max_items .streaming.max_lines .output.truncate_lines .timeout_minutes .run.retries .run.limit .agent.max_turns.developer .agent.max_turns.validator .agent.max_turns.groomer .agent.max_turns.refiner .validation.timeout"
+
+# Keys whose leaf values must be strings (not maps or arrays)
+readonly STRING_CONFIG_PATHS=".core.command .setup.command .fix.command .developer.command .models.primary .models.fast .notifications.on_complete .groom.min_priority .merge.strategy .validation.command"
+
+# Keys whose leaf values must be booleans
+readonly BOOLEAN_CONFIG_PATHS=".streaming.enabled"
+
+validate_config() {
+    # Skip validation if config doesn't exist or yq is unavailable
+    [[ ! -f "$CONFIG_FILE" ]] && return 0
+    if ! command -v yq &>/dev/null; then
+        # Graceful no-op: load_config already warns about missing yq
+        return 0
+    fi
+
+    # Check YAML is parseable first
+    if ! yq empty "$CONFIG_FILE" 2>/dev/null; then
+        log_error "Config error: ${CONFIG_FILE} is not valid YAML"
+        return 1
+    fi
+
+    local _errors=0
+
+    # Check for unknown top-level keys
+    local _top_keys
+    _top_keys=$(yq -r 'keys | .[]' "$CONFIG_FILE" 2>/dev/null) || _top_keys=""
+    local _key
+    for _key in $_top_keys; do
+        local _found=0
+        local _valid
+        for _valid in $VALID_CONFIG_KEYS; do
+            if [[ "$_key" == "$_valid" ]]; then
+                _found=1
+                break
+            fi
+        done
+        if [[ "$_found" -eq 0 ]]; then
+            log_error "Config error: unknown key \"${_key}\" in ${CONFIG_FILE}. Valid keys: ${VALID_CONFIG_KEYS// /, }"
+            _errors=$(( _errors + 1 ))
+        fi
+    done
+
+    # Validate numeric fields
+    local _path
+    for _path in $NUMERIC_CONFIG_PATHS; do
+        local _val
+        _val=$(yq -r "$_path // \"\"" "$CONFIG_FILE" 2>/dev/null) || _val=""
+        if [[ -n "$_val" ]]; then
+            if ! [[ "$_val" =~ ^[0-9]+$ ]]; then
+                log_error "Config error: \"${_path}\" must be a number in ${CONFIG_FILE}, got: \"${_val}\""
+                _errors=$(( _errors + 1 ))
+            fi
+        fi
+    done
+
+    # Validate string fields (must not be maps or arrays)
+    for _path in $STRING_CONFIG_PATHS; do
+        local _type
+        _type=$(yq -r "$_path | type" "$CONFIG_FILE" 2>/dev/null) || _type=""
+        if [[ -n "$_type" && "$_type" != "null" && "$_type" != "!!str" && "$_type" != "string" ]]; then
+            log_error "Config error: \"${_path}\" must be a string in ${CONFIG_FILE}, got type: ${_type}"
+            _errors=$(( _errors + 1 ))
+        fi
+    done
+
+    # Validate boolean fields
+    for _path in $BOOLEAN_CONFIG_PATHS; do
+        local _val
+        _val=$(yq -r "$_path // \"\"" "$CONFIG_FILE" 2>/dev/null) || _val=""
+        if [[ -n "$_val" ]]; then
+            case "$_val" in
+                true|false) ;;
+                *) log_error "Config error: \"${_path}\" must be true or false in ${CONFIG_FILE}, got: \"${_val}\""
+                   _errors=$(( _errors + 1 )) ;;
+            esac
+        fi
+    done
+
+    if [[ "$_errors" -gt 0 ]]; then
+        log_error "Config validation failed with ${_errors} error(s) in ${CONFIG_FILE}"
+        return 1
+    fi
+
+    return 0
+}
+
 load_config() {
     # Only load if config exists
     [[ ! -f "$CONFIG_FILE" ]] && { _apply_env_overrides; return 0; }
+
+    # Validate config before loading values
+    validate_config || return 1
 
     if command -v yq &> /dev/null; then
         local -a _cfg_map=(
