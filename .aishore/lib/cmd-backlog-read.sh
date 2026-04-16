@@ -375,8 +375,13 @@ cmd_backlog_rm() {
 }
 
 cmd_backlog_requeue() {
+    if [[ "${1:-}" == "--all" ]]; then
+        _backlog_requeue_all
+        return $?
+    fi
+
     local id="${1:-}"
-    [[ -z "$id" ]] && { log_error "Usage: backlog requeue <ID>"; return 1; }
+    [[ -z "$id" ]] && { log_error "Usage: backlog requeue <ID|--all>"; return 1; }
     [[ $# -gt 1 ]] && { log_error "Unexpected argument: ${2}"; return 1; }
 
     local item
@@ -405,6 +410,38 @@ cmd_backlog_requeue() {
     fi
 
     log_success "Requeued $id: $title (status → todo, failure tracking cleared)"
+}
+
+_backlog_requeue_all() {
+    local requeued=0
+    local -a requeued_ids=()
+
+    for f in "${BACKLOG_FILES[@]}"; do
+        [[ -f "$BACKLOG_DIR/$f" ]] || continue
+
+        local ids
+        ids=$(jq -r '.items[] | select((.failCount // 0) > 0) | .id' "$BACKLOG_DIR/$f" 2>/dev/null) || continue
+        [[ -z "$ids" ]] && continue
+
+        while IFS= read -r id; do
+            [[ -z "$id" ]] && continue
+            if dal_update_item "$f" "$id" \
+                '| .status = "todo" | .passes = false | del(.lastFailReason) | del(.lastFailAt) | del(.failCount)'; then
+                requeued_ids+=("$id")
+                requeued=$((requeued + 1))
+            else
+                log_error "Failed to requeue $id"
+            fi
+        done <<< "$ids"
+    done
+
+    if [[ "$requeued" -eq 0 ]]; then
+        log_info "No failed items found"
+        return 0
+    fi
+
+    log_success "Requeued $requeued item(s): ${requeued_ids[*]}"
+    return 0
 }
 
 cmd_backlog_stats() {

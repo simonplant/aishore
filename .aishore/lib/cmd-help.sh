@@ -161,6 +161,7 @@ Subcommands:
   set-priority <ID> <priority>
                     Change item priority (must/should/could/future)
   requeue <ID>      Reset a failed item back to todo (clears failure tracking)
+    --all             Reset all failed items back to todo
   populate          Create items from PRODUCT.md (AI-assisted)
   stats             Show sprint velocity and success metrics from archive
   next              Show what item would be auto-picked next (read-only)
