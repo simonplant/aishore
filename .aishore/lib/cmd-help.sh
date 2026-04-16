@@ -86,9 +86,15 @@ Options:
   --once                Run exactly one sprint item then exit
   --pr                  Create GitHub PRs instead of merging (requires gh CLI)
   --retries N           Retry attempts on validation failure
+  --skip-preflight      Skip regression suite pre-flight check (use when fixing regressions)
   --max-failures N      Circuit breaker: stop after N consecutive failures
   --limit N             Stop after N successful items
   --max-runtime N       Stop after N minutes (finishes current item before exiting)
+
+Preflight bypass:
+  Items whose title or intent mentions "regression" automatically skip the
+  regression suite pre-flight — preventing deadlock when the item exists to
+  fix the regression suite itself. Use --skip-preflight for manual override.
 
 Custom gates (config.yaml):
   Add a gates section to run user-defined commands at each pipeline phase.
