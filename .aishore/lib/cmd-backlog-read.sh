@@ -123,8 +123,13 @@ _backlog_check_all() {
 }
 
 cmd_backlog_list() {
-    local filter_status="" filter_type="" filter_priority="" filter_track="" filter_ready=false filter_no_ready=false filter_failed=false
-    parse_opts "val:filter_status:--status" "val:filter_type:--type" "val:filter_priority:--priority" "val:filter_track:--track" "bool:filter_ready:--ready" "bool:filter_no_ready:--no-ready" "bool:filter_failed:--failed" -- "$@" || return 1
+    local filter_status="" filter_type="" filter_priority="" filter_track="" filter_ready=false filter_no_ready=false filter_failed=false filter_done=false
+    parse_opts "val:filter_status:--status" "val:filter_type:--type" "val:filter_priority:--priority" "val:filter_track:--track" "bool:filter_ready:--ready" "bool:filter_no_ready:--no-ready" "bool:filter_failed:--failed" "bool:filter_done:--done" -- "$@" || return 1
+
+    if [[ "$filter_done" == "true" ]]; then
+        _backlog_list_done
+        return $?
+    fi
 
     # Validate --track value
     if [[ -n "$filter_track" ]]; then
@@ -203,6 +208,47 @@ cmd_backlog_list() {
 
     echo ""
     printf '%s item(s), %s ready for sprint\n' "$count" "$ready_count"
+}
+
+_backlog_list_done() {
+    local sprints_file="$ARCHIVE_DIR/sprints.jsonl"
+
+    if [[ ! -f "$sprints_file" ]] || [[ ! -s "$sprints_file" ]]; then
+        log_info "No completed items in archive"
+        return 0
+    fi
+
+    local rows
+    rows=$(jq -rs '
+        [.[] | select(.status == "complete")]
+        | group_by(.itemId)
+        | map(sort_by(.date) | last)
+        | sort_by(.date)
+        | reverse
+        | .[] | [
+            .itemId,
+            .date,
+            ((.attempts // 1) | tostring),
+            ((.title // "-") | if length > 50 then .[:47] + "..." else . end)
+        ] | @tsv
+    ' "$sprints_file" 2>/dev/null)
+
+    if [[ -z "$rows" ]]; then
+        log_info "No completed items in archive"
+        return 0
+    fi
+
+    printf "%-12s %-12s %-10s %s\n" "ID" "DATE" "ATTEMPTS" "TITLE"
+    printf "%-12s %-12s %-10s %s\n" "────────────" "────────────" "──────────" "──────────────────────────────────────────────────"
+
+    local count=0
+    while IFS=$'\t' read -r id date attempts title; do
+        printf "%-12s %-12s %-10s %s\n" "$id" "$date" "$attempts" "$title"
+        ((count++)) || true
+    done <<< "$rows"
+
+    echo ""
+    printf '%s completed item(s)\n' "$count"
 }
 
 cmd_backlog_show() {
