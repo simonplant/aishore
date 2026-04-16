@@ -75,6 +75,7 @@ When a scope (done/p0/p1/p2) is given, auto-grooming and the circuit breaker
 activate automatically.
 
 Options:
+  --context <text>      One-time developer hint injected into the prompt (not persisted)
   --dry-run             Preview without running agents
   --no-merge            Keep feature branches for review
   --pr                  Create GitHub PRs instead of merging (requires gh CLI)

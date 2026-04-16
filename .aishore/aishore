@@ -2594,7 +2594,7 @@ _build_prior_failure_context() {
 
 # Developer → validation cmd → validator agent retry loop.
 # Uses outer-scope locals: retries, auto_mode, session_failures, sprint_passed,
-#   retry_extra_prompt, retry_failure_history, initial_dev_context, item_source, sprint_start, ITEM_ID
+#   retry_extra_prompt, retry_failure_history, initial_dev_context, dev_hint, item_source, sprint_start, ITEM_ID
 _run_retry_loop() {
     local attempt=0
     sprint_passed=false
@@ -2941,11 +2941,12 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
 
 # Parse command-line arguments for cmd_run.
 # Sets outer-scope locals: count, dry_run, specific_id, retries, no_merge,
-#   pr_mode, auto_mode, auto_scope, max_consecutive_failures
+#   pr_mode, auto_mode, auto_scope, max_consecutive_failures, dev_hint
 cmd_run_parse_args() {
     parse_opts --positional \
         "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:pr_mode:--pr" \
         "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" \
+        "val:dev_hint:--context" \
         -- "$@" || return 1
     local _arg
     for _arg in "${_PARSE_REMAINING[@]}"; do
@@ -3370,6 +3371,7 @@ run_sprint_loop() {
         local sprint_passed=false
         local retry_extra_prompt=""
         local initial_dev_context=""
+        [[ -n "$dev_hint" ]] && retry_extra_prompt="[Operator context: $dev_hint]${retry_extra_prompt:+$'\n'$retry_extra_prompt}"
         _run_retry_loop
 
         if [[ "$sprint_passed" != "true" ]]; then
@@ -3483,6 +3485,7 @@ cmd_run() {
     local no_merge=false pr_mode=false
     local auto_mode=false auto_scope="" auto_priorities=""
     local max_consecutive_failures="" session_limit=""
+    local dev_hint=""
 
     cmd_run_parse_args "$@" || return $?
 
