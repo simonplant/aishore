@@ -946,6 +946,11 @@ check_readiness_gates() {
     if [[ -n "$verify_cmds" ]]; then
         while IFS= read -r vcmd; do
             [[ -z "$vcmd" ]] && continue
+            # Warn on state-mutating verify commands (backlog add/rm leak on failure)
+            if [[ "$vcmd" == *"backlog add"* ]] || [[ "$vcmd" == *"backlog rm"* ]]; then
+                warnings="${warnings}  - AC verify command mutates backlog state (backlog add/rm) — temp items leak on failure: ${vcmd}\n"
+                has_warning=true
+            fi
             local vrc=0
             (eval "$vcmd") >/dev/null 2>&1 || vrc=$?
             if [[ "$vrc" -ne 0 ]]; then
