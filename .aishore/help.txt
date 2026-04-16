@@ -20,6 +20,7 @@ Commands:
   backlog rm <ID>   Remove an item (with confirmation)
     --force         Skip confirmation
   backlog populate  Populate backlog from PRODUCT.md (AI-assisted)
+  backlog stats     Show sprint velocity and success metrics from archive
 
   run [count]       Run N sprints (default: 1, feature branches, push/pull)
   run <ID>          Run specific item by ID (e.g., TEST-006)

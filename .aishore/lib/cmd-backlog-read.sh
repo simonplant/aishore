@@ -20,9 +20,10 @@ cmd_backlog() {
         check)      cmd_backlog_check "$@" ;;
         requeue)    cmd_backlog_requeue "$@" ;;
         populate)   _load_module cmd-populate; cmd_backlog_populate "$@" ;;
+        stats)      cmd_backlog_stats "$@" ;;
         *)
             log_error "Unknown backlog command: $subcmd"
-            echo "Usage: backlog {list|add|show|edit|check|rm|requeue|populate}" >&2
+            echo "Usage: backlog {list|add|show|edit|check|rm|requeue|populate|stats}" >&2
             return 1
             ;;
     esac
@@ -346,4 +347,100 @@ cmd_backlog_requeue() {
     fi
 
     log_success "Requeued $id: $title (status → todo, failure tracking cleared)"
+}
+
+cmd_backlog_stats() {
+    local sprints_file="$ARCHIVE_DIR/sprints.jsonl"
+
+    if [[ ! -f "$sprints_file" ]] || [[ ! -s "$sprints_file" ]]; then
+        log_info "No sprint archive found — run some sprints first"
+        return 0
+    fi
+
+    local stats
+    stats=$(jq -s '
+        {
+            total: length,
+            complete: [.[] | select(.status == "complete")] | length,
+            failed: [.[] | select(.status != "complete")] | length,
+            durations: [.[] | select(.duration != null) | .duration],
+            priorities: [.[] | select(.priority != null) | .priority],
+            attempts: [.[] | .attempts // 1],
+            dates: [.[] | .date] | sort,
+            items: [.[] | .itemId] | unique | length
+        } | . + {
+            success_rate: (if .total > 0 then (100.0 * .complete / .total) else 0 end),
+            dur_avg: (if (.durations | length) > 0 then (.durations | add / length) else null end),
+            dur_min: (if (.durations | length) > 0 then (.durations | min) else null end),
+            dur_max: (if (.durations | length) > 0 then (.durations | max) else null end),
+            dur_count: (.durations | length),
+            first_date: (.dates | first),
+            last_date: (.dates | last),
+            retried: ([.attempts[] | select(. > 1)] | length),
+            pri_must: ([.priorities[] | select(. == "must")] | length),
+            pri_should: ([.priorities[] | select(. == "should")] | length),
+            pri_could: ([.priorities[] | select(. == "could")] | length),
+            pri_future: ([.priorities[] | select(. == "future")] | length),
+            pri_unset: (.total - ([.priorities[]] | length))
+        }
+    ' "$sprints_file" 2>/dev/null)
+
+    if [[ -z "$stats" ]]; then
+        log_error "Failed to parse sprint archive"
+        return 1
+    fi
+
+    local total complete failed success_rate items
+    total=$(printf '%s' "$stats" | jq -r '.total')
+    complete=$(printf '%s' "$stats" | jq -r '.complete')
+    failed=$(printf '%s' "$stats" | jq -r '.failed')
+    success_rate=$(printf '%s' "$stats" | jq -r '.success_rate | . * 10 | round / 10')
+    items=$(printf '%s' "$stats" | jq -r '.items')
+
+    local dur_avg dur_min dur_max dur_count
+    dur_count=$(printf '%s' "$stats" | jq -r '.dur_count')
+    dur_avg=$(printf '%s' "$stats" | jq -r 'if .dur_avg then (.dur_avg | . * 10 | round / 10 | tostring + "s") else "-" end')
+    dur_min=$(printf '%s' "$stats" | jq -r 'if .dur_min then (.dur_min | tostring + "s") else "-" end')
+    dur_max=$(printf '%s' "$stats" | jq -r 'if .dur_max then (.dur_max | tostring + "s") else "-" end')
+
+    local retried first_date last_date
+    retried=$(printf '%s' "$stats" | jq -r '.retried')
+    first_date=$(printf '%s' "$stats" | jq -r '.first_date // "-"')
+    last_date=$(printf '%s' "$stats" | jq -r '.last_date // "-"')
+
+    local pri_must pri_should pri_could pri_future pri_unset
+    pri_must=$(printf '%s' "$stats" | jq -r '.pri_must')
+    pri_should=$(printf '%s' "$stats" | jq -r '.pri_should')
+    pri_could=$(printf '%s' "$stats" | jq -r '.pri_could')
+    pri_future=$(printf '%s' "$stats" | jq -r '.pri_future')
+    pri_unset=$(printf '%s' "$stats" | jq -r '.pri_unset')
+
+    echo ""
+    echo "Sprint Velocity & Success Metrics"
+    echo "══════════════════════════════════"
+    echo ""
+    printf "  %-24s %s\n" "Total sprints:" "$total"
+    printf "  %-24s %s\n" "Unique items:" "$items"
+    printf "  %-24s %s\n" "Completed:" "$complete"
+    printf "  %-24s %s\n" "Failed:" "$failed"
+    printf "  %-24s %s\n" "Success rate:" "${success_rate}%"
+    printf "  %-24s %s\n" "Sprints with retries:" "$retried"
+    printf "  %-24s %s\n" "Date range:" "${first_date} → ${last_date}"
+    echo ""
+    echo "Duration (${dur_count} sprints with timing data)"
+    echo "──────────────────────────────────"
+    printf "  %-24s %s\n" "Average:" "$dur_avg"
+    printf "  %-24s %s\n" "Min:" "$dur_min"
+    printf "  %-24s %s\n" "Max:" "$dur_max"
+    echo ""
+    echo "Completed by Priority"
+    echo "──────────────────────────────────"
+    printf "  %-24s %s\n" "must:" "$pri_must"
+    printf "  %-24s %s\n" "should:" "$pri_should"
+    printf "  %-24s %s\n" "could:" "$pri_could"
+    printf "  %-24s %s\n" "future:" "$pri_future"
+    if [[ "$pri_unset" -gt 0 ]]; then
+        printf "  %-24s %s\n" "(no priority):" "$pri_unset"
+    fi
+    echo ""
 }
