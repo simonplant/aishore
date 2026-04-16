@@ -149,6 +149,7 @@ Usage: aishore backlog <subcommand> [options]
 
 Subcommands:
   list              List all items (features + bugs)
+    --search <term>   Filter items by text in title, intent, or description (case-insensitive)
     --status <s>      Filter by status (todo, in-progress, done)
     --type <t>        Filter by type (feat, bug)
     --priority <p>    Filter by priority (must, should, could, future)

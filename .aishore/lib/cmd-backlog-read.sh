@@ -124,8 +124,8 @@ _backlog_check_all() {
 }
 
 cmd_backlog_list() {
-    local filter_status="" filter_type="" filter_priority="" filter_track="" filter_ready=false filter_no_ready=false filter_failed=false filter_done=false filter_no_verify=false filter_json=false filter_by_priority=false
-    parse_opts "val:filter_status:--status" "val:filter_type:--type" "val:filter_priority:--priority" "val:filter_track:--track" "bool:filter_ready:--ready" "bool:filter_no_ready:--no-ready" "bool:filter_failed:--failed" "bool:filter_done:--done" "bool:filter_no_verify:--no-verify" "bool:filter_json:--json" "bool:filter_by_priority:--by-priority" -- "$@" || return 1
+    local filter_status="" filter_type="" filter_priority="" filter_track="" filter_ready=false filter_no_ready=false filter_failed=false filter_done=false filter_no_verify=false filter_json=false filter_by_priority=false filter_search=""
+    parse_opts "val:filter_status:--status" "val:filter_type:--type" "val:filter_priority:--priority" "val:filter_track:--track" "bool:filter_ready:--ready" "bool:filter_no_ready:--no-ready" "bool:filter_failed:--failed" "bool:filter_done:--done" "bool:filter_no_verify:--no-verify" "bool:filter_json:--json" "bool:filter_by_priority:--by-priority" "val:filter_search:--search" -- "$@" || return 1
 
     if [[ "$filter_done" == "true" ]]; then
         _backlog_list_done
@@ -133,7 +133,7 @@ cmd_backlog_list() {
     fi
 
     if [[ "$filter_by_priority" == "true" ]]; then
-        _backlog_list_by_priority "$filter_status" "$filter_type" "$filter_track" "$filter_ready" "$filter_no_ready" "$filter_failed" "$filter_no_verify"
+        _backlog_list_by_priority "$filter_status" "$filter_type" "$filter_track" "$filter_ready" "$filter_no_ready" "$filter_failed" "$filter_no_verify" "$filter_search"
         return $?
     fi
 
@@ -178,6 +178,9 @@ cmd_backlog_list() {
     if [[ "$filter_no_verify" == "true" ]]; then
         jq_filter="$jq_filter | select([.acceptanceCriteria // [] | .[] | select(type==\"object\" and .verify != null)] | length == 0)"
     fi
+    if [[ -n "$filter_search" ]]; then
+        jq_filter="$jq_filter | select((.title // \"\" | test(\$search; \"i\")) or (.intent // \"\" | test(\$search; \"i\")) or (.description // \"\" | test(\$search; \"i\")))"
+    fi
 
     # JSON output mode: collect matching items and emit as JSON array
     if [[ "$filter_json" == "true" ]]; then
@@ -185,7 +188,7 @@ cmd_backlog_list() {
         for f in "${files[@]}"; do
             [[ -f "$BACKLOG_DIR/$f" ]] || continue
             local matched
-            matched=$(jq -c "[$jq_filter]" "$BACKLOG_DIR/$f" 2>/dev/null) || continue
+            matched=$(jq -c --arg search "$filter_search" "[$jq_filter]" "$BACKLOG_DIR/$f" 2>/dev/null) || continue
             json_items=$(printf '%s\n%s\n' "$json_items" "$matched" | jq -s 'add // []')
         done
         printf '%s\n' "$json_items" | jq '.'
@@ -205,7 +208,7 @@ cmd_backlog_list() {
         [[ -f "$BACKLOG_DIR/$f" ]] || continue
         local items
         # shellcheck disable=SC1010
-        items=$(jq -r --argjson done "$done_ids" "${JQ_PRIO_RANK}[$jq_filter] | sort_by(.priority // \"should\" | prio_rank) | .[] | [.id, .priority // \"-\", .track // \"feature\", .status // \"todo\", (if .readyForSprint then \"yes\" else \"no\" end), ((.failCount // 0) | tostring), ((.dependsOn // []) | map(select(. as \$d | \$done | index(\$d) | not)) | if length == 0 then \"-\" else join(\",\") end), .title] | @tsv" "$BACKLOG_DIR/$f" 2>/dev/null) || continue
+        items=$(jq -r --argjson done "$done_ids" --arg search "$filter_search" "${JQ_PRIO_RANK}[$jq_filter] | sort_by(.priority // \"should\" | prio_rank) | .[] | [.id, .priority // \"-\", .track // \"feature\", .status // \"todo\", (if .readyForSprint then \"yes\" else \"no\" end), ((.failCount // 0) | tostring), ((.dependsOn // []) | map(select(. as \$d | \$done | index(\$d) | not)) | if length == 0 then \"-\" else join(\",\") end), .title] | @tsv" "$BACKLOG_DIR/$f" 2>/dev/null) || continue
         if [[ -n "$items" ]]; then
             while IFS=$'\t' read -r id pri track status ready fails blocked title; do
                 local blocked_display="" fails_display="-"
@@ -233,7 +236,7 @@ cmd_backlog_list() {
 }
 
 _backlog_list_by_priority() {
-    local filter_status="$1" filter_type="$2" filter_track="$3" filter_ready="$4" filter_no_ready="$5" filter_failed="$6" filter_no_verify="$7"
+    local filter_status="$1" filter_type="$2" filter_track="$3" filter_ready="$4" filter_no_ready="$5" filter_failed="$6" filter_no_verify="$7" filter_search="${8:-}"
 
     if [[ -n "$filter_track" ]]; then
         case "$filter_track" in
@@ -269,6 +272,9 @@ _backlog_list_by_priority() {
     if [[ "$filter_no_verify" == "true" ]]; then
         jq_filter="$jq_filter | select([.acceptanceCriteria // [] | .[] | select(type==\"object\" and .verify != null)] | length == 0)"
     fi
+    if [[ -n "$filter_search" ]]; then
+        jq_filter="$jq_filter | select((.title // \"\" | test(\$search; \"i\")) or (.intent // \"\" | test(\$search; \"i\")) or (.description // \"\" | test(\$search; \"i\")))"
+    fi
 
     local done_ids
     done_ids=$(collect_done_ids)
@@ -283,7 +289,7 @@ _backlog_list_by_priority() {
             [[ -f "$BACKLOG_DIR/$f" ]] || continue
             local items
             # shellcheck disable=SC1010
-            items=$(jq -r --argjson done "$done_ids" "${JQ_PRIO_RANK}[$pri_filter] | sort_by(.priority // \"should\" | prio_rank) | .[] | [.id, .priority // \"-\", .track // \"feature\", .status // \"todo\", (if .readyForSprint then \"yes\" else \"no\" end), ((.failCount // 0) | tostring), ((.dependsOn // []) | map(select(. as \$d | \$done | index(\$d) | not)) | if length == 0 then \"-\" else join(\",\") end), .title] | @tsv" "$BACKLOG_DIR/$f" 2>/dev/null) || continue
+            items=$(jq -r --argjson done "$done_ids" --arg search "$filter_search" "${JQ_PRIO_RANK}[$pri_filter] | sort_by(.priority // \"should\" | prio_rank) | .[] | [.id, .priority // \"-\", .track // \"feature\", .status // \"todo\", (if .readyForSprint then \"yes\" else \"no\" end), ((.failCount // 0) | tostring), ((.dependsOn // []) | map(select(. as \$d | \$done | index(\$d) | not)) | if length == 0 then \"-\" else join(\",\") end), .title] | @tsv" "$BACKLOG_DIR/$f" 2>/dev/null) || continue
             [[ -n "$items" ]] && group_items+="$items"$'\n'
         done
 
