@@ -162,6 +162,7 @@ Subcommands:
     --json            Output matching items as JSON array
   add --json '{..}' Add a new item (JSON object, or pipe via stdin)
   show <ID>         Show full detail of one item
+    --json            Output item as raw JSON object
   edit <ID> --json '{..}' Update fields on an item (merges onto existing)
   check <ID>        Check readiness gates for an item
     --all             Audit every non-done item
