@@ -2448,7 +2448,20 @@ _run_custom_gates() {
 
 # Pre-flight: run regression suite on the baseline before developer touches anything.
 # Returns 0 if preflight passes, 1 on failure.
+# Bypass: --skip-preflight flag or item that fixes the regression suite itself.
 _run_preflight() {
+    if [[ "${skip_preflight:-}" == "true" ]]; then
+        log_warning "Pre-flight skipped (--skip-preflight flag)"
+        return 0
+    fi
+    if _item_fixes_regressions; then
+        log_warning "Pre-flight regression suite skipped — this item fixes the regression suite itself"
+        if ! _run_custom_gates "pre_flight"; then
+            log_error "Pre-flight: custom gate failed — blocking sprint"
+            return 1
+        fi
+        return 0
+    fi
     # Regression suite: run accumulated verify commands from prior sprints
     # This runs even when CORE_CMD is empty — the regression suite IS the eval
     if ! _run_regression_suite; then
@@ -2461,6 +2474,19 @@ _run_preflight() {
     fi
     log_success "Pre-flight passed"
     return 0
+}
+
+_item_fixes_regressions() {
+    local _title _intent _cat
+    _title=$(jq -r '.item.title // ""' "$BACKLOG_DIR/sprint.json" 2>/dev/null) || return 1
+    _intent=$(jq -r '.item.intent // ""' "$BACKLOG_DIR/sprint.json" 2>/dev/null) || return 1
+    _cat=$(jq -r '.item.category // ""' "$BACKLOG_DIR/sprint.json" 2>/dev/null) || return 1
+    local _combined="${_title} ${_intent} ${_cat}"
+    _combined="${_combined,,}"
+    if [[ "$_combined" =~ regress ]]; then
+        return 0
+    fi
+    return 1
 }
 
 # Run developer agent for one attempt: build failure context, run fix_cmd on retry,
@@ -3065,10 +3091,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
 
 # Parse command-line arguments for cmd_run.
 # Sets outer-scope locals: count, dry_run, specific_id, retries, no_merge,
-#   pr_mode, once, auto_mode, auto_scope, max_consecutive_failures, dev_hint, filter_keyword, max_runtime
+#   pr_mode, once, skip_preflight, auto_mode, auto_scope, max_consecutive_failures, dev_hint, filter_keyword, max_runtime
 cmd_run_parse_args() {
     parse_opts --positional \
         "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:pr_mode:--pr" "bool:once:--once" \
+        "bool:skip_preflight:--skip-preflight" \
         "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" \
         "num:max_runtime:--max-runtime" \
         "val:dev_hint:--context" "val:filter_keyword:--filter" \
@@ -3627,7 +3654,7 @@ cmd_run() {
     require_tool git
 
     local count=1 dry_run=false specific_id="" retries=0
-    local no_merge=false pr_mode=false once=false
+    local no_merge=false pr_mode=false once=false skip_preflight=false
     local auto_mode=false auto_scope="" auto_priorities=""
     local max_consecutive_failures="" session_limit=""
     local max_runtime=""
