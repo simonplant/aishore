@@ -82,6 +82,7 @@ Options:
   --dry-run             Preview without running agents
   --filter <keyword>    Only consider items whose title or intent contains keyword
   --no-merge            Keep feature branches for review
+  --once                Run exactly one sprint item then exit
   --pr                  Create GitHub PRs instead of merging (requires gh CLI)
   --retries N           Retry attempts on validation failure
   --max-failures N      Circuit breaker: stop after N consecutive failures
