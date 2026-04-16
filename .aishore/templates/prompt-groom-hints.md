@@ -31,6 +31,9 @@ Every AC you write MUST have an `--ac-verify` command wherever the outcome is te
 
 **CRITICAL: verify commands must survive build transforms.** If the project uses a build tool (Astro, Vite, Next.js, webpack, etc.), NEVER grep built output for content strings — they are bundled, hashed, and minified. Test file existence, exit codes, HTTP responses, or run the code directly. Every broken verify command wastes an entire developer retry cycle.
 
+## Stateless Verify Commands (MANDATORY)
+Verify commands must be **stateless and side-effect free**. They must NEVER mutate backlog state — no `backlog add`, `backlog rm`, or any command that creates temporary items. If the sprint fails before cleanup, orphaned temp items pollute the backlog permanently. Use static checks (grep, jq, test, curl) that only read state, never write it.
+
 ## Grooming Limits
 - **Maximum items per session:** {{GROOM_MAX_ITEMS}} — stop adding new items after this cap. Focus on the highest-value items first.
 - **Minimum priority threshold:** {{GROOM_MIN_PRIORITY}} — only add items at `{{GROOM_MIN_PRIORITY}}` priority or higher. Skip lower-priority items (log them in your summary but do not add them).
