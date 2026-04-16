@@ -152,6 +152,7 @@ Subcommands:
     --failed          Show only items that have failed
     --done            Show completed items from sprint archive
     --no-verify       Show only items with no executable AC verify commands
+    --by-priority     Group items under priority section headers (must/should/could/future)
     --json            Output matching items as JSON array
   add --json '{..}' Add a new item (JSON object, or pipe via stdin)
   show <ID>         Show full detail of one item
