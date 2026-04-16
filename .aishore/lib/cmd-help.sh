@@ -23,6 +23,7 @@ cmd_help() {
         insights) _help_insights ;;
         init)   _help_init ;;
         doctor) _help_doctor ;;
+        logs)   _help_logs ;;
         "")     _help_compact ;;
         *)      log_error "No help topic for: $arg"; _help_compact >&2; return 1 ;;
     esac
@@ -53,7 +54,7 @@ Commands:
   help <command>   Show detailed help for a command
   help --full      Show complete reference
 
-Other: clean, doctor, insights, update, checksums, version
+Other: clean, doctor, insights, logs, update, checksums, version
 EOF
 }
 
@@ -297,5 +298,24 @@ The refine → populate → groom → run cycle:
 Examples:
   aishore refine                   # Interactive interview
   aishore refine --from-sprints    # Post-sprint feedback loop
+EOF
+}
+
+_help_logs() {
+    cat <<EOF
+aishore logs — Show recent agent run history
+
+Usage: aishore logs [options]
+
+Displays recent entries from the agent run log (.aishore/data/logs/agent-runs.log).
+Each entry shows when an agent ran, which agent, what command, how long it took,
+and which model was used.
+
+Options:
+  --last N    Show last N entries (default: 20)
+
+Examples:
+  aishore logs                       # Show last 20 agent runs
+  aishore logs --last 5              # Show last 5 agent runs
 EOF
 }
