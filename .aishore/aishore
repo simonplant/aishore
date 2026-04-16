@@ -81,6 +81,7 @@ ARCHIVE_DIR="$BACKLOG_DIR/archive"
 MODEL_PRIMARY="claude-opus-4-6"
 MODEL_FAST="claude-sonnet-4-6"
 AGENT_TIMEOUT="3600"
+MAX_AGENT_TIME="600"
 CORE_CMD=""
 CORE_TIMEOUT="120"
 CORE_HEALTHY=true
@@ -609,7 +610,7 @@ get_claudemd_snippet() {
 readonly VALID_CONFIG_KEYS="validation core setup fix developer models agent notifications auto groom streaming output merge timeout_minutes run project backlog_files gates"
 
 # Keys whose leaf values must be integers
-readonly NUMERIC_CONFIG_PATHS=".core.timeout .agent.timeout .auto.groom_threshold .auto.max_failures .groom.max_items .streaming.max_lines .output.truncate_lines .timeout_minutes .run.retries .run.limit .agent.max_turns.developer .agent.max_turns.validator .agent.max_turns.groomer .agent.max_turns.refiner .validation.timeout"
+readonly NUMERIC_CONFIG_PATHS=".core.timeout .agent.timeout .agent.max_agent_time_seconds .auto.groom_threshold .auto.max_failures .groom.max_items .streaming.max_lines .output.truncate_lines .timeout_minutes .run.retries .run.limit .agent.max_turns.developer .agent.max_turns.validator .agent.max_turns.groomer .agent.max_turns.refiner .validation.timeout"
 
 # Keys whose leaf values must be strings (not maps or arrays)
 readonly STRING_CONFIG_PATHS=".core.command .setup.command .fix.command .developer.command .models.primary .models.fast .notifications.on_complete .groom.min_priority .merge.strategy .validation.command"
@@ -747,6 +748,7 @@ load_config() {
             ".agent.max_turns.validator MAX_TURNS_VALIDATOR"
             ".agent.max_turns.groomer   MAX_TURNS_GROOMER"
             ".agent.max_turns.refiner   MAX_TURNS_REFINER"
+            ".agent.max_agent_time_seconds MAX_AGENT_TIME"
         )
         local cfg_val _key _var
         for _entry in "${_cfg_map[@]}"; do
@@ -805,6 +807,7 @@ _apply_env_overrides() {
         "AISHORE_MAX_TURNS_VALIDATOR MAX_TURNS_VALIDATOR"
         "AISHORE_MAX_TURNS_GROOMER   MAX_TURNS_GROOMER"
         "AISHORE_MAX_TURNS_REFINER   MAX_TURNS_REFINER"
+        "AISHORE_MAX_AGENT_TIME     MAX_AGENT_TIME"
     )
     local _env_name _target_var
     for _entry in "${_env_map[@]}"; do
@@ -1234,7 +1237,7 @@ run_agent_process() {
     local prompt="$5"
     local max_turns="${6:-}"
 
-    log_agent "$agent_label" "Starting (model: $model, timeout: ${AGENT_TIMEOUT}s${max_turns:+, max_turns: $max_turns})"
+    log_agent "$agent_label" "Starting (model: $model, timeout: ${MAX_AGENT_TIME:-${AGENT_TIMEOUT}}s${max_turns:+, max_turns: $max_turns})"
     local start_time
     start_time=$(date +%s)
 
@@ -1257,6 +1260,12 @@ run_agent_process() {
     # Max turns limit
     if [[ -n "$max_turns" ]] && [[ "$max_turns" -gt 0 ]] 2>/dev/null; then
         claude_args+=(--max-turns "$max_turns")
+    fi
+
+    # Effective timeout: use max_agent_time_seconds if set, else fall back to agent.timeout
+    local effective_timeout="$AGENT_TIMEOUT"
+    if [[ -n "${MAX_AGENT_TIME:-}" ]] && [[ "$MAX_AGENT_TIME" -gt 0 ]] 2>/dev/null; then
+        effective_timeout="$MAX_AGENT_TIME"
     fi
 
     local _out_target="${AGENT_OUTPUT_FILE:-$agent_log}"
@@ -1309,7 +1318,7 @@ run_agent_process() {
         done
     fi
 
-    while [[ $elapsed -lt $AGENT_TIMEOUT ]]; do
+    while [[ $elapsed -lt $effective_timeout ]]; do
         if ! kill -0 "$agent_pid" 2>/dev/null; then
             # Process exited — stream any remaining lines before breaking
             if [[ "$_stream_enabled" == "true" && -f "$_stream_log_file" ]]; then
@@ -1378,16 +1387,18 @@ run_agent_process() {
     # Kill the process if it's still running
     if kill -0 "$agent_pid" 2>/dev/null; then
         if [[ "$got_result" != "true" ]]; then
-            local timeout_min=$((AGENT_TIMEOUT / 60))
+            local timeout_min=$((effective_timeout / 60))
             local _timeout_item_id=""
             _timeout_item_id=$(jq -r '.item.id // ""' "$BACKLOG_DIR/sprint.json" 2>/dev/null) || true
             if [[ -n "$_timeout_item_id" ]]; then
-                log_error "Agent timeout after ${timeout_min} minutes for ${_timeout_item_id}"
+                log_error "Agent timeout after ${timeout_min} minutes for ${_timeout_item_id} (max_agent_time_seconds=${effective_timeout})"
             else
-                log_error "Agent timeout after ${timeout_min} minutes for ${agent_label}"
+                log_error "Agent timeout after ${timeout_min} minutes for ${agent_label} (max_agent_time_seconds=${effective_timeout})"
             fi
-            # Write TIMEOUT result so the sprint loop treats this as a countable failure
-            printf '{"status":"fail","reason":"TIMEOUT: agent exceeded %d-minute limit"}\n' "$timeout_min" \
+            _retry_failure_reason="Agent timeout"
+            _retry_failure_detail="Agent ${agent_label} exceeded ${effective_timeout}-second limit (max_agent_time_seconds=${effective_timeout})"
+            printf '{"status":"fail","reason":"Agent timeout: %s exceeded %d-second limit (max_agent_time_seconds=%d)"}\n' \
+                "$agent_label" "$effective_timeout" "$effective_timeout" \
                 > "$STATUS_DIR/result.json"
         fi
         if [[ "$has_setsid" == true ]]; then
@@ -3077,6 +3088,7 @@ setup_sprint_environment() {
     # Apply timeout_minutes: config/env > default (0 = no override)
     if [[ "${TIMEOUT_MINUTES:-0}" -gt 0 ]]; then
         AGENT_TIMEOUT=$((TIMEOUT_MINUTES * 60))
+        MAX_AGENT_TIME=$((TIMEOUT_MINUTES * 60))
         log_info "Agent timeout set to ${TIMEOUT_MINUTES} minutes (${AGENT_TIMEOUT}s)"
     fi
 

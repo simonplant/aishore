@@ -29,6 +29,7 @@ core:
 
 # agent:
 #   timeout: 3600
+#   max_agent_time_seconds: 600   # Per-agent invocation timeout (env: AISHORE_MAX_AGENT_TIME)
 #   max_turns:
 #     developer: 75
 #     validator: 45
