@@ -1119,14 +1119,23 @@ run_agent_process() {
         claude_args+=(--output-format "$output_format")
     fi
 
+    # Build env cleanup: unset ALL Claude Code env vars to prevent the nested
+    # session from detecting it's inside a parent Claude Code process.
+    # Redirect stdin from /dev/null to prevent the 3-second stdin wait warning.
+    local -a _env_unset=()
+    local _ev
+    while IFS= read -r _ev; do
+        [[ -n "$_ev" ]] && _env_unset+=(-u "$_ev")
+    done < <(env | grep -o '^CLAUDE[^=]*' 2>/dev/null; echo "CLAUDECODE")
+
     if [[ "$has_setsid" == true ]]; then
-        setsid env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+        setsid env "${_env_unset[@]}" \
             claude "${claude_args[@]}" \
-            -p "$prompt" > "$_out_target" 2>&1 &
+            -p "$prompt" < /dev/null > "$_out_target" 2>&1 &
     else
-        env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+        env "${_env_unset[@]}" \
             claude "${claude_args[@]}" \
-            -p "$prompt" > "$_out_target" 2>&1 &
+            -p "$prompt" < /dev/null > "$_out_target" 2>&1 &
     fi
 
     local agent_pid=$!
@@ -1331,11 +1340,18 @@ ${prompt}"
     # AskUserQuestion prompts appear in the user's terminal.
     # Cannot pipe through tee — claude detects non-tty stdout and switches to print mode.
     # Use script(1) to capture output while preserving the pty.
+    # Build env cleanup string for interactive mode
+    local _env_unset_str=""
+    local _ev
+    while IFS= read -r _ev; do
+        [[ -n "$_ev" ]] && _env_unset_str="${_env_unset_str} -u $_ev"
+    done < <(env | grep -o '^CLAUDE[^=]*' 2>/dev/null; echo "CLAUDECODE")
+
     if command -v script &>/dev/null; then
-        script -q -e -c "env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT claude $(printf '%q ' "${claude_args[@]}")" "$agent_log"
+        script -q -e -c "env${_env_unset_str} claude $(printf '%q ' "${claude_args[@]}")" "$agent_log"
     else
         # Fallback: no logging for interactive sessions
-        env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+        eval "env${_env_unset_str}" \
             claude "${claude_args[@]}"
     fi
 
