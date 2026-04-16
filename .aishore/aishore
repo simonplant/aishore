@@ -90,6 +90,7 @@ FIX_CMD=""
 DEVELOPER_CMD=""
 NOTIFY_CMD=""
 AUTO_GROOM_THRESHOLD="3"
+READY_BUFFER_MIN="3"
 AUTO_MAX_FAILURES="5"
 GROOM_MAX_ITEMS="10"
 GROOM_MIN_PRIORITY="should"
@@ -734,6 +735,7 @@ load_config() {
             ".agent.timeout         AGENT_TIMEOUT"
             ".notifications.on_complete NOTIFY_CMD"
             ".auto.groom_threshold  AUTO_GROOM_THRESHOLD"
+            ".auto.ready_buffer_min READY_BUFFER_MIN"
             ".auto.max_failures     AUTO_MAX_FAILURES"
             ".groom.max_items       GROOM_MAX_ITEMS"
             ".groom.min_priority    GROOM_MIN_PRIORITY"
@@ -793,6 +795,7 @@ _apply_env_overrides() {
         "AISHORE_FIX_CMD            FIX_CMD"
         "AISHORE_NOTIFY_CMD         NOTIFY_CMD"
         "AISHORE_AUTO_GROOM_THRESHOLD AUTO_GROOM_THRESHOLD"
+        "AISHORE_READY_BUFFER_MIN  READY_BUFFER_MIN"
         "AISHORE_AUTO_MAX_FAILURES  AUTO_MAX_FAILURES"
         "AISHORE_GROOM_MAX_ITEMS    GROOM_MAX_ITEMS"
         "AISHORE_GROOM_MIN_PRIORITY GROOM_MIN_PRIORITY"
@@ -3022,6 +3025,13 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
         # Remove done item from backlog to keep file small for subsequent agents
         # (item is already archived in sprints.jsonl by mark_complete)
         remove_item "$item_source" "$ITEM_ID" 2>/dev/null || true
+
+        # Sprint-ready buffer check (after archive, before next pick)
+        local _ready_buf_count
+        _ready_buf_count=$(_count_total_ready)
+        if [[ "$_ready_buf_count" -lt "$READY_BUFFER_MIN" ]]; then
+            log_warning "Sprint-ready buffer low: $_ready_buf_count items remaining. Run: aishore groom"
+        fi
     else
         log_error "Failed to mark $ITEM_ID complete"
         failed=$((failed + 1))
