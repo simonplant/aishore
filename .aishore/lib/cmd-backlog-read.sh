@@ -21,12 +21,13 @@ cmd_backlog() {
         requeue)    cmd_backlog_requeue "$@" ;;
         move)       _load_module cmd-backlog-write; cmd_backlog_move "$@" ;;
         set-priority) _load_module cmd-backlog-write; cmd_backlog_set_priority "$@" ;;
+        set-track)    _load_module cmd-backlog-write; cmd_backlog_set_track "$@" ;;
         populate)   _load_module cmd-populate; cmd_backlog_populate "$@" ;;
         stats)      cmd_backlog_stats "$@" ;;
         next)       cmd_backlog_next "$@" ;;
         *)
             log_error "Unknown backlog command: $subcmd"
-            echo "Usage: backlog {list|add|show|edit|check|rm|move|set-priority|requeue|populate|stats|next}" >&2
+            echo "Usage: backlog {list|add|show|edit|check|rm|move|set-priority|set-track|requeue|populate|stats|next}" >&2
             return 1
             ;;
     esac

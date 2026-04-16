@@ -1136,6 +1136,14 @@ validate_priority() {
     esac
 }
 
+validate_track() {
+    local t="$1"
+    case "$t" in
+        core|feature) return 0 ;;
+        *) log_error "Invalid track: $t (must be: core, feature)"; return 1 ;;
+    esac
+}
+
 validate_status() {
     local s="$1"
     case "$s" in

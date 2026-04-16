@@ -408,6 +408,33 @@ cmd_backlog_set_priority() {
     log_success "$id priority set to $priority"
 }
 
+cmd_backlog_set_track() {
+    local id="${1:-}"
+    local track="${2:-}"
+
+    if [[ -z "$id" || -z "$track" || "$id" == "--help" || "$id" == "-h" ]]; then
+        log_error "Usage: backlog set-track <ID> <track>"
+        echo "  Track must be one of: core, feature" >&2
+        return 1
+    fi
+
+    validate_track "$track" || return 1
+
+    find_item "$id" >/dev/null || return 1
+
+    local file
+    file=$(resolve_backlog_file "$id") || return 1
+
+    if ! dal_update_item "$file" "$id" \
+        '| .track = $t' \
+        --arg t "$track"; then
+        log_error "Failed to update track for $id"
+        return 1
+    fi
+
+    log_success "Track updated: $id → $track"
+}
+
 _backlog_move_usage() {
     cat <<'EOF'
 Usage: aishore backlog move <ID> --to <bugs|backlog>
