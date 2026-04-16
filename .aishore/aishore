@@ -1918,9 +1918,21 @@ _sm_recover_on_startup() {
         _remove_worktree "$wt_dir" 2>/dev/null || true
     fi
 
-    # Clean up branch
+    # Prune stale worktree metadata so branch -D can succeed even when
+    # the worktree directory was already removed but git still tracks it
+    git worktree prune 2>/dev/null || true
+
+    # Clean up branch (including orphaned branches from prior crashes)
     if [[ -n "$branch_name" ]]; then
         git branch -D "$branch_name" 2>/dev/null || true
+    fi
+    # Also clean up any orphaned aishore/* branch for the item being recovered
+    if [[ -n "$item_id" ]]; then
+        local orphan_branch="aishore/${item_id}"
+        orphan_branch=$(printf '%s\n' "$orphan_branch" | sed 's/[^a-zA-Z0-9/_-]/-/g')
+        if [[ "$orphan_branch" != "$branch_name" ]]; then
+            git branch -D "$orphan_branch" 2>/dev/null || true
+        fi
     fi
 
     # Mark item as failed
@@ -3066,8 +3078,20 @@ _sprint_setup_worktree() {
     # avoiding a race between rmdir and git worktree add.
     local wt_dir
     wt_dir=$(mktemp -u "${TMPDIR:-/tmp}/aishore-wt-${ITEM_ID}.XXXXXX")
+
+    # Clean up any stale branch from a previous failed sprint.
+    # First prune worktree metadata so branch -D succeeds even when
+    # the worktree directory was already removed but git still tracks it.
+    git worktree prune 2>/dev/null || true
     git branch -D "$branch_name" 2>/dev/null || true
-    git worktree add "$wt_dir" -b "$branch_name"
+
+    # Create worktree with retry: if branch already exists (e.g. race or
+    # incomplete cleanup), force-delete it and retry once.
+    if ! git worktree add "$wt_dir" -b "$branch_name" 2>/dev/null; then
+        log_warning "Branch $branch_name already exists — deleting stale branch and retrying"
+        git branch -D "$branch_name" 2>/dev/null || true
+        git worktree add "$wt_dir" -b "$branch_name"
+    fi
     AISHORE_WORKTREE_DIR="$wt_dir"
     AISHORE_FEATURE_BRANCH="$branch_name"
 
