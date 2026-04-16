@@ -78,6 +78,7 @@ activate automatically.
 Options:
   --context <text>      One-time developer hint injected into the prompt (not persisted)
   --dry-run             Preview without running agents
+  --filter <keyword>    Only consider items whose title or intent contains keyword
   --no-merge            Keep feature branches for review
   --pr                  Create GitHub PRs instead of merging (requires gh CLI)
   --retries N           Retry attempts on validation failure
@@ -101,6 +102,8 @@ Custom gates (config.yaml):
 
 Examples:
   aishore run FEAT-001               # Run specific item
+  aishore run --filter auth          # Only items matching "auth"
+  aishore run --filter auth done     # Drain auth-related items
   aishore run --no-merge 3           # Keep branches for review
   aishore run --pr done              # Drain backlog, open PRs for review
   aishore run done                   # Drain entire backlog

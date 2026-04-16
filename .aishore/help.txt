@@ -30,6 +30,7 @@ Commands:
     p1              Complete all P0+P1 (must + should) items
     p2              Complete all P0-P2 (must + should + could) items
     --limit N       Cap session at N successful items then exit cleanly
+    --filter <kw>   Only consider items whose title or intent contains <kw>
     --max-failures N  Consecutive failures before stopping (default: 5)
     --retries N     Per-item retry attempts on failure
     --no-merge      Keep feature branches for review

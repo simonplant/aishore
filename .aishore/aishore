@@ -924,6 +924,13 @@ _pick_auto() {
     }
     map_backlog_files _collect_candidates
 
+    # Apply --filter keyword if set (case-insensitive match on title or intent)
+    if [[ -n "${filter_keyword:-}" ]]; then
+        all_candidates=$(printf '%s\n' "$all_candidates" | jq --arg kw "$filter_keyword" '
+            [.[] | select((.title // "" | ascii_downcase | contains($kw | ascii_downcase)) or
+                         (.intent // "" | ascii_downcase | contains($kw | ascii_downcase)))]')
+    fi
+
     # Pick highest priority across all files
     local best
     best=$(printf '%s\n' "$all_candidates" | jq -r "$JQ_PRIO_RANK"'
@@ -2270,6 +2277,7 @@ _run_dry_run() {
         log_header "aishore - Dry Run"
         echo "Project: $PROJECT_ROOT"
     fi
+    [[ -n "${filter_keyword:-}" ]] && echo "Filter: $filter_keyword"
     echo ""
 
     # Run core gate to determine track filtering (same as real run)
@@ -2277,7 +2285,10 @@ _run_dry_run() {
 
     local item_json
     if ! item_json=$(pick_item "$specific_id"); then
-        if [[ "$CORE_HEALTHY" == "false" ]]; then
+        if [[ -n "${filter_keyword:-}" ]]; then
+            log_info "No items match filter '$filter_keyword'"
+            return 0
+        elif [[ "$CORE_HEALTHY" == "false" ]]; then
             log_error "Core is broken and no core-track items available — run '.aishore/aishore scaffold' or fix CORE_CMD manually"
         elif [[ -z "$specific_id" ]]; then
             local _total_items
@@ -3017,12 +3028,12 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
 
 # Parse command-line arguments for cmd_run.
 # Sets outer-scope locals: count, dry_run, specific_id, retries, no_merge,
-#   pr_mode, auto_mode, auto_scope, max_consecutive_failures, dev_hint
+#   pr_mode, auto_mode, auto_scope, max_consecutive_failures, dev_hint, filter_keyword
 cmd_run_parse_args() {
     parse_opts --positional \
         "bool:dry_run:--dry-run" "bool:no_merge:--no-merge" "bool:pr_mode:--pr" \
         "num:max_consecutive_failures:--max-failures" "num:retries:--retries" "num:session_limit:--limit" \
-        "val:dev_hint:--context" \
+        "val:dev_hint:--context" "val:filter_keyword:--filter" \
         -- "$@" || return 1
     local _arg
     for _arg in "${_PARSE_REMAINING[@]}"; do
@@ -3103,6 +3114,7 @@ setup_sprint_environment() {
     else
         echo "Sprints: $count"
     fi
+    [[ -n "${filter_keyword:-}" ]] && echo "Filter: $filter_keyword"
     [[ -n "$session_limit" ]] && echo "Session limit: $session_limit items"
     if [[ "$pr_mode" == "true" ]]; then
         echo "Mode: PR (branches pushed, PRs created via gh)"
@@ -3299,7 +3311,9 @@ _sprint_pick_and_validate() {
     skip_list=$(_build_skip_list)
 
     if ! item_json=$(pick_item "$specific_id" "$skip_list"); then
-        if [[ -n "$specific_id" ]]; then
+        if [[ -n "${filter_keyword:-}" ]]; then
+            log_info "No items match filter '$filter_keyword'"
+        elif [[ -n "$specific_id" ]]; then
             : # resolve_backlog_file already printed the error
         elif [[ "$CORE_HEALTHY" == "false" ]]; then
             log_error "Core is broken and no core-track items available — run '.aishore/aishore scaffold' or fix CORE_CMD manually"
@@ -3546,6 +3560,9 @@ print_sprint_summary() {
     else
         log_header "Results: $passed passed, $failed failed"
     fi
+    if [[ -n "${filter_keyword:-}" && $passed -eq 0 && $failed -eq 0 ]]; then
+        return 0
+    fi
     if [[ $failed -gt 0 || $passed -eq 0 ]]; then
         log_error "Sprint completed with failures ($passed passed, $failed failed)"
         return 1
@@ -3562,6 +3579,7 @@ cmd_run() {
     local auto_mode=false auto_scope="" auto_priorities=""
     local max_consecutive_failures="" session_limit=""
     local dev_hint=""
+    local filter_keyword=""
 
     cmd_run_parse_args "$@" || return $?
 
