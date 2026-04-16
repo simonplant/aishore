@@ -34,6 +34,9 @@ Every AC you write MUST have an `--ac-verify` command wherever the outcome is te
 ## Stateless Verify Commands (MANDATORY)
 Verify commands must be **stateless and side-effect free**. They must NEVER mutate backlog state — no `backlog add`, `backlog rm`, or any command that creates temporary items. If the sprint fails before cleanup, orphaned temp items pollute the backlog permanently. Use static checks (grep, jq, test, curl) that only read state, never write it.
 
+## No-Op Verify Commands are BANNED
+NEVER use `"true"`, `"echo ok"`, or `"command || true"` as a verify command. These always pass and provide zero validation — they waste sprint slots because the developer agent sees "all ACs pass" without doing any work, then the validator rejects it. If you cannot write a real verify command for an AC, omit the verify field entirely rather than using a no-op. Every AC with a verify command must be capable of failing when the feature is not implemented.
+
 ## Grooming Limits
 - **Maximum items per session:** {{GROOM_MAX_ITEMS}} — stop adding new items after this cap. Focus on the highest-value items first.
 - **Minimum priority threshold:** {{GROOM_MIN_PRIORITY}} — only add items at `{{GROOM_MIN_PRIORITY}}` priority or higher. Skip lower-priority items (log them in your summary but do not add them).

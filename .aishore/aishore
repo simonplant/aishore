@@ -944,10 +944,31 @@ check_readiness_gates() {
         done <<< "$deps"
     fi
 
-    # Run AC verify commands and report failures
-    local verify_cmds
+    # Check AC verify command quality before running them
+    local verify_cmds noop_count=0 total_verify=0
     verify_cmds=$(printf '%s\n' "$item" | jq -r '[.acceptanceCriteria // [] | .[] | select(type == "object" and .verify != null) | .verify] | .[]' 2>/dev/null)
     if [[ -n "$verify_cmds" ]]; then
+        # Count total and no-op verify commands
+        while IFS= read -r vcmd; do
+            [[ -z "$vcmd" ]] && continue
+            ((total_verify++)) || true
+            # Detect no-op verify commands that always pass (e.g. "true", "echo ok", "|| true")
+            if [[ "$vcmd" =~ ^[[:space:]]*true[[:space:]]*$ ]] || \
+               [[ "$vcmd" =~ \|\|[[:space:]]*true[[:space:]]*$ ]]; then
+                ((noop_count++)) || true
+            fi
+        done <<< "$verify_cmds"
+
+        # Warn if majority of verify commands are no-ops — the item hasn't been properly groomed
+        if [[ "$total_verify" -gt 0 && "$noop_count" -gt 0 ]]; then
+            local noop_pct=$(( (noop_count * 100) / total_verify ))
+            if [[ "$noop_pct" -ge 50 ]]; then
+                warnings="${warnings}  - ${noop_count}/${total_verify} AC verify commands are no-ops (\"true\" or \"|| true\") — item needs real verification commands\n"
+                has_warning=true
+            fi
+        fi
+
+        # Run AC verify commands and report failures
         while IFS= read -r vcmd; do
             [[ -z "$vcmd" ]] && continue
             # Warn on state-mutating verify commands (backlog add/rm leak on failure)
