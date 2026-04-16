@@ -12,6 +12,7 @@ cmd_help() {
     case "$arg" in
         --full) sed "s/__VERSION__/$AISHORE_VERSION/g" "$AISHORE_ROOT/help.txt" ;;
         run)    _help_run ;;
+        stop)   _help_stop ;;
         backlog) _help_backlog ;;
         groom)    _help_groom ;;
         scaffold) _help_scaffold ;;
@@ -44,6 +45,7 @@ Getting started:
 
 Commands:
   run [N|ID|scope] Run sprints, or drain backlog with scope (done|p0|p1|p2)
+  stop             Graceful stop: finish current item then exit
   backlog <sub>    Manage backlog (list|add|show|edit|check|rm|requeue|populate|stats|next)
   groom            Groom backlog items (AI adds steps, AC, priority)
   refine           Improve PRODUCT.md through interactive interview
@@ -108,6 +110,25 @@ Examples:
   aishore run --pr done              # Drain backlog, open PRs for review
   aishore run done                   # Drain entire backlog
   aishore run p1 --retries 2         # Must + should, with retries
+EOF
+}
+
+_help_stop() {
+    cat <<EOF
+aishore stop — Graceful stop
+
+Usage: aishore stop
+
+Sends SIGUSR1 to the running aishore process, telling it to finish the
+current sprint item and then exit cleanly. The process completes its
+in-flight work (merge, archive) before stopping — no orphaned worktrees,
+no partial merges, no lost work.
+
+The PID is read from the lock file (.aishore/data/status/.aishore.lock/pid).
+Exits 1 if no aishore process is running.
+
+Examples:
+  aishore stop                 # Stop after current item finishes
 EOF
 }
 

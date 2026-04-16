@@ -23,6 +23,7 @@ AISHORE_BASE_BRANCH=""
 AISHORE_FEATURE_BRANCH=""
 AISHORE_WORKTREE_DIR=""
 LAST_AGENT_LOG=""
+_STOP_REQUESTED=false
 cleanup_exit() {
     # Restore tool file permissions on unexpected exit
     _unlock_tool_files 2>/dev/null || true
@@ -3466,6 +3467,10 @@ _sprint_handle_merge_conflict() {
 
 run_sprint_loop() {
     for ((i=1; i<=count; i++)); do
+        if [[ "$_STOP_REQUESTED" == "true" ]]; then
+            log_info "Stopping cleanly."
+            break
+        fi
         _sprint_check_circuit_breaker && break
         _sprint_report_progress
         local sprint_start
@@ -3631,6 +3636,8 @@ cmd_run() {
 
     setup_sprint_environment || return $?
 
+    trap '_STOP_REQUESTED=true; log_warning "Graceful stop requested — will exit after current item"' SIGUSR1
+
     run_sprint_loop
 
     print_sprint_summary
@@ -3662,6 +3669,32 @@ cmd_version() {
 
 # cmd_usage, cmd_help, _help_* — extracted to .aishore/lib/cmd-help.sh (lazy-loaded via _load_module)
 
+cmd_stop() {
+    local lockdir="$STATUS_DIR/.aishore.lock"
+    local pidfile="$lockdir/pid"
+
+    if [[ ! -f "$pidfile" ]]; then
+        log_warning "No aishore process running (lock file not found)"
+        return 1
+    fi
+
+    local holder_pid=""
+    read -r holder_pid _ < "$pidfile" 2>/dev/null || true
+
+    if [[ -z "$holder_pid" ]]; then
+        log_warning "No aishore process running (PID not found in lock file)"
+        return 1
+    fi
+
+    if ! kill -0 "$holder_pid" 2>/dev/null; then
+        log_warning "No aishore process running (PID $holder_pid is not alive)"
+        return 1
+    fi
+
+    kill -USR1 "$holder_pid"
+    log_success "Graceful stop signal sent to PID $holder_pid — will exit after current item"
+}
+
 # ============================================================================
 # MAIN
 # ============================================================================
@@ -3680,6 +3713,7 @@ main() {
 
     case "$cmd" in
         run) cmd_run "$@" ;;
+        stop) cmd_stop "$@" ;;
         backlog) _load_module cmd-backlog-read; cmd_backlog "$@" ;;
         groom)    _load_module cmd-groom; cmd_groom "$@" ;;
         scaffold) _load_module cmd-scaffold; cmd_scaffold "$@" ;;
