@@ -1,12 +1,24 @@
 {
-  "itemId": "FEAT-119",
-  "reason": "Implementation failed",
-  "detail": "Implementation failed",
-  "timestamp": "2026-04-15T14:49:22-07:00",
-  "agentLog": "/home/simon/dev/aishore/.aishore/data/logs/developer-20260415T144727.log",
+  "itemId": "FEAT-124",
+  "reason": "Pre-flight failed",
+  "detail": "Baseline validation failed before developer ran",
+  "timestamp": "2026-04-15T20:04:30-07:00",
+  "agentLog": "",
   "result": {
-    "status": "fail",
-    "reason": "CRASH: Agent crashed or was killed (exit code 0) — empty log suggests startup failure or resource limit"
+    "status": "pass",
+    "summary": "All AC met. Intent fulfilled. No verify commands in the active backlog mutate backlog state (AC1 pass). Both groomer.md and prompt-groom-hints.md now contain explicit stateless-verify-commands guidance (AC2 pass). Bonus: a lint warning was added to check_readiness_gates() — wired to backlog check via cmd-backlog-read.sh — that flags any verify command containing backlog add or backlog rm before a sprint begins.",
+    "ac_results": [
+      {
+        "ac_index": 0,
+        "met": true,
+        "summary": "jq scan of backlog.json and bugs.json finds no verify commands containing 'backlog add' or 'backlog rm'"
+      },
+      {
+        "ac_index": 1,
+        "met": true,
+        "summary": "Both .aishore/templates/prompt-groom-hints.md and .aishore/agents/groomer.md contain 'stateless' and explicit warnings against backlog add/rm in verify commands"
+      }
+    ]
   },
   "logTail": ""
 }

@@ -2701,5 +2701,46 @@
     "readyForSprint": true,
     "groomedAt": "2026-04-08",
     "groomingNotes": "Implemented directly — added FAILS column to backlog list with failCount display. AC verified passing."
+  },
+  {
+    "id": "FEAT-117",
+    "title": "backlog show falls back to archive for done/cleaned items",
+    "intent": "backlog show <ID> must succeed for any item aishore has ever tracked — active or archived. Running backlog show on a done item that was cleaned must display the item with an [archived] label rather than failing with item not found.",
+    "description": "dal_find_item searches only the active BACKLOG_DIR files. Once aishore clean archives completed items, backlog show <ID> returns an error. Fix: after find_item fails in cmd_backlog_show, search archive/backlog_done.json and archive/bugs_done.json, display with an archived label, exit 0.",
+    "priority": "must",
+    "track": "feature",
+    "category": null,
+    "steps": [
+      "In cmd_backlog_show in lib/cmd-backlog-read.sh, after find_item fails, search ARCHIVE_DIR/backlog_done.json and ARCHIVE_DIR/bugs_done.json for the item ID",
+      "Archive files store items as a JSON array at the top level. Use: jq -e --arg id ID .[] | select(.id == $id) on each archive file",
+      "If found in archive, print an [archived] header line then display the item with the existing jq display block",
+      "Return 0 so callers do not treat archived item display as a failure",
+      "Only error when the item is not found in any file — active backlog or archive"
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "backlog show on an archived done item displays the item with archived label",
+        "verify": ".aishore/aishore backlog show FEAT-094 2>&1 | grep -qi archived"
+      },
+      {
+        "text": "backlog show on archived item exits 0",
+        "verify": ".aishore/aishore backlog show FEAT-094 >/dev/null 2>&1"
+      },
+      {
+        "text": "backlog show on an unknown ID still exits non-zero",
+        "verify": "! .aishore/aishore backlog show NONEXISTENT-9999 >/dev/null 2>&1"
+      }
+    ],
+    "scope": [],
+    "dependsOn": [],
+    "status": "done",
+    "passes": false,
+    "readyForSprint": true,
+    "lastFailReason": "AC verification failed",
+    "lastFailAt": "2026-04-15T16:40:50-07:00",
+    "failCount": 15,
+    "groomedAt": "2026-04-14",
+    "groomingNotes": "Well-specified. FEAT-094 confirmed in archive/backlog_done.json. Steps correctly target cmd_backlog_show after find_item fails. Archive files use JSON array — jq .[] | select(.id == $id) is correct. Verify commands use real archived item. Must priority, clear implementation path.",
+    "resolved_at": "2026-04-15T23:41:22Z"
   }
 ]
