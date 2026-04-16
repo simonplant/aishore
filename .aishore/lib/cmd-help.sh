@@ -22,6 +22,7 @@ cmd_help() {
         clean)  _help_clean ;;
         insights) _help_insights ;;
         init)   _help_init ;;
+        doctor) _help_doctor ;;
         "")     _help_compact ;;
         *)      log_error "No help topic for: $arg"; _help_compact >&2; return 1 ;;
     esac
@@ -52,7 +53,7 @@ Commands:
   help <command>   Show detailed help for a command
   help --full      Show complete reference
 
-Other: clean, insights, update, checksums, version
+Other: clean, doctor, insights, update, checksums, version
 EOF
 }
 
@@ -239,6 +240,28 @@ Options:
   --demo        Create a tiny demo project and run sprints on it so you
                 can experience the full lifecycle before configuring your
                 own project
+EOF
+}
+
+_help_doctor() {
+    cat <<EOF
+aishore doctor — Diagnose health and configuration
+
+Usage: aishore doctor
+
+Checks the runtime environment and reports health:
+  - Required tools: jq, git, claude (PASS/FAIL)
+  - Optional tools: yq (PASS/WARN)
+  - Backlog files: validates JSON syntax (PASS/FAIL)
+  - Config: checks config.yaml is parseable (PASS/WARN/FAIL)
+  - Core status: reports CORE_CMD value (PASS/WARN)
+
+Exit code:
+  0   All required checks pass
+  1   One or more required checks failed
+
+Examples:
+  aishore doctor                   # Run all health checks
 EOF
 }
 
