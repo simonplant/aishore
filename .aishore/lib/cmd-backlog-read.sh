@@ -360,8 +360,11 @@ _backlog_list_done() {
 
 cmd_backlog_show() {
     local id="${1:-}"
-    [[ -z "$id" ]] && { log_error "Usage: backlog show <ID>"; return 1; }
-    [[ $# -gt 1 ]] && { log_error "Unexpected argument: ${2}"; return 1; }
+    [[ -z "$id" ]] && { log_error "Usage: backlog show <ID> [--json]"; return 1; }
+    shift || true
+
+    local json_mode=false
+    parse_opts "bool:json_mode:--json" -- "$@" || return 1
 
     local item archived=false
     if ! item=$(find_item "$id" 2>/dev/null); then
@@ -378,6 +381,11 @@ cmd_backlog_show() {
             log_error "Item not found: $id"
             return 1
         fi
+    fi
+
+    if [[ "$json_mode" == "true" ]]; then
+        printf '%s\n' "$item" | jq '.'
+        return 0
     fi
 
     # Collect done IDs for dependency status display
