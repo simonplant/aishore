@@ -3574,6 +3574,7 @@ main() {
         insights) _load_module cmd-insights; cmd_insights "$@" ;;
         init)    _load_module cmd-init; cmd_init "$@" ;;
         doctor)  _load_module cmd-doctor; cmd_doctor "$@" ;;
+        logs)    _load_module cmd-logs; cmd_logs "$@" ;;
         version|-v|--version) cmd_version ;;
         help|-h|--help) _load_module cmd-help; cmd_help "$@" ;;
         usage) _load_module cmd-help; cmd_usage ;;
