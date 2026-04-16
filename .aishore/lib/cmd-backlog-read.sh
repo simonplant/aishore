@@ -28,14 +28,24 @@ cmd_backlog() {
 }
 
 cmd_backlog_check() {
+    local quick=false
+    local args=()
+    for arg in "$@"; do
+        case "$arg" in
+            --quick) quick=true ;;
+            *) args+=("$arg") ;;
+        esac
+    done
+    set -- "${args[@]+"${args[@]}"}"
+
     # Handle --all flag
     if [[ "${1:-}" == "--all" ]]; then
-        _backlog_check_all
+        _backlog_check_all "$quick"
         return $?
     fi
 
     local id="${1:-}"
-    [[ -z "$id" ]] && { log_error "Usage: backlog check <ID|--all>"; return 1; }
+    [[ -z "$id" ]] && { log_error "Usage: backlog check <ID|--all> [--quick]"; return 1; }
     [[ $# -gt 1 ]] && { log_error "Unexpected argument: ${2}"; return 1; }
 
     # Verify item exists
@@ -43,7 +53,7 @@ cmd_backlog_check() {
 
     local gates_warnings
     local exit_code=0
-    if gates_warnings=$(check_readiness_gates "$id"); then
+    if gates_warnings=$(check_readiness_gates "$id" "$quick"); then
         log_success "$id passes all readiness gates"
     else
         log_warning "$id has readiness warnings:"
@@ -55,8 +65,13 @@ cmd_backlog_check() {
 }
 
 _backlog_check_all() {
+    local quick="${1:-false}"
     local pass_count=0 fail_count=0 total=0
     local -a table_rows=()
+
+    if [[ "$quick" == "true" ]]; then
+        log_info "Quick mode: skipping verify command execution"
+    fi
 
     for f in "${BACKLOG_FILES[@]}"; do
         [[ -f "$BACKLOG_DIR/$f" ]] || continue
@@ -67,7 +82,7 @@ _backlog_check_all() {
         while IFS= read -r item_id; do
             ((total++)) || true
             local gates_warnings result failures
-            if gates_warnings=$(check_readiness_gates "$item_id" 2>/dev/null); then
+            if gates_warnings=$(check_readiness_gates "$item_id" "$quick" 2>/dev/null); then
                 result="PASS"
                 failures="-"
                 ((pass_count++)) || true

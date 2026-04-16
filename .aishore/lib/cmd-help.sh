@@ -110,6 +110,7 @@ Subcommands:
   edit <ID> --json '{..}' Update fields on an item (merges onto existing)
   check <ID>        Check readiness gates for an item
     --all             Audit every non-done item
+    --quick           Skip verify command execution (metadata gates only)
   rm <ID>           Remove an item (--force to skip confirmation)
   populate          Create items from PRODUCT.md (AI-assisted)
 

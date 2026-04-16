@@ -866,6 +866,7 @@ find_item() { dal_find_item "$@"; }
 
 check_readiness_gates() {
     local item_id="$1"
+    local quick="${2:-false}"
     local item
     item=$(find_item "$item_id") || return 1
     local warnings=""
@@ -968,21 +969,23 @@ check_readiness_gates() {
             fi
         fi
 
-        # Run AC verify commands and report failures
-        while IFS= read -r vcmd; do
-            [[ -z "$vcmd" ]] && continue
-            # Warn on state-mutating verify commands (backlog add/rm leak on failure)
-            if [[ "$vcmd" == *"backlog add"* ]] || [[ "$vcmd" == *"backlog rm"* ]]; then
-                warnings="${warnings}  - AC verify command mutates backlog state (backlog add/rm) — temp items leak on failure: ${vcmd}\n"
-                has_warning=true
-            fi
-            local vrc=0
-            (eval "$vcmd") >/dev/null 2>&1 || vrc=$?
-            if [[ "$vrc" -ne 0 ]]; then
-                warnings="${warnings}  - AC verify failed (exit ${vrc}): ${vcmd}\n"
-                has_warning=true
-            fi
-        done <<< "$verify_cmds"
+        # Run AC verify commands and report failures (skipped in quick mode)
+        if [[ "$quick" != "true" ]]; then
+            while IFS= read -r vcmd; do
+                [[ -z "$vcmd" ]] && continue
+                # Warn on state-mutating verify commands (backlog add/rm leak on failure)
+                if [[ "$vcmd" == *"backlog add"* ]] || [[ "$vcmd" == *"backlog rm"* ]]; then
+                    warnings="${warnings}  - AC verify command mutates backlog state (backlog add/rm) — temp items leak on failure: ${vcmd}\n"
+                    has_warning=true
+                fi
+                local vrc=0
+                (eval "$vcmd") >/dev/null 2>&1 || vrc=$?
+                if [[ "$vrc" -ne 0 ]]; then
+                    warnings="${warnings}  - AC verify failed (exit ${vrc}): ${vcmd}\n"
+                    has_warning=true
+                fi
+            done <<< "$verify_cmds"
+        fi
     fi
 
     [[ -n "$warnings" ]] && printf '%s\n' "$warnings"
