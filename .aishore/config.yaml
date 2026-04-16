@@ -35,6 +35,10 @@ core:
 #     validator: 45
 #     groomer: 45
 
+# auto:
+#   groom_threshold: 3          # Auto-groom when ready items fall below this (env: AISHORE_AUTO_GROOM_THRESHOLD)
+#   ready_buffer_min: 3         # Warn when sprint-ready items fall below this (env: AISHORE_READY_BUFFER_MIN)
+
 # Session tuning defaults for 'run'. CLI flags override these.
 # run:
 #   retries: 0             # Per-item retry attempts
