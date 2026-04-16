@@ -880,6 +880,8 @@ _warn_unpickable() {
             select(.id as $id | $skip | index($id) | not) |
             if .dependsOn != null and (.id as $self | .dependsOn | index($self) != null) then
                 .id + "\tself-referencing dependency"
+            elif .dependsOn != null and (.dependsOn | length > 0) and (.dependsOn | all(. as $dep | $done_ids | index($dep) != null) | not) then
+                .id + "\tblocked by " + ([.dependsOn[] | select(. as $dep | $done_ids | index($dep) == null)] | first)
             elif .intent == null or .intent == "" then
                 .id + "\tintent missing"
             elif (.intent | length) < 20 then
