@@ -123,8 +123,8 @@ _backlog_check_all() {
 }
 
 cmd_backlog_list() {
-    local filter_status="" filter_type="" filter_priority="" filter_track="" filter_ready=false filter_no_ready=false filter_failed=false filter_done=false filter_no_verify=false
-    parse_opts "val:filter_status:--status" "val:filter_type:--type" "val:filter_priority:--priority" "val:filter_track:--track" "bool:filter_ready:--ready" "bool:filter_no_ready:--no-ready" "bool:filter_failed:--failed" "bool:filter_done:--done" "bool:filter_no_verify:--no-verify" -- "$@" || return 1
+    local filter_status="" filter_type="" filter_priority="" filter_track="" filter_ready=false filter_no_ready=false filter_failed=false filter_done=false filter_no_verify=false filter_json=false
+    parse_opts "val:filter_status:--status" "val:filter_type:--type" "val:filter_priority:--priority" "val:filter_track:--track" "bool:filter_ready:--ready" "bool:filter_no_ready:--no-ready" "bool:filter_failed:--failed" "bool:filter_done:--done" "bool:filter_no_verify:--no-verify" "bool:filter_json:--json" -- "$@" || return 1
 
     if [[ "$filter_done" == "true" ]]; then
         _backlog_list_done
@@ -171,6 +171,19 @@ cmd_backlog_list() {
     fi
     if [[ "$filter_no_verify" == "true" ]]; then
         jq_filter="$jq_filter | select([.acceptanceCriteria // [] | .[] | select(type==\"object\" and .verify != null)] | length == 0)"
+    fi
+
+    # JSON output mode: collect matching items and emit as JSON array
+    if [[ "$filter_json" == "true" ]]; then
+        local json_items="[]"
+        for f in "${files[@]}"; do
+            [[ -f "$BACKLOG_DIR/$f" ]] || continue
+            local matched
+            matched=$(jq -c "[$jq_filter]" "$BACKLOG_DIR/$f" 2>/dev/null) || continue
+            json_items=$(printf '%s\n%s\n' "$json_items" "$matched" | jq -s 'add // []')
+        done
+        printf '%s\n' "$json_items" | jq '.'
+        return 0
     fi
 
     # Collect done IDs for dependency checking
