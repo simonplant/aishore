@@ -1767,6 +1767,8 @@ _save_regression_entries() {
     entries=$(jq -c --arg id "$item_id" --arg date "$(date +%Y-%m-%d)" '
         [.item.acceptanceCriteria // [] | .[] | select(type == "object" and .verify != null)] |
         unique_by(.verify) |
+        # Filter out no-op verify commands (e.g. "true") that add regression noise
+        map(select(.verify | test("^\\s*true\\s*$") | not)) |
         # Filter out self-referential entries: verify commands that grep regression.jsonl
         # will always find themselves once saved, creating unfixable paradoxes
         map(select(.verify | test("regression\\.jsonl") | not)) |
