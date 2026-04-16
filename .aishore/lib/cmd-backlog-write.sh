@@ -325,3 +325,75 @@ Example:
   .aishore/aishore backlog edit FEAT-001 --json '{"priority": "must", "readyForSprint": true}'
 EOF
 }
+
+cmd_backlog_move() {
+    local id="" target=""
+
+    # Parse arguments: move <ID> --to <bugs|backlog>
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --to) shift; target="${1:-}"; shift || true ;;
+            --help|-h) _backlog_move_usage; return 0 ;;
+            -*) log_error "Unknown option: $1"; _backlog_move_usage; return 1 ;;
+            *) if [[ -z "$id" ]]; then id="$1"; else log_error "Unexpected argument: $1"; return 1; fi; shift ;;
+        esac
+    done
+
+    [[ -z "$id" ]] && { log_error "Usage: backlog move <ID> --to <bugs|backlog>"; return 1; }
+    [[ -z "$target" ]] && { log_error "Missing --to flag. Usage: backlog move <ID> --to <bugs|backlog>"; return 1; }
+
+    # Validate destination target
+    local dest_file
+    case "$target" in
+        bugs)    dest_file="bugs.json" ;;
+        backlog) dest_file="backlog.json" ;;
+        *) log_error "Invalid target: $target (must be: bugs, backlog)"; return 1 ;;
+    esac
+
+    # Find the item
+    local item
+    item=$(find_item "$id") || return 1
+
+    # Resolve source file
+    local src_file
+    src_file=$(resolve_backlog_file "$id") || return 1
+
+    # Reject if already in destination
+    if [[ "$src_file" == "$dest_file" ]]; then
+        log_error "$id is already in $dest_file"
+        return 1
+    fi
+
+    # Add item to destination
+    if ! add_item "$dest_file" \
+        --argjson item "$item" \
+        '.items += [$item]'; then
+        log_error "Failed to add $id to $dest_file"
+        return 1
+    fi
+
+    # Remove item from source
+    if ! remove_item "$src_file" "$id"; then
+        log_error "Failed to remove $id from $src_file"
+        return 1
+    fi
+
+    log_success "Moved $id from $src_file to $dest_file"
+}
+
+_backlog_move_usage() {
+    cat <<'EOF'
+Usage: aishore backlog move <ID> --to <bugs|backlog>
+
+Moves an item between backlog.json and bugs.json. The item retains all
+its fields; only its source file changes.
+
+Targets:
+  bugs       Move item to bugs.json
+  backlog    Move item to backlog.json
+
+Example:
+  .aishore/aishore backlog move FEAT-001 --to bugs
+  .aishore/aishore backlog move BUG-003 --to backlog
+EOF
+}
