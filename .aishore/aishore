@@ -1166,7 +1166,7 @@ run_agent_process() {
                 local _log_size=0
                 [[ -f "$agent_log" ]] && _log_size=$(wc -c < "$agent_log" 2>/dev/null || echo 0)
                 log_error "Agent process exited (code $_exit_code) without writing result.json (log: ${_log_size} bytes)"
-                local _crash_detail="Agent crashed or was killed (exit code $_exit_code)"
+                local _crash_detail="Agent crashed or was killed (exit code $_exit_code, log_bytes $_log_size)"
                 if [[ "$_log_size" -lt 100 ]]; then
                     _crash_detail="$_crash_detail — empty log suggests startup failure or resource limit"
                     # Log environment diagnostics to help debug recurring empty-log crashes
@@ -1558,12 +1558,13 @@ $prompt"
         # Check for empty-log crash pattern: agent exited but produced < 100 bytes of output.
         # This typically means the claude CLI failed to start (resource contention, session limits).
         # Retry once after a delay — transient failures often resolve on second attempt.
+        # Note: we parse log_bytes from the CRASH message because the log file itself may have
+        # grown (diagnostics appended after size was measured).
         if [[ -f "$STATUS_DIR/result.json" ]] && \
            grep -q '"CRASH:' "$STATUS_DIR/result.json" 2>/dev/null && \
            [[ "$_ra_attempt" -lt "$_ra_max_retries" ]]; then
             local _ra_log_size=0
-            [[ -n "$LAST_AGENT_LOG" && -f "$LAST_AGENT_LOG" ]] && \
-                _ra_log_size=$(wc -c < "$LAST_AGENT_LOG" 2>/dev/null || echo 0)
+            _ra_log_size=$(grep -o 'log_bytes [0-9]*' "$STATUS_DIR/result.json" 2>/dev/null | grep -o '[0-9]*' || echo 999)
             if [[ "$_ra_log_size" -lt 100 ]]; then
                 _ra_attempt=$((_ra_attempt + 1))
                 log_warning "Empty-log crash detected (attempt $_ra_attempt/$_ra_max_retries) — retrying in 15s"
@@ -1720,6 +1721,28 @@ run_ac_verification() {
     [[ "$all_passed" == "true" ]] && return 0 || return 1
 }
 
+# Quick check: do all AC verify commands already pass before the developer runs?
+# Used to detect already-implemented items that would waste sprint slots.
+# Returns 0 if ALL verify commands pass, 1 if any fail or none exist.
+_all_ac_already_pass() {
+    local sprint_file="$BACKLOG_DIR/sprint.json"
+    [[ ! -f "$sprint_file" ]] && return 1
+
+    local verifiable verify_count
+    verifiable=$(jq -c '[.item.acceptanceCriteria // [] | .[] | select(type == "object" and .verify != null)]' "$sprint_file" 2>/dev/null) || return 1
+    verify_count=$(jq 'length' <<< "$verifiable" 2>/dev/null || echo 0)
+    [[ "$verify_count" -eq 0 ]] && return 1
+
+    local cmd
+    while IFS= read -r cmd; do
+        [[ -z "$cmd" || "$cmd" == "null" ]] && continue
+        if ! bash -c "$cmd" >/dev/null 2>&1; then
+            return 1
+        fi
+    done < <(jq -r '.[].verify' <<< "$verifiable")
+    return 0
+}
+
 # ============================================================================
 # REGRESSION SUITE — verify commands compound across sprints
 # ============================================================================
@@ -1739,7 +1762,11 @@ _save_regression_entries() {
     local entries
     entries=$(jq -c --arg id "$item_id" --arg date "$(date +%Y-%m-%d)" '
         [.item.acceptanceCriteria // [] | .[] | select(type == "object" and .verify != null)] |
-        unique_by(.verify) | .[] | {itemId: $id, date: $date, text: .text, verify: .verify}
+        unique_by(.verify) |
+        # Filter out self-referential entries: verify commands that grep regression.jsonl
+        # will always find themselves once saved, creating unfixable paradoxes
+        map(select(.verify | test("regression\\.jsonl") | not)) |
+        .[] | {itemId: $id, date: $date, text: .text, verify: .verify}
     ' "$sprint_file" 2>/dev/null) || return 0
 
     [[ -z "$entries" ]] && return 0
@@ -2432,6 +2459,21 @@ _run_retry_loop() {
         _retry_failure_reason="Pre-flight failed"
         _retry_failure_detail="Baseline validation failed before developer ran"
         return
+    fi
+
+    # Already-implemented check: if all AC verify commands already pass before the
+    # developer runs, the feature is already implemented. Skip the developer agent
+    # entirely and go straight to validation. This prevents agents from breaking
+    # working code by trying to re-implement what's already there (e.g., FEAT-117
+    # had 14 failures from this pattern).
+    if _all_ac_already_pass; then
+        log_success "All AC verify commands already pass — feature appears already implemented"
+        if _run_validation_cycle; then
+            sprint_passed=true
+            total_attempts=0
+            return
+        fi
+        log_warning "AC passed but validation failed — running developer agent"
     fi
 
     for ((attempt=0; attempt<=retries; attempt++)); do

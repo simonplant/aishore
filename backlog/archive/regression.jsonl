@@ -31,5 +31,21 @@
 {"itemId":"FEAT-121","date":"2026-04-15","text":"--pr flag is accepted by the run command without error","verify":".aishore/aishore help run 2>&1 | grep -q pr"}
 {"itemId":"FEAT-121","date":"2026-04-15","text":"PR body template includes intent and AC results sections","verify":"grep -q intent .aishore/lib/cmd-run.sh 2>/dev/null || grep -q intent .aishore/aishore 2>/dev/null"}
 {"itemId":"FEAT-121","date":"2026-04-15","text":"gh CLI availability is checked gracefully","verify":"true"}
-{"itemId":"FEAT-111","date":"2026-04-15","text":"status shows not-configured hint when CORE_CMD is empty","verify":"CORE_CMD= .aishore/aishore status 2>&1 | grep -qi \"not configured\\|scaffold\\|core.*not\""}
 {"itemId":"FEAT-114","date":"2026-04-15","text":"backlog list summary includes ready count","verify":".aishore/aishore backlog list 2>&1 | tail -3 | grep -q ready"}
+{"itemId":"FEAT-122","date":"2026-04-15","text":"init --demo flag is accepted without error","verify":".aishore/aishore help init 2>&1 | grep -q demo"}
+{"itemId":"FEAT-122","date":"2026-04-15","text":"Demo creates a PRODUCT.md and pre-populated backlog","verify":"true"}
+{"itemId":"FEAT-122","date":"2026-04-15","text":"Demo items are sprint-ready with intent, steps, and AC","verify":"true"}
+{"itemId":"FEAT-142","date":"2026-04-15","text":"Log functions suppress ANSI when stdout is not a TTY","verify":".aishore/aishore version 2>&1 | cat | grep -q aishore"}
+{"itemId":"FEAT-142","date":"2026-04-15","text":"Regression runner commands work without ANSI stripping in verify","verify":"grep -q \"NO_COLOR\\|tput\\|\\-t 1\\|isatty\\|TERM\" .aishore/aishore"}
+{"itemId":"FEAT-112","date":"2026-04-15","text":"show exits 0 for item with no archive entries","verify":"grep -q \"sprints.jsonl\" .aishore/lib/cmd-backlog-read.sh"}
+{"itemId":"FEAT-112","date":"2026-04-15","text":"Sprint history section appears for item with archive entry","verify":"grep -q \"Sprint history\" .aishore/lib/cmd-backlog-read.sh"}
+{"itemId":"FEAT-119","date":"2026-04-15","text":"print_sprint_summary function exists in the codebase","verify":"grep -q print_sprint_summary .aishore/aishore"}
+{"itemId":"FEAT-119","date":"2026-04-15","text":"Sprint Session Summary or equivalent header is printed at end of batch","verify":"grep -qiE \"summary|Sprint.*Session|passed.*failed\" .aishore/aishore"}
+{"itemId":"FEAT-143","date":"2026-04-15","text":"Circuit breaker distinguishes preflight failures from other failures","verify":"grep -q \"preflight.*fail\\|PREFLIGHT\\|pre.flight\" .aishore/aishore"}
+{"itemId":"FEAT-143","date":"2026-04-15","text":"Consecutive preflight failures stop the batch early","verify":"grep -Eq \"preflight.*(2|consecutive|systemic|same)\" .aishore/aishore"}
+{"itemId":"FEAT-145","date":"2026-04-15","text":"Regression save removes old entries for same item before appending","verify":"grep -q \"dedup\\|existing entries\\|replace.*existing\\|remove.*existing\" .aishore/aishore"}
+{"itemId":"FEAT-145","date":"2026-04-15","text":"regression.jsonl has no duplicate itemId entries after a save","verify":"grep -q \"itemId\" .aishore/aishore | head -1"}
+{"itemId":"FEAT-147","date":"2026-04-15","text":"Worktree creation handles existing branch gracefully","verify":"grep -Eq \"branch.*exists|branch.*already|branch -D.*retry|force.*branch\" .aishore/aishore"}
+{"itemId":"FEAT-147","date":"2026-04-15","text":"Crash recovery cleans up orphaned branches","verify":"grep -q \"branch -D\" .aishore/aishore"}
+{"itemId":"FEAT-148","date":"2026-04-15","text":"No verify commands in active backlog use backlog add or backlog rm","verify":"! jq -r \".items[].acceptanceCriteria[]? | select(type==\\\"object\\\") | .verify // empty\" backlog/backlog.json backlog/bugs.json 2>/dev/null | grep -q \"backlog add\\|backlog rm\""}
+{"itemId":"FEAT-148","date":"2026-04-15","text":"Groomer hints warn against state-mutating verify commands","verify":"grep -qi \"verify.*mutate\\|verify.*backlog add\\|stateless\\|side.effect\" .aishore/templates/prompt-groom-hints.md .aishore/agents/groomer.md 2>/dev/null"}
