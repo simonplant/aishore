@@ -50,6 +50,7 @@ Commands:
   checksums         Regenerate checksums.sha256 manifest
   init              Setup wizard — checks prerequisites, configures project
     -y, --yes       Accept all detected defaults (non-interactive)
+  doctor            Health check — verify tools, backlog, config, core status
   version, -v, --version   Show version
   help, -h, --help         Show this help
 
