@@ -5,9 +5,14 @@
 
 cmd_log() {
     local limit=20
+    local json_output=false
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            --json)
+                json_output=true
+                shift
+                ;;
             --limit)
                 if [[ -z "${2:-}" || ! "$2" =~ ^[0-9]+$ ]]; then
                     log_error "--limit requires a numeric argument"
@@ -26,8 +31,17 @@ cmd_log() {
     local archive="$ARCHIVE_DIR/sprints.jsonl"
 
     if [[ ! -f "$archive" ]] || [[ ! -s "$archive" ]]; then
+        if [[ "$json_output" == "true" ]]; then
+            echo "[]"
+            return 0
+        fi
         echo "No sprint history yet."
         echo "Run a sprint with 'aishore run' to generate history."
+        return 0
+    fi
+
+    if [[ "$json_output" == "true" ]]; then
+        tail -n "$limit" "$archive" | jq -s '.'
         return 0
     fi
 

@@ -369,11 +369,14 @@ Displays the last 20 sprint attempts from the archive (backlog/archive/sprints.j
 as a formatted table with date, item ID, title, status, duration, and attempt count.
 
 Options:
+  --json       Output sprint history as a JSON array
   --limit N    Show last N entries (default: 20)
 
 Examples:
   aishore log                        # Show last 20 sprint entries
   aishore log --limit 5              # Show last 5 entries
+  aishore log --json                 # Machine-readable JSON output
+  aishore log --json --limit 3      # Last 3 entries as JSON
 EOF
 }
 
