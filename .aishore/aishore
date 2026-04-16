@@ -2690,6 +2690,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
     if mark_complete "$ITEM_ID" "$item_source" "$total_attempts"; then
         log_success "Sprint complete: $ITEM_ID"
         COMPLETED_IDS["$ITEM_ID"]=1
+        ITEM_ATTEMPTS["$ITEM_ID"]="$total_attempts"
         passed=$((passed + 1))
         consecutive_failures=0
         groom_exhausted=false
@@ -2715,6 +2716,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"; then
         log_error "Failed to mark $ITEM_ID complete"
         failed=$((failed + 1))
         FAILED_IDS["$ITEM_ID"]="Archival failed"
+        ITEM_ATTEMPTS["$ITEM_ID"]="$total_attempts"
         sprint_items+=("$ITEM_ID")
         if [[ -n "$NOTIFY_CMD" ]]; then
             bash -c "$NOTIFY_CMD" -- "fail" "$ITEM_ID" 2>/dev/null || log_warning "Notification command failed (exit $?) — sprint outcome unaffected"
@@ -2873,6 +2875,7 @@ _record_sprint_failure() {
     failed=$((failed + 1))
     consecutive_failures=$((consecutive_failures + 1))
     FAILED_IDS["$ITEM_ID"]="$reason"
+    ITEM_ATTEMPTS["$ITEM_ID"]="$total_attempts"
     session_failures+=("$ITEM_ID: $reason")
     sprint_items+=("$ITEM_ID")
 
@@ -3152,13 +3155,39 @@ run_sprint_loop() {
 # Print batch summary and print final status.
 # Uses outer-scope locals from cmd_run and setup_sprint_environment.
 print_sprint_summary() {
-    # Failed items detail
-    if [[ ${#FAILED_IDS[@]} -gt 0 ]]; then
-        echo ""
-        echo "  Failed items:"
-        for fid in "${!FAILED_IDS[@]}"; do
-            echo "    - $fid: ${FAILED_IDS[$fid]}"
+    # Sprint Session Summary table (auto_mode only, with items attempted)
+    if [[ "$auto_mode" == "true" && ${#sprint_items[@]} -gt 0 ]]; then
+        log_header "Sprint Session Summary"
+        local skipped=$(( ${#queued_ids[@]} - passed - failed ))
+        [[ "$skipped" -lt 0 ]] && skipped=0
+
+        # Table header
+        printf "  ${CYAN}%-14s %-10s %s${NC}\n" "ITEM" "STATUS" "ATTEMPTS"
+        printf "  ${CYAN}%-14s %-10s %s${NC}\n" "──────────────" "──────────" "────────"
+
+        # One row per item attempted
+        for sid in "${sprint_items[@]}"; do
+            local _status _color _attempts
+            _attempts="${ITEM_ATTEMPTS[$sid]:-1}"
+            if [[ -n "${COMPLETED_IDS[$sid]+_}" ]]; then
+                _status="passed"
+                _color="$GREEN"
+            elif [[ -n "${FAILED_IDS[$sid]+_}" ]]; then
+                _status="failed"
+                _color="$RED"
+            else
+                _status="unknown"
+                _color="$YELLOW"
+            fi
+            printf "  %-14s ${_color}%-10s${NC} %s\n" "$sid" "$_status" "$_attempts"
         done
+
+        # Totals
+        local elapsed_sec=$(( $(date +%s) - batch_start ))
+        local elapsed_min=$(( elapsed_sec / 60 ))
+        echo ""
+        echo -e "  ${CYAN}Totals:${NC} ${GREEN}$passed passed${NC}, ${RED}$failed failed${NC}, ${YELLOW}$skipped skipped${NC}"
+        echo -e "  ${CYAN}Elapsed:${NC} ${elapsed_min}m"
     fi
 
     # Zero-items-processed warning: when auto mode processes nothing but backlog has items
@@ -3219,6 +3248,7 @@ cmd_run() {
     local passed=0 failed=0
     declare -A FAILED_IDS; FAILED_IDS[_]=1; unset 'FAILED_IDS[_]'
     declare -A COMPLETED_IDS; COMPLETED_IDS[_]=1; unset 'COMPLETED_IDS[_]'
+    declare -A ITEM_ATTEMPTS; ITEM_ATTEMPTS[_]=1; unset 'ITEM_ATTEMPTS[_]'
     local batch_start sprint_items=()
     local consecutive_failures=0 groom_exhausted=false
     local -a session_failures=() session_successes=() queued_ids=() skipped_ids=()
