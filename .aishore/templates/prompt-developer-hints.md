@@ -18,3 +18,9 @@ Your result.json MUST include a `"phases"` object proving you completed Critique
 {"status": "pass", "summary": "...", "phases": {"critique": {"findings_count": N, "fixed_count": N}, "harden": {"verify_commands_run": N, "verify_commands_passed": N}}}
 ```
 The orchestrator will REJECT a pass result that lacks the `"phases"` field. findings_count is how many issues you found in Critique; fixed_count is how many you fixed. verify_commands_run/passed are from Harden.
+
+## Help Text (MANDATORY for new flags/commands)
+When you add a new CLI flag or subcommand, you MUST update the help text. Help is defined in TWO places — update BOTH:
+1. `.aishore/lib/cmd-help.sh` — the `_help_<command>()` function for the parent command
+2. `.aishore/help.txt` — the top-level help (for new top-level commands only)
+If an AC verify command tests `help ... | grep -q <flag>`, your implementation WILL fail if you skip this step. Check the help output yourself in Phase 3.
