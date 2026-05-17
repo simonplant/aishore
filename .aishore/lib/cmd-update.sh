@@ -57,17 +57,18 @@ cmd_update() {
 
     # Fetch a repo file and save directly to disk.
     # Downloads to file (not shell variable) to preserve trailing newlines.
-    # Usage: _update_fetch_file_to <relative_path> <dest_path>
+    # Usage: _update_fetch_file_to <relative_path> <dest_path> [api_only]
+    # When api_only=true, skips raw.githubusercontent.com (used to bypass stale CDN cache).
     _update_fetch_file_to() {
-        local file_path="$1" dest="$2"
+        local file_path="$1" dest="$2" api_only="${3:-false}"
         local raw_url="https://raw.githubusercontent.com/$_update_repo/$release_tag/$file_path"
 
         # Route 1: raw.githubusercontent.com (fast, no rate limit)
-        if _update_fetch "$raw_url" > "$dest" 2>/dev/null; then
+        if [[ "$api_only" != "true" ]] && _update_fetch "$raw_url" > "$dest" 2>/dev/null; then
             return 0
         fi
 
-        # Route 2: GitHub Contents API (base64-encoded)
+        # Route 2: GitHub Contents API (base64-encoded, bypasses raw CDN cache)
         local api_url="https://api.github.com/repos/$_update_repo/contents/$file_path?ref=$release_tag"
         local json
         if json=$(_update_fetch "$api_url" 2>/dev/null); then
@@ -196,9 +197,14 @@ cmd_update() {
             if verify_checksum "$local_path" "$expected"; then
                 echo "$checksum_key=verified" >> "$checksum_status_file"
             else
-                log_error "Checksum mismatch for $label — file may be corrupted or tampered"
-                echo "$checksum_key=mismatch" >> "$checksum_status_file"
-                all_verified=false
+                # Raw CDN may be serving stale content — retry via Contents API
+                if _update_fetch_file_to "$remote_path" "$local_path" true && verify_checksum "$local_path" "$expected"; then
+                    echo "$checksum_key=verified" >> "$checksum_status_file"
+                else
+                    log_error "Checksum mismatch for $label — file may be corrupted or tampered"
+                    echo "$checksum_key=mismatch" >> "$checksum_status_file"
+                    all_verified=false
+                fi
             fi
         elif [[ -n "$checksums_content" ]]; then
             if [[ "$no_verify" == "true" ]]; then
@@ -239,6 +245,47 @@ cmd_update() {
         printf "\r  Downloading... [%d/%d]" "$fetched" "$file_count"
     done
     printf "\r%40s\r" ""  # clear progress line
+
+    # If verification failed, the raw manifest itself may be stale —
+    # re-fetch via API (bypasses CDN) and re-verify all files against it.
+    if [[ "$all_verified" != "true" ]]; then
+        log_warning "Initial verification failed — retrying with authoritative manifest from GitHub API"
+        local _tmp_ck2
+        _tmp_ck2="$(ensure_tmpdir)/remote_checksums_api.txt"
+        if _update_fetch_file_to ".aishore/checksums.sha256" "$_tmp_ck2" true; then
+            checksums_content=$(cat "$_tmp_ck2")
+            rm -f "$_tmp_ck2"
+            all_verified=true
+            : > "$checksum_status_file"
+            for f in "${update_files[@]}"; do
+                local basename_f2 expected2
+                basename_f2=$(basename "$f")
+                expected2=$(printf '%s\n' "$checksums_content" | awk -v k="$f" '$2 == k {print $1; exit}') || true
+                if [[ -z "$expected2" ]]; then
+                    if [[ "$no_verify" == "true" ]]; then
+                        echo "$f=skipped" >> "$checksum_status_file"
+                    else
+                        log_error "No checksum entry for $basename_f2 in authoritative manifest"
+                        echo "$f=missing" >> "$checksum_status_file"
+                        all_verified=false
+                    fi
+                    continue
+                fi
+                if verify_checksum "$staging_dir/$f" "$expected2"; then
+                    echo "$f=verified" >> "$checksum_status_file"
+                else
+                    # Staged content is stale too — refetch via API
+                    if _update_fetch_file_to "$f" "$staging_dir/$f" true && verify_checksum "$staging_dir/$f" "$expected2"; then
+                        echo "$f=verified" >> "$checksum_status_file"
+                    else
+                        log_error "Checksum mismatch for $basename_f2 — file may be corrupted or tampered"
+                        echo "$f=mismatch" >> "$checksum_status_file"
+                        all_verified=false
+                    fi
+                fi
+            done
+        fi
+    fi
 
     # ── Phase 2: Install (only if all verified) ──
     _unlock_tool_files

@@ -2,36 +2,33 @@
   "description": "Feature backlog - Product Owner owns priority",
   "items": [
     {
-      "id": "FEAT-120",
-      "title": "Sprint summary report as markdown artifact",
-      "intent": "After a batch run completes, aishore must produce a shareable markdown sprint report showing every item shipped, pass/fail status, duration, lines changed, regression suite results, core health, and totals — so users have a viral proof artifact they can paste in Slack or commit to the repo.",
-      "description": "The sprint report is the single highest-ROI feature for adoption. When run done or run N completes, drop a markdown file (e.g. .aishore/data/reports/sprint-YYYY-MM-DD.md) and print a summary to stdout. Include: item table (ID, title, status, duration, lines +/-), regression suite stats, core health, heal items generated, and totals. Format it to be impressive when pasted in Slack or viewed on GitHub.",
-      "priority": "must",
+      "id": "FEAT-181",
+      "title": "backlog add --title/--intent shortcuts: add items without raw JSON",
+      "intent": "Running backlog add --title \"...\" --intent \"...\" must create a new backlog item without requiring the caller to construct a JSON string — so developers can add items ergonomically from the command line without quoting hell.",
+      "description": "backlog add currently requires --json with a full JSON object string, which is verbose and error-prone for quick ad-hoc adds. A flag-based shorthand (--title, --intent, --priority, --track, --desc, --type) constructs the JSON internally and reuses existing validation.",
+      "priority": "should",
       "track": "feature",
       "category": null,
       "steps": [
-        "Create a report generation function that reads sprint archive data for the current batch",
-        "Build the markdown template with item table, regression stats, core health, and totals",
-        "Call the report generator at end of batch run (after all items processed)",
-        "Write report to .aishore/data/reports/ with date-stamped filename",
-        "Print a compact version to stdout as the batch completion message"
+        "In cmd_backlog_add() (lib/cmd-backlog-write.sh:28), detect when first arg is NOT --json and NOT --help (i.e., it is a flag like --title)",
+        "Parse flags: --title, --intent, --priority (default: should), --track (default: feature), --desc, --type (default: feat) using a while loop",
+        "After parsing, require at minimum --title and --intent; error and exit 1 if either is missing",
+        "Construct JSON from parsed flags using jq -n and pass as raw_json to the existing add logic (starting at line 55 validate JSON block)",
+        "Preserve existing --json path unchanged",
+        "Update cmd-help.sh backlog add entry to show both usage forms"
       ],
       "acceptanceCriteria": [
         {
-          "text": "Report generation function exists in codebase",
-          "verify": "grep -q \"reports/\" .aishore/aishore || grep -rq \"reports/\" .aishore/lib/"
+          "text": "backlog add accepts --title flag",
+          "verify": "grep -q \"title.*add\\|add.*title\" .aishore/lib/cmd-backlog-write.sh 2>/dev/null || grep -q \"title.*add\\|add.*title\" .aishore/aishore 2>/dev/null"
         },
         {
-          "text": "Report contains item table with ID, title, status, duration, lines changed",
-          "verify": "grep -q \"FEAT\" .aishore/data/reports/*.md 2>/dev/null || grep -Eq \"item.*table|sprintf.*ID|ID.*title.*status\" .aishore/aishore .aishore/lib/*.sh 2>/dev/null"
+          "text": "backlog add accepts --intent flag",
+          "verify": "grep -q \"intent.*add\\|add.*intent\" .aishore/lib/cmd-backlog-write.sh 2>/dev/null || grep -q \"val:.*intent\" .aishore/lib/cmd-backlog-write.sh 2>/dev/null"
         },
         {
-          "text": "Report contains regression suite summary",
-          "verify": "grep -qi \"regression\" .aishore/data/reports/*.md 2>/dev/null || grep -Eqi \"regression.*report|report.*regression\" .aishore/aishore .aishore/lib/*.sh 2>/dev/null"
-        },
-        {
-          "text": "Compact summary printed to stdout at batch end",
-          "verify": "true"
+          "text": "help backlog documents flag-based add syntax",
+          "verify": ".aishore/aishore help backlog 2>&1 | grep -qiE \"title|intent|flag\""
         }
       ],
       "scope": [],
@@ -39,148 +36,39 @@
       "status": "todo",
       "passes": false,
       "readyForSprint": true,
-      "groomedAt": "2026-04-14",
-      "groomingNotes": "Must-priority. Steps now specify exact function name (_generate_sprint_report), data sources (sprint_items[], COMPLETED_IDS, FAILED_IDS, batch_start — all already in scope in cmd_run), and output format. Reports go to .aishore/data/reports/ (directory does not yet exist — developer must create it). AC verify #1 combines run done + file existence check; verify #2 and #3 are real assertions (fallbacks removed). Verify #4 checks that the report path appears in run output. Developer must run run done after implementing to generate the first report before AC can pass.",
-      "lastFailReason": "Baseline validation failed before developer ran",
-      "lastFailAt": "2026-04-15T20:04:22-07:00",
-      "failCount": 10
-    },
-    {
-      "id": "FEAT-123",
-      "title": "Composable quality gates via config",
-      "intent": "Teams must be able to declare custom quality gate commands in config.yaml (pre-flight, post-develop, pre-merge phases) that run alongside built-in gates — so aishore adds intent gates and regression protection on top of existing CI checks rather than replacing them, making adoption additive.",
-      "description": "Add a gates section to config.yaml where users can add custom shell commands at each pipeline phase: pre_flight (before dev starts), post_develop (after dev, before validation), pre_merge (after validation, before merge). Each gate has a name and command. Built-in gates (regression suite, maturity protocol, validator agent) remain; custom gates run alongside them. A failing custom gate blocks the pipeline just like a built-in gate.",
-      "priority": "should",
-      "track": "feature",
-      "category": null,
-      "steps": [
-        "Define gates schema in config.yaml with pre_flight, post_develop, pre_merge phases",
-        "Parse gate definitions from config during sprint setup",
-        "Execute custom gates at each phase alongside built-in gates",
-        "Report gate results (name, pass/fail, output) in sprint log",
-        "Include custom gate results in sprint report"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "Custom gates can be defined in config.yaml under a gates section",
-          "verify": "grep -q gates .aishore/config.yaml 2>/dev/null || true"
-        },
-        {
-          "text": "A failing custom gate blocks the sprint pipeline",
-          "verify": "true"
-        },
-        {
-          "text": "Gate results appear in sprint logs",
-          "verify": "true"
-        }
-      ],
-      "scope": [],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": false,
-      "groomedAt": "2026-04-14",
-      "groomingNotes": "Steps now specify exact hook points: _run_preflight (after regression suite), post-developer-pass (before validation), post-validator-pass (before merge). Gate runner takes phase name and returns 1 on failure. Requires yq for config parsing — graceful no-op when yq absent or gates section missing. Not marking ready: needs scoping decision on whether yq is required (currently optional). AC verify #3 is true-deferred — integration test needs a real sprint run with a custom gate. Developer should manually test with a gates.pre_flight: [{name: smoke, command: false}] to confirm blocking behavior before signaling pass."
-    },
-    {
-      "id": "FEAT-124",
-      "title": "GitHub Action for CI/headless sprint execution",
-      "intent": "Users must be able to run aishore in GitHub Actions on a schedule or trigger so that pushing a PRODUCT.md change or adding a backlog item causes sprints to execute in CI and open PRs automatically — enabling the overnight factory workflow where you wake up to shipped features.",
-      "description": "Create a GitHub Action (action.yml + wrapper script) that runs aishore run in a CI environment. Needs: Claude API key as secret, gh token for PR creation, headless mode (no interactive prompts). Pairs with --pr mode (FEAT-121) so CI runs produce PRs rather than auto-merging to main. Include a sample workflow yaml users can copy.",
-      "priority": "should",
-      "track": "feature",
-      "category": null,
-      "steps": [
-        "Create action.yml defining the GitHub Action inputs (api key, run args, pr mode)",
-        "Create entrypoint script that sets up environment and runs aishore",
-        "Handle headless Claude Code execution (CLAUDE_CODE_HEADLESS or equivalent)",
-        "Create sample workflow file (.github/workflows/aishore.yml) users can copy",
-        "Document CI setup in README or dedicated CI doc"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "action.yml exists and defines required inputs",
-          "verify": "test -f action.yml && echo exists"
-        },
-        {
-          "text": "Sample workflow file exists",
-          "verify": "test -f .github/workflows/aishore.yml && echo exists"
-        },
-        {
-          "text": "Entrypoint handles missing interactive terminal gracefully",
-          "verify": "true"
-        }
-      ],
-      "scope": [],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": true,
-      "groomedAt": "2026-04-14",
-      "groomingNotes": "Blocked on FEAT-121 (--pr mode must exist before CI can use it). Steps are clear: action.yml, entrypoint script, sample workflow. AC verify #1 and #2 test file existence — straightforward. Not marking ready until FEAT-121 ships. Once unblocked, this is a short implementation: define action inputs, write entrypoint.sh that calls aishore run --pr, create sample workflow yaml.",
-      "lastFailReason": "Baseline validation failed before developer ran",
-      "lastFailAt": "2026-04-15T20:04:30-07:00",
+      "groomedAt": "2026-04-16",
+      "groomingNotes": "LINE NUMBERS VERIFIED 2026-04-16:\\n- cmd_backlog_add(): lib/cmd-backlog-write.sh:28\\n- --json detection: lines 32-41\\n- else branch (line 37-41): log_error \"backlog add requires --json\" — THIS is where to add flag parsing\\n- _backlog_add_usage(): line 150\\n- cmd-help.sh backlog add line: line 163 (add --json form)\\n\\nIMPLEMENTATION:\\n\\n1. REPLACE lines 37-41 (else branch in --json detection) with flag-parsing branch:\\n   else\\n       # Flag-based shorthand: --title \"...\" --intent \"...\" [--priority P] [--track T] [--desc \"...\"] [--type feat|bug]\\n       local _title=\"\" _intent=\"\" _priority=\"should\" _track=\"feature\" _desc=\"\" _type=\"feat\"\\n       while [[ $# -gt 0 ]]; do\\n           case \"$1\" in\\n               --title)    _title=\"${2:-}\";    shift 2 ;;\\n               --intent)   _intent=\"${2:-}\";   shift 2 ;;\\n               --priority) _priority=\"${2:-}\"; shift 2 ;;\\n               --track)    _track=\"${2:-}\";    shift 2 ;;\\n               --desc)     _desc=\"${2:-}\";     shift 2 ;;\\n               --type)     _type=\"${2:-}\";     shift 2 ;;\\n               *) log_error \"Unknown flag: $1\"; _backlog_add_usage; return 1 ;;\\n           esac\\n       done\\n       [[ -z \"$_title\" ]]  && { log_error \"--title is required\"; _backlog_add_usage; return 1; }\\n       [[ -z \"$_intent\" ]] && { log_error \"--intent is required\"; _backlog_add_usage; return 1; }\\n       raw_json=$(jq -n \\\\\\n           --arg title \"$_title\" --arg intent \"$_intent\" \\\\\\n           --arg priority \"$_priority\" --arg track \"$_track\" \\\\\\n           --arg desc \"$_desc\" --arg type \"$_type\" \\\\\\n           '{\"title\":$title,\"intent\":$intent,\"priority\":$priority,\"track\":$track,\"description\":$desc,\"type\":$type}')\\n   fi\\n\\nNOTE: The replacement removes the closing \"fi\" from the original if/elif/else block and adds it inside the else. The original block ends at line 41 with \"fi\" — that fi must become part of the else content and a new fi added after raw_json is set.\\n\\n2. UPDATE _backlog_add_usage() (line 151-152) to show both forms:\\n   Usage: aishore backlog add --json '<JSON>'\\n          aishore backlog add --title \"...\" --intent \"...\" [--priority P] [--track T] [--desc \"...\"] [--type feat|bug]\\n          echo '<JSON>' | aishore backlog add --json -\\n\\n3. UPDATE cmd-help.sh backlog add entry (line 157 area) to show shorthand syntax",
+      "lastFailReason": "AC verification failed",
+      "lastFailAt": "2026-04-16T14:10:06-07:00",
       "failCount": 2
     },
     {
-      "id": "FEAT-126",
-      "title": "Agent-agnostic backend abstraction for developer and validator agents",
-      "intent": "The orchestration layer must support pluggable AI backends (not just Claude Code) via a config-driven agent backend setting — so that users of Aider, Codex CLI, or other tools can adopt aishore for its quality model (intent gates, regression protection, core-first discipline) without switching their AI tool.",
-      "description": "Abstract the agent invocation layer so the developer and validator agents can be backed by different tools. Start with claude-code as the default backend. Define a backend interface: a command template that receives the prompt file and working directory, returns exit code and result.json. Add backend config to config.yaml. This is a design-now, ship-incrementally feature — the abstraction should be clean even if only claude-code is implemented initially.",
-      "priority": "could",
+      "id": "FEAT-182",
+      "title": "backlog edit: flag-based field updates without raw JSON",
+      "intent": "Running backlog edit <ID> --priority must (or --title, --intent, --track, --desc, --ready, --no-ready) must update the specified fields without requiring a JSON object — so developers can make quick edits without writing JSON strings.",
+      "description": "backlog edit currently requires --json with a full JSON object, which is verbose for quick field updates. Flag-based shortcuts construct the JSON internally and reuse existing merge/validation logic. Mirrors the --title/--intent shorthand added to backlog add in FEAT-181.",
+      "priority": "should",
       "track": "feature",
       "category": null,
       "steps": [
-        "Define agent backend interface: input (prompt file, workdir, context), output (exit code, result.json)",
-        "Extract current Claude Code invocation into a backend module",
-        "Add agent.backend config to config.yaml with claude-code as default",
-        "Create backend dispatch function that routes to the configured backend",
-        "Document how to add a custom backend"
+        "In cmd_backlog_edit() (lib/cmd-backlog-write.sh:185), detect when no --json flag is present in the else branch (lines 202-206) — same pattern as FEAT-181 in cmd_backlog_add()",
+        "Parse flags: --title, --intent, --priority, --track, --desc, --ready (sets readyForSprint:true), --no-ready (sets readyForSprint:false) using a while loop",
+        "After parsing, require at least one flag was set; error and exit 1 if no flags provided (prevents silent no-op)",
+        "Construct JSON patch using jq -n from parsed flags (only include fields where a flag was actually provided) and pass as raw_json to the existing edit logic at line 208",
+        "Preserve existing --json path unchanged",
+        "Update cmd-help.sh backlog edit entry to document flag-based form"
       ],
       "acceptanceCriteria": [
         {
-          "text": "Agent invocation goes through a backend abstraction layer",
-          "verify": "grep -q backend .aishore/lib/*.sh 2>/dev/null || grep -q backend .aishore/aishore 2>/dev/null"
+          "text": "backlog edit <ID> --priority must exits 0 and updates priority"
         },
         {
-          "text": "claude-code backend works identically to current behavior",
-          "verify": "true"
+          "text": "backlog edit with no flags and no --json exits non-zero",
+          "verify": "! .aishore/aishore backlog edit 2>/dev/null"
         },
         {
-          "text": "Backend is configurable via config.yaml",
-          "verify": "grep -q backend .aishore/config.yaml 2>/dev/null || true"
-        }
-      ],
-      "scope": [],
-      "dependsOn": [],
-      "status": "todo",
-      "passes": false,
-      "readyForSprint": false,
-      "groomedAt": "2026-04-14",
-      "groomingNotes": "Could priority refactor. Steps specify extracting existing claude invocation into _invoke_agent() dispatch function — this is a refactor, not a new feature. Risk: touching the agent invocation path could break the sprint loop. Not marking ready: this is a significant refactor that should not block feature delivery. Recommend tackling after FEAT-120 and FEAT-121 ship. Developer should read the existing claude invocation in .aishore/aishore before implementing to identify all call sites."
-    },
-    {
-      "id": "FEAT-144",
-      "title": "Chicken-and-egg: regression fix items cannot run because regressions block pre-flight",
-      "intent": "When a backlog item exists specifically to fix the regression suite (like BUG-154), the orchestrator must allow it to bypass the pre-flight regression check — because requiring the regression suite to pass before running the item that fixes the regression suite creates an unresolvable deadlock that requires manual intervention.",
-      "description": "BUG-154 was created to fix stale regression entries blocking pre-flight. But BUG-154 itself could not run because pre-flight (which runs the regression suite) failed. This is a fundamental design flaw: the system cannot self-heal regression suite issues. Options: (1) items tagged track:core or with specific keywords bypass pre-flight, (2) if an items intent/title references regression suite, skip regression pre-flight for that item, (3) add a --skip-preflight flag for manual override, (4) if pre-flight fails, auto-check if any queued item is specifically about fixing regressions.",
-      "priority": "should",
-      "track": "core",
-      "category": null,
-      "steps": [
-        "In the sprint item picker or preflight runner, check if the picked item has a scope or title that indicates it fixes the regression suite",
-        "If the item is tagged track:core and its title/intent mentions regression, skip the regression preflight for that item only",
-        "Log a warning when skipping preflight so the user knows it was intentionally bypassed",
-        "Add a --skip-preflight flag to run command as a manual escape hatch"
-      ],
-      "acceptanceCriteria": [
-        {
-          "text": "Items fixing regressions can bypass preflight",
-          "verify": "grep -Eiq \"skip.*preflight\\|bypass.*regression\\|regression.*skip\" .aishore/aishore"
-        },
-        {
-          "text": "help run documents skip-preflight flag",
-          "verify": ".aishore/aishore help run 2>&1 | grep -qi preflight"
+          "text": "help backlog documents --ready and --no-ready for edit",
+          "verify": ".aishore/aishore help backlog 2>&1 | grep -qE -- '--ready|--no-ready'"
         }
       ],
       "scope": [],
@@ -188,33 +76,39 @@
       "status": "todo",
       "passes": false,
       "readyForSprint": true,
-      "groomedAt": "2026-04-15",
-      "groomingNotes": "Chicken-and-egg deadlock: regression fix items cannot pass the regression suite they are fixing. Solution: detect regression-fix items and skip preflight, plus manual --skip-preflight flag.",
+      "groomedAt": "2026-04-16",
+      "groomingNotes": "LINE NUMBERS VERIFIED 2026-04-16:\n- cmd_backlog_edit(): lib/cmd-backlog-write.sh:185\n- id guard: line 187, shift: line 188\n- --json detection if/elif/else: lines 197-206\n- else branch (no --json): lines 202-206 -- THIS is where to add flag parsing\n- raw_json validate block starts line 208\n- cmd-help.sh edit entry: around line 165\n\nIMPLEMENTATION (mirrors FEAT-181 pattern):\n1. REPLACE lines 202-206 else branch with flag-parsing loop for --title, --intent, --priority, --track, --desc, --ready (sets readyForSprint:true), --no-ready (sets readyForSprint:false)\n2. Require at least one flag set; error if none\n3. Build JSON patch with jq -n --arg, include only fields where flag was provided\n4. Update cmd-help.sh edit entry to show both forms",
       "lastFailReason": "Implementation failed",
-      "lastFailAt": "2026-04-15T17:20:53-07:00",
+      "lastFailAt": "2026-04-16T14:14:12-07:00",
       "failCount": 1
     },
     {
-      "id": "FEAT-146",
-      "title": "backlog check --all is too slow for use in regression suite",
-      "intent": "backlog check --all must complete within 10 seconds for a typical backlog (20 items) — because the current implementation runs every verify command for every item sequentially, taking over 30 seconds for 16 items, which makes it unusable as a regression check and causes timeouts.",
-      "description": "backlog check --all runs check_readiness_gates for each non-done item, which executes all AC verify commands. With 16 items, some having verify commands that themselves invoke aishore CLI commands, this takes over 30 seconds. The regression check for FEAT-103 was removed because it reliably timed out. Options: (1) parallelize verify command execution, (2) add --quick flag that skips verify commands, (3) cache recent verify results.",
-      "priority": "could",
+      "id": "FEAT-184",
+      "title": "backlog check --json: machine-readable readiness output",
+      "intent": "Running backlog check --all --json must output a JSON array of per-item readiness objects and exit 0 — so scripts and CI can inspect readiness state programmatically without parsing human-formatted table output.",
+      "description": "backlog check outputs a human-readable pass/fail table. A --json flag emits structured output: for --all, an array of {id, ready, failures} objects; for a single item, a single {id, ready, failures} object. Exit 0 always in --json mode (caller reads the ready field).",
+      "priority": "should",
       "track": "feature",
       "category": null,
       "steps": [
-        "In _backlog_check_all in cmd-backlog-read.sh, add a --quick flag that skips verify command execution and only checks metadata gates (intent, AC existence, dependencies)",
-        "Make the default behavior remain unchanged (full check with verify commands)",
-        "The quick check should complete in under 2 seconds for 20 items"
+        "In cmd_backlog_check() (lib/cmd-backlog-read.sh:36), add json_mode parsing alongside quick in the arg loop (lines 37-45)",
+        "Single-item path (lines 60-70): when json_mode is true, capture check_readiness_gates exit code and output, then emit JSON with id, ready (bool), and failures (array of warning strings), then exit 0",
+        "Parse gate warning strings from check_readiness_gates output: strip the leading '  - ' prefix from each warning line to build the failures array",
+        "_backlog_check_all() path: add json_mode parameter; when true, collect per-item objects into a JSON array and print it, exit 0",
+        "Update cmd-help.sh backlog check entry to document --json flag"
       ],
       "acceptanceCriteria": [
         {
-          "text": "backlog check --all --quick runs without executing verify commands",
-          "verify": "grep -q \"quick\" .aishore/lib/cmd-backlog-read.sh"
+          "text": "backlog check --all --json outputs a JSON array",
+          "verify": ".aishore/aishore backlog check --all --json 2>/dev/null | jq -e 'type == \"array\"'"
         },
         {
-          "text": "help backlog documents --quick flag",
-          "verify": ".aishore/aishore help backlog 2>&1 | grep -qi quick"
+          "text": "each element of backlog check --all --json has a ready field",
+          "verify": ".aishore/aishore backlog check --all --json 2>/dev/null | jq -e 'if length == 0 then true else all(has(\"ready\")) end'"
+        },
+        {
+          "text": "help backlog documents --json for check",
+          "verify": ".aishore/aishore help backlog 2>&1 | grep -A2 'check' | grep -qF -- '--json'"
         }
       ],
       "scope": [],
@@ -222,10 +116,10 @@
       "status": "todo",
       "passes": false,
       "readyForSprint": true,
-      "groomedAt": "2026-04-15",
-      "groomingNotes": "Low priority quality-of-life improvement. Quick mode skips verify execution, checks only metadata readiness gates.",
-      "lastFailReason": "Implementation failed",
-      "lastFailAt": "2026-04-15T17:33:29-07:00",
+      "groomedAt": "2026-04-16",
+      "groomingNotes": "LINE NUMBERS VERIFIED 2026-04-16:\n- cmd_backlog_check(): lib/cmd-backlog-read.sh:36\n- arg loop (quick flag): lines 37-45 -- add json_mode parsing here\n- --all dispatch: lines 47-51\n- single-item path: lines 53-70\n- check_readiness_gates call: line 62\n- _backlog_check_all(): line 73\n- cmd-help.sh check entry: around line 166-168\n\nIMPLEMENTATION:\n1. Add json_mode=false to line 37, add '--json) json_mode=true ;;' in the arg loop\n2. Single-item path: when json_mode is true, capture gates_warnings and exit code, then build JSON {id, ready, failures:[]} using jq -n, always exit 0\n3. Parse warning strings: strip '  - ' prefix from each line of gates_warnings to build failures array\n4. _backlog_check_all(): add json_mode param; when true, build JSON array of {id, ready, failures} objects, print and exit 0\n5. Pass json_mode to _backlog_check_all on line 49\n6. Update cmd-help.sh check entry: add [--json] to the subcommand line",
+      "lastFailReason": "AC verification failed",
+      "lastFailAt": "2026-04-16T14:20:18-07:00",
       "failCount": 1
     }
   ]

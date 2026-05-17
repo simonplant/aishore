@@ -49,3 +49,103 @@
 {"itemId":"FEAT-120","date":"2026-04-15","text":"Report contains regression suite summary","verify":"grep -qi \"regression\" .aishore/data/reports/*.md 2>/dev/null || grep -Eqi \"regression.*report|report.*regression\" .aishore/aishore .aishore/lib/*.sh 2>/dev/null"}
 {"itemId":"FEAT-124","date":"2026-04-15","text":"Sample workflow file exists","verify":"test -f .github/workflows/aishore.yml && echo exists"}
 {"itemId":"FEAT-124","date":"2026-04-15","text":"action.yml exists and defines required inputs","verify":"test -f action.yml && echo exists"}
+{"itemId":"FEAT-146","date":"2026-04-15","text":"help backlog documents --quick flag","verify":".aishore/aishore help backlog 2>&1 | grep -qi quick"}
+{"itemId":"FEAT-146","date":"2026-04-15","text":"backlog check --all --quick runs without executing verify commands","verify":"grep -q \"quick\" .aishore/lib/cmd-backlog-read.sh"}
+{"itemId":"FEAT-149","date":"2026-04-15","text":"doctor checks git availability","verify":"grep -A20 \"doctor\\|_doctor\" .aishore/aishore .aishore/lib/cmd-*.sh 2>/dev/null | grep -qi git"}
+{"itemId":"FEAT-149","date":"2026-04-15","text":"doctor checks jq availability","verify":"grep -A20 \"doctor\\|_doctor\" .aishore/aishore .aishore/lib/cmd-*.sh 2>/dev/null | grep -qi jq"}
+{"itemId":"FEAT-149","date":"2026-04-15","text":"doctor command exists in dispatcher","verify":"grep -q \"doctor\" .aishore/aishore || grep -q \"doctor\" .aishore/lib/cmd-*.sh 2>/dev/null"}
+{"itemId":"FEAT-150","date":"2026-04-15","text":"Unknown config keys produce a warning or error","verify":"grep -Eq \"unknown.*key|invalid.*config|unrecognized.*setting|unexpected.*config\" .aishore/aishore .aishore/lib/*.sh 2>/dev/null"}
+{"itemId":"FEAT-150","date":"2026-04-15","text":"Config validation function exists","verify":"grep -Eq \"validate.*config|config.*valid|_check_config|unknown.*key|unrecognized\" .aishore/aishore .aishore/lib/*.sh 2>/dev/null"}
+{"itemId":"FEAT-151","date":"2026-04-15","text":"Running aishore doctor --regression produces output about regression suite results","verify":".aishore/aishore doctor --regression 2>&1 | grep -qiE 'regression'"}
+{"itemId":"FEAT-151","date":"2026-04-15","text":"aishore doctor --regression flag is documented in help output","verify":".aishore/aishore help doctor 2>&1 | grep -qi 'regression'"}
+{"itemId":"FEAT-152","date":"2026-04-15","text":"help backlog output mentions requeue","verify":".aishore/aishore help backlog 2>&1 | grep -qi requeue"}
+{"itemId":"FEAT-152","date":"2026-04-15","text":"requeue subcommand is registered in the backlog dispatcher","verify":"grep -q requeue .aishore/lib/cmd-backlog-read.sh"}
+{"itemId":"FEAT-153","date":"2026-04-15","text":"help run documents --context flag","verify":".aishore/aishore help run 2>&1 | grep -qi context"}
+{"itemId":"FEAT-153","date":"2026-04-15","text":"--context flag is registered in parse_opts for cmd_run","verify":"grep -q 'dev_hint.*--context' .aishore/aishore"}
+{"itemId":"FEAT-154","date":"2026-04-15","text":"help mentions logs command","verify":".aishore/aishore help 2>&1 | grep -qi logs"}
+{"itemId":"FEAT-154","date":"2026-04-15","text":"logs command runs without error when log file exists","verify":".aishore/aishore logs --last 5 2>&1 | grep -qvE '^$'"}
+{"itemId":"FEAT-154","date":"2026-04-15","text":"logs subcommand is registered in the dispatcher","verify":"grep -q 'logs)' .aishore/aishore"}
+{"itemId":"FEAT-123","date":"2026-04-16","text":"User-defined gate commands run during sprint pipeline","verify":"[ $(grep -c \"_run_custom_gates\" .aishore/aishore 2>/dev/null || echo 0) -ge 2 ]"}
+{"itemId":"FEAT-123","date":"2026-04-16","text":"Config parser reads a gates section from config.yaml with user-defined commands","verify":"grep -Eq \"gates.*yaml|gates.*config|config.*gates.*cmd|user.*gate\" .aishore/aishore .aishore/lib/*.sh 2>/dev/null"}
+{"itemId":"FEAT-123","date":"2026-04-16","text":"A failing user-defined gate blocks the sprint","verify":"grep -Eqi \"custom gate failed|custom.*gate.*fail\" .aishore/aishore 2>/dev/null"}
+{"itemId":"FEAT-155","date":"2026-04-16","text":"stats output includes sprint count or success-related metric","verify":".aishore/aishore backlog stats 2>&1 | grep -qi \"sprint\\|total\\|success\\|complete\""}
+{"itemId":"FEAT-155","date":"2026-04-16","text":"stats subcommand is registered and reachable","verify":".aishore/aishore backlog stats 2>&1 | grep -vq \"unknown subcommand\""}
+{"itemId":"FEAT-155","date":"2026-04-16","text":"stats exits 0 even with empty archive","verify":".aishore/aishore backlog stats; [ $? -eq 0 ]"}
+{"itemId":"FEAT-155","date":"2026-04-16","text":"help backlog documents stats subcommand","verify":".aishore/aishore help backlog 2>&1 | grep -qi \"stats\""}
+{"itemId":"FEAT-156","date":"2026-04-16","text":"help run documents --filter flag","verify":".aishore/aishore help run 2>&1 | grep -qi \"filter\""}
+{"itemId":"FEAT-156","date":"2026-04-16","text":"run --filter with no-match keyword exits cleanly","verify":".aishore/aishore run --filter zzznomatchzzz --dry-run 2>&1; [ $? -eq 0 ]"}
+{"itemId":"FEAT-156","date":"2026-04-16","text":"--filter flag is registered in the run command","verify":"grep -q \"filter.*keyword\\|filter_keyword\\|--filter\" .aishore/aishore"}
+{"itemId":"FEAT-157","date":"2026-04-16","text":"backlog list shows BLOCKED for items with unmet dependencies","verify":"grep -q \"BLOCKED\\|blocked\" .aishore/aishore"}
+{"itemId":"FEAT-157","date":"2026-04-16","text":"dependsOn check exists in item picker logic","verify":"grep -q \"dependsOn\\|depends_on\" .aishore/aishore"}
+{"itemId":"FEAT-157","date":"2026-04-16","text":"backlog check warns when dependsOn references a non-done item","verify":"grep -q \"dependsOn\\|depends_on\" .aishore/lib/cmd-backlog-read.sh 2>/dev/null || grep -q \"dependsOn\\|depends_on\" .aishore/aishore"}
+{"itemId":"FEAT-158","date":"2026-04-16","text":"backlog next prints a pickable item ID and title","verify":".aishore/aishore backlog next 2>&1 | grep -qE '^(FEAT|BUG)-[0-9]+'"}
+{"itemId":"FEAT-158","date":"2026-04-16","text":"backlog next is documented in backlog help","verify":".aishore/aishore help backlog 2>&1 | grep -qi next"}
+{"itemId":"FEAT-159","date":"2026-04-16","text":"max_agent_time_seconds is a recognized config key","verify":"grep -q \"max_agent_time\" .aishore/aishore"}
+{"itemId":"FEAT-159","date":"2026-04-16","text":"config.yaml schema documents max_agent_time_seconds","verify":"grep -q \"max_agent_time\" .aishore/config.yaml"}
+{"itemId":"FEAT-159","date":"2026-04-16","text":"developer agent invocation passes --timeout flag derived from config","verify":"grep -qE \"timeout.*max_agent|max_agent.*timeout\" .aishore/aishore"}
+{"itemId":"FEAT-160","date":"2026-04-16","text":"warning message includes the ready item count","verify":"grep -qE \"buffer low.*[0-9]|[0-9].*buffer low|READY_BUFFER\" .aishore/aishore"}
+{"itemId":"FEAT-160","date":"2026-04-16","text":"low-buffer warning is logged after merge when ready count drops below threshold","verify":"grep -qE \"buffer low|ready.*buffer|READY_BUFFER\" .aishore/aishore"}
+{"itemId":"FEAT-161","date":"2026-04-16","text":"aishore help documents the stop command","verify":".aishore/aishore help 2>&1 | grep -qi stop"}
+{"itemId":"FEAT-161","date":"2026-04-16","text":"SIGUSR1 trap is registered in the run pipeline","verify":"grep -qE 'SIGUSR1|_STOP_REQUESTED' .aishore/aishore"}
+{"itemId":"FEAT-161","date":"2026-04-16","text":"aishore stop reads PID from lock file and sends SIGUSR1","verify":"grep -qE 'cmd_stop' .aishore/aishore"}
+{"itemId":"FEAT-162","date":"2026-04-16","text":"run help documents --max-runtime","verify":".aishore/aishore help run 2>&1 | grep -qi max.runtime"}
+{"itemId":"FEAT-162","date":"2026-04-16","text":"--max-runtime flag is parsed in run command","verify":"grep -qE 'max_runtime|--max-runtime' .aishore/aishore"}
+{"itemId":"FEAT-163","date":"2026-04-16","text":"move rejects unknown destination target","verify":"! .aishore/aishore backlog move FEAT-144 --to invalid 2>/dev/null"}
+{"itemId":"FEAT-163","date":"2026-04-16","text":"backlog help documents move subcommand","verify":".aishore/aishore help backlog 2>&1 | grep -qi move"}
+{"itemId":"FEAT-163","date":"2026-04-16","text":"backlog move subcommand exists","verify":"grep -qE 'cmd_backlog_move|backlog.*move|move.*subcommand' .aishore/lib/cmd-backlog-write.sh"}
+{"itemId":"FEAT-164","date":"2026-04-16","text":"AISHORE_VERIFY_TIMEOUT constant or env var is defined in the orchestrator","verify":"grep -qE 'AISHORE_VERIFY_TIMEOUT|VERIFY_TIMEOUT' .aishore/aishore"}
+{"itemId":"FEAT-164","date":"2026-04-16","text":"verify commands are wrapped in timeout in the AC check loop","verify":"grep -qE 'timeout.*bash|gtimeout' .aishore/aishore"}
+{"itemId":"FEAT-165","date":"2026-04-16","text":"invalid priority value is rejected with non-zero exit","verify":"! .aishore/aishore backlog set-priority FEAT-144 invalid 2>/dev/null"}
+{"itemId":"FEAT-165","date":"2026-04-16","text":"backlog help documents set-priority","verify":".aishore/aishore help backlog 2>&1 | grep -qi 'set-priority'"}
+{"itemId":"FEAT-165","date":"2026-04-16","text":"set-priority subcommand is registered in cmd-backlog-write.sh","verify":"grep -qE 'cmd_backlog_set_priority|set.priority' .aishore/lib/cmd-backlog-write.sh"}
+{"itemId":"FEAT-166","date":"2026-04-16","text":"backlog list --done outputs content from the sprint archive","verify":".aishore/aishore backlog list --done 2>&1 | grep -qiE 'FEAT|BUG|date|complete|ID'"}
+{"itemId":"FEAT-166","date":"2026-04-16","text":"backlog help documents --done flag","verify":".aishore/aishore help backlog 2>&1 | grep -qi 'done'"}
+{"itemId":"FEAT-166","date":"2026-04-16","text":"--done flag is handled in the list subcommand","verify":"grep -qE '\\-\\-done|list.*done' .aishore/lib/cmd-backlog-read.sh"}
+{"itemId":"FEAT-167","date":"2026-04-16","text":"backlog list --track core exits 0","verify":".aishore/aishore backlog list --track core 2>&1 | grep -qvE ^Error"}
+{"itemId":"FEAT-167","date":"2026-04-16","text":"backlog list --track feature exits 0","verify":".aishore/aishore backlog list --track feature 2>&1 | grep -qvE ^Error"}
+{"itemId":"FEAT-167","date":"2026-04-16","text":"help backlog documents --track flag for list","verify":".aishore/aishore help backlog 2>&1 | grep -qF -- \"--track\""}
+{"itemId":"FEAT-169","date":"2026-04-16","text":"backlog requeue --all output mentions count or status of items","verify":".aishore/aishore backlog requeue --all 2>&1 | grep -qiE \"(requeued|no failed|item)\""}
+{"itemId":"FEAT-169","date":"2026-04-16","text":"backlog requeue --all exits 0 when there are no failed items","verify":".aishore/aishore backlog requeue --all 2>&1; [[ $? -eq 0 ]]"}
+{"itemId":"FEAT-169","date":"2026-04-16","text":"help backlog documents requeue subcommand","verify":".aishore/aishore help backlog 2>&1 | grep -qi requeue"}
+{"itemId":"FEAT-170","date":"2026-04-16","text":"backlog list --no-verify excludes items that have verify commands (FEAT-144 is not shown)","verify":"! .aishore/aishore backlog list --no-verify 2>/dev/null | grep -q 'FEAT-144'"}
+{"itemId":"FEAT-170","date":"2026-04-16","text":"backlog list --no-verify exits 0 (flag is recognized)","verify":".aishore/aishore backlog list --no-verify >/dev/null"}
+{"itemId":"FEAT-170","date":"2026-04-16","text":"help backlog documents --no-verify flag under list","verify":".aishore/aishore help backlog 2>&1 | grep -qF -- '--no-verify'"}
+{"itemId":"FEAT-171","date":"2026-04-16","text":"backlog list --json exits 0 and outputs a valid JSON array","verify":".aishore/aishore backlog list --json | jq -e 'type == \"array\"'"}
+{"itemId":"FEAT-171","date":"2026-04-16","text":"backlog list --ready --json only includes items with readyForSprint true","verify":".aishore/aishore backlog list --ready --json | jq -e 'all(.readyForSprint == true)'"}
+{"itemId":"FEAT-171","date":"2026-04-16","text":"help backlog documents --json flag under list","verify":".aishore/aishore help backlog 2>&1 | grep -qE '^[[:space:]]+--json'"}
+{"itemId":"FEAT-172","date":"2026-04-16","text":"help status documents the --json flag","verify":".aishore/aishore help status 2>&1 | grep -qF -- '--json'"}
+{"itemId":"FEAT-172","date":"2026-04-16","text":"aishore status --json output contains a numeric ready count","verify":".aishore/aishore status --json | jq -e '.ready | type == \"number\"'"}
+{"itemId":"FEAT-172","date":"2026-04-16","text":"aishore status --json exits 0 and outputs a valid JSON object","verify":".aishore/aishore status --json | jq -e 'type == \"object\"'"}
+{"itemId":"FEAT-173","date":"2026-04-16","text":"flag is recognized (no unknown option error)","verify":"! .aishore/aishore backlog list --priority should 2>&1 | grep -qF 'Unknown option: --priority'"}
+{"itemId":"FEAT-173","date":"2026-04-16","text":"backlog list --priority should --json outputs a JSON array","verify":".aishore/aishore backlog list --priority should --json 2>/dev/null | jq -e 'type == \"array\"'"}
+{"itemId":"FEAT-173","date":"2026-04-16","text":"help backlog documents --priority flag","verify":".aishore/aishore help backlog 2>&1 | grep -qF -- '--priority'"}
+{"itemId":"FEAT-174","date":"2026-04-16","text":"flag is recognized (no unknown option error)","verify":"! .aishore/aishore backlog list --ready 2>&1 | grep -qF 'Unknown option: --ready'"}
+{"itemId":"FEAT-174","date":"2026-04-16","text":"all items in ready output have readyForSprint true","verify":".aishore/aishore backlog list --ready --json 2>/dev/null | jq -e '[.[].readyForSprint] | all'"}
+{"itemId":"FEAT-174","date":"2026-04-16","text":"backlog list --ready --json outputs a JSON array","verify":".aishore/aishore backlog list --ready --json 2>/dev/null | jq -e 'type == \"array\"'"}
+{"itemId":"FEAT-174","date":"2026-04-16","text":"help backlog documents --ready flag","verify":".aishore/aishore help backlog 2>&1 | grep -qF -- '--ready'"}
+{"itemId":"FEAT-175","date":"2026-04-16","text":"flag is recognized (no unknown option error when combined with --dry-run)","verify":"! ( .aishore/aishore run --once --dry-run 2>&1 | grep -qF 'Unknown option: --once' )"}
+{"itemId":"FEAT-175","date":"2026-04-16","text":"help run documents --once flag","verify":".aishore/aishore help run 2>&1 | grep -qF -- '--once'"}
+{"itemId":"FEAT-176","date":"2026-04-16","text":"invalid track value is rejected with non-zero exit","verify":"! .aishore/aishore backlog set-track FEAT-144 INVALID 2>/dev/null"}
+{"itemId":"FEAT-176","date":"2026-04-16","text":"valid set-track call exits 0 and prints confirmation","verify":".aishore/aishore backlog set-track FEAT-144 core 2>&1 | grep -qi \"updated\\|track\\|core\""}
+{"itemId":"FEAT-176","date":"2026-04-16","text":"help backlog documents set-track subcommand","verify":".aishore/aishore help backlog 2>&1 | grep -qi \"set-track\""}
+{"itemId":"FEAT-177","date":"2026-04-16","text":"top-level help documents log command","verify":".aishore/aishore help 2>&1 | grep -qi \"log\""}
+{"itemId":"FEAT-177","date":"2026-04-16","text":"aishore log reads sprint archive and outputs sprint IDs","verify":".aishore/aishore log 2>/dev/null | grep -qi \"FEAT-\""}
+{"itemId":"FEAT-177","date":"2026-04-16","text":"aishore log output includes status column values","verify":".aishore/aishore log 2>/dev/null | grep -qiE \"complete|pass|fail\""}
+{"itemId":"FEAT-178","date":"2026-04-16","text":"backlog list --by-priority flag is recognized without unknown-option error","verify":"! .aishore/aishore backlog list --by-priority 2>&1 | grep -qi \"unknown option\""}
+{"itemId":"FEAT-178","date":"2026-04-16","text":"backlog list --by-priority output contains at least one priority section header","verify":".aishore/aishore backlog list --by-priority 2>&1 | grep -qiE \"must|should|could|future\""}
+{"itemId":"FEAT-178","date":"2026-04-16","text":"help backlog documents --by-priority flag","verify":".aishore/aishore help backlog 2>&1 | grep -qi \"by-priority\""}
+{"itemId":"FEAT-179","date":"2026-04-16","text":"help log documents --json flag","verify":".aishore/aishore help log 2>&1 | grep -qF -- '--json'"}
+{"itemId":"FEAT-179","date":"2026-04-16","text":"aishore log --json --limit 3 returns at most 3 records","verify":".aishore/aishore log --json --limit 3 2>/dev/null | jq -e 'length <= 3'"}
+{"itemId":"FEAT-179","date":"2026-04-16","text":"aishore log --json records include itemId field","verify":".aishore/aishore log --json 2>/dev/null | jq -e '.[0] | has(\"itemId\")'"}
+{"itemId":"FEAT-179","date":"2026-04-16","text":"aishore log --json outputs a valid JSON array","verify":".aishore/aishore log --json 2>/dev/null | jq -e 'type == \"array\"'"}
+{"itemId":"FEAT-180","date":"2026-04-16","text":"backlog next --json output includes id field","verify":".aishore/aishore backlog next --json 2>/dev/null | jq -e 'has(\"id\")' >/dev/null"}
+{"itemId":"FEAT-180","date":"2026-04-16","text":"backlog next --json outputs a valid JSON object","verify":".aishore/aishore backlog next --json 2>/dev/null | jq -e 'type == \"object\"'"}
+{"itemId":"FEAT-180","date":"2026-04-16","text":"help backlog documents --json option for next","verify":".aishore/aishore help backlog 2>&1 | grep -E 'next.*--json'"}
+{"itemId":"FEAT-144","date":"2026-04-16","text":"help run documents the preflight skip option","verify":".aishore/aishore help run 2>&1 | grep -qi preflight"}
+{"itemId":"FEAT-144","date":"2026-04-16","text":"Skip-preflight flag or regression-bypass logic exists in the run pipeline","verify":"grep -Eiq \"skip.pre|no.pre.?flight|bypass.*regress|regress.*bypass|skip.*regress\" .aishore/aishore"}
+{"itemId":"FEAT-168","date":"2026-04-16","text":"backlog show --json output includes the item id field","verify":".aishore/aishore backlog show FEAT-144 --json 2>/dev/null | jq -e .id"}
+{"itemId":"FEAT-168","date":"2026-04-16","text":"backlog show --json outputs valid JSON","verify":".aishore/aishore backlog show FEAT-144 --json 2>/dev/null | jq empty"}
+{"itemId":"FEAT-168","date":"2026-04-16","text":"help backlog documents --json flag for show","verify":".aishore/aishore help backlog 2>&1 | grep -qF -- \"--json\""}
+{"itemId":"FEAT-183","date":"2026-04-16","text":"backlog list --search with --json outputs a JSON array","verify":".aishore/aishore backlog list --search \"zzznonexistentterm99999\" --json 2>/dev/null | jq -e 'type == \"array\"'"}
+{"itemId":"FEAT-183","date":"2026-04-16","text":"backlog list --search <non-matching-term> exits 0 and outputs nothing (empty results are not an error)","verify":".aishore/aishore backlog list --search \"zzznonexistentterm99999\" 2>/dev/null"}
+{"itemId":"FEAT-183","date":"2026-04-16","text":"help backlog documents --search flag","verify":".aishore/aishore help backlog 2>&1 | grep -qF -- '--search'"}
