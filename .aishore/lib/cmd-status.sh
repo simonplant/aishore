@@ -207,7 +207,7 @@ _status_json() {
     jq -n --argjson total "$total" \
           --argjson todo "$todo" \
           --argjson in_progress "$in_progress" \
-          --argjson done "$done_count" \
+          --argjson "done" "$done_count" \
           --argjson ready "$ready" \
           --argjson failed "$failed" \
           '{total: $total, todo: $todo, in_progress: $in_progress, done: $done, ready: $ready, failed: $failed}'
