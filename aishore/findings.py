@@ -31,13 +31,12 @@ def run(wt: Path, review: Path, out: Path, cfg: dict) -> tuple[int, int, int]:
                 code_, output = r.returncode, r.stdout + r.stderr
             except subprocess.TimeoutExpired:
                 code_, output = -1, ""
-            pattern = cfg["acceptance"].get("assert_pattern", "")
             if code_ == 0:
                 verdict, discarded = "discard: test passes", discarded + 1
-            elif lib.test_failed(cfg, code_) and pattern and not re.search(pattern, output, re.M):
-                verdict, invalid = "invalid: test crashed or errored, no failed assertion", invalid + 1
-            elif lib.test_failed(cfg, code_):
+            elif lib.proves(cfg, wt, output, code_, f.relative_to(wt).as_posix()):
                 verdict, real = "REAL: test fails on branch", real + 1
+            elif lib.test_failed(cfg, code_):
+                verdict, invalid = "invalid: the test itself errored, no failed assertion", invalid + 1
             else:
                 verdict, invalid = f"invalid: runner exit {code_}", invalid + 1
             rows.append(f"| {n} | {titles.get(n, '').strip()} | {verdict} |")

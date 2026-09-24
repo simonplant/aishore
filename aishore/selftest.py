@@ -327,7 +327,10 @@ def python_part(tmp: Path, env: dict, py: str, stub_dir: Path) -> None:
     check(bash("git checkout main") == 2 and bash("git -c advice.detachedHead=false checkout --detach") == 2
           and bash("git -C . switch -") == 2, "guard_bash blocks branch switch, also after git global options")
     check(bash("echo 99 > .aishore/state/stop_failures") == 2, "guard_bash blocks writes to harness state")
-    check(bash("git commit -qm 'push the fix'") == 0, "guard_bash allows a commit message that mentions push")
+    check(bash("git commit -qm 'push the fix'") == 0 and bash("git grep -n push src/") == 0
+          and bash("git log -S checkout --oneline") == 0, "guard_bash allows read-only git that mentions push or checkout")
+    check(bash("git -c alias.co=checkout co --detach") == 2 and bash("bash -c 'git push'") == 2,
+          "guard_bash blocks git aliases and git inside sh -c")
     check(bash(".aishore/bin/aishore replay update") == 2, "guard_bash blocks golden updates")
     check(bash("cat tests/acceptance/test_t_001.py 2>&1 | head") == 0, "guard_bash allows reading locked file")
     check(bash("python -m pytest -q tests/unit > /tmp/out.txt") == 0, "guard_bash allows normal commands")
@@ -404,12 +407,14 @@ def python_part(tmp: Path, env: dict, py: str, stub_dir: Path) -> None:
         "finding: 1", "finding: 2").replace("assert 0 <= wrap(3, -2) < 2", "assert wrap(5, 3) == 2")
         + REVIEW_PY.replace("Finding 1", "Finding 3").replace("finding: 1", "finding: 3").replace(
         "from toy.calc import wrap", "import toy.calc as calc").replace("assert 0 <= wrap(3, -2) < 2",
-                                                                         "assert calc.wrap_around(3, 10) == 3"))
+                                                                         "assert calc.wrap_around(3, 10) == 3")
+        + REVIEW_PY.replace("Finding 1", "Finding 4").replace("finding: 1", "finding: 4").replace(
+        "assert 0 <= wrap(3, -2) < 2", "assert wrap(3, 0) == 0"))
     from aishore import findings
     real, discarded, invalid = findings.run(wt, stub_dir / "review.md", stub_dir / "findings.md",
                                             tomllib.loads((root / "aishore.toml").read_text()))
-    check((real, discarded, invalid) == (1, 1, 1),
-          "findings: failing assertion is REAL, passing test discarded, crashing test invalid",
+    check((real, discarded, invalid) == (2, 1, 1),
+          "findings: assertion or production exception is REAL, passing test discarded, test's own error invalid",
           (stub_dir / "findings.md").read_text())
     r = repo.aishore("adopt", "T-001", "1")
     check(r.returncode == 0 and (wt / "tests/acceptance/test_t_001_f1.py").exists(),
@@ -460,21 +465,29 @@ def python_part(tmp: Path, env: dict, py: str, stub_dir: Path) -> None:
           "### Counterexample 2: always 1\nViolates: negatives\nRow to add: -3 -> -1\n"
           f"```file:src/toy/calc.py\n{always_one}```\n"
           "### Counterexample 3: edits a locked file\nViolates: x\nRow to add: x\n```file:aishore.toml\nx = 1\n```\n"
+          f"### Counterexample 4: absolute path\nViolates: x\nRow to add: x\n```file:{root / 'src/toy/calc.py'}\nX = 1\n```\n"
+          "### Counterexample 5: climbs out\nViolates: x\nRow to add: x\n"
+          "```file:src/toy/../../tests/acceptance/test_t_002.py\ndef test_sign():\n    pass\n```\n"
           "### Question 1: what is sign(0)? 0 or error\nVERDICT: REVISE\n")
     r = repo.aishore("new", "T-002", "Add sign")
-    write(root / "tasks/T-002/task.toml", TASK.format(id="T-002", title="Add sign", allow='"src/toy/calc.py"',
+    write(root / "tasks/T-002/task.toml", TASK.format(id="T-002", title="Add sign", allow='"src/toy/*", "**/calc.py"',
                                                       test="tests/acceptance/test_t_002.py"))
     write(root / "tasks/T-002/spec.md", SPEC.format(id="T-002", title="Add sign"))
+    write(root / "tests/acceptance/conftest.py", "import pytest\n\n\n@pytest.fixture\ndef five():\n    return 5\n")
     write(root / "tests/acceptance/test_t_002.py", "# AISHORE_PLACEHOLDER: review\nfrom toy.calc import sign\n\n\n"
-          "def test_sign():\n    assert sign(5) == 1\n    assert sign(-3) == -1\n")
+          "def test_sign(five):\n    assert sign(five) == 1\n    assert sign(-3) == -1\n")
+    before = (root / "src/toy/calc.py").read_text()
     r = repo.aishore("brief-review", "T-002")
     br = (root / "tasks/T-002/brief-review.md").read_text() if (root / "tasks/T-002/brief-review.md").exists() else ""
-    check(r.returncode == 0 and "Gaps 1, caught 1, invalid 1" in br and "what is sign(0)" in br
+    check(r.returncode == 0 and "Gaps 1, caught 1, invalid 3" in br and "what is sign(0)" in br
           and "worktree" not in git(root, "worktree", "list").split("\n", 1)[-1],
-          "brief-review proves a gap, credits a caught counterexample, rejects files outside allow",
+          "brief-review: gap proven with the uncommitted fixture, caught credited, escapes and locked files rejected",
           r.stdout + r.stderr + br)
+    check((root / "src/toy/calc.py").read_text() == before and "assert sign(-3)" in
+          (root / "tests/acceptance/test_t_002.py").read_text(), "brief-review never writes into the main checkout")
     shutil.rmtree(root / "tasks/T-002")
     (root / "tests/acceptance/test_t_002.py").unlink()
+    (root / "tests/acceptance/conftest.py").unlink()
 
     # a second task's red acceptance test does not gate main; merged tasks' tests do
     repo.task("T-002", "Add sign", '"src/toy/calc.py"', "tests/acceptance/test_t_002.py",

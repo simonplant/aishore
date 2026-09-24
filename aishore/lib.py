@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 import fnmatch
 import os
+import re
 import shlex
 import stat
 import subprocess
@@ -147,6 +148,26 @@ def test_failed(cfg: dict, code: int) -> bool:
     """True when the runner's exit code means an assertion failed, not a crash or a collection error."""
     codes = cfg["acceptance"].get("fail_codes", [])
     return code in codes if codes else code > 0
+
+
+LOCATION = re.compile(r"((?:[A-Za-z]:)?[\w./\\-]+\.\w+):(\d+)")
+
+
+def proves(cfg: dict, root: Path, output: str, code: int, test_file: str = "") -> bool:
+    """A failing run proves wrong behavior when an assertion failed, or when an exception was raised
+    inside production code. Errors in the test itself (typos, missing fixtures, bad calls) prove nothing."""
+    if code == 0 or not test_failed(cfg, code):
+        return False
+    pattern = cfg["acceptance"].get("assert_pattern", "")
+    if not pattern or re.search(pattern, output, re.M):
+        return True
+    for m in LOCATION.finditer(output):
+        path = m.group(1).removeprefix("file://")
+        rel = relpath(root, path)
+        if (rel and rel != test_file and in_src(rel, cfg) and not rel.startswith(("tests/", "test/"))
+                and (root / rel).is_file()):
+            return True
+    return False
 
 
 def tests_empty(cfg: dict, code: int) -> bool:
