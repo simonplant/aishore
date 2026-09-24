@@ -1,124 +1,39 @@
 # CLAUDE.md
 
-## Project Overview
+aishore: an engineering harness for Claude Code, vendored into target repositories as
+`.aishore/aishore/`. README.md is the user manual.
 
-**aishore** is an autonomous sprint orchestration layer for Claude Code. It picks items from a backlog, has an AI developer implement them through a quality protocol, validates against intent and executable checks, and merges the result.
+## Layout
 
-- Tool: `.aishore/` (Bash, no build step)
-- User content: `backlog/` (backlog.json, bugs.json, sprint.json, archive/)
-- Config: `.aishore/config.yaml` (optional, env vars override)
+| Path | Content |
+|---|---|
+| `aishore/__main__.py` | CLI dispatch |
+| `aishore/lib.py` | repo and config access, task context, ownership, acceptance runner, failure classification |
+| `aishore/langs.py` | per-language gate-weakening patterns and class detection |
+| `aishore/tasks.py` | task.toml and spec.md validation |
+| `aishore/flow.py` | new, brief-review, start, plan-review, review, adopt, sync, merge, abandon, status |
+| `aishore/briefcheck.py` | runs brief-review counterexamples in a scratch worktree |
+| `aishore/run.py` | headless plan, approval, build, review, fix round |
+| `aishore/gate.py`, `diffcheck.py`, `replay.py`, `mutate.py`, `findings.py`, `logbook.py`, `entropy.py` | gates, oracles, records |
+| `aishore/hooks/` | guard_edit, guard_bash, post_edit, stop (`aishore hook <name>`) |
+| `aishore/install.py` | profiles (python, node, generic), install, update |
+| `aishore/selftest.py` | end-to-end test in throwaway repositories with a stub `claude` |
+| `aishore/prompts/` | reviewer role, brief review, plan review, diff review |
+| `aishore/scaffold/` | files written into targets: rulebook, role, `/implement`, skills, task templates, vitest runner, CLI shim |
+| `bin/aishore` | symlink to the shim, for running from source |
+| `install.sh` | installer |
 
-## Sprint Flow
+## Rules
 
-```
-Core Gate → Pick Item → Branch (aishore/<ID>) → Preflight (regression suite) → Developer Agent → AC Verify Commands → Validator Agent → Merge → Core Re-check → Archive
-```
+- Stdlib only. Target projects need no pip install to run hooks.
+- No project-specific facts in the package. They belong in the target's `aishore.toml` or
+  ENGINEERING.md.
+- Guards fail closed. The formatter hook never blocks on its own error.
+- Every behavior has a selftest check that drives the installed CLI and fails without the behavior.
 
-Each item runs in an isolated git worktree on its own feature branch. Backlog mutations happen on the base branch after merge, never in the worktree.
-
-**Working core:** Every project has a core — the primary end-to-end path the product exists for, declared in PRODUCT.md. The `CORE_CMD` verifies it. Before picking, the core gate runs: if it fails, only `track: "core"` items are pickable (features are blocked). After merge, the core is re-checked: if a sprint broke it, a heal item is auto-generated and jumps the queue. Features are decoration on a working core, never construction on a dead frame.
-
-## Agent Roles
-
-| Agent | When | Permissions |
-|-------|------|-------------|
-| Developer | `run` | Agent,Bash,Edit,Write,Read,Glob,Grep,EnterPlanMode,ExitPlanMode |
-| Validator | `run` (after dev) | Bash,Read,Glob,Grep |
-| Groomer | `groom` | CLI commands |
-| Architect | `scaffold`, `review` | Read,Glob,Grep (+ Edit,Write with `--update-docs`). Establishes working core, generates `CORE_CMD`, assigns tracks. |
-
-## Completion Contract
-
-Agents signal completion by writing `.aishore/data/status/result.json`:
-
-```json
-{"status": "pass", "summary": "what was done"}
-{"status": "fail", "reason": "what went wrong"}
-```
-
-The orchestrator polls for this file. On pass, the pipeline continues. On fail, retry logic triggers.
-
-## Quality Model
-
-- **Working core gate**: `CORE_CMD` runs before picking and after every merge. If the core is broken, only `track: "core"` items are pickable — features are blocked until the core passes. Core regressions auto-generate heal items that jump the queue.
-- **Maturity protocol**: Developer runs 3 phases in one session — implement, critique (re-read all changes, verify each AC, hunt bugs), harden (run validation, fix regressions, confirm all AC met)
-- **Synthetic validation**: (1) AC verify commands (synthetic transactions that prove each feature works for real), (2) Validator agent (independent intent check)
-- **Regression suite**: All verify commands from completed sprints saved to `backlog/archive/regression.jsonl`, run as pre-flight before every future sprint
-- **Intent gate**: Items without `intent` (or < 20 chars) cannot enter a sprint
-- **Scope**: Items can declare `scope` glob patterns — advisory, not strict
-
-## Key Rules for Agents
-
-- **Core before features.** The working core — the primary end-to-end path — must pass before feature work proceeds. If you're working on a core-track item, you're building the foundation. If you're working on a feature-track item, the core already works — don't break it.
-- **Intent is the north star.** When steps or AC are ambiguous, follow intent.
-- **Prove it runs.** Wire code to real entry points. Working code that's reachable beats tested code that's isolated.
-- **No mocks or stubs** in production code unless the item explicitly requests them.
-- **Stay in scope.** Implement only the assigned item. Don't fix unrelated code or add unrequested features.
-- **Commit before signaling.** Always commit with a meaningful message before writing result.json.
-
-## Commands
-
-```bash
-# Core workflow
-.aishore/aishore run [N|ID|done|p0|p1|p2]  # Run sprints
-.aishore/aishore groom                      # Groom backlog items
-.aishore/aishore refine                     # Improve PRODUCT.md interactively
-.aishore/aishore scaffold                   # Establish working core, detect fragment risk
-.aishore/aishore review [--update-docs]     # Architecture review
-.aishore/aishore status                     # Backlog overview
-
-# Backlog management
-.aishore/aishore backlog list               # List items
-.aishore/aishore backlog add --json '{"title":"...","intent":"..."}'  # Add item
-.aishore/aishore backlog show <ID>          # Full item detail
-.aishore/aishore backlog edit <ID> --json '{...}'  # Update item
-.aishore/aishore backlog check <ID|--all>   # Validate readiness
-.aishore/aishore backlog rm <ID>            # Remove item
-.aishore/aishore backlog populate           # Populate from PRODUCT.md
-
-# Maintenance
-.aishore/aishore clean [--dry-run]          # Archive done items
-.aishore/aishore update [--dry-run]         # Self-update
-.aishore/aishore init [-y]                  # Setup wizard
-.aishore/aishore checksums                   # Regenerate checksums
-.aishore/aishore version                    # Show version
-.aishore/aishore help [command]             # Help
-```
-
-## Code Style
-
-- `set -euo pipefail` at the start
-- Quote all variables: `"$var"` not `$var`
-- `[[ ]]` for conditionals, not `[ ]`
-- `$(command)` for substitution, not backticks
-- Functions: `snake_case`, Constants: `UPPER_SNAKE_CASE`
-
-## Dependencies
-
-Bash 4.4+, jq, git, claude (Claude Code CLI). Optional: yq (full config.yaml support). macOS: `brew install coreutils` (for `gtimeout`).
-
-## Commit Convention
-
-[Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`
-
-## Lint & Validate
-
-```bash
-shellcheck .aishore/aishore
-jq empty backlog/*.json
-```
-
-## Directory Layout
+## Verify
 
 ```
-backlog/                    # User content (preserved across updates)
-  backlog.json, bugs.json, sprint.json, DEFINITIONS.md
-  archive/sprints.jsonl, archive/regression.jsonl
-.aishore/                   # Tool (replaceable via update)
-  aishore                   # Core orchestrator
-  agents/*.md               # Agent prompts
-  lib/cmd-*.sh              # Lazy-loaded command modules
-  config.yaml               # Optional overrides
-  data/status/result.json   # Agent completion signal
-  data/logs/                # Agent output logs
+bin/aishore selftest     # needs pytest; node and npm for the node and vitest parts
+ruff check aishore
 ```

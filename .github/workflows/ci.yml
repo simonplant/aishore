@@ -1,70 +1,26 @@
-name: CI
-
+name: ci
 on:
+  pull_request:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
-
-permissions:
-  contents: read
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
-  shellcheck:
-    name: Shellcheck
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+  selftest:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.11", "3.13"]
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Install ShellCheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
-
-      - name: Run ShellCheck
-        run: shellcheck -S warning .aishore/aishore .aishore/lib/*.sh install.sh scripts/*.sh
-
-  test:
-    name: Basic Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Check script is executable
-        run: test -x .aishore/aishore
-
-      - name: Syntax check
-        run: bash -n install.sh && bash -n scripts/check-drift.sh
-
-      - name: Test help command
-        run: .aishore/aishore help
-
-      - name: Test version command
-        run: .aishore/aishore version
-
-  macos:
-    name: macOS Compatibility
-    runs-on: macos-latest
-    timeout-minutes: 10
-    defaults:
-      run:
-        shell: /opt/homebrew/bin/bash -e {0}
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install dependencies
-        shell: bash
-        run: brew install bash jq coreutils
-
-      - name: Test help command
-        run: .aishore/aishore help
-
-      - name: Test version command
-        run: .aishore/aishore version
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      - run: pip install pytest ruff
+      - run: ruff check aishore
+      - run: shellcheck install.sh aishore/scaffold/aishore.sh
+        if: runner.os == 'Linux'
+      - run: bin/aishore selftest

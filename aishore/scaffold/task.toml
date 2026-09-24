@@ -1,0 +1,13 @@
+#:schema ../../.aishore/aishore/scaffold/task.schema.json
+# Schema: .aishore/aishore/scaffold/SCHEMA.md
+id = "{{ID}}"
+title = "{{TITLE}}"
+tier = 2                 # 1 critical path, 2 features and reporting, 3 tooling
+kind = "feature"         # feature | fix | refactor | delete | test
+allow = []               # globs the agent may write, e.g. "src/pricing/stops.py", "tests/unit/test_stops.py"
+acceptance_tests = ["{{ACCEPTANCE}}"]
+loc_budget = 200         # max net production LOC
+max_new_files = 1        # new files under the src roots
+max_new_classes = 0      # new classes under the src roots
+replay_may_change = []   # replay cases allowed to differ; empty means identical replay
+# mutation_min_kill = 0.8  # Python only; default by tier: 1 is 0.8, 2 is 0.6, 3 is off

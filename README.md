@@ -1,230 +1,288 @@
 # aishore
 
-[![Version](https://img.shields.io/github/v/release/simonplant/aishore)](https://github.com/simonplant/aishore/releases)
-[![CI](https://github.com/simonplant/aishore/actions/workflows/ci.yml/badge.svg)](https://github.com/simonplant/aishore/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/simonplant/aishore)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey)]()
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-required-blueviolet?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
+An engineering harness for Claude Code. Claude implements; the harness owns correctness.
 
-Autonomous sprint orchestration for Claude Code. You write a backlog with intent. AI implements, validates, and merges — item by item, branch by branch, hands-off.
+| Mechanism | Effect |
+|---|---|
+| Human-owned briefs | spec and acceptance tests are written or approved by you; agents cannot change them |
+| Task worktrees | one worktree and branch (`t/T-042`) per task; human-owned paths are read-only there |
+| Blocking hooks | edits outside the allowlist, writes to locked paths, gate bypasses, and red finishes are refused |
+| Diff gate | ownership, allowlist, gate weakening, LOC budget, new files, new classes |
+| Oracles | per-task acceptance tests, replay against goldens, mutation on changed Python lines |
+| Independent reviewer | a different model, headless and read-only; a finding counts only if its test fails on the branch |
+| Human merge | full gate, diff, your y/N, logged outcome |
 
-```bash
-.aishore/aishore run done    # drain the entire backlog autonomously
-```
+Stdlib Python 3.11+. Target projects can use any language; gates and test runners are commands
+in `aishore.toml`. Profiles: `python`, `node` (node test runner, vitest, jest), `generic`.
+
+## Requirements
+
+- `python3` >= 3.11 and git >= 2.30 on PATH
+- Claude Code, logged in with access to the implementer and reviewer models
+- the project's own test runner
+- a non-root user (file permissions do not bind root)
 
 ## Install
 
-```bash
-curl -sSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash
-```
-```bash
-gh api repos/simonplant/aishore/contents/install.sh --jq '.content' | base64 -d | bash
-```
-
-**Or clone and copy** (no piping to bash):
-
-```bash
-git clone --depth 1 https://github.com/simonplant/aishore.git /tmp/aishore-install
-```
-```bash
-cp -r /tmp/aishore-install/.aishore .
-```
-```bash
-rm -rf /tmp/aishore-install
-```
-
-Then initialize:
-
-```bash
-.aishore/aishore init -y
-```
-
-**Update:**
-
-```bash
-.aishore/aishore update                # latest release
-```
-```bash
-.aishore/aishore update --ref main     # latest commit on main
-```
-```bash
-.aishore/aishore update --ref abc123f  # specific commit
-```
-
-**Requirements:** Bash 4.4+, jq, git, [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code). Optional: yq (full config.yaml support).
-
-## Usage
-
-```bash
-.aishore/aishore refine                # improve PRODUCT.md interactively
-```
-```bash
-.aishore/aishore backlog populate      # create backlog items from PRODUCT.md
-```
-```bash
-.aishore/aishore groom                 # groom items for sprint readiness
-```
-```bash
-.aishore/aishore run                   # one item
-```
-```bash
-.aishore/aishore run done              # drain entire backlog
-```
-```bash
-.aishore/aishore run p0                # must-haves only
-```
-```bash
-.aishore/aishore run p1 --retries 2    # must + should, with retries
-```
-
-### PR Workflow (--no-merge)
-
-By default, aishore merges autonomously. Use `--no-merge` to push the feature branch without merging, so you can review via pull request:
-
-```bash
-.aishore/aishore run --no-merge
-```
-
-The branch is pushed to origin but left unmerged. When the sprint finishes, aishore prints the command to open a PR:
-
-```bash
-gh pr create --head aishore/FEAT-123 --base main
-```
-
-## Working Core First (upcoming)
-
-> **Note:** Working core is designed but not yet implemented in the engine. The documentation below describes the target behavior. See [Roadmap](docs/ROADMAP.md) for status.
-
-Every project has a core — the one end-to-end path the product exists for. A possessions app's core is GET /items returning real data from a real database, rendered on screen. An API's core is: request in, correct response out, persisted. A CLI's core is: primary command runs on real input, produces correct output.
-
-**Nothing gets built until the core works.** aishore will manage two tracks:
-
-- **Core track** — items that build, wire up, or fix the primary end-to-end path. Always pickable.
-- **Feature track** — items that extend or decorate the core. Blocked until the core passes.
-
-You declare the core in PRODUCT.md. The groomer assigns each item to a track. The architect proposes the core verification command. The engine enforces it: `CORE_CMD` runs before every pick and after every merge. If the core breaks, a heal item is auto-generated and jumps the queue. Features are decoration on a working core, never construction on a dead frame.
-
-## Intent-Based Development
-
-aishore doesn't work like TDD or agile ceremony. There are no standups, no velocity charts, no coverage targets, no test suites. The quality model is: **prove the software works by running it for real — synthetic transactions that exercise the actual system, not mocked tests that exercise an abstraction.**
-
-**The backlog item is the unit of quality.** Each item has three things:
-
-1. **Commander's intent** — a directive stating what must be true when done. Not "add health check endpoint" but "ops must know instantly if the service is alive or dead." Intent is the north star when specs are ambiguous, the bar the validator checks against, and a hard gate for sprint entry.
-
-2. **Steps and acceptance criteria** — specific enough that an AI developer can implement without guessing. Bad AC: "it works." Good AC: "health endpoint returns 200 when the service is running."
-
-3. **Synthetic transactions** — AC verify commands that exercise the real system. Not `grep -q 'healthCheck' src/app.js` (that's structure, not behavior). Instead: `curl -sf http://localhost:3000/health` (that's the machine using the product). These are the difference between proving it works and hoping it works.
-
-**Transactions compound into a regression suite.** Every passing sprint's verify commands are saved. Before every future sprint, the full suite runs as pre-flight. Sprint 51 cannot silently break what sprint 12 proved. No manual test maintenance — the suite grows automatically from well-written AC.
-
-**The groomer is the quality bottleneck.** A vague backlog produces vague implementations that fail validation and burn retries. A precise backlog — clear intent, right-sized steps, executable AC — produces sprints that pass autonomously. `backlog populate` and `groom` exist because the quality of the input determines the quality of the output.
-
-## How It Works
+From the repository root, on the base branch:
 
 ```
-Core Gate ─→ Pick ─→ Branch ─→ Preflight ─→ Develop ─→ Validate ─→ Merge ─→ Core Re-check
-   │                                           │            │                      │
-   │ core broken → core-track only             └── retry ───┘           broke core → heal
-   │ core passing → all items
+curl -fsSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash
 ```
 
-1. **Core Gate** (upcoming) — `CORE_CMD` runs. If it fails, only core-track items are pickable. Features stay blocked.
-2. **Pick** — highest-priority ready item from the active track. Heal items jump the queue.
-3. **Branch** — isolated git worktree per sprint
-4. **Preflight** — regression suite (all prior verify commands) on unmodified baseline
-5. **Develop** — implement, critique (re-read all changes, verify each AC), harden (run all verify commands, fix regressions)
-6. **Validate** — AC verify commands (synthetic transactions proving real behavior), then independent Validator agent probes against intent
-7. **Merge** — feature branch merged, pushed, item archived. Core re-checked — if broken, heal item auto-generated.
+Options: `bash -s -- --profile python|node|generic`. `AISHORE_REF` selects a branch or tag;
+`GITHUB_TOKEN`, `GH_TOKEN` or a `gh auth` login is used when present.
 
-## Example: A Well-Written Item
+| Path | Content | On update |
+|---|---|---|
+| `.aishore/aishore/`, `.aishore/bin/aishore` | harness and CLI | replaced |
+| `aishore.toml` | commands, src roots, test runner, models, budgets, locked paths | kept |
+| `ENGINEERING.md` | engineering rules; section 3 is project-specific | kept |
+| `CLAUDE.md` | imports ENGINEERING.md and the role file | appended once |
+| `.claude/settings.json` | four hooks, deny rules for `git push` and `sudo` | merged |
+| `.claude/commands/implement.md` | `/implement` | replaced |
+| `.claude/skills/` | `/brief`, `/decompose`, `/aishore-setup`, `/triage`, `/retro` | replaced |
+| `.gitignore` | `.aishore/state/`, `PLAN.md`, `ESCALATE.md`, `tests/_review/` | merged |
+| `.github/workflows/aishore-verify.yml` | full gate on pull requests and the base branch | kept |
+| `docs/adr/0000-template.md` | decision record template | kept |
 
-```bash
-.aishore/aishore backlog add --json '{
-  "title": "Add health check endpoint",
-  "intent": "Ops must know instantly if the service is alive or dead. No false positives.",
-  "steps": [
-    "Add GET /health route that checks DB connection and returns 200/503",
-    "Return JSON {status: ok|error, db: bool} so monitors can parse it"
-  ],
-  "acceptanceCriteria": [
-    {"text": "Health endpoint returns 200 when service is running",
-     "verify": "curl -sf http://localhost:3000/health | jq -e '.status == \"ok\"'"},
-    {"text": "Health endpoint returns 503 when DB is unreachable",
-     "verify": "DB_HOST=nowhere curl -s http://localhost:3000/health; test $? -ne 0"},
-    {"text": "Response is valid JSON with status and db fields",
-     "verify": "curl -sf http://localhost:3000/health | jq -e '.status and .db'"}
-  ]
-}'
-```
+A pre-existing bash aishore install (`.aishore/aishore` script, `.aishore/data/`, its CLAUDE.md
+section) is removed. `backlog/` is not touched.
 
-This item demonstrates what makes aishore work:
+Setup:
 
-- **Intent is an order, not a description.** "Ops must know instantly" — when the spec is ambiguous, the developer follows this. When the validator checks results, this is the bar. "Add health check endpoint" would be useless as intent because it says nothing about what matters.
-- **Steps are concrete.** The developer doesn't have to guess what "health check" means. Two steps, specific enough to implement, loose enough to allow judgment.
-- **AC verify commands are smoke tests, not grep theater.** Each verify command runs the actual endpoint and checks real behavior. `curl | jq -e` proves the response is valid JSON with correct fields. These are evals — they execute the code and verify the output, not grep a source file for a function name.
-- **Every verify command becomes a regression test.** After this sprint passes, these three curl commands run before every future sprint. If a later change breaks the health endpoint, pre-flight catches it before the developer even starts. The regression suite grows automatically from well-written AC.
+1. Run `/aishore-setup` in Claude Code on the base branch. It makes the gate commands pass,
+   drafts ENGINEERING.md section 3 and `docs/architecture.md`, proposes locked schema and
+   interface paths, and proposes a replay command. Review the diff.
+2. Run `.aishore/bin/aishore gate fast`.
+3. Commit on the base branch. `aishore start` refuses to run until the harness is committed.
+
+Update with `aishore update [--ref REF]`. Examples below assume `.aishore/bin` is on PATH.
+
+## Workflow
+
+All `aishore` commands run from the main checkout. Implementation runs only in a task worktree.
+
+| Step | Where | Command |
+|---|---|---|
+| Plan a goal into tasks | Claude Code, base branch | `/decompose <goal or issue>` |
+| Brief one task | Claude Code, base branch | `/brief T-042 <intent>` |
+| Attack the brief | shell | `aishore brief-review T-042` |
+| Validate and commit | shell | `aishore validate T-042`, then `git commit` |
+| Start | shell | `aishore start T-042` |
+| Implement, interactive | Claude Code, worktree | `/implement` |
+| Implement, headless | shell | `aishore run T-042 [--approve-plan]` |
+| Review the plan (tier 1) | shell | `aishore plan-review T-042` |
+| Review the diff (tiers 1-2) | shell | `aishore review T-042` |
+| Adopt proven findings | shell | `aishore adopt T-042 1 3` |
+| Triage findings or an escalation | Claude Code, base branch | `/triage T-042` |
+| Merge | shell | `aishore merge T-042` |
+| Abandon | shell | `aishore abandon T-042 "reason"` |
+| Improve the process | Claude Code, base branch | `/retro` |
+
+### Brief
+
+The brief (`tasks/T-042/spec.md`, `task.toml`, acceptance tests) is the only definition of done.
+
+`/brief` does four things:
+
+- reads the code to find the types to reuse, the call sites, and the minimal allowlist;
+- asks only the decisions the code cannot answer: boundaries, failure behavior, scope;
+- writes the brief;
+- confirms the tests fail for the right reason. For a fix, one test reproduces the bug.
+
+`aishore new T-042 "title"` scaffolds the files without Claude.
+
+`aishore brief-review T-042` has the reviewer write up to three counterexamples. Each is a
+plausible wrong implementation of the allowlisted files. Each runs against the acceptance tests
+in a scratch worktree that holds the brief as it is on disk. The results go to
+`tasks/T-042/brief-review.md`, together with the reviewer's open questions:
+
+| Result | Meaning | Action |
+|---|---|---|
+| GAP | the tests pass a wrong implementation | add the proposed row and test, re-run |
+| caught | the tests reject it | none |
+| invalid | the counterexample errored or wrote outside `allow` | none |
+
+Delete every `AISHORE_PLACEHOLDER` line before committing.
+
+### Start
+
+`aishore start` does the following, in order:
+
+1. validates the task;
+2. requires the acceptance tests to fail on the base branch;
+3. creates `../.wt/<repo>-T-042` on branch `t/T-042`;
+4. runs `commands.setup` there;
+5. makes human-owned paths read-only.
+
+### Implement
+
+Interactive: run `cd ../.wt/<repo>-T-042 && claude`, then `/implement`. Claude writes PLAN.md and
+waits. You approve or cut the plan; for tier 1, run `aishore plan-review` first. Claude then
+builds under the hooks:
+
+| Hook | Event | Effect |
+|---|---|---|
+| guard_edit | PreToolUse Edit/Write | blocks locked paths, `.aishore/`, and files outside `allow`; fails closed |
+| guard_bash | PreToolUse Bash | blocks push, branch and history changes, git aliases, permission changes, dependency installs, golden updates, shell writes to locked paths |
+| post_edit | PostToolUse Edit/Write | runs the `[format]` command for the extension; feeds problems back |
+| stop | Stop | once code has changed, blocks a red finish twice, then requires ESCALATE.md |
+
+Headless: `aishore run T-042` runs these steps:
+
+1. starts the task if needed;
+2. the implementer writes PLAN.md;
+3. the reviewer approves or asks for revisions once;
+4. the implementer builds to green;
+5. for tiers 1 and 2, the diff is reviewed and proven findings go back to the implementer once.
+
+It never merges. State (session, plan approval, build) is kept in the worktree, and re-running
+resumes from it. After two REVISE verdicts it stops. Edit PLAN.md or the spec, then run
+`aishore run T-042 --approve-plan`.
+
+### Review
+
+`aishore review` runs the reviewer in the worktree. The reviewer is `claude -p` with the reviewer
+model, Read/Grep/Glob only, and no access to the implementer session. Each finding carries a
+test, and the harness runs it with `acceptance.cmd`:
+
+| Verdict | Condition |
+|---|---|
+| REAL | an assertion fails, or production code raises |
+| discard | the test passes |
+| invalid | the test itself errors, crashes, or does not collect |
+
+Results go to `tasks/T-042/findings.md`. `aishore adopt` commits the chosen findings as
+acceptance tests on main and syncs them into the worktree.
+
+### Merge and escalation
+
+`aishore merge` does the following:
+
+- refuses a worktree that is not on `t/T-042`;
+- runs the full gate and commits the work;
+- shows the diff stat, the replay diff, and for tier 1 the full diff;
+- asks y/N and records your minutes, the gate that caught a problem, and the missing gate;
+- on yes, merges, writes approved goldens, commits the records, and removes the worktree.
+
+ESCALATE.md means the spec or architecture must change. Run `/triage` to get a proposed fix,
+then `aishore abandon` to file the escalation and remove the worktree. To change a spec
+mid-task, commit the change on main and run `aishore sync T-042`.
+
+`aishore status` lists open worktrees with PLAN, ESCALATE, and finding flags.
 
 ## Commands
 
-```bash
-.aishore/aishore run [N|ID|done|p0|p1|p2]    # run sprints
-```
-```bash
-.aishore/aishore backlog populate              # create items from PRODUCT.md
-```
-```bash
-.aishore/aishore backlog add --json '{...}'     # add item manually
-```
-```bash
-.aishore/aishore refine                        # improve PRODUCT.md interactively
-```
-```bash
-.aishore/aishore groom                         # groom backlog items
-```
-```bash
-.aishore/aishore scaffold                      # establish working core, detect fragment risk
-```
-```bash
-.aishore/aishore review [--update-docs]        # architecture review
-```
-```bash
-.aishore/aishore status                        # backlog overview
-```
-```bash
-.aishore/aishore update [--ref main]           # self-update
-```
-
-## Documentation
-
-| | |
+| Command | Effect |
 |---|---|
-| **[Quickstart](docs/QUICKSTART.md)** | Install, configure, first sprint walkthrough |
-| **[Configuration](docs/CONFIGURATION.md)** | Config file, env vars, all CLI flags |
-| **[Architecture](docs/ARCHITECTURE.md)** | Pipeline, agents, quality model |
-| **[CI / GitHub Actions](docs/CI.md)** | Run sprints in CI, overnight factory workflow |
-| **[Changelog](docs/CHANGELOG.md)** | Release history |
+| `new ID "title"` | scaffold `tasks/ID/` and a placeholder acceptance test |
+| `validate ID` | check a task against the schema |
+| `brief-review ID` | run reviewer counterexamples against the acceptance tests |
+| `start ID` | prove red, create the worktree, lock paths |
+| `run ID [--approve-plan]` | headless plan, build, review, one fix round |
+| `plan-review ID` | reviewer attacks PLAN.md |
+| `review ID` | reviewer checks the diff; findings are executed |
+| `adopt ID N...` | promote findings to acceptance tests |
+| `sync ID` | merge the base branch into the task branch |
+| `merge ID [--yes]` | full gate, approval, merge, log |
+| `abandon ID "why"` | file the escalation, remove the worktree and branch |
+| `status` | open task worktrees |
+| `gate fast\|full` | run the gate in the current checkout |
+| `replay check\|diff\|update [CASE...]` | replay oracle |
+| `entropy` | append size and complexity to `entropy.csv` |
+| `install`, `update`, `selftest`, `version` | setup and maintenance |
 
-Additional: [Product vision](docs/PRODUCT.md) | [Problems solved](docs/PROBLEMS.md) | [Roadmap](docs/ROADMAP.md) | [Contributing](docs/CONTRIBUTING.md)
+## Skills
 
-## Comparison
+| Skill | Purpose |
+|---|---|
+| `/aishore-setup` | fit the harness to the repository: gates, architecture rules and their enforcement, module map, locked paths, replay |
+| `/decompose` | split a goal into ordered tasks that each fit one acceptance table and the budgets |
+| `/brief` | write a grounded brief with red-for-the-right-reason acceptance tests |
+| `/triage` | propose the spec change or split for an escalation; sort findings into adopt, reject, or spec gap |
+| `/retro` | propose the next gate, rule deletions, and budget changes from `tasks/log.csv` |
 
-**vs. Claude Code / Cursor / Aider** — those are session tools. aishore is the sprint layer: backlog priority, git branching, quality gates, failure recovery, batch execution, archival. You keep your AI tool — aishore orchestrates it.
+Skills draft human-owned files for your review. Judgments come from the separate reviewer process.
 
-**vs. SWE-agent / Devin** — those solve individual tasks. aishore manages the sprint: item selection, quality gates, batch execution, regression protection. It wraps Claude Code; it could wrap any agent.
+## Gates
 
-**vs. shell script loop** — you'd need: two-track backlog management, core verification, branching per item, worktree isolation, pre-flight regression, maturity protocol, retries with context, auto-grooming, circuit breaker, independent validation, self-healing, and archival.
+| Step | Fast (Stop hook) | Full (merge, CI) |
+|---|---|---|
+| no ESCALATE.md | | yes |
+| lint, types, imports, tests (`[commands]`) | yes | yes |
+| diffcheck (task branches) | yes | yes |
+| acceptance tests of merged tasks and the current task | yes | yes |
+| replay | | yes |
+| mutation on changed Python lines, by tier | | yes |
 
-## Status
+Tests of open tasks are red on main by design and never gate other work. `commands.tests` must
+not run `tests/acceptance`. The pytest profile passes `--ignore`. Node acceptance files are
+named `*.accept.js|ts`, a pattern that no default discovery matches.
 
-**Alpha** (v0.5.11). Self-hosting — nearly every commit generated by its own sprint orchestrator. Used daily on real projects.
+Diffcheck detects gate weakening (skips, suppressions, loosened tolerances) in Python, JS/TS,
+Go, Rust, and shell. Extensionless scripts are classified by shebang.
 
-Known limits: single-repo, Claude Code CLI only, macOS/Linux only.
+## Configuration
 
-## Author
+`aishore.toml`:
 
-**Simon Plant** — [@simonplant](https://github.com/simonplant)
+| Key | Meaning |
+|---|---|
+| `base`, `worktree_root` | base branch; worktree parent (`../.wt`) |
+| `src` | production roots for the LOC budget, new files, new classes, and mutation |
+| `commands.setup` | runs in each new worktree before paths lock |
+| `commands.lint`, `types`, `imports`, `tests` | gate steps; empty skips |
+| `acceptance.cmd` | runs acceptance, finding, and counterexample tests; `{tests}` is the file list |
+| `acceptance.fail_codes`, `empty_codes` | exit codes for "a test failed" and "no tests found" |
+| `acceptance.assert_pattern` | output that marks a failed assertion; empty accepts any failure |
+| `acceptance.path`, `lang` | test file template (`{name}` is `t_042` or `t_042_f1`); language for reviewer tests |
+| `format` | formatter per extension; `{file}` is the edited file |
+| `replay.cmd`, `cases`, `golden` | one JSON event per line for the recorded input `{input}`; empty disables replay |
+| `mutation.*` | test command, mutant cap, timeout factor |
+| `implement.model`, `implement.headless` | implementer model; headless command for `run` |
+| `review.model`, `review.cmd`, `review.context` | reviewer model and command; files sent with every review |
+| `defaults.*` | per-task LOC budget, new files, new classes |
+| `ownership.locked` | human-owned globs |
 
-## License
+Vitest acceptance runs use a shipped config that loads the project's own config and adds
+`tests/acceptance` and `tests/_review` to its `include`. Jest runs get `--roots` and
+`--testMatch`.
 
-[Apache License 2.0](LICENSE)
+Task schema: `.aishore/aishore/scaffold/SCHEMA.md`, with a JSON Schema beside it.
+
+## Session rules
+
+- One fresh session per task, started in its worktree.
+- On the base branch, only skills; never implement there. Hooks guard task branches only.
+- A request to edit a human-owned file is answered by changing the brief.
+- The implementer never reviews its own diff, directly or through a subagent.
+
+## Records
+
+| File | Content |
+|---|---|
+| `tasks/log.csv` | one row per merged, rejected, escalated, or abandoned task |
+| `tasks/ID/` | brief, brief review, plan review, review, findings, escalations |
+| `entropy.csv` | files, LOC, dependencies, and Python complexity and dead code |
+
+## Limits
+
+- guard_bash is heuristic. Writes it misses are caught by diffcheck at merge.
+- A hook that times out does not block.
+- The Stop hook allows the third red stop. The merge gate still refuses red work.
+- Mutation covers changed Python lines only, up to `max_mutants`, with a fixed operator set.
+- Reviewer and counterexample code runs in the worktree or a scratch worktree. Read finding
+  tests before adopting them.
+- The generic profile has no `assert_pattern`, so there any failing finding counts as REAL.
+
+## Development
+
+```
+bin/aishore selftest
+ruff check aishore
+```
+
+The selftest installs into throwaway Python, flat-layout, node, vitest, and shell repositories
+and drives every command and hook through the CLI. A stub `claude` stands in for the models.
+It needs pytest, and node and npm for the node and vitest parts.
