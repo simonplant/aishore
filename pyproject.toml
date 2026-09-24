@@ -1,0 +1,26 @@
+[project]
+name = "aishore"
+dynamic = ["version"]
+description = "Engineering harness for Claude Code: human-owned specs and tests, task worktrees, blocking hooks, gates, an independent reviewer"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+
+[project.scripts]
+aishore = "aishore.__main__:entry"
+
+[tool.setuptools.dynamic]
+version = { attr = "aishore.__version__" }
+
+[tool.setuptools.package-data]
+aishore = ["scaffold/**/*", "prompts/*"]
+
+[tool.ruff]
+line-length = 130
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "BLE", "S110", "SIM", "UP", "I"]
+ignore = ["E702"]
+
+[tool.ruff.lint.per-file-ignores]
+"aishore/hooks/*" = ["BLE001"]      # hooks fail closed (guards) or stay out of the way (formatter)
+"aishore/__main__.py" = ["UP036"]   # friendly error on Python < 3.11 before tomllib imports fail
