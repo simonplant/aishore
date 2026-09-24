@@ -202,11 +202,12 @@ imports = {tv(c["imports"])}
 tests = {tv(c["tests"])}      # everything except tests/acceptance; the harness runs those per task
 
 [acceptance]
-# Runs acceptance and reviewer-finding tests. {{tests}} becomes the quoted file list.
+# Runs acceptance, finding, and counterexample tests. {{tests}} becomes the quoted file list.
 cmd = {tv(a["cmd"])}
-fail_codes = {tv(a["fail_codes"])}    # exit codes that prove a finding (assertion failed); empty: any non-zero
+fail_codes = {tv(a["fail_codes"])}    # exit codes meaning "a test failed"; empty: any non-zero
 empty_codes = {tv(a["empty_codes"])}   # exit codes meaning "no tests found"; start refuses them
-assert_pattern = {tv(a["assert_pattern"])}   # a finding is REAL only if its output matches; empty: any failure
+# A failing test proves a defect when its output matches assert_pattern or production code raised.
+assert_pattern = {tv(a["assert_pattern"])}   # empty: any failure proves
 path = {tv(a["path"])}   # {{name}} is the task slug (t_042) or a finding (t_042_f1); never auto-discovered by commands.tests
 lang = {tv(a["lang"])}
 

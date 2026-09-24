@@ -4,12 +4,13 @@
 
 1. start the task if it has no worktree
 2. implementer (headless Claude Code in the worktree, hooks active) writes PLAN.md
-3. reviewer attacks the plan; REVISE sends the points back; a second REVISE stops the run
+3. reviewer attacks the plan; REVISE sends the points back; a second REVISE stops the run for
+   the human, who resumes with --approve-plan
 4. implementer builds to green under the Stop hook
 5. tier 1 and 2: reviewer checks the diff; proven findings go back to the implementer once
 6. stop; print the findings and the merge command
 
-Re-running resumes: the implementer session id and plan approval live in the worktree's state dir.
+Re-running resumes: session id, plan approval, and build status live in the worktree's state dir.
 """
 from __future__ import annotations
 

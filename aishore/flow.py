@@ -103,7 +103,7 @@ def prompt(cfg: dict, name: str) -> str:
     return ((PROMPTS / name).read_text()
             .replace("{{LANG}}", acc.get("lang", ""))
             .replace("{{RUNNER}}", acc["cmd"])
-            .replace("{{TEST_PATH}}", acc["path"]))
+            .replace("{{TEST_FILE}}", Path(acc["path"].replace("{name}", "finding_N")).name))
 
 
 # ---------------------------------------------------------------- commands
