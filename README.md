@@ -69,6 +69,8 @@ Put `.aishore/bin` on PATH or alias `aishore` to `.aishore/bin/aishore`. The exa
 assume one of these.
 
 Update: `aishore update` (or re-run install.sh). This keeps `aishore.toml` and ENGINEERING.md.
+Both fetch through the GitHub API with `GITHUB_TOKEN`, `GH_TOKEN` or a `gh auth` login when
+present, so a private fork works (`AISHORE_REPO=owner/name`).
 
 ## Operating procedure
 

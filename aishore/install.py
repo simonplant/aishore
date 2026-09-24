@@ -23,7 +23,7 @@ from pathlib import Path
 
 from aishore import __version__, lib
 
-REPO = "simonplant/aishore"
+REPO = os.environ.get("AISHORE_REPO", "simonplant/aishore")
 PKG = Path(__file__).resolve().parent
 SCAFFOLD = PKG / "scaffold"
 MARK = "<!-- aishore -->"
@@ -249,7 +249,7 @@ locked = [
 
 
 def render_ci(p: dict) -> str:
-    node = "\n      - uses: actions/setup-node@v4\n        with:\n          node-version: lts/*" \
+    node = "\n      - uses: actions/setup-node@v7\n        with:\n          node-version: lts/*" \
         if p["ci"]["setup"] == "node" else ""
     return f"""name: aishore-verify
 on:
@@ -262,10 +262,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"{node}
       - name: Install
@@ -390,9 +390,21 @@ def install(root: Path, profile: str | None) -> None:
     print("  .aishore/bin/aishore gate fast   # fix what it finds, or blank out steps you are not ready for")
 
 
+def github_token() -> str:
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
+    if not token and shutil.which("gh"):
+        token = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True).stdout.strip()
+    return token
+
+
 def update(root: Path, ref: str) -> None:
-    url = f"https://codeload.github.com/{REPO}/tar.gz/{ref}"
-    with urllib.request.urlopen(url, timeout=60) as r:
+    """Fetch the tarball through the API so a private fork works with a gh or GITHUB_TOKEN login."""
+    req = urllib.request.Request(f"https://api.github.com/repos/{REPO}/tarball/{ref}",
+                                 headers={"Accept": "application/vnd.github+json"})
+    token = github_token()
+    if token:
+        req.add_header("Authorization", f"Bearer {token}")
+    with urllib.request.urlopen(req, timeout=60) as r:
         data = r.read()
     with tempfile.TemporaryDirectory() as tmp:
         with tarfile.open(fileobj=io.BytesIO(data)) as tf:
