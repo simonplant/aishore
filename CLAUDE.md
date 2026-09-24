@@ -1,36 +1,39 @@
 # CLAUDE.md
 
-aishore is an engineering harness for Claude Code, installed into other repositories. README.md
-is the operating manual; this file maps the source.
+aishore: an engineering harness for Claude Code, vendored into target repositories as
+`.aishore/aishore/`. README.md is the user manual.
 
 ## Layout
 
-```
-aishore/                 the package, stdlib only, Python 3.11+ (vendored into targets as .aishore/aishore/)
-  __main__.py            CLI dispatch
-  lib.py                 repo, config, task context, ownership, acceptance runner helpers
-  langs.py               per-language cheat patterns and class detection
-  tasks.py               task.toml and spec.md validation
-  flow.py                new, brief-review, start, plan-review, review, adopt, sync, merge, abandon, status
-  briefcheck.py          runs brief-review counterexamples against the acceptance tests in a scratch worktree
-  run.py                 headless run: plan, reviewer approval, build, review, one fix round
-  gate.py diffcheck.py replay.py mutate.py findings.py logbook.py entropy.py
-  hooks/                 guard_edit, guard_bash, post_edit, stop (run via `aishore hook <name>`)
-  install.py             profiles (python, node, generic), install, update
-  selftest.py            end-to-end test in throwaway repos with a stub claude
-  prompts/               reviewer role, brief review, plan review, diff review
-  scaffold/              files written into targets: ENGINEERING.md, role, /implement, skills (brief,
-                         decompose, aishore-setup, triage, retro), task templates, vitest runner, shim
-bin/aishore              symlink to the shim, for running from source
-install.sh               curl installer
-```
+| Path | Content |
+|---|---|
+| `aishore/__main__.py` | CLI dispatch |
+| `aishore/lib.py` | repo and config access, task context, ownership, acceptance runner, failure classification |
+| `aishore/langs.py` | per-language gate-weakening patterns and class detection |
+| `aishore/tasks.py` | task.toml and spec.md validation |
+| `aishore/flow.py` | new, brief-review, start, plan-review, review, adopt, sync, merge, abandon, status |
+| `aishore/briefcheck.py` | runs brief-review counterexamples in a scratch worktree |
+| `aishore/run.py` | headless plan, approval, build, review, fix round |
+| `aishore/gate.py`, `diffcheck.py`, `replay.py`, `mutate.py`, `findings.py`, `logbook.py`, `entropy.py` | gates, oracles, records |
+| `aishore/hooks/` | guard_edit, guard_bash, post_edit, stop (`aishore hook <name>`) |
+| `aishore/install.py` | profiles (python, node, generic), install, update |
+| `aishore/selftest.py` | end-to-end test in throwaway repositories with a stub `claude` |
+| `aishore/prompts/` | reviewer role, brief review, plan review, diff review |
+| `aishore/scaffold/` | files written into targets: rulebook, role, `/implement`, skills, task templates, vitest runner, CLI shim |
+| `bin/aishore` | symlink to the shim, for running from source |
+| `install.sh` | installer |
 
 ## Rules
 
-- Stdlib only. Target projects must not need a pip install to run their hooks.
-- Nothing project-specific in the package: every project fact lives in the target's aishore.toml
-  or ENGINEERING.md.
-- A change is done when `bin/aishore selftest` passes (it needs pytest, and node for the node
-  part) and `ruff check aishore` is clean. A new behavior gets a selftest check driving the
-  installed CLI, not a fragment test.
-- Hooks fail closed (guards) or stay out of the way (formatter). Never let a guard error allow an edit.
+- Stdlib only. Target projects need no pip install to run hooks.
+- No project-specific facts in the package. They belong in the target's `aishore.toml` or
+  ENGINEERING.md.
+- Guards fail closed. The formatter hook never blocks on its own error.
+- Every behavior has a selftest check that drives the installed CLI and fails without the behavior.
+
+## Verify
+
+```
+bin/aishore selftest     # needs pytest; node and npm for the node and vitest parts
+ruff check aishore
+```

@@ -2,7 +2,7 @@
 
   aishore selftest
 
-Python profile: install and legacy removal, hooks exactly as settings.json runs them, diffcheck,
+Python profile: install over a bash aishore, hooks exactly as settings.json runs them, diffcheck,
 replay, mutation, reviewer findings, adopt, merge, pending-task isolation, and a headless
 `aishore run` against a stub `claude`. Node and generic profiles: install, red proof, guards,
 language cheats, findings, merge. Vitest: a project whose config `include` excludes tests/acceptance.
@@ -231,7 +231,7 @@ def python_part(tmp: Path, env: dict, py: str, stub_dir: Path) -> None:
     write(root / "tests/unit/test_calc.py", "from toy.calc import clamp\n\n\ndef test_clamp():\n"
           "    assert clamp(-5, 0, 10) == 0\n    assert clamp(12, 0, 10) == 10\n    assert clamp(3, 0, 10) == 3\n")
     write(root / "replay/cases/basic.json", "[-5, 3, 12]")
-    write(root / ".aishore/aishore", "#!/usr/bin/env bash\necho legacy\n")
+    write(root / ".aishore/aishore", "#!/usr/bin/env bash\necho bash-aishore\n")
     write(root / ".aishore/data/logs/x.log", "old\n")
     write(root / "CLAUDE.md", "# Toy\n\nProject rules.\n\n## Sprint Orchestration (aishore)\nold stuff\n\n## Other\nkeep\n")
     write(root / ".gitignore", "# aishore runtime files\n.aishore/data/logs/\n")
@@ -248,7 +248,7 @@ def python_part(tmp: Path, env: dict, py: str, stub_dir: Path) -> None:
           and not (root / ".aishore/data").exists(), "install vendors the harness and removes the bash aishore")
     cm = (root / "CLAUDE.md").read_text()
     check("Sprint Orchestration" not in cm and "## Other\nkeep" in cm and "@ENGINEERING.md" in cm,
-          "install strips the old CLAUDE.md section and adds imports", cm)
+          "install strips the bash aishore CLAUDE.md section and adds imports", cm)
     gi = (root / ".gitignore").read_text()
     check(".aishore/data" not in gi and ".aishore/state/" in gi, "install rewrites .gitignore entries", gi)
     r = run([*INSTALLER, str(root)], root, env)

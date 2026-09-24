@@ -284,8 +284,8 @@ jobs:
 
 def remove_legacy(root: Path) -> list[str]:
     done = []
-    old = root / ".aishore" / "aishore"
-    if old.is_file():
+    bash_install = root / ".aishore" / "aishore"
+    if bash_install.is_file():
         lib.set_locked(root / ".aishore", {"ownership": {"locked": ["**"]}}, False)
         shutil.rmtree(root / ".aishore")
         done.append("removed the bash aishore in .aishore/ (backlog/ left as is)")
@@ -295,7 +295,7 @@ def remove_legacy(root: Path) -> list[str]:
         new = re.sub(r"^## Sprint Orchestration \(aishore\)\n.*?(?=^## |\Z)", "", t, flags=re.M | re.S)
         if new != t:
             cm.write_text(new)
-            done.append("removed the old aishore section from CLAUDE.md")
+            done.append("removed the bash aishore section from CLAUDE.md")
     gi = root / ".gitignore"
     if gi.exists():
         lines = gi.read_text().splitlines()

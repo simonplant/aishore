@@ -2,30 +2,25 @@
 
 An engineering harness for Claude Code. Claude implements; the harness owns correctness.
 
-- **Human-owned specs and tests.** Each task has a spec and acceptance tests that you write (or
-  approve) on the base branch. Agents read them and cannot change them.
-- **One worktree per task** (`../.wt/<repo>-T-042`, branch `t/T-042`). Human-owned paths are made
-  read-only there.
-- **Hooks that block.** Edits outside the task allowlist, writes to human-owned paths, gate
-  bypasses, and red finishes are all refused.
-- **A diff gate.** Checks ownership, the allowlist, gate weakening, the LOC budget, new files and
-  new classes.
-- **Oracles.** Acceptance tests per task, a replay of recorded inputs against golden output, and
-  mutation testing on changed lines (Python).
-- **An independent reviewer.** A different model runs headless and read-only. A finding counts
-  only when its test fails on the branch.
-- **A merge you approve.** The full gate runs, you see the diff, and you answer y/N. The outcome
-  is logged.
+| Mechanism | Effect |
+|---|---|
+| Human-owned briefs | spec and acceptance tests are written or approved by you; agents cannot change them |
+| Task worktrees | one worktree and branch (`t/T-042`) per task; human-owned paths are read-only there |
+| Blocking hooks | edits outside the allowlist, writes to locked paths, gate bypasses, and red finishes are refused |
+| Diff gate | ownership, allowlist, gate weakening, LOC budget, new files, new classes |
+| Oracles | per-task acceptance tests, replay against goldens, mutation on changed Python lines |
+| Independent reviewer | a different model, headless and read-only; a finding counts only if its test fails on the branch |
+| Human merge | full gate, diff, your y/N, logged outcome |
 
-Works in any git repository. The harness is stdlib Python 3.11+. Your project can be in any
-language: gates and test runners are commands in `aishore.toml`. Python projects also get AST
-mutation and ruff-on-edit when ruff is configured.
+Stdlib Python 3.11+. Target projects can use any language; gates and test runners are commands
+in `aishore.toml`. Profiles: `python`, `node` (node test runner, vitest, jest), `generic`.
 
 ## Requirements
 
-`python3` >= 3.11 and git 2.30+ on PATH. The hooks call python3. You also need Claude Code,
-logged in with access to the implementer and reviewer models. Your project's own test runner
-must be installed. Do not run Claude Code as root: file permissions do not bind root.
+- `python3` >= 3.11 and git >= 2.30 on PATH
+- Claude Code, logged in with access to the implementer and reviewer models
+- the project's own test runner
+- a non-root user (file permissions do not bind root)
 
 ## Install
 
@@ -35,273 +30,259 @@ From the repository root, on the base branch:
 curl -fsSL https://raw.githubusercontent.com/simonplant/aishore/main/install.sh | bash
 ```
 
-This detects a profile: `node` (package.json), `python` (pyproject, setup, requirements, or
-mostly .py) or `generic`. Pass `bash -s -- --profile <name>` to override it. It then writes:
+Options: `bash -s -- --profile python|node|generic`. `AISHORE_REF` selects a branch or tag;
+`GITHUB_TOKEN`, `GH_TOKEN` or a `gh auth` login is used when present.
 
-| Path | What | Rewritten by update? |
+| Path | Content | On update |
 |---|---|---|
-| `.aishore/aishore/`, `.aishore/bin/aishore` | the harness and its CLI | yes |
-| `aishore.toml` | commands, src roots, test runner, models, budgets, locked paths | no |
-| `ENGINEERING.md` | the rulebook; section 3 is yours to fill | no |
-| `CLAUDE.md` | appends `@ENGINEERING.md` and the role file import | once |
-| `.claude/settings.json` | four hooks merged into your existing settings | merged |
-| `.claude/commands/implement.md` | `/implement` for the implementer session | yes |
-| `.claude/skills/` | `/brief`, `/decompose`, `/aishore-setup`, `/triage`, `/retro` | yes |
+| `.aishore/aishore/`, `.aishore/bin/aishore` | harness and CLI | replaced |
+| `aishore.toml` | commands, src roots, test runner, models, budgets, locked paths | kept |
+| `ENGINEERING.md` | engineering rules; section 3 is project-specific | kept |
+| `CLAUDE.md` | imports ENGINEERING.md and the role file | appended once |
+| `.claude/settings.json` | four hooks, deny rules for `git push` and `sudo` | merged |
+| `.claude/commands/implement.md` | `/implement` | replaced |
+| `.claude/skills/` | `/brief`, `/decompose`, `/aishore-setup`, `/triage`, `/retro` | replaced |
 | `.gitignore` | `.aishore/state/`, `PLAN.md`, `ESCALATE.md`, `tests/_review/` | merged |
-| `.github/workflows/aishore-verify.yml` | full gate on PRs and the base branch | no |
-| `docs/adr/0000-template.md` | decision record template (new dependencies need one) | no |
+| `.github/workflows/aishore-verify.yml` | full gate on pull requests and the base branch | kept |
+| `docs/adr/0000-template.md` | decision record template | kept |
 
-It removes an old bash aishore (`.aishore/aishore` script, `.aishore/data/`, and the CLAUDE.md
-sprint section). It leaves `backlog/` alone.
+A pre-existing bash aishore install (`.aishore/aishore` script, `.aishore/data/`, its CLAUDE.md
+section) is removed. `backlog/` is not touched.
 
-Then:
+Setup:
 
-1. In Claude Code on the base branch, run `/aishore-setup`. It makes the gate commands pass,
-   drafts ENGINEERING.md section 3 (architecture rules, each with its enforcement) and
-   `docs/architecture.md`, proposes schema and interface paths to lock, and a replay command.
-   Review its diff: all of it is human-owned from here on.
-2. Or by hand: check `src`, the gate commands and `acceptance.cmd` in `aishore.toml`, fill
-   ENGINEERING.md section 3, and optionally set `replay.cmd` (`{input}` is the recorded file;
-   it prints one JSON event per line), add `replay/cases/`, and run `aishore replay update`.
-3. Run `.aishore/bin/aishore gate fast` and fix what it finds.
-4. Commit on the base branch. `aishore start` refuses to run until the harness is committed,
-   because a worktree without it would have no hooks.
+1. Run `/aishore-setup` in Claude Code on the base branch. It makes the gate commands pass,
+   drafts ENGINEERING.md section 3 and `docs/architecture.md`, proposes locked schema and
+   interface paths, and proposes a replay command. Review the diff.
+2. Run `.aishore/bin/aishore gate fast`.
+3. Commit on the base branch. `aishore start` refuses to run until the harness is committed.
 
-Put `.aishore/bin` on PATH or alias `aishore` to `.aishore/bin/aishore`. The examples below
-assume one of these.
+Update with `aishore update [--ref REF]`. Examples below assume `.aishore/bin` is on PATH.
 
-Update: `aishore update` (or re-run install.sh). This keeps `aishore.toml` and ENGINEERING.md.
-Both fetch through the GitHub API with `GITHUB_TOKEN`, `GH_TOKEN` or a `gh auth` login when
-present, so a private fork works (`AISHORE_REPO=owner/name`).
+## Workflow
 
-## Operating procedure
+All `aishore` commands run from the main checkout. Implementation runs only in a task worktree.
 
-Every `aishore` command runs from the main checkout. Claude Code runs only in a worktree.
+| Step | Where | Command |
+|---|---|---|
+| Plan a goal into tasks | Claude Code, base branch | `/decompose <goal or issue>` |
+| Brief one task | Claude Code, base branch | `/brief T-042 <intent>` |
+| Attack the brief | shell | `aishore brief-review T-042` |
+| Validate and commit | shell | `aishore validate T-042`, then `git commit` |
+| Start | shell | `aishore start T-042` |
+| Implement, interactive | Claude Code, worktree | `/implement` |
+| Implement, headless | shell | `aishore run T-042 [--approve-plan]` |
+| Review the plan (tier 1) | shell | `aishore plan-review T-042` |
+| Review the diff (tiers 1-2) | shell | `aishore review T-042` |
+| Adopt proven findings | shell | `aishore adopt T-042 1 3` |
+| Triage findings or an escalation | Claude Code, base branch | `/triage T-042` |
+| Merge | shell | `aishore merge T-042` |
+| Abandon | shell | `aishore abandon T-042 "reason"` |
+| Improve the process | Claude Code, base branch | `/retro` |
 
-### 0. Plan the work (optional, for anything bigger than one task)
+### Brief
 
-In Claude Code on the base branch: `/decompose <goal or issue>`. It splits the goal into ordered
-tasks that each fit one acceptance table and the budgets. Refactors with identical replay come
-first, then one behavior change per task. You approve the plan, and it scaffolds the task ids.
+The brief (`tasks/T-042/spec.md`, `task.toml`, acceptance tests) is the only definition of done.
 
-### 1. Brief the task (you, on the base branch)
+`/brief` does four things:
 
-The brief is the only definition of "right" the implementer is held to. Every gap in it is a
-defect the gates will let through.
+- reads the code to find the types to reuse, the call sites, and the minimal allowlist;
+- asks only the decisions the code cannot answer: boundaries, failure behavior, scope;
+- writes the brief;
+- confirms the tests fail for the right reason. For a fix, one test reproduces the bug.
 
-```
-/brief T-042 trail the stop to the last swing low
-```
+`aishore new T-042 "title"` scaffolds the files without Claude.
 
-`/brief` works in Claude Code and does four things:
-- It grounds itself in the code: the types to reuse, the call sites, and the minimal allowlist.
-- It asks you only the decisions the code cannot answer: boundaries, failure behavior, and
-  what is out of scope.
-- It writes spec.md, task.toml and the acceptance tests.
-- It checks the tests are red for the right reason: missing behavior, not a broken test.
+`aishore brief-review T-042` has the reviewer write up to three counterexamples. Each is a
+plausible wrong implementation of the allowlisted files. Each runs against the acceptance tests
+in a scratch worktree that holds the brief as it is on disk. The results go to
+`tasks/T-042/brief-review.md`, together with the reviewer's open questions:
 
-For a fix, one test reproduces the bug. Without Claude, `aishore new T-042 "title"` scaffolds
-the same files for you to fill.
+| Result | Meaning | Action |
+|---|---|---|
+| GAP | the tests pass a wrong implementation | add the proposed row and test, re-run |
+| caught | the tests reject it | none |
+| invalid | the counterexample errored or wrote outside `allow` | none |
 
-Then have an independent reviewer attack the brief:
+Delete every `AISHORE_PLACEHOLDER` line before committing.
 
-```
-aishore brief-review T-042
-```
+### Start
 
-The reviewer writes up to three counterexamples: plausible wrong implementations of the
-allowlisted files. The harness runs your acceptance tests against each one in a scratch
-worktree. Results go to `tasks/T-042/brief-review.md`, alongside the reviewer's open questions:
-- **GAP**: the tests pass a wrong implementation. Add the reviewer's row and a test for it,
-  then re-run.
-- **caught**: the tests already reject it.
+`aishore start` does the following, in order:
 
-Delete every placeholder line, then:
+1. validates the task;
+2. requires the acceptance tests to fail on the base branch;
+3. creates `../.wt/<repo>-T-042` on branch `t/T-042`;
+4. runs `commands.setup` there;
+5. makes human-owned paths read-only.
 
-```
-aishore validate T-042
-git add tasks/T-042 tests/acceptance && git commit -m "T-042: task"
-```
+### Implement
 
-If you cannot write the acceptance table, or cannot say which replay cases change, split the task.
+Interactive: run `cd ../.wt/<repo>-T-042 && claude`, then `/implement`. Claude writes PLAN.md and
+waits. You approve or cut the plan; for tier 1, run `aishore plan-review` first. Claude then
+builds under the hooks:
 
-### 2. Start
+| Hook | Event | Effect |
+|---|---|---|
+| guard_edit | PreToolUse Edit/Write | blocks locked paths, `.aishore/`, and files outside `allow`; fails closed |
+| guard_bash | PreToolUse Bash | blocks push, branch and history changes, git aliases, permission changes, dependency installs, golden updates, shell writes to locked paths |
+| post_edit | PostToolUse Edit/Write | runs the `[format]` command for the extension; feeds problems back |
+| stop | Stop | once code has changed, blocks a red finish twice, then requires ESCALATE.md |
 
-```
-aishore start T-042
-```
+Headless: `aishore run T-042` runs these steps:
 
-This validates the task, proves the acceptance tests fail on the base branch, creates the
-worktree, runs `commands.setup` there (for example `npm ci`), and makes human-owned paths
-read-only.
+1. starts the task if needed;
+2. the implementer writes PLAN.md;
+3. the reviewer approves or asks for revisions once;
+4. the implementer builds to green;
+5. for tiers 1 and 2, the diff is reviewed and proven findings go back to the implementer once.
 
-### 3a. Interactive: plan and build
+It never merges. State (session, plan approval, build) is kept in the worktree, and re-running
+resumes from it. After two REVISE verdicts it stops. Edit PLAN.md or the spec, then run
+`aishore run T-042 --approve-plan`.
 
-```
-cd ../.wt/<repo>-T-042 && claude --model claude-opus-5-5
-/implement
-```
+### Review
 
-Claude writes PLAN.md and stops. For Tier 1, run `aishore plan-review T-042` from main and paste
-the points you accept into the session. Approve when the Leave alone section is honest, the size
-fits the budget, and nothing is added that the acceptance tests do not need. Otherwise cut it:
-"Drop X. Reuse Y." Then say "approved". Claude builds while the hooks supervise:
+`aishore review` runs the reviewer in the worktree. The reviewer is `claude -p` with the reviewer
+model, Read/Grep/Glob only, and no access to the implementer session. Each finding carries a
+test, and the harness runs it with `acceptance.cmd`:
 
-| Hook | Effect |
+| Verdict | Condition |
 |---|---|
-| guard_edit | blocks edits to human-owned paths and outside the allowlist (fails closed) |
-| guard_bash | blocks push, branch switching, chmod, dependency installs, golden updates, shell writes to locked paths |
-| post_edit | runs the `[format]` command for the file's extension and feeds problems back |
-| stop | once code has changed, refuses a red finish twice, then requires ESCALATE.md |
+| REAL | an assertion fails, or production code raises |
+| discard | the test passes |
+| invalid | the test itself errors, crashes, or does not collect |
 
-If Claude goes idle after a blocked tool call, type `continue`.
+Results go to `tasks/T-042/findings.md`. `aishore adopt` commits the chosen findings as
+acceptance tests on main and syncs them into the worktree.
 
-### 3b. Headless: `aishore run T-042 [--approve-plan]`
+### Merge and escalation
 
-`aishore run` starts the task if needed, then:
-1. The implementer runs headless in the worktree with the same hooks and writes PLAN.md.
-2. The reviewer attacks the plan. REVISE sends the points back once. A second REVISE stops the
-   run for you: edit PLAN.md or the spec, then `aishore run T-042 --approve-plan`. That flag
-   records your approval and skips the reviewer's plan review.
-3. The implementer builds under the Stop hook.
-4. Tier 1 and 2: the reviewer checks the diff. Findings that fail on the branch go back to the
-   implementer once, then are re-run.
-5. It prints the findings and the merge command.
+`aishore merge` does the following:
 
-It never merges. Re-running resumes from the worktree's state: the session id, plan approval,
-and build status. After you adopt findings, `aishore run` again makes the new tests pass.
+- refuses a worktree that is not on `t/T-042`;
+- runs the full gate and commits the work;
+- shows the diff stat, the replay diff, and for tier 1 the full diff;
+- asks y/N and records your minutes, the gate that caught a problem, and the missing gate;
+- on yes, merges, writes approved goldens, commits the records, and removes the worktree.
 
-### 4. Review (Tier 1 and 2)
+ESCALATE.md means the spec or architecture must change. Run `/triage` to get a proposed fix,
+then `aishore abandon` to file the escalation and remove the worktree. To change a spec
+mid-task, commit the change on main and run `aishore sync T-042`.
 
-```
-aishore review T-042
-```
+`aishore status` lists open worktrees with PLAN, ESCALATE, and finding flags.
 
-The reviewer is a separate `claude -p` process in the worktree. It runs the reviewer model with
-only Read, Grep and Glob, and never sees the implementer's session. Each finding must carry a
-test in the project's language. The harness runs each test with `acceptance.cmd` and writes
-`tasks/T-042/findings.md`:
-- **REAL**: the test fails on the branch.
-- **discard**: the test passes.
-- **invalid**: the test crashed or did not collect.
+## Commands
 
-Read each REAL test, then promote the ones you agree with:
+| Command | Effect |
+|---|---|
+| `new ID "title"` | scaffold `tasks/ID/` and a placeholder acceptance test |
+| `validate ID` | check a task against the schema |
+| `brief-review ID` | run reviewer counterexamples against the acceptance tests |
+| `start ID` | prove red, create the worktree, lock paths |
+| `run ID [--approve-plan]` | headless plan, build, review, one fix round |
+| `plan-review ID` | reviewer attacks PLAN.md |
+| `review ID` | reviewer checks the diff; findings are executed |
+| `adopt ID N...` | promote findings to acceptance tests |
+| `sync ID` | merge the base branch into the task branch |
+| `merge ID [--yes]` | full gate, approval, merge, log |
+| `abandon ID "why"` | file the escalation, remove the worktree and branch |
+| `status` | open task worktrees |
+| `gate fast\|full` | run the gate in the current checkout |
+| `replay check\|diff\|update [CASE...]` | replay oracle |
+| `entropy` | append size and complexity to `entropy.csv` |
+| `install`, `update`, `selftest`, `version` | setup and maintenance |
 
-```
-aishore adopt T-042 1 3
-```
+## Skills
 
-They become acceptance tests on main and are merged into the worktree. Tell Claude "New
-acceptance tests: make them pass", or re-run `aishore run T-042`. `/triage T-042` sorts each
-REAL finding into "spec requires it", "reviewer preference", or "spec gap", and recommends
-which to adopt.
+| Skill | Purpose |
+|---|---|
+| `/aishore-setup` | fit the harness to the repository: gates, architecture rules and their enforcement, module map, locked paths, replay |
+| `/decompose` | split a goal into ordered tasks that each fit one acceptance table and the budgets |
+| `/brief` | write a grounded brief with red-for-the-right-reason acceptance tests |
+| `/triage` | propose the spec change or split for an escalation; sort findings into adopt, reject, or spec gap |
+| `/retro` | propose the next gate, rule deletions, and budget changes from `tasks/log.csv` |
 
-### 5. Merge (you)
-
-```
-aishore merge T-042
-```
-
-Runs the full gate in the worktree, commits the work, and shows the diff stat and the replay
-diff. For Tier 1 it also shows the full diff. You answer y/N and record your minutes, which gate
-caught a problem, and which gate was missing. On yes it merges, writes approved goldens for
-`replay_may_change` cases, commits the task records and log, and removes the worktree. Reject
-any diff larger than you expected, even when it is green.
-
-### 6. Escalations
-
-`/triage T-042` reads it and proposes the spec edit or split. ESCALATE.md is a statement about the spec or the architecture. Fix the spec or split the task,
-then `aishore abandon T-042 "spec missed partial fills"`. This files the escalation under
-`tasks/T-042/escalations/`, removes the worktree and branch, and logs the outcome.
-
-Changing a spec mid-task: edit it on main, commit, run `aishore sync T-042`, and tell Claude
-what changed. `aishore status` lists open worktrees with PLAN, ESCALATE and findings flags.
+Skills draft human-owned files for your review. Judgments come from the separate reviewer process.
 
 ## Gates
 
 | Step | Fast (Stop hook) | Full (merge, CI) |
 |---|---|---|
-| escalation: no ESCALATE.md | | yes |
-| lint, types, imports, tests: commands from aishore.toml | yes | yes |
-| diffcheck: ownership, allowlist, weakening, budgets (task branches) | yes | yes |
-| acceptance: tests of merged tasks and the current task | yes | yes |
-| replay against goldens | | yes |
-| mutation on changed Python lines, per tier | | yes |
+| no ESCALATE.md | | yes |
+| lint, types, imports, tests (`[commands]`) | yes | yes |
+| diffcheck (task branches) | yes | yes |
+| acceptance tests of merged tasks and the current task | yes | yes |
+| replay | | yes |
+| mutation on changed Python lines, by tier | | yes |
 
-`commands.tests` must not run `tests/acceptance`. The profiles handle this: pytest gets
-`--ignore`, and node acceptance files are named `*.accept.js|ts`, which no default discovery
-picks up. The acceptance step runs
-the tests of merged tasks (from `tasks/log.csv`) plus the current task's. A task that is still
-open elsewhere has red tests on main by design, and they never block other work.
+Tests of open tasks are red on main by design and never gate other work. `commands.tests` must
+not run `tests/acceptance`. The pytest profile passes `--ignore`. Node acceptance files are
+named `*.accept.js|ts`, a pattern that no default discovery matches.
 
-Gate weakening is detected per language: skip, only, xfail, and lint, type and coverage
-suppressions for Python, JS/TS, Go, Rust and shell. An extensionless script is classified by
-its shebang.
+Diffcheck detects gate weakening (skips, suppressions, loosened tolerances) in Python, JS/TS,
+Go, Rust, and shell. Extensionless scripts are classified by shebang.
 
-## Configuration: `aishore.toml`
+## Configuration
+
+`aishore.toml`:
 
 | Key | Meaning |
 |---|---|
-| `base`, `worktree_root` | base branch; where worktrees go (`../.wt`) |
-| `src` | production roots: LOC budget, new files, new classes, mutation |
-| `commands.setup` | runs once in each new worktree before paths lock |
-| `commands.lint/types/imports/tests` | gate steps; empty skips |
-| `acceptance.cmd` | runs acceptance and finding tests; `{tests}` is the quoted file list. Vitest runs through a shipped config that loads yours and adds `tests/acceptance` and `tests/_review` to `include`; jest gets `--roots` and `--testMatch` |
-| `acceptance.fail_codes` | exit codes that prove a finding (pytest: 1); empty means any non-zero |
-| `acceptance.empty_codes` | exit codes meaning no tests found (pytest: 5) |
-| `acceptance.assert_pattern` | a finding is REAL only when its output matches: a failed assertion, not a crash |
-| `acceptance.path`, `lang` | test file template (`{name}` = `t_042`, `t_042_f1`); reviewer's language |
-| `format` | extension to formatter command, `{file}` |
-| `replay.*`, `mutation.*` | oracle settings; empty replay cmd disables it |
-| `implement.model`, `implement.headless` | interactive model; headless command for `aishore run` |
-| `review.model`, `review.cmd`, `review.context` | reviewer model and command; files it always receives |
-| `defaults.*` | LOC budget, new files, new classes per task |
+| `base`, `worktree_root` | base branch; worktree parent (`../.wt`) |
+| `src` | production roots for the LOC budget, new files, new classes, and mutation |
+| `commands.setup` | runs in each new worktree before paths lock |
+| `commands.lint`, `types`, `imports`, `tests` | gate steps; empty skips |
+| `acceptance.cmd` | runs acceptance, finding, and counterexample tests; `{tests}` is the file list |
+| `acceptance.fail_codes`, `empty_codes` | exit codes for "a test failed" and "no tests found" |
+| `acceptance.assert_pattern` | output that marks a failed assertion; empty accepts any failure |
+| `acceptance.path`, `lang` | test file template (`{name}` is `t_042` or `t_042_f1`); language for reviewer tests |
+| `format` | formatter per extension; `{file}` is the edited file |
+| `replay.cmd`, `cases`, `golden` | one JSON event per line for the recorded input `{input}`; empty disables replay |
+| `mutation.*` | test command, mutant cap, timeout factor |
+| `implement.model`, `implement.headless` | implementer model; headless command for `run` |
+| `review.model`, `review.cmd`, `review.context` | reviewer model and command; files sent with every review |
+| `defaults.*` | per-task LOC budget, new files, new classes |
 | `ownership.locked` | human-owned globs |
 
-Task files: `.aishore/aishore/scaffold/SCHEMA.md`, with a JSON Schema beside it for TOML
-language servers.
+Vitest acceptance runs use a shipped config that loads the project's own config and adds
+`tests/acceptance` and `tests/_review` to its `include`. Jest runs get `--roots` and
+`--testMatch`.
 
-## Rules for Claude Code sessions
+Task schema: `.aishore/aishore/scaffold/SCHEMA.md`, with a JSON Schema beside it.
 
-- One fresh session per task, started inside that task's worktree. Exit between tasks.
-- On the base branch: `/decompose`, `/brief`, `/triage`, `/retro`, `/aishore-setup`. Never
-  implement there; the hooks guard task branches only.
-- A request to edit a human-owned file is answered by changing the spec, never by permission.
-- Never ask the implementer session to review its own diff, and never use a subagent inside it
-  for review. Both inherit its context and its mistakes.
-- Keep CLAUDE.md and ENGINEERING.md short. A rule broken twice becomes a gate or is deleted.
+## Session rules
+
+- One fresh session per task, started in its worktree.
+- On the base branch, only skills; never implement there. Hooks guard task branches only.
+- A request to edit a human-owned file is answered by changing the brief.
+- The implementer never reviews its own diff, directly or through a subagent.
 
 ## Records
 
-Run `/retro` weekly. It reads the log, escalations and findings, and proposes the next gate, rule
-deletions, and budget changes, each backed by the rows that justify it.
+| File | Content |
+|---|---|
+| `tasks/log.csv` | one row per merged, rejected, escalated, or abandoned task |
+| `tasks/ID/` | brief, brief review, plan review, review, findings, escalations |
+| `entropy.csv` | files, LOC, dependencies, and Python complexity and dead code |
 
-- `tasks/log.csv`: one row per merged, rejected, escalated or abandoned task. Rising human
-  minutes, rising escalations, or a repeated `missing_gate` names the next gate to build.
-- `aishore entropy`: appends files, LOC, dependencies, and Python complexity and dead code to
-  `entropy.csv`.
+## Limits
 
-## Known limits
-
-- guard_bash is heuristic. A write through `python -c` gets past it; diffcheck at merge catches
-  the result.
-- A hook that times out does not block. The guards run in well under a second.
-- The Stop hook allows a third red stop to avoid an infinite loop. The merge gate still refuses
-  red work.
-- Mutation covers changed Python lines only, samples at most `max_mutants`, and uses a fixed
-  operator set.
-- Reviewer tests are model-written code executed in the worktree. Read them before `adopt`.
-- A finding is REAL only when its test fails with an assertion (`assert_pattern`). A test that
-  crashes, errors or does not collect is invalid. The generic profile has no pattern: there,
-  any failure counts as REAL, so read the test. Vitest and jest pass when no test is collected,
-  so a misplaced test shows as "already passes", never as a false red.
+- guard_bash is heuristic. Writes it misses are caught by diffcheck at merge.
+- A hook that times out does not block.
+- The Stop hook allows the third red stop. The merge gate still refuses red work.
+- Mutation covers changed Python lines only, up to `max_mutants`, with a fixed operator set.
+- Reviewer and counterexample code runs in the worktree or a scratch worktree. Read finding
+  tests before adopting them.
+- The generic profile has no `assert_pattern`, so there any failing finding counts as REAL.
 
 ## Development
 
 ```
-bin/aishore selftest     # installs into throwaway python, node and shell repos; drives every gate
+bin/aishore selftest
 ruff check aishore
 ```
 
-The selftest needs pytest (and node for the node profile). It never calls a model: a stub
-`claude` plays the reviewer and the headless implementer.
+The selftest installs into throwaway Python, flat-layout, node, vitest, and shell repositories
+and drives every command and hook through the CLI. A stub `claude` stands in for the models.
+It needs pytest, and node and npm for the node and vitest parts.
