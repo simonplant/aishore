@@ -10,7 +10,7 @@ Everything you write here is human-owned afterwards, so write only what the code
 2. Gates. Run each `commands` step (setup, lint, types, imports, tests) and `acceptance.cmd` on the
    base branch. For each one that fails or is missing, find the command this project really
    uses (package scripts, Makefile, CI workflow). Set it, or leave it empty with a comment
-   saying what is missing. Confirm `commands.tests` excludes `tests/acceptance`. Check `src`
+   saying what is missing. Confirm `commands.tests` never runs `tests/acceptance` (pytest `--ignore`; node files are `*.accept.*`). Check `src`
    lists the production roots and nothing else. Iterate until
    `.aishore/bin/aishore gate fast` passes on the base branch.
 3. Module map. Write `docs/architecture.md`: one table of modules with their responsibility

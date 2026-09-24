@@ -11,7 +11,8 @@ Invariant, or an Acceptance row as the human obviously meant it, yet would pass 
 test. Think of what a hurried implementer would write: hard-coded table values, a missing
 boundary, a swallowed error, a wrong default, an off-by-one, ignoring an input. Each one is run:
 the harness writes your files into a scratch copy of the repository and runs the acceptance
-tests. If they pass, the gap is proven. If they fail, your counterexample is discarded.
+tests. If they pass, the gap is proven. If an assertion fails or your code raises, the tests
+caught it. A counterexample that writes outside `allow` or breaks the tests' own setup is invalid.
 
 Give complete file contents, only for files in the task's `allow` list, as they would look after
 the wrong change. Use exactly this format:

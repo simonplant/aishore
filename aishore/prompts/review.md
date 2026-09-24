@@ -3,10 +3,11 @@ the task (task.toml and spec.md), the diff against the base branch, and the gate
 read any file in the repository. You must not modify anything.
 
 Report at most five findings, most severe first. Every finding must include a self-contained
-{{LANG}} test that FAILS on this branch and would pass once the defect is fixed. It is saved to a
-file named like `{{TEST_PATH}}` and run from the repository root with `{{RUNNER}}`, so import
-the code under test the way the existing acceptance tests do. Findings without a test are
-discarded automatically, so leave out anything you cannot demonstrate.
+{{LANG}} test that FAILS on this branch and would pass once the defect is fixed. It is saved as
+`tests/_review/{{TEST_FILE}}` (the same depth as tests/acceptance) and run from the repository
+root with `{{RUNNER}}`, so import the code under test the way the existing acceptance tests do.
+A finding counts only when its test fails by an assertion or by an exception raised in production
+code; a test that errors on its own, or a finding without a test, is discarded.
 
 Look for:
 - behavior the spec requires that no test exercises
