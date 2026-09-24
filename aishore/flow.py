@@ -1,6 +1,7 @@
 """Task lifecycle, run from the main checkout.
 
   new T-042 "title"      scaffold tasks/T-042 and a placeholder acceptance test
+  brief-review T-042     reviewer's counterexamples prove gaps in the acceptance tests
   start T-042            validate, prove acceptance tests are red, create worktree, lock paths
   plan-review T-042      reviewer attacks PLAN.md
   review T-042           reviewer checks the diff; findings count only with a failing test
@@ -20,7 +21,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from aishore import findings, lib, logbook, tasks
+from aishore import briefcheck, findings, lib, logbook, tasks
 
 PKG = Path(__file__).resolve().parent
 SCAFFOLD = PKG / "scaffold"
@@ -58,6 +59,14 @@ def worktree(root: Path, cfg: dict, tid: str, must_exist: bool = True) -> Path:
     if must_exist and not wt.exists():
         die(f"no worktree for {tid} at {wt}")
     return wt
+
+
+def task_env(wt: Path, cfg: dict, tid: str) -> dict:
+    """Gate environment pinned to the task, so a worktree off its branch cannot skip task checks."""
+    head = subprocess.run(["git", "symbolic-ref", "-q", "HEAD"], cwd=wt, capture_output=True, text=True).stdout.strip()
+    if head != f"refs/heads/t/{tid}":
+        die(f"{wt} is on '{head or 'a detached HEAD'}', not t/{tid}. Check what happened there before anything merges.")
+    return dict(lib.env(wt, cfg), AISHORE_TASK=tid, AISHORE_BRANCH=f"t/{tid}")
 
 
 def remove_worktree(root: Path, cfg: dict, tid: str, force_branch: bool) -> None:
@@ -119,8 +128,9 @@ def cmd_new(root: Path, cfg: dict, a) -> None:
                        else f"{lib.comment(acc_rel)} {lib.PLACEHOLDER}: write tests for the acceptance table, "
                             "then delete this line.\n")
     print(f"created tasks/{a.id}/ and {acc_rel}")
-    print("next: fill spec.md, task.toml and the acceptance test (or run /draft-task in Claude Code),")
-    print(f"      remove every {lib.PLACEHOLDER} line, commit on {base_name(cfg)}, then: aishore start {a.id}")
+    print("next: fill spec.md, task.toml and the acceptance test (or run /brief in Claude Code),")
+    print(f"      aishore brief-review {a.id}, remove every {lib.PLACEHOLDER} line, commit on {base_name(cfg)},")
+    print(f"      then: aishore start {a.id}")
 
 
 def cmd_start(root: Path, cfg: dict, a) -> Path:
@@ -198,6 +208,22 @@ def plan_review(root: Path, cfg: dict, task: tasks.Task, wt: Path) -> str:
     return m.group(1).upper() if m else "MISSING"
 
 
+def cmd_brief_review(root: Path, cfg: dict, a) -> None:
+    """Independent attack on the brief before start. The brief may still be uncommitted."""
+    try:
+        task = tasks.load(root, a.id, allow_placeholder=True)
+    except lib.HarnessError as e:
+        die(str(e))
+        raise
+    acc = [(t, (root / t).read_text()) for t in task.acceptance_tests]
+    raw = task.dir / "brief-review-raw.md"
+    reviewer(root, cfg, root, "brief_review.md", context_for(root, cfg, task, acc), raw)
+    out = task.dir / "brief-review.md"
+    gaps, _, _ = briefcheck.run(root, cfg, task, raw, out)
+    print(out.read_text())
+    print(f"saved {out.relative_to(root)}" + (f"; {gaps} proven gap(s): add the rows and tests, then re-run" if gaps else ""))
+
+
 def cmd_plan_review(root: Path, cfg: dict, a) -> None:
     task = load(root, a.id)
     plan_review(root, cfg, task, worktree(root, cfg, a.id))
@@ -207,7 +233,8 @@ def cmd_plan_review(root: Path, cfg: dict, a) -> None:
 
 
 def review(root: Path, cfg: dict, task: tasks.Task, wt: Path) -> tuple[int, int, int]:
-    gate = subprocess.run(lib.harness("gate", "fast"), cwd=wt, env=lib.env(wt, cfg), capture_output=True, text=True)
+    gate = subprocess.run(lib.harness("gate", "fast"), cwd=wt, env=task_env(wt, cfg, task.id),
+                          capture_output=True, text=True)
     if gate.returncode != 0:
         print(gate.stdout[-3000:])
         die("fast gate is red; review only green work")
@@ -271,8 +298,9 @@ def cmd_merge(root: Path, cfg: dict, a) -> None:
     if (wt / "ESCALATE.md").exists():
         print((wt / "ESCALATE.md").read_text())
         die(f"task escalated. Fix the spec, then: aishore abandon {a.id} \"why\"")
+    env = task_env(wt, cfg, a.id)
     print("running full gate in the worktree ...", flush=True)
-    if subprocess.run(lib.harness("gate", "full"), cwd=wt, env=lib.env(wt, cfg)).returncode != 0:
+    if subprocess.run(lib.harness("gate", "full"), cwd=wt, env=env).returncode != 0:
         die("full gate failed; nothing merged")
     git(wt, "add", "-A")
     if git(wt, "status", "--porcelain").strip():
@@ -280,11 +308,11 @@ def cmd_merge(root: Path, cfg: dict, a) -> None:
     rng = f"{base_name(cfg)}...t/{a.id}"
     print("\n" + git(root, "diff", "--stat", rng))
     net = 0
-    for row in git(root, "diff", "--numstat", rng).splitlines():
+    for row in lib.sh(*lib.DIFF, "--numstat", rng, cwd=root).splitlines():
         x, y, f = row.split("\t", 2)
         if x != "-" and lib.in_src(f, cfg):
             net += int(x) - int(y)
-    replay = subprocess.run(lib.harness("replay", "diff"), cwd=wt, env=lib.env(wt, cfg), capture_output=True, text=True)
+    replay = subprocess.run(lib.harness("replay", "diff"), cwd=wt, env=env, capture_output=True, text=True)
     print(replay.stdout[-4000:])
     if task.tier == 1 and not a.yes:
         subprocess.run(["git", "diff", rng], cwd=root)

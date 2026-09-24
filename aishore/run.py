@@ -1,6 +1,6 @@
 """Headless task run. The reviewer model stands in for the human at plan approval; merge stays human.
 
-  aishore run T-042
+  aishore run T-042 [--approve-plan]
 
 1. start the task if it has no worktree
 2. implementer (headless Claude Code in the worktree, hooks active) writes PLAN.md
@@ -62,8 +62,13 @@ def stop_if_escalated(wt: Path, tid: str) -> None:
         flow.die(f"implementer escalated. Fix the spec, then: aishore abandon {tid} \"why\"")
 
 
+def wt_task(wt: Path) -> str:
+    return (wt / lib.STATE / "task").read_text().strip()
+
+
 def fast_green(cfg: dict, wt: Path, show: bool = False) -> bool:
-    r = subprocess.run(lib.harness("gate", "fast"), cwd=wt, env=lib.env(wt, cfg), capture_output=True, text=True)
+    r = subprocess.run(lib.harness("gate", "fast"), cwd=wt, env=flow.task_env(wt, cfg, wt_task(wt)),
+                       capture_output=True, text=True)
     if r.returncode and show:
         print(r.stdout[-3000:])
     return r.returncode == 0
@@ -81,8 +86,14 @@ def main(root: Path, cfg: dict, a) -> None:
         flow.cmd_start(root, cfg, a)
     state = wt / lib.STATE
     state.mkdir(parents=True, exist_ok=True)
+    (state / "task").write_text(a.id)
     approved = state / "plan-approved"
     stop_if_escalated(wt, a.id)
+    if a.approve_plan:
+        if not (wt / "PLAN.md").exists():
+            flow.die("no PLAN.md to approve")
+        approved.touch()
+        print("plan approved by you")
 
     if not approved.exists():
         if not (wt / "PLAN.md").exists():
@@ -99,8 +110,8 @@ def main(root: Path, cfg: dict, a) -> None:
             points = (task.dir / "plan-review.md").read_text()
             if attempt == 2:
                 print(points)
-                flow.die(f"plan not approved after two reviews (tasks/{a.id}/plan-review.md). "
-                         f"Approve or revise it yourself: {resume_hint(wt)}")
+                flow.die(f"plan not approved after two reviews (tasks/{a.id}/plan-review.md). Edit PLAN.md or the "
+                         f"spec yourself, then: aishore run {a.id} --approve-plan")
             implementer(cfg, wt, f"The reviewer asks for plan changes:\n\n{points}\n\n"
                                  "Revise PLAN.md where the points hold. Edit no other file. Then stop.")
             stop_if_escalated(wt, a.id)

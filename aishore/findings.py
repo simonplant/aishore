@@ -28,11 +28,14 @@ def run(wt: Path, review: Path, out: Path, cfg: dict) -> tuple[int, int, int]:
             try:
                 r = subprocess.run(lib.acceptance_cmd(cfg, [f.relative_to(wt)]), shell=True, cwd=wt, env=env,
                                    capture_output=True, text=True, timeout=300)
-                code_ = r.returncode
+                code_, output = r.returncode, r.stdout + r.stderr
             except subprocess.TimeoutExpired:
-                code_ = -1
+                code_, output = -1, ""
+            pattern = cfg["acceptance"].get("assert_pattern", "")
             if code_ == 0:
                 verdict, discarded = "discard: test passes", discarded + 1
+            elif lib.test_failed(cfg, code_) and pattern and not re.search(pattern, output, re.M):
+                verdict, invalid = "invalid: test crashed or errored, no failed assertion", invalid + 1
             elif lib.test_failed(cfg, code_):
                 verdict, real = "REAL: test fails on branch", real + 1
             else:

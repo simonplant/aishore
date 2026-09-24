@@ -112,6 +112,7 @@ def python_profile(root: Path) -> dict:
             "tests": "python3 -m pytest -q -x -p no:cacheprovider --ignore=tests/acceptance --ignore=tests/_review",
         },
         "acceptance": {"cmd": "python3 -m pytest -q -p no:cacheprovider {tests}", "fail_codes": [1], "empty_codes": [5],
+                       "assert_pattern": r"^E\s+(assert\b|AssertionError|Failed:)",
                        "path": "tests/acceptance/test_{name}.py", "lang": "python"},
         "format": {".py": "ruff format -q {file} && ruff check -q --fix {file} && "
                           "ruff check --output-format concise {file}"} if ruff else {},
@@ -135,13 +136,11 @@ def node_profile(root: Path) -> dict:
     ts = (root / "tsconfig.json").exists()
     if "vitest" in test or "vitest" in deps:
         acc = "npx vitest run --passWithNoTests --config .aishore/aishore/scaffold/runners/vitest.config.mjs {tests}"
-        tests = "npm test --silent -- --exclude 'tests/acceptance/**' --exclude 'tests/_review/**'"
     elif "jest" in test or "jest" in deps:
         acc = ("npx jest --passWithNoTests --roots '<rootDir>' "
                "--testMatch '**/tests/{acceptance,_review}/**/*.[jt]s?(x)' {tests}")
-        tests = "npm test --silent -- --testPathIgnorePatterns tests/acceptance tests/_review"
     else:
-        acc, tests = "node --test {tests}", "npm test --silent" if test else ""
+        acc = "node --test {tests}"
     fmt = "npx --no-install prettier --write {file}" if "prettier" in deps else ""
     return {
         "commands": {
@@ -149,10 +148,12 @@ def node_profile(root: Path) -> dict:
             "lint": "npm run lint --silent" if "lint" in scripts else "",
             "types": "npx tsc --noEmit" if ts else "",
             "imports": "",
-            "tests": tests,
+            "tests": "npm test --silent" if test else "",
         },
+        # .accept. matches no default discovery (node --test, jest, vitest), so npm test never runs them.
         "acceptance": {"cmd": acc, "fail_codes": [], "empty_codes": [], "lang": "typescript" if ts else "javascript",
-                       "path": "tests/acceptance/{name}.test." + ("ts" if ts else "js")},
+                       "assert_pattern": r"AssertionError|ERR_ASSERTION|expect\(received\)",
+                       "path": "tests/acceptance/{name}.accept." + ("ts" if ts else "js")},
         "format": {ext: fmt for ext in (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs")} if fmt else {},
         "ci": {"setup": "node", "install": setup.replace(" --no-package-lock", "")},
     }
@@ -162,6 +163,7 @@ def generic_profile(root: Path) -> dict:
     return {
         "commands": {"setup": "", "lint": "", "types": "", "imports": "", "tests": ""},
         "acceptance": {"cmd": 'for t in {tests}; do bash "$t" || exit 1; done', "fail_codes": [], "empty_codes": [],
+                       "assert_pattern": "",
                        "path": "tests/acceptance/test_{name}.sh", "lang": "bash"},
         "format": {},
         "ci": {"setup": "", "install": "true"},
@@ -204,7 +206,8 @@ tests = {tv(c["tests"])}      # everything except tests/acceptance; the harness 
 cmd = {tv(a["cmd"])}
 fail_codes = {tv(a["fail_codes"])}    # exit codes that prove a finding (assertion failed); empty: any non-zero
 empty_codes = {tv(a["empty_codes"])}   # exit codes meaning "no tests found"; start refuses them
-path = {tv(a["path"])}   # {{name}} is the task slug (t_042) or a finding (t_042_f1)
+assert_pattern = {tv(a["assert_pattern"])}   # a finding is REAL only if its output matches; empty: any failure
+path = {tv(a["path"])}   # {{name}} is the task slug (t_042) or a finding (t_042_f1); never auto-discovered by commands.tests
 lang = {tv(a["lang"])}
 
 [format]
@@ -212,7 +215,7 @@ lang = {tv(a["lang"])}
 {fmt}
 
 [replay]
-# Prints one event per line to stdout for one recorded input. Empty cmd disables replay.
+# Prints one event per line to stdout for one recorded input ({{input}}, quoted). Empty cmd disables replay.
 cmd = ""
 cases = "replay/cases"
 golden = "replay/golden"
@@ -248,14 +251,14 @@ locked = [
 """
 
 
-def render_ci(p: dict) -> str:
+def render_ci(p: dict, base: str) -> str:
     node = "\n      - uses: actions/setup-node@v7\n        with:\n          node-version: lts/*" \
         if p["ci"]["setup"] == "node" else ""
     return f"""name: aishore-verify
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [{base}]
 
 jobs:
   gate:
@@ -358,7 +361,7 @@ def install(root: Path, profile: str | None) -> None:
         ci = root / ".github" / "workflows" / "aishore-verify.yml"
         if not ci.exists():
             ci.parent.mkdir(parents=True, exist_ok=True)
-            ci.write_text(render_ci(p))
+            ci.write_text(render_ci(p, base_branch(root)))
             notes.append("wrote .github/workflows/aishore-verify.yml: check its install step")
     adr = root / "docs" / "adr" / "0000-template.md"
     if not adr.exists():
@@ -378,6 +381,9 @@ def install(root: Path, profile: str | None) -> None:
     cmds.mkdir(parents=True, exist_ok=True)
     for f in (SCAFFOLD / "commands").iterdir():
         shutil.copy(f, cmds / f.name)
+    (cmds / "draft-task.md").unlink(missing_ok=True)
+    for d in (SCAFFOLD / "skills").iterdir():
+        shutil.copytree(d, root / ".claude" / "skills" / d.name, dirs_exist_ok=True)
     merge_settings(root)
     append_missing(root / ".gitignore", GITIGNORE, "# aishore")
 
@@ -387,7 +393,7 @@ def install(root: Path, profile: str | None) -> None:
     print("next: review the files above, then commit them on the base branch:")
     print("  git add -A .aishore aishore.toml ENGINEERING.md CLAUDE.md .claude .gitignore .github docs/adr "
           "&& git commit -m 'chore: install aishore'")
-    print("  .aishore/bin/aishore gate fast   # fix what it finds, or blank out steps you are not ready for")
+    print("then in Claude Code on the base branch: /aishore-setup   (gates, architecture rules, locked paths)")
 
 
 def github_token() -> str:

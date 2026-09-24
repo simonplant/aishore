@@ -31,7 +31,7 @@ def main() -> int:
     if rel in lib.SCRATCH:
         return 0
     cfg = lib.config(root)
-    pat = lib.match(rel, cfg["ownership"]["locked"])
+    pat = lib.match(rel, [*cfg["ownership"]["locked"], *lib.HARNESS_OWNED])
     if pat:
         block(f"{rel} is human-owned ({pat}). If the task needs it changed, write ESCALATE.md and stop.")
     try:

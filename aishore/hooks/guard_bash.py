@@ -11,11 +11,12 @@ import sys
 
 from aishore import lib
 
+GIT = r"\bgit\b[^|;&\n'\"]*?\s"  # git, then any global options such as -c k=v or -C dir
 BLOCKED = [
-    (r"\bgit\s+push\b", "git push"),
+    (GIT + r"push\b", "git push"),
     (r"--no-verify\b", "--no-verify"),
-    (r"\bgit\s+(checkout|switch|worktree|rebase|merge|stash)\b", "branch or worktree changes"),
-    (r"\bgit\s+reset\s+--hard\b|\bgit\s+branch\s+-[dDmM]\b|\bgit\s+update-ref\b", "history rewrites"),
+    (GIT + r"(checkout|switch|worktree|rebase|merge|stash|symbolic-ref)\b", "branch or worktree changes"),
+    (GIT + r"reset\s+--hard\b|" + GIT + r"branch\s+-[dDmMfc]\b|" + GIT + r"update-ref\b", "history rewrites"),
     (r"\b(chmod|chown|chattr|sudo)\b", "permission changes"),
     (r"\b(pip3?|uv\s+pip)\s+install\b|\buv\s+(add|remove)\b|\bpoetry\s+(add|remove)\b"
      r"|\b(npm|pnpm)\s+(i|install|add|uninstall|remove|rm)\b|\byarn\s+(add|remove)\b"
@@ -60,7 +61,7 @@ def main() -> int:
         if re.search(pat, cmd):
             print(f"Blocked by aishore: {label} are not allowed in a task session.", file=sys.stderr)
             return 2
-    locked = lib.config(root)["ownership"]["locked"]
+    locked = [*lib.config(root)["ownership"]["locked"], *lib.HARNESS_OWNED]
     for t in targets(cmd):
         rel = lib.relpath(root, t)
         if rel and lib.match(rel, locked):

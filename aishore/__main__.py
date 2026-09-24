@@ -18,8 +18,9 @@ USAGE = """aishore <command>
 
 task lifecycle (main checkout)
   new T-042 "title"       scaffold tasks/T-042 and a placeholder acceptance test
+  brief-review T-042      reviewer tries wrong implementations that pass the acceptance tests
   start T-042             prove acceptance tests red, create the worktree, lock human-owned paths
-  run T-042               headless: plan, reviewer approves, build to green, review, one fix round
+  run T-042 [--approve-plan]  headless: plan, reviewer approves (or you do), build, review, one fix round
   plan-review T-042       reviewer attacks PLAN.md
   review T-042            reviewer checks the diff; findings count only with a failing test
   adopt T-042 1 3         promote REAL findings to acceptance tests, sync into the worktree
@@ -66,8 +67,11 @@ def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(prog="aishore", usage=USAGE)
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("new"); s.add_argument("id"); s.add_argument("title")
-    for name in ("start", "run", "plan-review", "review", "sync"):
+    for name in ("start", "brief-review", "plan-review", "review", "sync"):
         sub.add_parser(name).add_argument("id")
+    s = sub.add_parser("run"); s.add_argument("id")
+    s.add_argument("--approve-plan", action="store_true",
+                   help="you approve PLAN.md; skip the reviewer's plan review")
     s = sub.add_parser("adopt"); s.add_argument("id"); s.add_argument("numbers", nargs="+")
     s = sub.add_parser("merge"); s.add_argument("id")
     s.add_argument("--yes", action="store_true", help="skip prompts (scripted use)")
@@ -87,7 +91,8 @@ def main(argv: list[str]) -> int:
         install.update(Path.cwd(), a.ref)
         return 0
     root, cfg = flow.main_checkout()
-    {"new": flow.cmd_new, "start": flow.cmd_start, "run": run.main, "plan-review": flow.cmd_plan_review,
+    {"new": flow.cmd_new, "brief-review": flow.cmd_brief_review, "start": flow.cmd_start, "run": run.main,
+     "plan-review": flow.cmd_plan_review,
      "review": flow.cmd_review, "adopt": flow.cmd_adopt, "sync": flow.cmd_sync, "merge": flow.cmd_merge,
      "abandon": flow.cmd_abandon, "status": flow.cmd_status}[a.cmd](root, cfg, a)
     return 0

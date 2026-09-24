@@ -46,10 +46,12 @@ if "--tools" in args:
     if "===== PLAN.md =====" in ctx:
         n = bump("plan_reviews")
         print("1. Reuse the existing module.")
-        print("VERDICT: " + ("REVISE" if n == 1 else "APPROVE"))
-    else:
-        assert "diff against base" in ctx
+        print("VERDICT: " + ("REVISE" if n == 1 or os.environ.get("STUB_PLAN") == "revise" else "APPROVE"))
+    elif "diff against base" in ctx:
         print((d / "review.md").read_text())
+    else:
+        assert "===== tests/acceptance/" in ctx, ctx[-300:]
+        print((d / "brief.md").read_text())
     sys.exit(0)
 assert os.environ.get("AISHORE_ROLE") == "implementer"
 resumed = "--resume" in args
@@ -322,7 +324,10 @@ def python_part(tmp: Path, env: dict, py: str, stub_dir: Path) -> None:
     check(bash("sed -i 's/12/13/' tests/acceptance/test_t_001.py") == 2, "guard_bash blocks sed -i on locked file")
     check(bash("echo x > aishore.toml") == 2, "guard_bash blocks redirect into locked file")
     check(bash("pip install requests") == 2 and bash("npm install left-pad") == 2, "guard_bash blocks dependency installs")
-    check(bash("git checkout main") == 2, "guard_bash blocks branch switch")
+    check(bash("git checkout main") == 2 and bash("git -c advice.detachedHead=false checkout --detach") == 2
+          and bash("git -C . switch -") == 2, "guard_bash blocks branch switch, also after git global options")
+    check(bash("echo 99 > .aishore/state/stop_failures") == 2, "guard_bash blocks writes to harness state")
+    check(bash("git commit -qm 'push the fix'") == 0, "guard_bash allows a commit message that mentions push")
     check(bash(".aishore/bin/aishore replay update") == 2, "guard_bash blocks golden updates")
     check(bash("cat tests/acceptance/test_t_001.py 2>&1 | head") == 0, "guard_bash allows reading locked file")
     check(bash("python -m pytest -q tests/unit > /tmp/out.txt") == 0, "guard_bash allows normal commands")
@@ -396,11 +401,16 @@ def python_part(tmp: Path, env: dict, py: str, stub_dir: Path) -> None:
     check(r.returncode == 0 and fm.exists() and "REAL" in fm.read_text(),
           "review runs headless reviewer and executes its finding", r.stdout + r.stderr)
     write(stub_dir / "review.md", REVIEW_PY + REVIEW_PY.replace("Finding 1", "Finding 2").replace(
-        "finding: 1", "finding: 2").replace("assert 0 <= wrap(3, -2) < 2", "assert wrap(5, 3) == 2"))
+        "finding: 1", "finding: 2").replace("assert 0 <= wrap(3, -2) < 2", "assert wrap(5, 3) == 2")
+        + REVIEW_PY.replace("Finding 1", "Finding 3").replace("finding: 1", "finding: 3").replace(
+        "from toy.calc import wrap", "import toy.calc as calc").replace("assert 0 <= wrap(3, -2) < 2",
+                                                                         "assert calc.wrap_around(3, 10) == 3"))
     from aishore import findings
     real, discarded, invalid = findings.run(wt, stub_dir / "review.md", stub_dir / "findings.md",
                                             tomllib.loads((root / "aishore.toml").read_text()))
-    check((real, discarded, invalid) == (1, 1, 0), "findings: failing test is REAL, passing test discarded")
+    check((real, discarded, invalid) == (1, 1, 1),
+          "findings: failing assertion is REAL, passing test discarded, crashing test invalid",
+          (stub_dir / "findings.md").read_text())
     r = repo.aishore("adopt", "T-001", "1")
     check(r.returncode == 0 and (wt / "tests/acceptance/test_t_001_f1.py").exists(),
           "adopt promotes finding to acceptance test and syncs worktree", r.stdout + r.stderr)
@@ -410,6 +420,29 @@ def python_part(tmp: Path, env: dict, py: str, stub_dir: Path) -> None:
     r = repo.aishore("gate", "fast", cwd=wt)
     check(r.returncode == 0 and "acceptance: 2 files" in r.stdout, "implementation passes adopted finding", r.stdout)
 
+    f1 = wt / "tests/acceptance/test_t_001_f1.py"
+    os.chmod(f1.parent, 0o755)
+    f1.rename(wt / "src/toy/f1.py")
+    git(wt, "add", "-A")
+    r = repo.aishore("diffcheck", cwd=wt)
+    check(r.returncode == 1 and "human-owned path modified: tests/acceptance/test_t_001_f1.py" in r.stdout,
+          "diffcheck sees a locked test moved into src (no rename folding)", r.stdout)
+    (wt / "src/toy/f1.py").rename(f1)
+    git(wt, "add", "-A")
+    os.chmod(f1.parent, 0o555)
+    write(wt / "src/toy/café.py", "X = 1\n")
+    r = repo.aishore("diffcheck", cwd=wt)
+    check(r.returncode == 1 and "outside allowlist: src/toy/café.py" in r.stdout, "diffcheck reports non-ASCII paths as is",
+          r.stdout)
+    (wt / "src/toy/café.py").unlink()
+
+    git(wt, "commit", "-q", "-m", "wip")
+    git(wt, "checkout", "-q", "--detach")
+    r = repo.aishore("merge", "T-001", "--yes", "--minutes", "1", "--caught", "", "--missing", "")
+    check(r.returncode == 1 and "not t/T-001" in r.stderr, "merge refuses a worktree that left its task branch",
+          r.stdout + r.stderr)
+    git(wt, "checkout", "-q", "t/T-001")
+
     r = repo.aishore("merge", "T-001", "--yes", "--minutes", "7", "--caught", "", "--missing", "")
     check(r.returncode == 0 and "merged T-001" in r.stdout, "merge runs full gate, merges, logs, cleans up",
           r.stdout + r.stderr)
@@ -417,6 +450,31 @@ def python_part(tmp: Path, env: dict, py: str, stub_dir: Path) -> None:
     log = (root / "tasks/log.csv").read_text() if (root / "tasks/log.csv").exists() else ""
     check("T-001" in log and "merged" in log, "log.csv row written", log)
     check("def wrap" in (root / "src/toy/calc.py").read_text(), "main contains the merged change")
+
+    # brief review: counterexamples run against the brief as it is on disk
+    base_calc = (root / "src/toy/calc.py").read_text()
+    wrong_zero = base_calc + "\n\ndef sign(x: int) -> int:\n    return 1 if x > 0 else -1\n"
+    always_one = base_calc + "\n\ndef sign(x: int) -> int:\n    return 1\n"
+    write(stub_dir / "brief.md", "### Counterexample 1: zero gets -1\nViolates: sign(0) is 0\nRow to add: 0 -> 0\n"
+          f"```file:src/toy/calc.py\n{wrong_zero}```\n"
+          "### Counterexample 2: always 1\nViolates: negatives\nRow to add: -3 -> -1\n"
+          f"```file:src/toy/calc.py\n{always_one}```\n"
+          "### Counterexample 3: edits a locked file\nViolates: x\nRow to add: x\n```file:aishore.toml\nx = 1\n```\n"
+          "### Question 1: what is sign(0)? 0 or error\nVERDICT: REVISE\n")
+    r = repo.aishore("new", "T-002", "Add sign")
+    write(root / "tasks/T-002/task.toml", TASK.format(id="T-002", title="Add sign", allow='"src/toy/calc.py"',
+                                                      test="tests/acceptance/test_t_002.py"))
+    write(root / "tasks/T-002/spec.md", SPEC.format(id="T-002", title="Add sign"))
+    write(root / "tests/acceptance/test_t_002.py", "# AISHORE_PLACEHOLDER: review\nfrom toy.calc import sign\n\n\n"
+          "def test_sign():\n    assert sign(5) == 1\n    assert sign(-3) == -1\n")
+    r = repo.aishore("brief-review", "T-002")
+    br = (root / "tasks/T-002/brief-review.md").read_text() if (root / "tasks/T-002/brief-review.md").exists() else ""
+    check(r.returncode == 0 and "Gaps 1, caught 1, invalid 1" in br and "what is sign(0)" in br
+          and "worktree" not in git(root, "worktree", "list").split("\n", 1)[-1],
+          "brief-review proves a gap, credits a caught counterexample, rejects files outside allow",
+          r.stdout + r.stderr + br)
+    shutil.rmtree(root / "tasks/T-002")
+    (root / "tests/acceptance/test_t_002.py").unlink()
 
     # a second task's red acceptance test does not gate main; merged tasks' tests do
     repo.task("T-002", "Add sign", '"src/toy/calc.py"', "tests/acceptance/test_t_002.py",
@@ -451,6 +509,42 @@ def python_part(tmp: Path, env: dict, py: str, stub_dir: Path) -> None:
     r = repo.aishore("merge", "T-002", "--yes", "--minutes", "1", "--caught", "", "--missing", "")
     check(r.returncode == 0 and not wt2.exists(), "merge after headless run", r.stdout + r.stderr)
 
+    # the reviewer never approves the plan: the run stops for you, and --approve-plan resumes it
+    repo.task("T-003", "Add double", '"src/toy/calc.py"', "tests/acceptance/test_t_003.py",
+              "from toy.calc import double\n\n\ndef test_double():\n    assert double(4) == 8\n")
+    write(stub_dir / "impl", (root / "src/toy/calc.py").read_text() + "\n\ndef double(x: int) -> int:\n    return 2 * x\n")
+    write(stub_dir / "review.md", "No defects found.\nVERDICT: PASS\n")
+    wt_state = repo.wt("T-003") / ".aishore/state"
+    rev_env = dict(run_env, STUB_PLAN="revise")
+    r = repo.aishore("run", "T-003", env=rev_env)
+    check(r.returncode == 1 and "--approve-plan" in r.stderr, "run: two REVISE verdicts stop for the human",
+          r.stdout + r.stderr)
+    r = repo.aishore("run", "T-003", "--approve-plan", env=rev_env)
+    check(r.returncode == 0 and "plan approved by you" in r.stdout and "plan review" not in r.stdout
+          and "ready for you" in r.stdout and (wt_state / "built").exists(),
+          "run --approve-plan builds without another plan review", r.stdout + r.stderr)
+    r = repo.aishore("abandon", "T-003", "selftest")
+    check(r.returncode == 0 and not repo.wt("T-003").exists(), "abandon removes the worktree", r.stdout + r.stderr)
+
+
+def flat_part(tmp: Path, env: dict, py: str) -> None:
+    """A flat-layout package with a module named like a stdlib module must not shadow the stdlib."""
+    root = tmp / "flatrepo"
+    root.mkdir()
+    new_repo(root)
+    write(root / "pyproject.toml", '[project]\nname = "mypkg"\nversion = "0"\n')
+    write(root / "mypkg/__init__.py", "")
+    write(root / "mypkg/types.py", "from dataclasses import dataclass\n\n\n@dataclass\nclass Point:\n    x: int\n")
+    write(root / "tests/test_types.py", "from mypkg.types import Point\n\n\ndef test_point():\n    assert Point(1).x == 1\n")
+    commit(root, "init")
+    r = run([*INSTALLER, str(root)], root, env)
+    repo = Repo(root, env)
+    set_config(root, **{"commands.tests": f'"{py} -m pytest -q -p no:cacheprovider tests"'})
+    commit(root, "install aishore")
+    r = repo.aishore("gate", "fast")
+    check(r.returncode == 0 and tomllib.loads((root / "aishore.toml").read_text())["src"] == ["mypkg"],
+          "flat layout: package root on src, stdlib not shadowed, gate green", r.stdout + r.stderr)
+
 
 NODE_CALC = "export function clamp(x, lo, hi) {\n  return Math.min(hi, Math.max(lo, x));\n}\n"
 NODE_ACCEPT = ('import { test } from "node:test";\nimport assert from "node:assert/strict";\n'
@@ -464,7 +558,7 @@ def node_part(tmp: Path, env: dict, stub_dir: Path) -> None:
     root.mkdir()
     new_repo(root)
     write(root / "package.json", json.dumps({"name": "toy", "type": "module",
-                                             "scripts": {"test": "node --test 'tests/unit/*.test.js'"}}, indent=2))
+                                             "scripts": {"test": "node --test"}}, indent=2))
     write(root / "src/calc.js", NODE_CALC)
     write(root / "tests/unit/calc.test.js", 'import { test } from "node:test";\nimport assert from "node:assert/strict";\n'
           'import { clamp } from "../../src/calc.js";\n\ntest("clamp", () => assert.equal(clamp(12, 0, 10), 10));\n')
@@ -473,15 +567,18 @@ def node_part(tmp: Path, env: dict, stub_dir: Path) -> None:
     repo = Repo(root, env)
     cfg = tomllib.loads((root / "aishore.toml").read_text()) if (root / "aishore.toml").exists() else {}
     check(r.returncode == 0 and cfg.get("acceptance", {}).get("cmd") == "node --test {tests}"
-          and cfg["acceptance"]["path"].endswith(".test.js") and cfg["commands"]["tests"] == "npm test --silent",
+          and cfg["acceptance"]["path"].endswith(".accept.js") and cfg["commands"]["tests"] == "npm test --silent",
           "node: install detects node profile and runner", r.stdout + r.stderr)
     set_config(root, **{"commands.setup": '""'})
     commit(root, "install aishore")
-    repo.task("T-001", "Add wrap", '"src/calc.js"', "tests/acceptance/t_001.test.js", NODE_ACCEPT)
+    repo.task("T-001", "Add wrap", '"src/calc.js"', "tests/acceptance/t_001.accept.js", NODE_ACCEPT)
     r = repo.aishore("start", "T-001")
     wt = repo.wt("T-001")
     check(r.returncode == 0 and "red on main" in r.stdout, "node: start proves acceptance red", r.stdout + r.stderr)
-    code = repo.hook("guard_edit", wt, {"tool_input": {"file_path": str(wt / "tests/acceptance/t_001.test.js")}})
+    r = repo.aishore("gate", "fast")
+    check(r.returncode == 0, "node: npm test on main does not discover the open task's red acceptance test",
+          r.stdout + r.stderr)
+    code = repo.hook("guard_edit", wt, {"tool_input": {"file_path": str(wt / "tests/acceptance/t_001.accept.js")}})
     check(code.returncode == 2, "node: guard_edit blocks acceptance test")
     calc = wt / "src/calc.js"
     calc.write_text(NODE_GOOD.replace("return ((x", "// eslint-disable-next-line\n  return ((x"))
@@ -534,7 +631,7 @@ def vitest_part(tmp: Path, env: dict) -> None:
           "vitest: install selects the vitest runner", r.stdout + r.stderr)
     set_config(root, **{"commands.setup": '""', "commands.types": '""'})
     commit(root, "install aishore")
-    repo.task("T-001", "Add sub", '"src/calc.ts"', "tests/acceptance/t_001.test.ts",
+    repo.task("T-001", "Add sub", '"src/calc.ts"', "tests/acceptance/t_001.accept.ts",
               'import { expect, test } from "vitest";\nimport * as calc from "../../src/calc";\n\n'
               'test("sub", () => expect((calc as any).sub?.(5, 3)).toBe(2));\n')
     r = repo.aishore("start", "T-001")
@@ -610,6 +707,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("SKIP  vitest profile (npm not installed)")
         generic_part(tmp, env)
+        flat_part(tmp, env, py)
     finally:
         for dirpath, dirnames, filenames in os.walk(tmp):
             for n in dirnames + filenames:

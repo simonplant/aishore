@@ -11,14 +11,16 @@ aishore/                 the package, stdlib only, Python 3.11+ (vendored into t
   lib.py                 repo, config, task context, ownership, acceptance runner helpers
   langs.py               per-language cheat patterns and class detection
   tasks.py               task.toml and spec.md validation
-  flow.py                new, start, plan-review, review, adopt, sync, merge, abandon, status
+  flow.py                new, brief-review, start, plan-review, review, adopt, sync, merge, abandon, status
+  briefcheck.py          runs brief-review counterexamples against the acceptance tests in a scratch worktree
   run.py                 headless run: plan, reviewer approval, build, review, one fix round
   gate.py diffcheck.py replay.py mutate.py findings.py logbook.py entropy.py
   hooks/                 guard_edit, guard_bash, post_edit, stop (run via `aishore hook <name>`)
   install.py             profiles (python, node, generic), install, update
   selftest.py            end-to-end test in throwaway repos with a stub claude
-  prompts/               reviewer role, diff review, plan review
-  scaffold/              files written into targets: ENGINEERING.md, role, commands, task templates, shim
+  prompts/               reviewer role, brief review, plan review, diff review
+  scaffold/              files written into targets: ENGINEERING.md, role, /implement, skills (brief,
+                         decompose, aishore-setup, triage, retro), task templates, vitest runner, shim
 bin/aishore              symlink to the shim, for running from source
 install.sh               curl installer
 ```

@@ -44,7 +44,7 @@ def _str_list(v) -> bool:
     return isinstance(v, list) and all(isinstance(x, str) and x for x in v)
 
 
-def validate(root: Path, tid: str) -> tuple[dict, list[str]]:
+def validate(root: Path, tid: str, allow_placeholder: bool = False) -> tuple[dict, list[str]]:
     cfg = lib.config(root)
     defaults = cfg.get("defaults", {})
     locked = cfg["ownership"]["locked"]
@@ -93,7 +93,7 @@ def validate(root: Path, tid: str) -> tuple[dict, list[str]]:
             errs.append(f"acceptance_tests: '{a}' must be in a human-owned path")
         if not p.is_file():
             errs.append(f"acceptance_tests: '{a}' does not exist")
-        elif lib.PLACEHOLDER in p.read_text():
+        elif lib.PLACEHOLDER in p.read_text() and not allow_placeholder:
             errs.append(f"acceptance_tests: '{a}' still contains {lib.PLACEHOLDER}")
 
     for key in ("loc_budget", "max_new_files", "max_new_classes"):
@@ -125,13 +125,13 @@ def validate(root: Path, tid: str) -> tuple[dict, list[str]]:
         for s in SECTIONS:
             if s not in text:
                 errs.append(f"spec.md: missing section '{s}'")
-        if lib.PLACEHOLDER in text:
+        if lib.PLACEHOLDER in text and not allow_placeholder:
             errs.append(f"spec.md: still contains {lib.PLACEHOLDER}")
     return data, errs
 
 
-def load(root: Path, tid: str) -> Task:
-    data, errs = validate(root, tid)
+def load(root: Path, tid: str, allow_placeholder: bool = False) -> Task:
+    data, errs = validate(root, tid, allow_placeholder)
     if errs:
         raise lib.HarnessError(f"task {tid} is invalid:\n  - " + "\n  - ".join(errs))
     defaults = lib.config(root).get("defaults", {})

@@ -15,6 +15,7 @@ PKG_PARENT = Path(__file__).resolve().parent.parent
 CONFIG = "aishore.toml"
 TASK_PREFIX = "t/"
 SCRATCH = ("ESCALATE.md", "PLAN.md")
+HARNESS_OWNED = [".aishore/**"]  # the vendored harness and its per-worktree state
 STATE = ".aishore/state"
 PLACEHOLDER = "AISHORE_PLACEHOLDER"
 SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache",
@@ -101,10 +102,15 @@ def in_src(path: str, cfg: dict) -> bool:
     return any(path.startswith(r) for r in src_roots(cfg))
 
 
+# Every path-listing git call: renames reported as delete + add, paths unquoted.
+DIFF = ("git", "-c", "core.quotepath=off", "diff", "--no-renames")
+LS = ("git", "-c", "core.quotepath=off", "ls-files")
+
+
 def changed_files(root: Path, base: str) -> tuple[set[str], set[str]]:
     """(tracked files changed vs base including working tree, untracked files)."""
-    changed = set(sh("git", "diff", "--name-only", base, cwd=root).splitlines())
-    untracked = set(sh("git", "ls-files", "--others", "--exclude-standard", cwd=root).splitlines())
+    changed = set(sh(*DIFF, "--name-only", base, cwd=root).splitlines())
+    untracked = set(sh(*LS, "--others", "--exclude-standard", cwd=root).splitlines())
     return changed - {""}, untracked - {""}
 
 
@@ -120,7 +126,9 @@ def worktree_path(root: Path, cfg: dict, tid: str) -> Path:
 def env(root: Path, cfg: dict) -> dict:
     """Environment that imports the harness and this checkout's code, even with an install elsewhere."""
     e = dict(os.environ)
-    parts = [str(PKG_PARENT)] + [str(root / r) for r in src_roots(cfg) if r] + [str(root)]
+    # A src-layout root holds packages; a package dir itself (flat layout) would shadow the stdlib.
+    roots = [root / r for r in src_roots(cfg) if r and not (root / r / "__init__.py").exists()]
+    parts = [str(PKG_PARENT)] + [str(r) for r in roots] + [str(root)]
     if e.get("PYTHONPATH"):
         parts.append(e["PYTHONPATH"])
     e["PYTHONPATH"] = os.pathsep.join(parts)
@@ -160,7 +168,7 @@ def task_tests(root: Path, cfg: dict, tid: str) -> list[str]:
     listed = tomllib.loads(tf.read_text()).get("acceptance_tests", []) if tf.exists() else []
     adopted = sorted(p.relative_to(root).as_posix()
                      for p in root.glob(acceptance_path(cfg, f"{slug(tid)}_f*")) if p.is_file())
-    return [t for t in dict.fromkeys([*listed, *adopted]) if (root / t).is_file()]
+    return list(dict.fromkeys([*listed, *adopted]))
 
 
 def merged_ids(root: Path) -> set[str]:

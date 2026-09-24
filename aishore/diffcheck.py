@@ -13,7 +13,7 @@ from aishore import langs, lib, tasks
 def added_lines(root, base, untracked) -> list[tuple[str, str]]:
     out: list[tuple[str, str]] = []
     current = ""
-    for line in lib.sh("git", "diff", "-U0", base, cwd=root).splitlines():
+    for line in lib.sh(*lib.DIFF, "-U0", base, cwd=root).splitlines():
         if line.startswith("+++ "):
             current = line[6:] if line.startswith("+++ b/") else ""
         elif line.startswith("+") and current:
@@ -56,7 +56,7 @@ def main() -> int:
                 errors.append(f"{label}: {f}: {line.strip()[:100]}")
 
     net = 0
-    for row in lib.sh("git", "diff", "--numstat", base, cwd=root).splitlines():
+    for row in lib.sh(*lib.DIFF, "--numstat", base, cwd=root).splitlines():
         a, d, f = row.split("\t", 2)
         if a != "-" and lib.in_src(f, cfg) and f not in lib.SCRATCH:
             net += int(a) - int(d)

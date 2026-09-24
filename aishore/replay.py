@@ -23,7 +23,7 @@ def case_files(root: Path, cfg: dict) -> list[Path]:
 
 
 def run_case(root: Path, cfg: dict, path: Path, env: dict) -> list[str]:
-    cmd = cfg["replay"]["cmd"].format(input=shlex.quote(str(path)))
+    cmd = cfg["replay"]["cmd"].replace("{input}", shlex.quote(str(path)))
     r = subprocess.run(cmd, shell=True, cwd=root, env=env, capture_output=True, text=True, timeout=900)
     if r.returncode != 0:
         raise lib.HarnessError(f"replay case {path.stem} exited {r.returncode}:\n{r.stderr[-1500:]}")

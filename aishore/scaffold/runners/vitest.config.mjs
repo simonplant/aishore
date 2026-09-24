@@ -15,5 +15,5 @@ if (found) {
 }
 export default mergeConfig(base, {
   root,
-  test: { include: ["tests/acceptance/**/*.{test,spec}.?(c|m)[jt]s?(x)", "tests/_review/**/*.{test,spec}.?(c|m)[jt]s?(x)"] },
+  test: { include: ["tests/{acceptance,_review}/**/*.{accept,test,spec}.?(c|m)[jt]s?(x)"] },
 });

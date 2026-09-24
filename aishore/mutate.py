@@ -71,7 +71,7 @@ def changed_lines(root: Path, base: str, path: str, untracked: bool) -> set[int]
     if untracked:
         return set(range(1, len((root / path).read_text().splitlines()) + 1))
     lines: set[int] = set()
-    for m in re.finditer(r"^@@ -\S+ \+(\d+)(?:,(\d+))? @@", lib.sh("git", "diff", "-U0", base, "--", path, cwd=root), re.M):
+    for m in re.finditer(r"^@@ -\S+ \+(\d+)(?:,(\d+))? @@", lib.sh(*lib.DIFF, "-U0", base, "--", path, cwd=root), re.M):
         start, count = int(m.group(1)), int(m.group(2) or 1)
         lines.update(range(start, start + count))
     return lines

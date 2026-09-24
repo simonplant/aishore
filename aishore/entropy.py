@@ -42,7 +42,7 @@ def dependencies(root) -> int:
 def main() -> int:
     root = lib.repo_root()
     cfg = lib.config(root)
-    files = [f for f in lib.sh("git", "ls-files", cwd=root).splitlines() if lib.in_src(f, cfg)]
+    files = [f for f in lib.sh(*lib.LS, cwd=root).splitlines() if lib.in_src(f, cfg)]
     loc, funcs = 0, []
     for f in files:
         try:
