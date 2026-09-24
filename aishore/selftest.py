@@ -5,7 +5,8 @@
 Python profile: install and legacy removal, hooks exactly as settings.json runs them, diffcheck,
 replay, mutation, reviewer findings, adopt, merge, pending-task isolation, and a headless
 `aishore run` against a stub `claude`. Node and generic profiles: install, red proof, guards,
-language cheats, findings, merge. Needs git, Python 3.11+, and pytest; the node part needs node.
+language cheats, findings, merge. Vitest: a project whose config `include` excludes tests/acceptance.
+Needs git, Python 3.11+, and pytest; the node part needs node; the vitest part needs npm and the registry.
 Never calls a model.
 """
 from __future__ import annotations
@@ -20,6 +21,7 @@ import tomllib
 from pathlib import Path
 
 SOURCE = Path(__file__).resolve().parent.parent
+INSTALLER = [sys.executable, "-m", "aishore", "install", "--dir"]
 RESULTS: list[tuple[bool, str]] = []
 
 STUB = r'''#!/usr/bin/env python3
@@ -234,7 +236,7 @@ def python_part(tmp: Path, env: dict, py: str, stub_dir: Path) -> None:
     commit(root, "init")
 
     # install
-    r = run([str(SOURCE / "bin" / "aishore"), "install", "--dir", str(root)], root, env)
+    r = run([*INSTALLER, str(root)], root, env)
     repo = Repo(root, env)
     check(r.returncode == 0, "install runs", r.stdout + r.stderr)
     cfg = tomllib.loads((root / "aishore.toml").read_text())
@@ -247,12 +249,15 @@ def python_part(tmp: Path, env: dict, py: str, stub_dir: Path) -> None:
           "install strips the old CLAUDE.md section and adds imports", cm)
     gi = (root / ".gitignore").read_text()
     check(".aishore/data" not in gi and ".aishore/state/" in gi, "install rewrites .gitignore entries", gi)
-    r = run([str(SOURCE / "bin" / "aishore"), "install", "--dir", str(root)], root, env)
+    r = run([*INSTALLER, str(root)], root, env)
     settings = json.loads((root / ".claude/settings.json").read_text())
     n_hooks = sum(len(g["hooks"]) for gs in settings["hooks"].values() for g in gs)
-    check(r.returncode == 0 and n_hooks == 4 and (root / "CLAUDE.md").read_text().count("<!-- aishore -->") == 1
+    deny = settings["permissions"]["deny"]
+    marks = (root / "CLAUDE.md").read_text().count("<!-- aishore -->")
+    check(r.returncode == 0 and n_hooks == 4 and deny == ["Bash(git push:*)", "Bash(sudo:*)"] and marks == 1
           and "kept aishore.toml" in r.stdout, "second install is idempotent", r.stdout + json.dumps(settings))
-    check((root / ".github/workflows/aishore-verify.yml").exists(), "install writes the CI workflow")
+    check((root / ".github/workflows/aishore-verify.yml").exists() and (root / "docs/adr/0000-template.md").exists(),
+          "install writes the CI workflow and the ADR template")
 
     lint = f'"{shutil.which("ruff")} check --isolated src"' if shutil.which("ruff") else '""'
     set_config(root, **{
@@ -464,7 +469,7 @@ def node_part(tmp: Path, env: dict, stub_dir: Path) -> None:
     write(root / "tests/unit/calc.test.js", 'import { test } from "node:test";\nimport assert from "node:assert/strict";\n'
           'import { clamp } from "../../src/calc.js";\n\ntest("clamp", () => assert.equal(clamp(12, 0, 10), 10));\n')
     commit(root, "init")
-    r = run([str(SOURCE / "bin" / "aishore"), "install", "--dir", str(root)], root, env)
+    r = run([*INSTALLER, str(root)], root, env)
     repo = Repo(root, env)
     cfg = tomllib.loads((root / "aishore.toml").read_text()) if (root / "aishore.toml").exists() else {}
     check(r.returncode == 0 and cfg.get("acceptance", {}).get("cmd") == "node --test {tests}"
@@ -504,20 +509,69 @@ def node_part(tmp: Path, env: dict, stub_dir: Path) -> None:
     check(r.returncode == 0 and "wrap" in (root / "src/calc.js").read_text(), "node: merge", r.stdout + r.stderr)
 
 
+def vitest_part(tmp: Path, env: dict) -> None:
+    root = tmp / "vitestrepo"
+    root.mkdir()
+    new_repo(root)
+    write(root / "package.json",
+          json.dumps({"name": "vt", "type": "module", "scripts": {"test": "vitest run"}}, indent=2))
+    r = run(["npm", "install", "--silent", "--no-audit", "--no-fund", "--save-dev", "vitest@4"], root, env)
+    if r.returncode:
+        print(f"SKIP  vitest profile (npm install failed: {r.stderr.strip()[-200:]})")
+        return
+    write(root / ".gitignore", "node_modules\n")
+    write(root / "tsconfig.json", '{"compilerOptions": {"strict": true, "module": "esnext", "moduleResolution": "bundler"}}\n')
+    write(root / "vitest.config.ts", 'import { defineConfig } from "vitest/config";\n\n'
+          'export default defineConfig({ test: { include: ["src/**/*.test.ts"] } });\n')
+    write(root / "src/calc.ts", "export const add = (a: number, b: number): number => a + b;\n")
+    write(root / "src/calc.test.ts", 'import { expect, test } from "vitest";\nimport { add } from "./calc";\n\n'
+          'test("add", () => expect(add(1, 2)).toBe(3));\n')
+    commit(root, "init")
+    r = run([*INSTALLER, str(root)], root, env)
+    repo = Repo(root, env)
+    cfg = tomllib.loads((root / "aishore.toml").read_text()) if (root / "aishore.toml").exists() else {}
+    check(r.returncode == 0 and "runners/vitest.config.mjs" in cfg.get("acceptance", {}).get("cmd", ""),
+          "vitest: install selects the vitest runner", r.stdout + r.stderr)
+    set_config(root, **{"commands.setup": '""', "commands.types": '""'})
+    commit(root, "install aishore")
+    repo.task("T-001", "Add sub", '"src/calc.ts"', "tests/acceptance/t_001.test.ts",
+              'import { expect, test } from "vitest";\nimport * as calc from "../../src/calc";\n\n'
+              'test("sub", () => expect((calc as any).sub?.(5, 3)).toBe(2));\n')
+    r = repo.aishore("start", "T-001")
+    wt = repo.wt("T-001")
+    check(r.returncode == 0 and "red on main" in r.stdout,
+          "vitest: acceptance test outside the config include is collected and red", r.stdout + r.stderr)
+    if not wt.exists():
+        return
+    os.symlink(root / "node_modules", wt / "node_modules")
+    (wt / "src/calc.ts").write_text((root / "src/calc.ts").read_text() +
+                                    "export const sub = (a: number, b: number): number => a - b;\n")
+    r = repo.aishore("gate", "fast", cwd=wt)
+    check(r.returncode == 0 and "acceptance: 1 files" in r.stdout, "vitest: gate green with unit and acceptance tests",
+          r.stdout + r.stderr)
+
+
 def generic_part(tmp: Path, env: dict) -> None:
     root = tmp / "shrepo"
     root.mkdir()
     new_repo(root)
     write(root / "bin/greet", '#!/usr/bin/env bash\necho "hello"\n')
     commit(root, "init")
-    r = run([str(SOURCE / "bin" / "aishore"), "install", "--dir", str(root)], root, env)
+    r = run([*INSTALLER, str(root)], root, env)
     repo = Repo(root, env)
     check(r.returncode == 0 and "generic profile" in (root / "aishore.toml").read_text(),
           "generic: install detects generic profile", r.stdout + r.stderr)
     set_config(root, src='["bin"]')
+    write(root / "tasks/T-001/task.toml", TASK.format(id="T-001", title="Greet by name", allow='"bin/greet"',
+                                                      test="tests/acceptance/test_t_001.sh"))
+    write(root / "tasks/T-001/spec.md", SPEC.format(id="T-001", title="Greet by name"))
+    write(root / "tests/acceptance/test_t_001.sh", '#!/usr/bin/env bash\nset -e\n[ "$(bash bin/greet Ann)" = "hello Ann" ]\n')
+    git(root, "add", "tasks", "tests", "aishore.toml")
+    git(root, "commit", "-q", "-m", "task without the harness")
+    r = repo.aishore("start", "T-001")
+    check(r.returncode == 1 and "without hooks" in r.stderr and not repo.wt("T-001").exists(),
+          "generic: start refuses while the harness is uncommitted", r.stdout + r.stderr)
     commit(root, "install aishore")
-    repo.task("T-001", "Greet by name", '"bin/greet"', "tests/acceptance/test_t_001.sh",
-              '#!/usr/bin/env bash\nset -e\n[ "$(bash bin/greet Ann)" = "hello Ann" ]\n')
     r = repo.aishore("start", "T-001")
     wt = repo.wt("T-001")
     check(r.returncode == 0 and "red on main" in r.stdout, "generic: start proves shell acceptance test red",
@@ -539,8 +593,9 @@ def main(argv: list[str] | None = None) -> int:
     write(stub_bin / "claude", STUB)
     os.chmod(stub_bin / "claude", 0o755)
     stub_dir.mkdir()
-    env = dict(os.environ, STUB_DIR=str(stub_dir), PATH=f"{stub_bin}{os.pathsep}{Path(py).parent}{os.pathsep}"
-               f"{os.environ.get('PATH', '')}", GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1")
+    path = os.pathsep.join([str(stub_bin), str(Path(py).parent), os.environ.get("PATH", "")])
+    env = dict(os.environ, STUB_DIR=str(stub_dir), PYTHONPATH=str(SOURCE), PATH=path,
+               GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1")
     env.pop("CLAUDE_PROJECT_DIR", None)
     env.pop("AISHORE_TASK", None)
     env.pop("AISHORE_BRANCH", None)
@@ -550,6 +605,10 @@ def main(argv: list[str] | None = None) -> int:
             node_part(tmp, env, stub_dir)
         else:
             print("SKIP  node profile (node not installed)")
+        if shutil.which("npm"):
+            vitest_part(tmp, env)
+        else:
+            print("SKIP  vitest profile (npm not installed)")
         generic_part(tmp, env)
     finally:
         for dirpath, dirnames, filenames in os.walk(tmp):

@@ -48,6 +48,7 @@ mostly .py) or `generic`. Pass `bash -s -- --profile <name>` to override it. It 
 | `.claude/commands/` | `/implement`, `/draft-task` | yes |
 | `.gitignore` | `.aishore/state/`, `PLAN.md`, `ESCALATE.md`, `tests/_review/` | merged |
 | `.github/workflows/aishore-verify.yml` | full gate on PRs and the base branch | no |
+| `docs/adr/0000-template.md` | decision record template (new dependencies need one) | no |
 
 It removes an old bash aishore (`.aishore/aishore` script, `.aishore/data/`, and the CLAUDE.md
 sprint section). It leaves `backlog/` alone.
@@ -61,7 +62,8 @@ Then:
 3. Optional: set a replay command that prints one JSON event per line for one recorded input,
    put the inputs in `replay/cases/`, run `aishore replay update` and review the goldens.
 4. Run `.aishore/bin/aishore gate fast` and fix what it finds.
-5. Commit on the base branch.
+5. Commit on the base branch. `aishore start` refuses to run until the harness is committed,
+   because a worktree without it would have no hooks.
 
 Put `.aishore/bin` on PATH or alias `aishore` to `.aishore/bin/aishore`. The examples below
 assume one of these.
@@ -209,7 +211,7 @@ its shebang.
 | `src` | production roots: LOC budget, new files, new classes, mutation |
 | `commands.setup` | runs once in each new worktree before paths lock |
 | `commands.lint/types/imports/tests` | gate steps; empty skips |
-| `acceptance.cmd` | runs acceptance and finding tests; `{tests}` is the quoted file list |
+| `acceptance.cmd` | runs acceptance and finding tests; `{tests}` is the quoted file list. Vitest runs through a shipped config that loads yours and adds `tests/acceptance` and `tests/_review` to `include`; jest gets `--roots` and `--testMatch` |
 | `acceptance.fail_codes` | exit codes that prove a finding (pytest: 1); empty means any non-zero |
 | `acceptance.empty_codes` | exit codes meaning no tests found (pytest: 5) |
 | `acceptance.path`, `lang` | test file template (`{name}` = `t_042`, `t_042_f1`); reviewer's language |
@@ -250,7 +252,9 @@ language servers.
   operator set.
 - Reviewer tests are model-written code executed in the worktree. Read them before `adopt`.
 - Runners without distinct exit codes (node, jest, vitest, shell) cannot tell a failing
-  assertion from a crash. For them a crashing finding test counts as REAL, so read it.
+  assertion from a crash. For them a crashing finding test counts as REAL, so read it. Vitest
+  and jest pass when no test is collected, so a misplaced test shows as "already passes", never
+  as a false red.
 
 ## Development
 

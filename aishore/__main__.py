@@ -94,7 +94,12 @@ def main(argv: list[str]) -> int:
 
 
 def entry() -> None:
-    sys.exit(main(sys.argv[1:]))
+    from aishore.lib import HarnessError
+
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except HarnessError as e:
+        sys.exit(f"error: {e}")
 
 
 if __name__ == "__main__":

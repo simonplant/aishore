@@ -29,6 +29,7 @@ SCAFFOLD = PKG / "scaffold"
 MARK = "<!-- aishore -->"
 CLAUDE_BLOCK = f"{MARK}\n@ENGINEERING.md\n@.aishore/aishore/scaffold/claude-role.md\n"
 GITIGNORE = [".aishore/state/", "ESCALATE.md", "PLAN.md", "tests/_review/", "__pycache__/"]
+DENY = ["Bash(git push:*)", "Bash(sudo:*)"]
 HOOK = '"$CLAUDE_PROJECT_DIR"/.aishore/bin/aishore hook {}'
 HOOKS = {
     "PreToolUse": [("Edit|Write|MultiEdit|NotebookEdit", "guard_edit", 15), ("Bash", "guard_bash", 15)],
@@ -133,9 +134,12 @@ def node_profile(root: Path) -> dict:
         setup = "npm install --no-package-lock --no-audit --no-fund"
     ts = (root / "tsconfig.json").exists()
     if "vitest" in test or "vitest" in deps:
-        acc, tests = "npx vitest run {tests}", "npm test --silent -- --exclude 'tests/acceptance/**' --exclude 'tests/_review/**'"
+        acc = "npx vitest run --passWithNoTests --config .aishore/aishore/scaffold/runners/vitest.config.mjs {tests}"
+        tests = "npm test --silent -- --exclude 'tests/acceptance/**' --exclude 'tests/_review/**'"
     elif "jest" in test or "jest" in deps:
-        acc, tests = "npx jest {tests}", "npm test --silent -- --testPathIgnorePatterns tests/acceptance tests/_review"
+        acc = ("npx jest --passWithNoTests --roots '<rootDir>' "
+               "--testMatch '**/tests/{acceptance,_review}/**/*.[jt]s?(x)' {tests}")
+        tests = "npm test --silent -- --testPathIgnorePatterns tests/acceptance tests/_review"
     else:
         acc, tests = "node --test {tests}", "npm test --silent" if test else ""
     fmt = "npx --no-install prettier --write {file}" if "prettier" in deps else ""
@@ -301,6 +305,8 @@ def remove_legacy(root: Path) -> list[str]:
 def merge_settings(root: Path) -> None:
     path = root / ".claude" / "settings.json"
     data = json.loads(path.read_text()) if path.exists() else {}
+    deny = data.setdefault("permissions", {}).setdefault("deny", [])
+    deny += [d for d in DENY if d not in deny]
     hooks = data.setdefault("hooks", {})
     for event, entries in HOOKS.items():
         groups = hooks.setdefault(event, [])
@@ -354,6 +360,11 @@ def install(root: Path, profile: str | None) -> None:
             ci.parent.mkdir(parents=True, exist_ok=True)
             ci.write_text(render_ci(p))
             notes.append("wrote .github/workflows/aishore-verify.yml: check its install step")
+    adr = root / "docs" / "adr" / "0000-template.md"
+    if not adr.exists():
+        adr.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(SCAFFOLD / "adr" / "0000-template.md", adr)
+        notes.append("wrote docs/adr/0000-template.md")
     eng = root / "ENGINEERING.md"
     if not eng.exists():
         shutil.copy(SCAFFOLD / "ENGINEERING.md", eng)
@@ -374,7 +385,7 @@ def install(root: Path, profile: str | None) -> None:
     for n in notes:
         print(f"  - {n}")
     print("next: review the files above, then commit them on the base branch:")
-    print("  git add -A .aishore aishore.toml ENGINEERING.md CLAUDE.md .claude .gitignore .github "
+    print("  git add -A .aishore aishore.toml ENGINEERING.md CLAUDE.md .claude .gitignore .github docs/adr "
           "&& git commit -m 'chore: install aishore'")
     print("  .aishore/bin/aishore gate fast   # fix what it finds, or blank out steps you are not ready for")
 
@@ -385,7 +396,10 @@ def update(root: Path, ref: str) -> None:
         data = r.read()
     with tempfile.TemporaryDirectory() as tmp:
         with tarfile.open(fileobj=io.BytesIO(data)) as tf:
-            tf.extractall(tmp, filter="data")
+            if hasattr(tarfile, "data_filter"):
+                tf.extractall(tmp, filter="data")
+            else:
+                tf.extractall(tmp)  # noqa: S202 - our own GitHub tarball
         src = next(Path(tmp).iterdir())
         r = subprocess.run([sys.executable, "-m", "aishore", "install", "--dir", str(root)],
                            env={**os.environ, "PYTHONPATH": str(src)})

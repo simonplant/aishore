@@ -125,6 +125,9 @@ def cmd_new(root: Path, cfg: dict, a) -> None:
 
 def cmd_start(root: Path, cfg: dict, a) -> Path:
     task = load(root, a.id)
+    for p in (lib.CONFIG, ".aishore/bin/aishore", ".aishore/aishore/hooks/guard_edit.py", ".claude/settings.json"):
+        if subprocess.run(["git", "ls-files", "--error-unmatch", p], cwd=root, capture_output=True).returncode:
+            die(f"{p} is not committed on {base_name(cfg)}; the worktree would run without hooks")
     paths = [f"tasks/{a.id}", *task.acceptance_tests]
     if git(root, "status", "--porcelain", "--", *paths).strip():
         die(f"commit tasks/{a.id} and its acceptance tests on {base_name(cfg)} first")

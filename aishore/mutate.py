@@ -24,7 +24,7 @@ CMP = {ast.Lt: ast.GtE, ast.GtE: ast.Lt, ast.Gt: ast.LtE, ast.LtE: ast.Gt, ast.E
 BIN = {ast.Add: ast.Sub, ast.Sub: ast.Add, ast.Mult: ast.Div, ast.Div: ast.Mult}
 BOOL = {ast.And: ast.Or, ast.Or: ast.And}
 IGNORE = shutil.ignore_patterns(".git", "__pycache__", ".venv", "venv", "node_modules",
-                                ".pytest_cache", ".ruff_cache", ".mypy_cache", "state")
+                                ".pytest_cache", ".ruff_cache", ".mypy_cache")
 
 
 def sites(tree: ast.AST, lines: set[int]) -> list[tuple[ast.AST, str]]:

@@ -17,7 +17,7 @@ TASK_PREFIX = "t/"
 SCRATCH = ("ESCALATE.md", "PLAN.md")
 STATE = ".aishore/state"
 PLACEHOLDER = "AISHORE_PLACEHOLDER"
-SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", "state", ".pytest_cache",
+SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache",
              ".ruff_cache", ".mypy_cache", "dist", "build", "target"}
 # Variables a parent Claude Code session sets that would confuse a nested `claude` process.
 NESTED_ENV = ("CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_PROJECT_DIR", "CLAUDE_CODE_SSE_PORT")
